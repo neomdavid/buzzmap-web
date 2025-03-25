@@ -1,0 +1,22 @@
+@import "tailwindcss";
+
+@plugin "daisyui";
+
+@plugin "daisyui/theme" {
+  name: "buzzmap";
+  default: true;
+  prefersdark: false;
+  color-scheme: "light";
+
+  --color-primary: #245261;
+  --color-secondary: #fadd37;
+  --color-accent: #4aa8c7;
+  --color-neutral: #dbebf3;
+  --color-base-100: #ffffff;
+  --color-base-200: #dbebf3;
+  --color-base-300: #6093af;
+  --color-info: #6093af;
+  --color-success: #36d399;
+  --color-warning: #fadd37;
+  --color-error: #ff0000;
+}
