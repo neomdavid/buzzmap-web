@@ -13,4 +13,3 @@ export { default as FilterButton } from "./Community/FilterButton";
 export { default as PostCard } from "./Community/PostCard";
 export { default as AnnouncementCard } from "./Community/AnnouncementCard";
 export { default as ReactionsTab } from "./Community/ReactionsTab";
-export { default as ImageGrid } from "./Community/ImageGrid";

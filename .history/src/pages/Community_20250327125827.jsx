@@ -17,7 +17,7 @@ import {
 const Community = () => {
   return (
     <main className="pl-6 flex gap-x-6 max-w-[1250px] m-auto  ">
-      <article className="flex-8  rounded-lg">
+      <article className="flex-7  rounded-lg">
         <section className="flex gap-x-2 font-semibold w-full  mb-8">
           <FilterButton text="Popular" />
           <FilterButton text="Latest" />

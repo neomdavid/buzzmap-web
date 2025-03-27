@@ -6,26 +6,20 @@ import post3 from "../assets/post3.jpg";
 import post4 from "../assets/post4.jpg";
 import post5 from "../assets/post5.jpg";
 
-import {
-  PostCard,
-  CustomInput,
-  Heading,
-  FilterButton,
-  AnnouncementCard,
-} from "../components";
+import { PostCard, CustomInput, Heading, FilterButton } from "../components";
 
 const Community = () => {
   return (
-    <main className="pl-6 flex gap-x-6 max-w-[1250px] m-auto  ">
-      <article className="flex-8  rounded-lg">
-        <section className="flex gap-x-2 font-semibold w-full  mb-8">
+    <main className="pl-6 flex gap-x-6 max-w-[1250px] m-auto xl:bg-red-100 ">
+      <article className="flex-7s">
+        <section className="flex gap-x-2 font-semibold w-full  mb-6">
           <FilterButton text="Popular" />
           <FilterButton text="Latest" />
           <FilterButton text="My Posts" />
         </section>
         <Heading
           text="Stay /ahead/ of dengue."
-          className="text-8xl text-center mb-4 "
+          className="text-7xl text-center"
         />
         <p className="text-center text-lg font-semibold text-primary mb-6">
           Real-Time Dengue Updates from the Community.
@@ -39,7 +33,7 @@ const Community = () => {
           <CustomInput profileSrc={profile1} showImagePicker={true} />
         </section>
         <PostCard
-          profileImage={profile1}
+          profileImage="profile1.jpg"
           username="Anonymous Crocodile"
           timestamp="1 hour ago"
           location="Barangay Bagumbayan, Taguig City"
@@ -52,9 +46,7 @@ const Community = () => {
           images={[post1, post2, post3, post4, post5]}
         />
       </article>
-      <aside className="flex-5 bg-base-200 px-6 py-8 rounded-sm">
-        <AnnouncementCard />
-      </aside>
+      <aside className="flex-5 bg-amber-200">hello</aside>
     </main>
   );
 };

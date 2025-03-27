@@ -52,7 +52,7 @@ const Community = () => {
           images={[post1, post2, post3, post4, post5]}
         />
       </article>
-      <aside className="flex-5 bg-base-200 px-6 py-8 rounded-sm">
+      <aside className="flex-5 bg-base-200 px-6 py-8 rounded-sm h-auto">
         <AnnouncementCard />
       </aside>
     </main>

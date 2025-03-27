@@ -17,7 +17,7 @@ import {
 const Community = () => {
   return (
     <main className="pl-6 flex gap-x-6 max-w-[1250px] m-auto  ">
-      <article className="flex-8  rounded-lg">
+      <article className="flex-7  rounded-lg">
         <section className="flex gap-x-2 font-semibold w-full  mb-8">
           <FilterButton text="Popular" />
           <FilterButton text="Latest" />
@@ -25,7 +25,7 @@ const Community = () => {
         </section>
         <Heading
           text="Stay /ahead/ of dengue."
-          className="text-8xl text-center mb-4 "
+          className="text-8xl text-center mb-4 tracking-0"
         />
         <p className="text-center text-lg font-semibold text-primary mb-6">
           Real-Time Dengue Updates from the Community.

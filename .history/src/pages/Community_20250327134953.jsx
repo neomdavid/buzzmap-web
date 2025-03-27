@@ -17,6 +17,9 @@ import {
 const Community = () => {
   return (
     <main className="pl-6 flex gap-x-6 max-w-[1250px] m-auto  ">
+      <aside className="flex-5 bg-base-200 px-6 py-8 rounded-sm">
+        <AnnouncementCard />
+      </aside>
       <article className="flex-8  rounded-lg">
         <section className="flex gap-x-2 font-semibold w-full  mb-8">
           <FilterButton text="Popular" />
@@ -52,9 +55,6 @@ const Community = () => {
           images={[post1, post2, post3, post4, post5]}
         />
       </article>
-      <aside className="flex-5 bg-base-200 px-6 py-8 rounded-sm">
-        <AnnouncementCard />
-      </aside>
     </main>
   );
 };
