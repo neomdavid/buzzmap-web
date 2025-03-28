@@ -1,4 +1,4 @@
-import React from "react";
+import { useEffect, useState, React} from "react";
 import profile1 from "../assets/profile1.png";
 import post1 from "../assets/post1.jpg";
 import post2 from "../assets/post2.jpg";
@@ -15,6 +15,22 @@ import {
 } from "../components";
 
 const Community = () => {
+  const [posts, setPosts] = useState(null)
+
+  useEffect(() => {
+    const fetchPosts = async () => {
+      const response = await fetch('/api/v1/posts')
+      const json = await response.json()
+
+      if (response.ok) {
+        setPosts(json)
+      }
+    }
+
+    fetchPosts()
+  }, [])
+
+
   return (
     <main className="pl-6 flex gap-x-6 max-w-[1250px] m-auto  ">
       <article className="flex-8  rounded-lg">
@@ -38,7 +54,10 @@ const Community = () => {
           <hr className="text-accent mb-4" />
           <CustomInput profileSrc={profile1} showImagePicker={true} />
         </section>
-        <PostCard
+        {posts && posts.map((post) => (
+          <PostCard key={post._id} profileImage={profile1} username="Anonymous Crocodile" timestamp="1 hour ago" post={post} likes="24k" comments="24k" shares="5k" images={[post1, post2, post3, post4, post5]} />
+        ))}
+        {/* <PostCard
           profileImage={profile1}
           username="Anonymous Crocodile"
           timestamp="1 hour ago"
@@ -50,7 +69,7 @@ const Community = () => {
           comments="24k"
           shares="5k"
           images={[post1, post2, post3, post4, post5]}
-        />
+        /> */}
       </article>
       <aside className="flex-5 bg-base-200 px-6 py-8 rounded-sm">
         <AnnouncementCard />

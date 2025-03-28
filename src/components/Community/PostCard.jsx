@@ -7,14 +7,20 @@ const PostCard = ({
   profileImage,
   username,
   timestamp,
-  location,
-  dateTime,
-  reportType,
-  description,
+  post,
   likes,
   comments,
   shares,
-  images = [],
+  images,
+  // location,
+  // dateTime,
+  // reportType,
+  // description,
+  // likes,
+  // comments,
+  // shares,
+  // images = [],
+  
 }) => {
   return (
     <section className="bg-base-200 px-8 py-6 rounded-lg">
@@ -35,17 +41,17 @@ const PostCard = ({
         </div>
         <div className="text-primary">
           <p>
-            <span className="font-bold">📍 Location:</span> {location}
+            <span className="font-bold">📍 Location:</span> Barangay {post.barangay}, {post.specific_location}
           </p>
           <p>
-            <span className="font-bold">🕑 Date & Time:</span> {dateTime}
+            <span className="font-bold">🕑 Date & Time:</span> {post.date}, {post.time}
           </p>
           <p>
-            <span className="font-bold">⚠️ Report Type:</span> {reportType}
+            <span className="font-bold">⚠️ Report Type:</span> {post.report_type}
           </p>
           <p className="font-bold">
             📝 Description: <br />
-            <span className="font-normal block ml-1">{description}</span>
+            <span className="font-normal block ml-1">{post.description}</span>
           </p>
         </div>
 
