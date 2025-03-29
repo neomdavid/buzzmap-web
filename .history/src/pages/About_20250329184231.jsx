@@ -98,7 +98,7 @@ const About = () => {
           <div className="relative w-[200px]">
             <img
               src={logoDarkBg}
-              className="absolute right-0  -translate-y-15 w-[25vw] max-w-[220px] rotate-45 z-[1]"
+              className="absolute right-0  -translate-y-15 w-[25vw] max-w-[220px] rotate-45 z-[1"
             />
           </div>
         </section>

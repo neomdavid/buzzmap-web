@@ -25,7 +25,7 @@ import { Link } from "react-router-dom";
 
 const Landing = () => {
   return (
-    <main className="flex flex-col overflow-hidden mt-12">
+    <main className="flex flex-col overflow-hidden mt-10">
       <div className="text-primary font-[Koulen] uppercase flex flex-col text-7xl  px-10 mb-10 lg:max-w-[80vw] lg:items-center lg:self-center text-center">
         <Heading
           className="text-[46px] text-left sm:text-7xl md:text-8xl md:leading-24 lg:-translate-x-50 xl:-translate-x-50 xl:text-9xl xl:leading-40"
