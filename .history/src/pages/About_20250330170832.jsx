@@ -90,7 +90,7 @@ const About = () => {
           />
         </section>
         <section className="w-full flex relative h-35 justify-between ml-10  ">
-          <h1 className="text-left -translate-y-15 text-6xl  text-white tracking-wide lg:text-7xl lg:ml-5">
+          <h1 className="text-left -translate-y-15 text-6xl  text-white tracking-wide lg:text-7xl lg:-translate-y-2-">
             Meet <br /> the <br /> team
           </h1>
 
