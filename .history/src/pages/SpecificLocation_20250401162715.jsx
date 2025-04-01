@@ -23,14 +23,6 @@ const SpecificLocation = () => {
             reportType="Mosquito Breeding Grounds Spotted"
             description="Noticed stagnant water collecting near the back of the ChemEng building after recent rains. Mosquitoes are swarming in the area, and some students have reported frequent bites. Needs immediate drainage cleanup to prevent dengue risk."
           />
-          {/* <RecentReportCard
-            profileImage={profile1}
-            username="Neo David"
-            timestamp="1 minute ago"
-            date="February 15, 2025, 2:30 PM"
-            reportType="Mosquito Breeding Grounds Spotted"
-            description="Noticed stagnant water collecting near the back of the ChemEng building after recent rains. Mosquitoes are swarming in the area, and some students have reported frequent bites. Needs immediate drainage cleanup to prevent dengue risk."
-          />
           <RecentReportCard
             profileImage={profile1}
             username="Neo David"
@@ -46,7 +38,15 @@ const SpecificLocation = () => {
             date="February 15, 2025, 2:30 PM"
             reportType="Mosquito Breeding Grounds Spotted"
             description="Noticed stagnant water collecting near the back of the ChemEng building after recent rains. Mosquitoes are swarming in the area, and some students have reported frequent bites. Needs immediate drainage cleanup to prevent dengue risk."
-          /> */}
+          />
+          <RecentReportCard
+            profileImage={profile1}
+            username="Neo David"
+            timestamp="1 minute ago"
+            date="February 15, 2025, 2:30 PM"
+            reportType="Mosquito Breeding Grounds Spotted"
+            description="Noticed stagnant water collecting near the back of the ChemEng building after recent rains. Mosquitoes are swarming in the area, and some students have reported frequent bites. Needs immediate drainage cleanup to prevent dengue risk."
+          />
 
           {/* <RecentReportCard
             profileImage={profile1}

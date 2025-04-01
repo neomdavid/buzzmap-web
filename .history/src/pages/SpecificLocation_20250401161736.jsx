@@ -9,28 +9,12 @@ const SpecificLocation = () => {
         <DengueMap />
       </div>
       <SideNavDetails />
-      <article className="absolute  z-100000 flex flex-col  text-primary right-[10px]  bottom-0 md:max-w-[60vw]  lg:max-w-[62vw]  xl:max-w-[69vw]  2xl:max-w-[72vw] ">
-        <p className="text-[20px] font-semibold text-left mb-2 w-full">
+      <article className="absolute overflow-x-scroll z-100000 flex flex-col items-end text-primary right-10  bottom-5 bg-white max-w-200">
+        <p className="text-[20px] font-semibold text-left mb-2 bg-red-100 w-full">
           Most Recent Reports
         </p>
         {/* Scrollable container */}
-        <section className="flex gap-x-2 text-[13px] overflow-x-scroll  scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-100">
-          <RecentReportCard
-            profileImage={profile1}
-            username="Neo David"
-            timestamp="1 minute ago"
-            date="February 15, 2025, 2:30 PM"
-            reportType="Mosquito Breeding Grounds Spotted"
-            description="Noticed stagnant water collecting near the back of the ChemEng building after recent rains. Mosquitoes are swarming in the area, and some students have reported frequent bites. Needs immediate drainage cleanup to prevent dengue risk."
-          />
-          {/* <RecentReportCard
-            profileImage={profile1}
-            username="Neo David"
-            timestamp="1 minute ago"
-            date="February 15, 2025, 2:30 PM"
-            reportType="Mosquito Breeding Grounds Spotted"
-            description="Noticed stagnant water collecting near the back of the ChemEng building after recent rains. Mosquitoes are swarming in the area, and some students have reported frequent bites. Needs immediate drainage cleanup to prevent dengue risk."
-          />
+        <section className="flex bg-red-100 gap-x-2 text-[13px] overflow-x-auto  scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-100">
           <RecentReportCard
             profileImage={profile1}
             username="Neo David"
@@ -42,12 +26,27 @@ const SpecificLocation = () => {
           <RecentReportCard
             profileImage={profile1}
             username="Neo David"
-            timestamp="1 minute ago"
-            date="February 15, 2025, 2:30 PM"
-            reportType="Mosquito Breeding Grounds Spotted"
-            description="Noticed stagnant water collecting near the back of the ChemEng building after recent rains. Mosquitoes are swarming in the area, and some students have reported frequent bites. Needs immediate drainage cleanup to prevent dengue risk."
-          /> */}
-
+            timestamp="5 minutes ago"
+            date="February 14, 2025, 4:00 PM"
+            reportType="Suspected Dengue Case"
+            description="A student from the ChemEng department reported high fever and severe headaches. Dengue symptoms suspected."
+          />
+          <RecentReportCard
+            profileImage={profile1}
+            username="Neo David"
+            timestamp="5 minutes ago"
+            date="February 14, 2025, 4:00 PM"
+            reportType="Suspected Dengue Case"
+            description="A student from the ChemEng department reported high fever and severe headaches. Dengue symptoms suspected."
+          />
+          <RecentReportCard
+            profileImage={profile1}
+            username="Neo David"
+            timestamp="5 minutes ago"
+            date="February 14, 2025, 4:00 PM"
+            reportType="Suspected Dengue Case"
+            description="A student from the ChemEng department reported high fever and severe headaches. Dengue symptoms suspected."
+          />
           {/* <RecentReportCard
             profileImage={profile1}
             username="Neo David"

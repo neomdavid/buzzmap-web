@@ -9,7 +9,7 @@ const SpecificLocation = () => {
         <DengueMap />
       </div>
       <SideNavDetails />
-      <article className="absolute  z-100000 flex flex-col  text-primary right-[10px]  bottom-0 md:max-w-[60vw]  lg:max-w-[62vw]  xl:max-w-[69vw]  2xl:max-w-[72vw] ">
+      <article className="absolute overflow-x-scroll z-100000 flex flex-col  text-primary right-[10px]  bottom-5 md:max-w-[60vw]  lg:max-w-[62vw]  xl:max-w-[69vw]  2xl:max-w-[72vw] ">
         <p className="text-[20px] font-semibold text-left mb-2 w-full">
           Most Recent Reports
         </p>
