@@ -10,7 +10,7 @@ import {
   UsersThree,
 } from "phosphor-react";
 import { useState } from "react";
-import { NavLink, Link, Outlet } from "react-router-dom";
+import { NavLink, Link } from "react-router-dom";
 import { LogoNamed } from "../../components";
 
 const AdminLayout = () => {
@@ -54,17 +54,17 @@ const AdminLayout = () => {
                 label: "Analytics",
               },
               {
-                to: "/admin/denguemapping",
+                to: "/admin/mapping",
                 icon: <MapPin weight="fill" size={20} />,
                 label: "Dengue Mapping",
               },
               {
-                to: "/admin/reportsverification",
+                to: "/admin/reports",
                 icon: <CheckCircle weight="fill" size={20} />,
                 label: "Reports Verification",
               },
               {
-                to: "/admin/cea",
+                to: "/admin/community",
                 icon: <UsersThree weight="fill" size={30} />,
                 label: "Community Engagement & Awareness",
               },
@@ -127,9 +127,7 @@ const AdminLayout = () => {
           </div>
         </div>
 
-        <section className="px-6 py-4 md:mt-[-57px] md:ml-2 lg:ml-4 text-primary">
-          <Outlet />
-        </section>
+        <section className="px-6 py-4 md:mt-[-54px]">Content goes here</section>
       </div>
     </div>
   );

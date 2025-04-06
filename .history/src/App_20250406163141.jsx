@@ -15,14 +15,7 @@ import {
   SignUp,
   Login,
 } from "./pages/user";
-import {
-  AdminLayout,
-  Analytics,
-  CEA,
-  Dashboard,
-  DengueMapping,
-  ReportsVerification,
-} from "./pages/admin";
+import { AdminLayout, Analytics } from "./pages/admin";
 
 function App() {
   const router = createBrowserRouter([
@@ -74,24 +67,8 @@ function App() {
       element: <AdminLayout />,
       children: [
         {
-          path: "/admin/dashboard",
-          element: <Dashboard />,
-        },
-        {
           path: "/admin/analytics",
           element: <Analytics />,
-        },
-        {
-          path: "/admin/reportsverification",
-          element: <ReportsVerification />,
-        },
-        {
-          path: "/admin/denguemapping",
-          element: <DengueMapping />,
-        },
-        {
-          path: "/admin/cea",
-          element: <CEA />,
         },
       ],
     },

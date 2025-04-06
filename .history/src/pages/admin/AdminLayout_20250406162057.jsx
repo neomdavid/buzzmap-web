@@ -54,17 +54,17 @@ const AdminLayout = () => {
                 label: "Analytics",
               },
               {
-                to: "/admin/denguemapping",
+                to: "/admin/mapping",
                 icon: <MapPin weight="fill" size={20} />,
                 label: "Dengue Mapping",
               },
               {
-                to: "/admin/reportsverification",
+                to: "/admin/reports",
                 icon: <CheckCircle weight="fill" size={20} />,
                 label: "Reports Verification",
               },
               {
-                to: "/admin/cea",
+                to: "/admin/community",
                 icon: <UsersThree weight="fill" size={30} />,
                 label: "Community Engagement & Awareness",
               },
@@ -127,7 +127,7 @@ const AdminLayout = () => {
           </div>
         </div>
 
-        <section className="px-6 py-4 md:mt-[-57px] md:ml-2 lg:ml-4 text-primary">
+        <section className="px-6 py-4 md:mt-[-57px] md:ml-2 text-primary">
           <Outlet />
         </section>
       </div>

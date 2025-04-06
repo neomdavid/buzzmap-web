@@ -21,7 +21,6 @@ import {
   CEA,
   Dashboard,
   DengueMapping,
-  ReportsVerification,
 } from "./pages/admin";
 
 function App() {
@@ -80,10 +79,6 @@ function App() {
         {
           path: "/admin/analytics",
           element: <Analytics />,
-        },
-        {
-          path: "/admin/reportsverification",
-          element: <ReportsVerification />,
         },
         {
           path: "/admin/denguemapping",
