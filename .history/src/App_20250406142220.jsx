@@ -67,7 +67,7 @@ function App() {
       element: <AdminLayout />,
       children: [
         {
-          path: "/admin/dashboard",
+          path: "/dashboard",
           element: <Dashboard />,
         },
       ],

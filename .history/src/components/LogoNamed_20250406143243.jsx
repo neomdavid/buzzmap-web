@@ -22,7 +22,7 @@ const LogoNamed = ({
 
       <Link
         to="/home"
-        className={` ml-[-7.5px] flex italic font-extrabold tracking-wider font-title uppercase hover:cursor-pointer text-2xl xl:text-4xl ${textSize}`}
+        className={` ml-[-7px] flex italic font-extrabold tracking-wider font-title uppercase hover:cursor-pointer text-2xl xl:text-4xl ${textSize}`}
       >
         <h1 className="text-primary">buzz</h1>
         <h1 className="text-accent-content">map</h1>

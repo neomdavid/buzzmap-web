@@ -15,7 +15,6 @@ import {
   SignUp,
   Login,
 } from "./pages/user";
-import { AdminLayout, Dashboard } from "./pages/admin";
 
 function App() {
   const router = createBrowserRouter([
@@ -64,13 +63,7 @@ function App() {
     },
     {
       path: "/admin",
-      element: <AdminLayout />,
-      children: [
-        {
-          path: "/admin/dashboard",
-          element: <Dashboard />,
-        },
-      ],
+      element,
     },
   ]);
   return <RouterProvider router={router} />;

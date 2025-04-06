@@ -3,7 +3,7 @@ import { ReactComponent as DarkBgLogo } from "../assets/logo_darkbg.svg";
 import { Link } from "react-router-dom";
 const LogoNamed = ({
   theme = "light",
-  iconSize = "h-9 w-9",
+  iconSize = "h-11 w-11",
   textSize = "text-[24px]",
 }) => {
   return theme === "light" ? (
@@ -22,7 +22,7 @@ const LogoNamed = ({
 
       <Link
         to="/home"
-        className={` ml-[-7.5px] flex italic font-extrabold tracking-wider font-title uppercase hover:cursor-pointer text-2xl xl:text-4xl ${textSize}`}
+        className={` ml-[-10px] flex italic font-extrabold tracking-wider font-title uppercase hover:cursor-pointer text-2xl xl:text-4xl ${textSize}`}
       >
         <h1 className="text-primary">buzz</h1>
         <h1 className="text-accent-content">map</h1>
