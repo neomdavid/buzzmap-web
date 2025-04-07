@@ -1,0 +1,83 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Koulen&display=swap");
+/* Tailwind & DaisyUI */
+@import "tailwindcss";
+@plugin "daisyui";
+
+@plugin "daisyui/theme" {
+  name: "buzzmap";
+  default: true;
+  prefersdark: false;
+  color-scheme: light;
+
+  /* Base colors */
+  --color-base-100: oklch(100% 0 0); /* White */
+  --color-base-200: oklch(
+    93.05119893547914% 0.02 229.04866483025828
+  ); /* #DBEBF3 */
+  --color-base-300: oklch(
+    97.83470637645149% 0.013 226.555362053887
+  ); /* #6093AF */
+
+  /* Base Variants */
+  --color-base-content: oklch(0.64 0.0689 233.38); /* Dark text */
+  --color-info: oklch(0.75 0.0678 237.18); /* Light hover */
+  --color-info-content: oklch(0.79 0.0497 229.12); /* Focused background */
+  --color-primary-content: oklch(30% 0.1 220); /* White text */
+
+  /* Primary - Dark Teal (#245261) */
+  --color-primary: oklch(41.3089805757118% 0.056 222.08503441096238);
+
+  /* Secondary - Yellow (#FADD37) */
+  --color-secondary: oklch(89.55551242834846% 0.172 98.61735122693187);
+  --color-secondary-content: oklch(25% 0.05 95);
+
+  /* Accent - Surface Dark Color (#4AA8C7) */
+  --color-accent: oklch(68.76464156822996% 0.099 222.82532977639508);
+  --color-accent-content: oklch(63.801247505840266% 0.069 233.38151557099383);
+
+  /* Neutral - Surface Light Color (#DBEBF3) */
+  --color-neutral: oklch(95% 0.05 220);
+  --color-neutral-content: oklch(30% 0.1 220);
+
+  /* Info - same as base-300 */
+  --color-info: oklch(75% 0.12 220);
+  --color-info-content: oklch(25% 0.05 220);
+
+  /* Success - green */
+  --color-success: oklch(75% 0.17 140);
+  --color-success-content: oklch(20% 0.05 140);
+
+  /* Warning - orange */
+  --color-warning: oklch(85% 0.21 95);
+  --color-warning-content: oklch(25% 0.05 95);
+
+  /* Error - Red */
+  --color-error: oklch(65% 0.25 30);
+  --color-error-content: oklch(98% 0 0);
+
+  /* Radius & others */
+  --radius-selector: 1rem;
+  --radius-field: 0.25rem;
+  --radius-box: 0.5rem;
+  --size-selector: 0.25rem;
+  --size-field: 0.25rem;
+  --border: 1px;
+  --depth: 1;
+  --noise: 0;
+}
+@layer base {
+  html {
+    font-size: 12px;
+    font-family: "Inter", sans-serif; /* Base font */
+  }
+
+  h1,
+  h2,
+  h3 {
+    font-family: "Koulen", sans-serif; /* Heading font */
+  }
+}
+.leaflet-container {
+  width: 100%;
+  height: 100%;
+}
