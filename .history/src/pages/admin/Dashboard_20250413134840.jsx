@@ -61,8 +61,8 @@ const Dashboard = () => {
         <ReportTable rows={reports} />
       </section>
 
-      <section className="flex mt-10 gap-4  flex-col  xl:flex-row">
-        <div className="w-full shadow-sm h-72  rounded-lg xl:flex-2 overflow-hidden">
+      <section className="flex mt-10 gap-4  flex-col 3xl:flex-row">
+        <div className="w-full shadow-sm h-72  rounded-lg overflow-hidden">
           <DengueChartCard />
         </div>
         <div className="flex gap-6 lg:flex-3">

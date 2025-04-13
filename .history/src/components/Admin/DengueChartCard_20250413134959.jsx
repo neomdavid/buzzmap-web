@@ -68,7 +68,7 @@ class CustomizedAxisTick extends PureComponent {
 
 export default function DengueChartCard() {
   return (
-    <div className="w-full bg-primary p-6  rounded-sm">
+    <div className="w-full bg-primary p-6 pt-10 pb-10  rounded-sm">
       <p className="text-2xl text-center font-semibold mb-4 text-white">
         Monthly Dengue Cases (2024)
       </p>

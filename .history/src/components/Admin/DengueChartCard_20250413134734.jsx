@@ -68,14 +68,14 @@ class CustomizedAxisTick extends PureComponent {
 
 export default function DengueChartCard() {
   return (
-    <div className="w-full bg-primary p-6  rounded-sm">
+    <div className="w-full bg-primary p-4  rounded-sm">
       <p className="text-2xl text-center font-semibold mb-4 text-white">
         Monthly Dengue Cases (2024)
       </p>
       <ResponsiveContainer width="100%" height={200}>
         <LineChart
           data={data}
-          margin={{ top: 20, right: 15, left: -25, bottom: 13 }}
+          margin={{ top: 20, right: 30, left: 30, bottom: 10 }}
         >
           <CartesianGrid strokeDasharray="0 0" vertical={false} />
           <XAxis

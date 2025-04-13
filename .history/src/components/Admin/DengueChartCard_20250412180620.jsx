@@ -28,14 +28,14 @@ const data = [
 
 class CustomizedLabel extends PureComponent {
   render() {
-    const { x, y, value } = this.props;
+    const { x, y, stroke, value } = this.props;
 
     return (
       <text
         x={x}
         y={y}
         dy={-11}
-        fill="#fff" // ✅ Label text white
+        fill="#fff" // ✅ force label to be white
         fontSize={10}
         textAnchor="middle"
       >
@@ -56,7 +56,7 @@ class CustomizedAxisTick extends PureComponent {
           y={0}
           dy={16}
           textAnchor="end"
-          fill="#fff" // ✅ X-axis tick label white
+          fill="#fff" // ✅ changed to white
           transform="rotate(-35)"
         >
           {payload.value}
@@ -68,39 +68,43 @@ class CustomizedAxisTick extends PureComponent {
 
 export default function DengueChartCard() {
   return (
-    <div className="w-full bg-primary p-6  rounded-sm">
+    <div className="w-full bg-primary max-w-4xl mx-auto p-4 rounded-sm">
       <p className="text-2xl text-center font-semibold mb-4 text-white">
         Monthly Dengue Cases (2024)
       </p>
-      <ResponsiveContainer width="100%" height={200}>
-        <LineChart
-          data={data}
-          margin={{ top: 20, right: 15, left: -25, bottom: 13 }}
-        >
+      <ResponsiveContainer width="100%" height={350}>
+        <LineChart data={data} margin={{ left: -30, bottom: 10 }}>
           <CartesianGrid strokeDasharray="0 0" vertical={false} />
           <XAxis
             dataKey="month"
             height={60}
             tick={<CustomizedAxisTick />}
-            stroke="#fff" // ✅ X-axis line white
+            stroke="#fff" // ✅ axis line white
           />
+
           <YAxis
             axisLine={false}
             tickLine={false}
-            stroke="#fff" // ✅ Y-axis line white
-            tick={{ fill: "#fff" }} // ✅ Y-axis tick labels white
+            stroke="#fff" // ✅ Y axis line white
+            tick={{ fill: "#fff" }} // ✅ tick values white (if no custom tick used)
           />
+
+          <YAxis axisLine={false} tickLine={false} />
           <Tooltip
             contentStyle={{
-              backgroundColor: "hsl(var(--popover))",
-              border: "1px solid hsl(var(--border))",
-              color: "hsl(var(--foreground))",
+              backgroundColor: "#ffffff",
+              border: "#ffffff",
+              color: "#ffffff",
             }}
           />
           <Legend
-            formatter={() => "Number of Cases"}
-            wrapperStyle={{ color: "#fff" }} // ✅ Legend label white
+            formatter={() => (
+              <span style={{ color: "#ffffff", fontWeight: 500 }}>
+                Number of Cases
+              </span>
+            )}
           />
+
           <Line
             type="monotone"
             dataKey="cases"

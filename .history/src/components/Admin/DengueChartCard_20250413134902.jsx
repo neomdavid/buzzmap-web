@@ -75,7 +75,7 @@ export default function DengueChartCard() {
       <ResponsiveContainer width="100%" height={200}>
         <LineChart
           data={data}
-          margin={{ top: 20, right: 15, left: -25, bottom: 13 }}
+          margin={{ top: 20, right: 20, left: -20, bottom: 13 }}
         >
           <CartesianGrid strokeDasharray="0 0" vertical={false} />
           <XAxis

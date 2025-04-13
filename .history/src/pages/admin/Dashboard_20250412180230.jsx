@@ -61,13 +61,13 @@ const Dashboard = () => {
         <ReportTable rows={reports} />
       </section>
 
-      <section className="flex mt-10 gap-4  flex-col  xl:flex-row">
-        <div className="w-full shadow-sm h-72  rounded-lg xl:flex-2 overflow-hidden">
-          <DengueChartCard />
+      <section className="flex mt-10 gap-4  flex-col lg:flex-row">
+        <div className="w-full shadow-sm h-52  lg:flex-2 lg:h-auto  rounded-lg overflow-hidden">
+          <DengueMap />
         </div>
         <div className="flex gap-6 lg:flex-3">
-          <div className="flex-1  min-w-[150px] shadow-sm rounded-2xl ">
-            <DengueMap />
+          <div className="flex-1  min-w-[150px] h-100 shadow-sm rounded-2xl ">
+            <DengueChartCard />
           </div>
           <div className="flex flex-col ">
             <p className="text-3xl font-extrabold text-primary mb-3">
