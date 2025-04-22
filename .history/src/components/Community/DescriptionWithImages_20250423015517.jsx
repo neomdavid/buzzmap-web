@@ -19,7 +19,7 @@ const DescriptionWithImages = () => {
         <p className="font-bold">Description</p>
 
         {/* Image Picker */}
-        <label className="btn btn-md btn-outline cursor-pointer">
+        <label className="btn btn-lg btn-outline cursor-pointer">
           📷 Add Images
           <input
             type="file"

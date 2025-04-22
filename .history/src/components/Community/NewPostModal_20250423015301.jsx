@@ -118,7 +118,7 @@ const NewPostModal = () => {
           <hr className="text-gray-300 mt-4 mb-6" />
 
           <form className="flex flex-col" onSubmit={handleSubmit}>
-            <section className="flex mb-4">
+            <section className="flex">
               <div>
                 <img
                   src={profile1}
@@ -131,8 +131,9 @@ const NewPostModal = () => {
                 {/* 📍 Location Section */}
                 <div className="flex flex-col gap-2">
                   <div className="flex items-center gap-2">
-                    <p className="font-bold text-xl">
-                      📍Location <span className="text-error">*</span>
+                    <p className="font-bold text-lg">
+                      📍Location (Quezon City only):{" "}
+                      <span className="text-error">*</span>
                     </p>
                     {(formErrors.location || locationError) && (
                       <span className="text-error text-sm">
@@ -275,7 +276,7 @@ const NewPostModal = () => {
                 {/* 🕑 Date & Time Section */}
                 <div className="flex flex-col gap-2">
                   <div className="flex items-center gap-2">
-                    <p className="font-bold text-xl">
+                    <p className="font-bold text-lg">
                       🕑Date & Time: <span className="text-error">*</span>
                     </p>
                     {formErrors.datetime && (
@@ -323,7 +324,7 @@ const NewPostModal = () => {
                 {/* ⚠️ Report Type Section */}
                 <div className="flex flex-col gap-2">
                   <div className="flex items-center gap-2">
-                    <p className="font-bold text-xl">
+                    <p className="font-bold text-lg">
                       ⚠️Report Type: <span className="text-error">*</span>
                     </p>
                     {formErrors.reportType && (
@@ -334,7 +335,7 @@ const NewPostModal = () => {
                   </div>
 
                   <select
-                    className="select select-bordered h-12 w-full text-lg"
+                    className="select select-bordered h-10 w-full text-lg"
                     value={reportType}
                     onChange={(e) => setReportType(e.target.value)}
                   >

@@ -118,7 +118,7 @@ const NewPostModal = () => {
           <hr className="text-gray-300 mt-4 mb-6" />
 
           <form className="flex flex-col" onSubmit={handleSubmit}>
-            <section className="flex mb-4">
+            <section className="flex">
               <div>
                 <img
                   src={profile1}
@@ -131,8 +131,9 @@ const NewPostModal = () => {
                 {/* 📍 Location Section */}
                 <div className="flex flex-col gap-2">
                   <div className="flex items-center gap-2">
-                    <p className="font-bold text-xl">
-                      📍Location <span className="text-error">*</span>
+                    <p className="font-bold">
+                      📍Location (Quezon City only):{" "}
+                      <span className="text-error">*</span>
                     </p>
                     {(formErrors.location || locationError) && (
                       <span className="text-error text-sm">
@@ -144,7 +145,7 @@ const NewPostModal = () => {
                   <div className="flex gap-4 mb-2">
                     <button
                       type="button"
-                      className={`btn btn-lg ${
+                      className={`btn btn-sm ${
                         locationMethod === "map" ? "btn-primary" : "btn-ghost"
                       }`}
                       onClick={() => setLocationMethod("map")}
@@ -153,7 +154,7 @@ const NewPostModal = () => {
                     </button>
                     <button
                       type="button"
-                      className={`btn btn-lg ${
+                      className={`btn btn-sm ${
                         locationMethod === "manual"
                           ? "btn-primary"
                           : "btn-ghost"
@@ -177,11 +178,11 @@ const NewPostModal = () => {
                       <div className="grid grid-cols-2 gap-4">
                         <div>
                           <label className="label">
-                            <span className="label-text mb-1">City</span>
+                            <span className="label-text">City</span>
                           </label>
                           <input
                             type="text"
-                            className="input input-bordered py-6  w-full text-lg"
+                            className="input input-bordered w-full"
                             value="Quezon City"
                             readOnly
                           />
@@ -189,11 +190,11 @@ const NewPostModal = () => {
 
                         <div>
                           <label className="label">
-                            <span className="label-text mb-1">Barangay</span>
+                            <span className="label-text">Barangay</span>
                           </label>
                           <input
                             type="text"
-                            className="input input-bordered py-6  w-full text-lg"
+                            className="input input-bordered w-full"
                             value={barangay}
                             onChange={(e) => setBarangay(e.target.value)}
                             placeholder="Select on map or enter manually"
@@ -203,11 +204,11 @@ const NewPostModal = () => {
 
                       <div>
                         <label className="label">
-                          <span className="label-text mb-1">Coordinates</span>
+                          <span className="label-text">Coordinates</span>
                         </label>
                         <input
                           type="text"
-                          className="input input-bordered py-6 w-full text-lg"
+                          className="input input-bordered w-full"
                           value={coordinates}
                           readOnly
                           placeholder="Select on map"
@@ -219,11 +220,11 @@ const NewPostModal = () => {
                       <div className="grid grid-cols-2 gap-4">
                         <div>
                           <label className="label">
-                            <span className="label-text mb-1">City</span>
+                            <span className="label-text">City</span>
                           </label>
                           <input
                             type="text"
-                            className="input input-bordered py-6 w-full text-lg"
+                            className="input input-bordered w-full"
                             value="Quezon City"
                             readOnly
                           />
@@ -231,11 +232,11 @@ const NewPostModal = () => {
 
                         <div>
                           <label className="label">
-                            <span className="label-text mb-1">Barangay</span>
+                            <span className="label-text">Barangay</span>
                           </label>
                           <input
                             type="text"
-                            className="input input-bordered py-6 w-full text-lg"
+                            className="input input-bordered w-full"
                             value={barangay}
                             onChange={(e) => setBarangay(e.target.value)}
                             placeholder="Enter barangay"
@@ -245,12 +246,12 @@ const NewPostModal = () => {
 
                       <div>
                         <label className="label">
-                          <span className="label-text mb-1">Coordinates</span>
+                          <span className="label-text">Coordinates</span>
                         </label>
                         <div className="flex gap-2">
                           <input
                             type="text"
-                            className="input input-bordered py-6 flex-1 text-lg"
+                            className="input input-bordered flex-1"
                             placeholder="Latitude, Longitude"
                             value={coordinates}
                             onChange={(e) => setCoordinates(e.target.value)}
@@ -258,7 +259,7 @@ const NewPostModal = () => {
                           <button
                             type="button"
                             onClick={getCurrentLocation}
-                            className="btn btn-ghost text-lg"
+                            className="btn btn-ghost"
                           >
                             Use Current
                           </button>
@@ -275,7 +276,7 @@ const NewPostModal = () => {
                 {/* 🕑 Date & Time Section */}
                 <div className="flex flex-col gap-2">
                   <div className="flex items-center gap-2">
-                    <p className="font-bold text-xl">
+                    <p className="font-bold">
                       🕑Date & Time: <span className="text-error">*</span>
                     </p>
                     {formErrors.datetime && (
@@ -288,11 +289,11 @@ const NewPostModal = () => {
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className="label">
-                        <span className="label-text mb-1">Date</span>
+                        <span className="label-text">Date</span>
                       </label>
                       <input
                         type="date"
-                        className="input input-bordered py-6 w-full text-lg"
+                        className="input input-bordered w-full"
                         value={date}
                         onChange={(e) => setDate(e.target.value)}
                       />
@@ -300,11 +301,11 @@ const NewPostModal = () => {
 
                     <div>
                       <label className="label">
-                        <span className="label-text mb-1">Time</span>
+                        <span className="label-text">Time</span>
                       </label>
                       <input
                         type="time"
-                        className="input input-bordered py-6 w-full text-lg"
+                        className="input input-bordered w-full"
                         value={time}
                         onChange={(e) => setTime(e.target.value)}
                       />
@@ -314,7 +315,7 @@ const NewPostModal = () => {
                   <button
                     type="button"
                     onClick={setNow}
-                    className="btn btn-ghost btn-lg self-start"
+                    className="btn btn-ghost btn-sm self-start"
                   >
                     Use Current Date & Time
                   </button>
@@ -323,7 +324,7 @@ const NewPostModal = () => {
                 {/* ⚠️ Report Type Section */}
                 <div className="flex flex-col gap-2">
                   <div className="flex items-center gap-2">
-                    <p className="font-bold text-xl">
+                    <p className="font-bold">
                       ⚠️Report Type: <span className="text-error">*</span>
                     </p>
                     {formErrors.reportType && (
@@ -334,7 +335,7 @@ const NewPostModal = () => {
                   </div>
 
                   <select
-                    className="select select-bordered h-12 w-full text-lg"
+                    className="select select-bordered w-full"
                     value={reportType}
                     onChange={(e) => setReportType(e.target.value)}
                   >
