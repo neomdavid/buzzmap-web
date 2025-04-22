@@ -1,8 +1,12 @@
-// src/components/DescriptionWithImages.js
-import { useState } from "react";
+import { useRef } from "react";
 
-const DescriptionWithImages = () => {
-  const [selectedImages, setSelectedImages] = useState([]);
+function DescriptionWithImages({
+  description,
+  setDescription,
+  selectedImages,
+  setSelectedImages,
+}) {
+  const fileInputRef = useRef();
 
   const handleImageChange = (e) => {
     const files = Array.from(e.target.files);
@@ -18,10 +22,10 @@ const DescriptionWithImages = () => {
       <div className="flex justify-between items-center">
         <p className="font-bold">Description</p>
 
-        {/* Image Picker */}
         <label className="btn btn-sm btn-outline cursor-pointer">
           📷 Add Images
           <input
+            ref={fileInputRef}
             type="file"
             accept="image/*"
             multiple
@@ -35,6 +39,8 @@ const DescriptionWithImages = () => {
         className="p-2 rounded-md resize-none"
         rows={4}
         placeholder="What did you see? Is there anything you'd like to share?"
+        value={description}
+        onChange={(e) => setDescription(e.target.value)}
       ></textarea>
 
       {selectedImages.length > 0 && (
@@ -60,6 +66,6 @@ const DescriptionWithImages = () => {
       )}
     </div>
   );
-};
+}
 
 export default DescriptionWithImages;

@@ -16,7 +16,6 @@ import {
   CustomSearchBar,
   SecondaryButton,
   DescriptionWithImages,
-  NewPostModal,
 } from "../../components";
 
 const Community = () => {
@@ -72,7 +71,7 @@ const Community = () => {
           </button>
         </section>
         {/* POST MODAL */}
-        <NewPostModal />
+
         <section className="bg-base-200 px-8 py-6 rounded-lg flex flex-col gap-y-6">
           <PostCard
             profileImage={profile1}
