@@ -53,7 +53,6 @@ const MapPicker = ({ onLocationSelect }) => {
   }, []);
 
   // Create or update the marker when position changes
-  // Create or update the marker when position changes
   useEffect(() => {
     const loadMarker = async () => {
       if (isLoaded && markerPosition && mapRef.current) {
@@ -146,7 +145,7 @@ const MapPicker = ({ onLocationSelect }) => {
         zoom={13}
         onClick={handleMapClick}
         onLoad={onLoad}
-        mapId="82d912d6b8b4c779 " // <-- your new Map ID here
+        mapId="89aa6eb059a639fc" // <-- your new Map ID here
       >
         <Polygon
           paths={qcPolygonPaths}

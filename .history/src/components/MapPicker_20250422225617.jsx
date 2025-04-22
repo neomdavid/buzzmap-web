@@ -53,22 +53,17 @@ const MapPicker = ({ onLocationSelect }) => {
   }, []);
 
   // Create or update the marker when position changes
-  // Create or update the marker when position changes
   useEffect(() => {
-    const loadMarker = async () => {
-      if (isLoaded && markerPosition && mapRef.current) {
-        try {
-          // Clean up any existing marker
-          if (markerRef.current) {
-            markerRef.current.map = null;
-          }
+    if (isLoaded && markerPosition && mapRef.current) {
+      try {
+        // Clean up existing marker
+        if (markerRef.current) {
+          markerRef.current.map = null;
+        }
 
-          // Import marker library dynamically
-          const { AdvancedMarkerElement } = await google.maps.importLibrary(
-            "marker"
-          );
-
-          // Create pin element
+        // Check if the marker module is available
+        if (window.google && window.google.maps && window.google.maps.marker) {
+          // Create a pin element for the marker
           const pinElement = document.createElement("div");
           pinElement.className = "pin";
           pinElement.style.width = "30px";
@@ -80,6 +75,7 @@ const MapPicker = ({ onLocationSelect }) => {
           pinElement.style.top = "-15px";
           pinElement.style.left = "-15px";
 
+          // Add a center dot
           const pinInner = document.createElement("div");
           pinInner.style.width = "14px";
           pinInner.style.height = "14px";
@@ -91,20 +87,34 @@ const MapPicker = ({ onLocationSelect }) => {
 
           pinElement.appendChild(pinInner);
 
-          // Create marker using the advanced marker element
-          markerRef.current = new AdvancedMarkerElement({
-            position: markerPosition,
-            map: mapRef.current,
-            content: pinElement,
-            title: "Selected Location",
-          });
-        } catch (err) {
-          console.error("Failed to load marker library or place marker:", err);
-        }
-      }
-    };
+          // Create the advanced marker
+          const { AdvancedMarkerElement } = window.google.maps.marker;
+          if (AdvancedMarkerElement) {
+            markerRef.current = new AdvancedMarkerElement({
+              position: markerPosition,
+              map: mapRef.current,
+              content: pinElement,
+              title: "Selected Location",
+            });
 
-    loadMarker();
+            console.log("Advanced marker created:", markerRef.current);
+          } else {
+            console.error("AdvancedMarkerElement not available");
+
+            // Fallback to traditional marker if needed
+            markerRef.current = new window.google.maps.Marker({
+              position: markerPosition,
+              map: mapRef.current,
+              title: "Selected Location",
+            });
+          }
+        } else {
+          console.error("Google Maps marker module not available");
+        }
+      } catch (error) {
+        console.error("Error creating marker:", error);
+      }
+    }
   }, [isLoaded, markerPosition]);
 
   // Handle map click event and check if location is inside Quezon City
@@ -146,7 +156,6 @@ const MapPicker = ({ onLocationSelect }) => {
         zoom={13}
         onClick={handleMapClick}
         onLoad={onLoad}
-        mapId="82d912d6b8b4c779 " // <-- your new Map ID here
       >
         <Polygon
           paths={qcPolygonPaths}
