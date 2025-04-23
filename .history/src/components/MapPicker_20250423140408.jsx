@@ -31,6 +31,7 @@ export default function MapPicker({ onLocationSelect }) {
   const [selectedBarangay, setSelectedBarangay] = useState(null);
   const [barangayData, setBarangayData] = useState(null);
   const [isFullScreen, setIsFullScreen] = useState(false); // Full-screen mode state
+  const [isLocationInQC, setIsLocationInQC] = useState(true); // QC boundary check
   const mapRef = useRef(null);
   const { isLoaded } = useGoogleMaps();
 
@@ -77,6 +78,7 @@ export default function MapPicker({ onLocationSelect }) {
         const p = { lat: 14.676, lng: 121.0437 };
         setCurrentPosition(p);
         setMarkerPosition(p);
+        handleSelection(p);
       }
     );
   }, []);
@@ -88,8 +90,11 @@ export default function MapPicker({ onLocationSelect }) {
       coords.lng < QC_BOUNDS.west ||
       coords.lng > QC_BOUNDS.east
     ) {
+      setIsLocationInQC(false);
       alert("Please select a location within Quezon City");
       return false;
+    } else {
+      setIsLocationInQC(true);
     }
 
     if (barangayData) {
@@ -129,6 +134,13 @@ export default function MapPicker({ onLocationSelect }) {
 
   const toggleFullScreen = () => {
     setIsFullScreen((prev) => !prev);
+  };
+
+  const handleUseCurrentLocation = () => {
+    if (isLocationInQC && currentPosition) {
+      setMarkerPosition(currentPosition);
+      handleSelection(currentPosition);
+    }
   };
 
   if (!isLoaded || !currentPosition) return <p>Loading map...</p>;
@@ -192,6 +204,25 @@ export default function MapPicker({ onLocationSelect }) {
           </option>
         ))}
       </select>
+
+      {/* Use Current Location Button */}
+      <button
+        onClick={handleUseCurrentLocation}
+        disabled={!isLocationInQC}
+        style={{
+          position: "absolute",
+          top: 50,
+          right: 10,
+          padding: "6px 10px",
+          fontSize: "14px",
+          backgroundColor: isLocationInQC ? "#4CAF50" : "#ccc",
+          border: "1px solid #ccc",
+          borderRadius: "6px",
+          zIndex: 1000,
+        }}
+      >
+        Use Current Location
+      </button>
 
       {/* Risk Level Legend */}
       <div

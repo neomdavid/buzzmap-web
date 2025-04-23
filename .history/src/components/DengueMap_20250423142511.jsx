@@ -11,11 +11,11 @@ const DengueMap = ({ className = "" }) => {
   ];
 
   return (
-    <div className={`w-full h-full ${className}`}>
+    <div className={`w-full h-full ${className} z-[1]`}>
       <MapContainer
         center={[14.676, 121.0437]}
         zoom={13}
-        className="w-full h-full rounded-sm "
+        className="w-full h-full rounded-sm"
       >
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'

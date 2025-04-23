@@ -11,10 +11,10 @@ const Mapping = () => {
       <CustomDropDown
         options={["Quezon City", "Manila", "Makati", "Pasig"]}
         onSelect={(value) => console.log("Selected location:", value)}
-        className="mt-4 z-[1]"
+        className="mt-4"
       />
-      <div className="w-full z-100 h-[68vh] mt-4 rounded-md shadow-md z-[10] ">
-        <DengueMap className="w-full h-full " />
+      <div className="w-full z-100 h-[68vh] mt-4 rounded-md shadow-md ">
+        <DengueMap className="w-full h-full z-[-20]" />
       </div>
     </div>
   );

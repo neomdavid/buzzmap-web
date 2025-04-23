@@ -1,3 +1,4 @@
+// components/MapPicker.jsx
 import React, { useEffect, useState, useRef } from "react";
 import { GoogleMap, Polygon, Marker, Rectangle } from "@react-google-maps/api";
 import { useGoogleMaps } from "./GoogleMapsProvider";
@@ -5,7 +6,7 @@ import * as turf from "@turf/turf";
 
 const containerStyle = {
   width: "100%",
-  height: "400px", // Default height for the non-fullscreen map
+  height: "400px",
 };
 
 const QC_BOUNDS = {
@@ -30,7 +31,6 @@ export default function MapPicker({ onLocationSelect }) {
   const [qcPolygonPaths, setQcPolygonPaths] = useState([]);
   const [selectedBarangay, setSelectedBarangay] = useState(null);
   const [barangayData, setBarangayData] = useState(null);
-  const [isFullScreen, setIsFullScreen] = useState(false); // Full-screen mode state
   const mapRef = useRef(null);
   const { isLoaded } = useGoogleMaps();
 
@@ -127,32 +127,10 @@ export default function MapPicker({ onLocationSelect }) {
     }
   };
 
-  const toggleFullScreen = () => {
-    setIsFullScreen((prev) => !prev);
-  };
-
   if (!isLoaded || !currentPosition) return <p>Loading map...</p>;
 
   return (
     <div style={{ position: "relative" }}>
-      {/* Fullscreen Toggle Button */}
-      <button
-        onClick={toggleFullScreen}
-        style={{
-          position: "absolute",
-          top: 10,
-          right: 10,
-          zIndex: 1000,
-          padding: "6px 10px",
-          fontSize: "14px",
-          background: "#fff",
-          border: "1px solid #ccc",
-          borderRadius: "6px",
-        }}
-      >
-        {isFullScreen ? "Exit Full Screen" : "Full Screen"}
-      </button>
-
       {/* Search Dropdown */}
       <select
         onChange={(e) => {
@@ -247,10 +225,7 @@ export default function MapPicker({ onLocationSelect }) {
       </div>
 
       <GoogleMap
-        mapContainerStyle={{
-          ...containerStyle,
-          height: isFullScreen ? "100vh" : "400px", // Adjust height based on fullscreen state
-        }}
+        mapContainerStyle={containerStyle}
         center={currentPosition}
         zoom={13}
         onClick={handleMapClick}
@@ -258,15 +233,17 @@ export default function MapPicker({ onLocationSelect }) {
       >
         {/* QC boundary */}
         <Polygon
-          paths={qcPolygonPaths}
+          key={`${index}-${i}`}
+          paths={path}
           options={{
-            strokeColor: "#FF0000",
-            strokeOpacity: 0.8,
-            strokeWeight: 2,
-            fillColor: "#FF0000",
-            fillOpacity: 0.1,
-            zIndex: 1,
+            strokeColor: "#333",
+            strokeOpacity: 0.6,
+            strokeWeight: 1,
+            fillOpacity: 0.4,
+            fillColor: feature.properties.riskColor,
+            zIndex: 0,
           }}
+          onClick={() => setSelectedBarangay(feature)}
         />
 
         {/* Transparent overlay */}

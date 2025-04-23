@@ -31,6 +31,7 @@ export default function MapPicker({ onLocationSelect }) {
   const [selectedBarangay, setSelectedBarangay] = useState(null);
   const [barangayData, setBarangayData] = useState(null);
   const [isFullScreen, setIsFullScreen] = useState(false); // Full-screen mode state
+  const [isLocationInQC, setIsLocationInQC] = useState(false); // New state for QC location check
   const mapRef = useRef(null);
   const { isLoaded } = useGoogleMaps();
 
@@ -69,14 +70,29 @@ export default function MapPicker({ onLocationSelect }) {
     navigator.geolocation.getCurrentPosition(
       ({ coords }) => {
         const p = { lat: coords.latitude, lng: coords.longitude };
+        console.log("Detected Location: ", p); // Log the detected location
+
         setCurrentPosition(p);
         setMarkerPosition(p);
+
+        // Check if location is within QC bounds
+        const isInsideQC =
+          p.lat >= QC_BOUNDS.south &&
+          p.lat <= QC_BOUNDS.north &&
+          p.lng >= QC_BOUNDS.west &&
+          p.lng <= QC_BOUNDS.east;
+
+        console.log("Is Inside QC: ", isInsideQC); // Log if the location is inside QC
+
+        setIsLocationInQC(isInsideQC);
+
         handleSelection(p);
       },
       () => {
         const p = { lat: 14.676, lng: 121.0437 };
         setCurrentPosition(p);
         setMarkerPosition(p);
+        setIsLocationInQC(false); // Default to false if location cannot be retrieved
       }
     );
   }, []);
@@ -151,6 +167,26 @@ export default function MapPicker({ onLocationSelect }) {
         }}
       >
         {isFullScreen ? "Exit Full Screen" : "Full Screen"}
+      </button>
+
+      {/* Use Current Location Button */}
+      <button
+        onClick={() => handleSelection(currentPosition)}
+        disabled={!isLocationInQC} // Disable if not in QC
+        style={{
+          position: "absolute",
+          top: 50,
+          left: "50%",
+          transform: "translateX(-50%)",
+          zIndex: 1000,
+          padding: "6px 10px",
+          fontSize: "14px",
+          background: isLocationInQC ? "#38a169" : "#ccc", // Green if in QC, gray if not
+          border: "1px solid #ccc",
+          borderRadius: "6px",
+        }}
+      >
+        Use Current Location
       </button>
 
       {/* Search Dropdown */}

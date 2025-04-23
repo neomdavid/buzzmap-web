@@ -5,7 +5,12 @@ import * as turf from "@turf/turf";
 
 const containerStyle = {
   width: "100%",
-  height: "400px", // Default height for the non-fullscreen map
+  height: "400px",
+};
+
+const fullscreenStyle = {
+  width: "100%",
+  height: "100vh", // Make the map full height when in fullscreen mode
 };
 
 const QC_BOUNDS = {
@@ -30,7 +35,7 @@ export default function MapPicker({ onLocationSelect }) {
   const [qcPolygonPaths, setQcPolygonPaths] = useState([]);
   const [selectedBarangay, setSelectedBarangay] = useState(null);
   const [barangayData, setBarangayData] = useState(null);
-  const [isFullScreen, setIsFullScreen] = useState(false); // Full-screen mode state
+  const [isFullscreen, setIsFullscreen] = useState(false); // Track fullscreen state
   const mapRef = useRef(null);
   const { isLoaded } = useGoogleMaps();
 
@@ -127,33 +132,38 @@ export default function MapPicker({ onLocationSelect }) {
     }
   };
 
-  const toggleFullScreen = () => {
-    setIsFullScreen((prev) => !prev);
+  const toggleFullscreen = () => {
+    if (isFullscreen) {
+      document.exitFullscreen();
+    } else {
+      document.documentElement.requestFullscreen();
+    }
+    setIsFullscreen(!isFullscreen);
   };
 
   if (!isLoaded || !currentPosition) return <p>Loading map...</p>;
 
   return (
     <div style={{ position: "relative" }}>
-      {/* Fullscreen Toggle Button */}
+      {/* Fullscreen button */}
       <button
-        onClick={toggleFullScreen}
+        onClick={toggleFullscreen}
         style={{
           position: "absolute",
           top: 10,
           right: 10,
           zIndex: 1000,
-          padding: "6px 10px",
-          fontSize: "14px",
-          background: "#fff",
+          backgroundColor: "#fff",
           border: "1px solid #ccc",
-          borderRadius: "6px",
+          padding: "8px 12px",
+          borderRadius: "4px",
+          boxShadow: "0 2px 4px rgba(0,0,0,0.2)",
         }}
       >
-        {isFullScreen ? "Exit Full Screen" : "Full Screen"}
+        {isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
       </button>
 
-      {/* Search Dropdown */}
+      {/* Barangay search dropdown */}
       <select
         onChange={(e) => {
           const barangayName = e.target.value;
@@ -197,14 +207,15 @@ export default function MapPicker({ onLocationSelect }) {
       <div
         style={{
           position: "absolute",
-          top: 10,
-          right: 10,
+          bottom: 10,
+          left: 10,
           backgroundColor: "white",
           padding: "8px 12px",
           borderRadius: "8px",
           boxShadow: "0 2px 6px rgba(0,0,0,0.2)",
           fontSize: "14px",
           zIndex: 1000,
+          maxWidth: "250px", // Restrict width to prevent it from taking too much space
         }}
       >
         <strong>Risk Level</strong>
@@ -247,10 +258,7 @@ export default function MapPicker({ onLocationSelect }) {
       </div>
 
       <GoogleMap
-        mapContainerStyle={{
-          ...containerStyle,
-          height: isFullScreen ? "100vh" : "400px", // Adjust height based on fullscreen state
-        }}
+        mapContainerStyle={isFullscreen ? fullscreenStyle : containerStyle}
         center={currentPosition}
         zoom={13}
         onClick={handleMapClick}

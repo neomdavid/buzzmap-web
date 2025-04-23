@@ -2,7 +2,7 @@ import { useState } from "react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { navLinks } from "../utils";
 import LogoNamed from "./LogoNamed";
-import { Menu, X } from "lucide-react";
+import { Menu, X, UserCircle } from "lucide-react";
 import { useSelector } from "react-redux";
 import { logout } from "../features/authSlice.js";
 import { useDispatch } from "react-redux";
@@ -52,14 +52,14 @@ const Navbar = () => {
 
   const renderProfile = (darkMode = false) => (
     <>
-      <div className="dropdown dropdown-end z-[10000]">
+      <div className="dropdown dropdown-end z-1000000">
         <div
           tabIndex="0"
           role="button"
-          className="flex border-1 border-gray-300 rounded-full p-3 gap-1 items-center hover:cursor-pointer hover:border-2 hover:border-gray-200 transition-all duration-200"
+          className="flex border-1 border-gray-300 rounded-full p-3 gap-1 items-center hover:cursor-pointer hover:border-2 hover:border-gray-200 transition-all duration-200  "
         >
           <span
-            className={`text-sm font-semibold ${
+            className={`text-sm font-semibold  ${
               darkMode ? "text-white" : "text-primary"
             }`}
           >
@@ -69,11 +69,11 @@ const Navbar = () => {
         </div>
         <ul
           tabIndex="0"
-          className="dropdown-content mt-2.5 menu bg-primary text-white rounded-xl  z-[10000] w-120 shadow-md flex flex-col justify-center"
+          className="dropdown-content mt-2.5 menu bg-primary text-white rounded-xl z-1 w-120  shadow-md flex flex-col justify-center "
         >
           <div className="p-6 flex flex-col gap-1">
             <div className="w-full flex justify-center mb-3">
-              <IconUserCircle size={63} className="text-white" />
+              <IconUserCircle size={63} className="text-white " />
             </div>
             <p className="text-center font-bold text-2xl">{user.name}</p>
             <p className="text-center font-light text-white text-xl">
@@ -97,15 +97,6 @@ const Navbar = () => {
     </>
   );
 
-  const renderLoginButton = () => (
-    <button
-      onClick={() => navigate("/login")}
-      className="text-primary font-semibold py-2 px-4 rounded-lg border border-primary hover:bg-primary hover:text-white transition-all duration-300"
-    >
-      Login
-    </button>
-  );
-
   const baseClass =
     "z-50 fixed top-0 left-0 right-0 flex justify-between items-center px-6 py-4 lg:px-10";
 
@@ -115,7 +106,7 @@ const Navbar = () => {
         <LogoNamed theme="dark" />
         <div className="hidden md:flex items-center gap-x-6">
           {renderLinks()}
-          {user.name !== "Guest" ? renderProfile(true) : renderLoginButton()}
+          {renderProfile(true)}
         </div>
         <button className="md:hidden text-white" onClick={toggleDrawer}>
           {isOpen ? <X size={28} /> : <Menu size={28} />}
@@ -124,7 +115,7 @@ const Navbar = () => {
         {isOpen && (
           <div className="absolute top-full left-0 w-full bg-primary px-6 py-4 flex flex-col gap-y-4 md:hidden">
             {renderLinks(true)}
-            {user.name !== "Guest" ? renderProfile(true) : renderLoginButton()}
+            {renderProfile(true)}
           </div>
         )}
       </nav>
@@ -133,7 +124,7 @@ const Navbar = () => {
     return (
       <nav className="z-50 fixed right-6 top-6 text-white text-md bg-primary py-3.5 px-6 rounded-2xl shadow-md flex items-center gap-x-6">
         {renderLinks()}
-        {user.name !== "Guest" ? renderProfile(true) : renderLoginButton()}
+        {renderProfile(true)}
       </nav>
     );
   } else {
@@ -142,7 +133,7 @@ const Navbar = () => {
         <LogoNamed />
         <div className="hidden md:flex items-center gap-x-6">
           {renderLinks()}
-          {user.name !== "Guest" ? renderProfile() : renderLoginButton()}
+          {renderProfile()}
         </div>
         <button className="md:hidden text-primary" onClick={toggleDrawer}>
           {isOpen ? <X size={28} /> : <Menu size={28} />}
@@ -151,7 +142,7 @@ const Navbar = () => {
         {isOpen && (
           <div className="absolute top-full left-0 w-full bg-white px-6 py-4 flex flex-col gap-y-4 md:hidden shadow-md">
             {renderLinks(true)}
-            {user.name !== "Guest" ? renderProfile() : renderLoginButton()}
+            {renderProfile()}
           </div>
         )}
       </nav>

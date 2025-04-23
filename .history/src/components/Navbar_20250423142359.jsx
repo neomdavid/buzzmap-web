@@ -52,7 +52,7 @@ const Navbar = () => {
 
   const renderProfile = (darkMode = false) => (
     <>
-      <div className="dropdown dropdown-end z-[10000]">
+      <div className="dropdown dropdown-end z-1000000">
         <div
           tabIndex="0"
           role="button"
@@ -69,7 +69,7 @@ const Navbar = () => {
         </div>
         <ul
           tabIndex="0"
-          className="dropdown-content mt-2.5 menu bg-primary text-white rounded-xl  z-[10000] w-120 shadow-md flex flex-col justify-center"
+          className="dropdown-content mt-2.5 menu bg-primary text-white rounded-xl z-1 w-120 shadow-md flex flex-col justify-center"
         >
           <div className="p-6 flex flex-col gap-1">
             <div className="w-full flex justify-center mb-3">
