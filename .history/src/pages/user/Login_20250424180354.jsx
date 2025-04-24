@@ -82,6 +82,7 @@ const Login = () => {
             <div className="flex justify-center  items-center gap-x-2">
               <input
                 type="checkbox"
+                defaultChecked
                 className="checkbox checkbox-lg border-primary bg-transparent checked:bg-transparent checked:text-primary checked:border-primary "
               />
               <label className="text-md lg:text-[14px]">Remember Me</label>

@@ -49,7 +49,7 @@ const Login = () => {
       />
 
       <section
-        className="w-[87vw] h-[80vh] max-w-220 mt-25 rounded-2xl shadow-[4px_4px_8px_rgba(0,0,0,0.40)]  text-primary  bg-white py-12 px-[7%] lg:px-25 flex flex-col justify-center items-center text-center text-xl lg:text-2xl
+        className="w-[87vw] h-[80vh] max-w-220 mt-25 rounded-2xl shadow-[4px_4px_8px_rgba(0,0,0,0.40)]  text-primary  bg-white py-12 px-[7%] lg:px-25 flex flex-col justify-center items-center text-center text-lg lg:text-xl
       lg:shadow-none lg:max-w-none lg:m-0 lg:rounded-none lg:absolute lg:right-0 lg:top-0  lg:h-[100vh] lg:w-[60vw] xl:w-250  "
       >
         <h1 className="mb-4 text-7xl lg:text-8xl ">Welcome back!</h1>
@@ -82,6 +82,7 @@ const Login = () => {
             <div className="flex justify-center  items-center gap-x-2">
               <input
                 type="checkbox"
+                defaultChecked
                 className="checkbox checkbox-lg border-primary bg-transparent checked:bg-transparent checked:text-primary checked:border-primary "
               />
               <label className="text-md lg:text-[14px]">Remember Me</label>

@@ -6,25 +6,20 @@ const CustomFormInput = ({
   type = "text",
   value,
   onChange,
-  theme = "light",
+  theme = "light", // Optional if you want to rely purely on Tailwind dark mode
 }) => {
   const [isFocused, setIsFocused] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
   const isPassword = type === "password";
+
   const isDark = theme === "dark";
 
   return (
     <div className="w-full text-left relative">
-      <label
-        className={`block mb-2 font-semibold text-xl ${
-          isDark ? "text-white" : "text-black"
-        }`}
-      >
-        {label}
-      </label>
+      <label className="block mb-2 font-semibold text-xl">{label}</label>
       <div
-        className={`relative rounded-xl px-3 py-2 transition-all duration-200
+        className={`relative border rounded-xl px-3 py-2 transition-all duration-200
           ${
             isFocused
               ? isDark
@@ -32,8 +27,7 @@ const CustomFormInput = ({
                 : "outline outline-primary"
               : ""
           }
-          ${!isFocused ? (isDark ? "border-white" : "border-gray-300") : ""}
-          border
+          ${!isFocused ? (isDark ? "border-gray-600" : "border-gray-300") : ""}
           focus-within:outline focus-within:outline-2 ${
             isDark
               ? "focus-within:outline-base-200"
@@ -46,9 +40,7 @@ const CustomFormInput = ({
           onChange={onChange}
           onFocus={() => setIsFocused(true)}
           onBlur={() => setIsFocused(false)}
-          className={`w-full text-xl p-2 outline-none bg-transparent text-base ${
-            isDark ? "text-white placeholder-gray-400" : "text-black"
-          }`}
+          className="w-full text-xl p-2 outline-none bg-transparent text-base text-black dark:text-white"
         />
         {isPassword && (
           <span

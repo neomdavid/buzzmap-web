@@ -93,6 +93,7 @@ const SignUp = () => {
           <div className="mt-4 mb-4 flex justify-center  items-center gap-x-2">
             <input
               type="checkbox"
+              defaultChecked
               className="checkbox checkbox-lg border-white bg-transparent checked:bg-transparent checked:text-white checked:border-white "
             />
             <label className="text-md lg:text-[14px]">
