@@ -75,7 +75,10 @@ const Landing = () => {
       />
 
       <section className="flex flex-col lg:flex-row  justify-center max-w-[95vw] m-auto px-6 sm:px-6 gap-x-4">
-        <div className="rounded-xl overflow-hidden h-[400px] lg:h-[500px] mb-6 lg:mb-0 lg:flex-13 flex items-center justify-center bg-gray-100">
+        <Link
+          to="/mapping"
+          className="rounded-xl overflow-hidden h-[400px] lg:h-[500px] mb-6 lg:mb-0 lg:flex-13 flex items-center justify-center bg-gray-100"
+        >
           <DengueMap
             style={{
               width: "100%",
@@ -83,7 +86,7 @@ const Landing = () => {
               borderRadius: "12px",
             }}
           />
-        </div>
+        </Link>
         <div className="flex flex-col flex-10  mx-6 items-center text-center lg:items-end lg:text-right">
           <Heading
             text="see the /danger zones/"

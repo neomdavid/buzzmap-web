@@ -1,7 +1,14 @@
 import React, { useEffect, useState, useRef } from "react";
-import { GoogleMap, Polygon, Rectangle } from "@react-google-maps/api";
+import {
+  GoogleMap,
+  Polygon,
+  Marker,
+  Rectangle,
+  InfoWindow,
+} from "@react-google-maps/api";
 import { useGoogleMaps } from "./GoogleMapsProvider";
 import * as turf from "@turf/turf";
+import { toastWarn } from "../utils.jsx";
 
 const containerStyle = {
   width: "100%",
@@ -13,11 +20,6 @@ const QC_BOUNDS = {
   south: 14.4795,
   east: 121.1535,
   west: 121.022,
-};
-
-const QC_CENTER = {
-  lat: 14.676,
-  lng: 121.0437,
 };
 
 const RISK_LEVELS = ["High", "Medium", "Low"];
@@ -33,12 +35,15 @@ const assignRiskLevel = () => {
 };
 
 const DengueMap = () => {
+  const [currentPosition, setCurrentPosition] = useState(null);
+  const [markerPosition, setMarkerPosition] = useState(null);
   const [qcPolygonPaths, setQcPolygonPaths] = useState([]);
   const [barangayData, setBarangayData] = useState(null);
   const mapRef = useRef(null);
   const { isLoaded } = useGoogleMaps();
 
   useEffect(() => {
+    // Load QC outline
     fetch("/quezon_city_boundaries.geojson")
       .then((res) => res.json())
       .then((data) => {
@@ -48,6 +53,7 @@ const DengueMap = () => {
         setQcPolygonPaths(coords);
       });
 
+    // Load and assign random risk to barangays
     fetch("/quezon_barangays_boundaries.geojson")
       .then((res) => res.json())
       .then((data) => {
@@ -67,16 +73,38 @@ const DengueMap = () => {
         };
         setBarangayData(colored);
       });
+
+    // Set user location or fallback to QC
+    navigator.geolocation.getCurrentPosition(
+      ({ coords }) => {
+        const p = { lat: coords.latitude, lng: coords.longitude };
+        setCurrentPosition(p);
+        setMarkerPosition(p);
+      },
+      () => {
+        const fallback = { lat: 14.676, lng: 121.0437 };
+        setCurrentPosition(fallback);
+        setMarkerPosition(fallback);
+        toastWarn("You are outside Quezon City! Default location set to QC.");
+        mapRef.current?.panTo(fallback);
+      }
+    );
   }, []);
 
-  if (!isLoaded) return <p>Loading map...</p>;
+  const handleMapClick = (e) => {
+    const coords = { lat: e.latLng.lat(), lng: e.latLng.lng() };
+    setMarkerPosition(coords);
+  };
+
+  if (!isLoaded || !currentPosition) return <p>Loading map...</p>;
 
   return (
     <div className="w-full h-screen">
       <GoogleMap
         mapContainerStyle={containerStyle}
-        center={QC_CENTER}
-        zoom={12}
+        center={currentPosition}
+        zoom={13}
+        onClick={handleMapClick}
         onLoad={(map) => (mapRef.current = map)}
       >
         <Polygon
@@ -129,6 +157,8 @@ const DengueMap = () => {
             );
           });
         })}
+
+        {markerPosition && <Marker position={markerPosition} />}
       </GoogleMap>
     </div>
   );

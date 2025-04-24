@@ -1,11 +1,17 @@
 import React, { useEffect, useState, useRef } from "react";
-import { GoogleMap, Polygon, Rectangle } from "@react-google-maps/api";
+import {
+  GoogleMap,
+  Polygon,
+  Marker,
+  Rectangle,
+  InfoWindow,
+} from "@react-google-maps/api";
 import { useGoogleMaps } from "./GoogleMapsProvider";
 import * as turf from "@turf/turf";
 
 const containerStyle = {
-  width: "100%",
-  height: "100%",
+  width: "100%", // Ensure the width is 100% of the parent
+  height: "100%", // Ensure the height is 100% of the parent
 };
 
 const QC_BOUNDS = {
@@ -15,24 +21,9 @@ const QC_BOUNDS = {
   west: 121.022,
 };
 
-const QC_CENTER = {
-  lat: 14.676,
-  lng: 121.0437,
-};
-
-const RISK_LEVELS = ["High", "Medium", "Low"];
-const RISK_COLORS = {
-  High: "#e53e3e",
-  Medium: "#dd6b20",
-  Low: "#38a169",
-};
-
-const assignRiskLevel = () => {
-  const risk = RISK_LEVELS[Math.floor(Math.random() * RISK_LEVELS.length)];
-  return { level: risk, color: RISK_COLORS[risk] };
-};
-
 const DengueMap = () => {
+  const [currentPosition, setCurrentPosition] = useState(null);
+  const [markerPosition, setMarkerPosition] = useState(null);
   const [qcPolygonPaths, setQcPolygonPaths] = useState([]);
   const [barangayData, setBarangayData] = useState(null);
   const mapRef = useRef(null);
@@ -54,29 +45,48 @@ const DengueMap = () => {
         const colored = {
           ...data,
           features: data.features.map((f) => {
-            const { level, color } = assignRiskLevel();
+            const risk = "High"; // Hardcoded for simplicity
             return {
               ...f,
               properties: {
                 ...f.properties,
-                riskLevel: level,
-                color,
+                color: "#e53e3e", // High risk color
+                riskLevel: risk,
               },
             };
           }),
         };
         setBarangayData(colored);
       });
+
+    navigator.geolocation.getCurrentPosition(
+      ({ coords }) => {
+        const p = { lat: coords.latitude, lng: coords.longitude };
+        setCurrentPosition(p);
+        setMarkerPosition(p);
+      },
+      () => {
+        const fallback = { lat: 14.676, lng: 121.0437 };
+        setCurrentPosition(fallback);
+        setMarkerPosition(fallback);
+      }
+    );
   }, []);
 
-  if (!isLoaded) return <p>Loading map...</p>;
+  const handleMapClick = (e) => {
+    const coords = { lat: e.latLng.lat(), lng: e.latLng.lng() };
+    setMarkerPosition(coords);
+  };
+
+  if (!isLoaded || !currentPosition) return <p>Loading map...</p>;
 
   return (
-    <div className="w-full h-screen">
+    <div className="map-container" style={{ height: "100vh" }}>
       <GoogleMap
         mapContainerStyle={containerStyle}
-        center={QC_CENTER}
-        zoom={12}
+        center={currentPosition}
+        zoom={13}
+        onClick={handleMapClick}
         onLoad={(map) => (mapRef.current = map)}
       >
         <Polygon
@@ -89,7 +99,6 @@ const DengueMap = () => {
             fillOpacity: 0.05,
           }}
         />
-
         <Rectangle
           bounds={QC_BOUNDS}
           options={{
@@ -99,7 +108,6 @@ const DengueMap = () => {
             zIndex: 2,
           }}
         />
-
         {barangayData?.features.map((feature, index) => {
           const geometry = feature.geometry;
           const coordsArray =
@@ -129,6 +137,7 @@ const DengueMap = () => {
             );
           });
         })}
+        {markerPosition && <Marker position={markerPosition} />}
       </GoogleMap>
     </div>
   );

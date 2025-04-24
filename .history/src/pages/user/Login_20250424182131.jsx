@@ -6,7 +6,6 @@ import { useLoginMutation } from "../../api/dengueApi";
 import { useDispatch } from "react-redux";
 import { login as setAuthCredentials } from "../../features/authSlice.js";
 import { toastSuccess } from "../../utils.jsx";
-import { IconChevronDown } from "@tabler/icons-react";
 
 const Login = () => {
   const [userType, setUserType] = useState("user"); // 'user' is default
@@ -63,27 +62,17 @@ const Login = () => {
           onSubmit={handleSubmit}
           className="flex flex-col items-center gap-y-6 lg:gap-y-8 w-[85%]"
         >
-          {/* Dropdown Input */}
-          <div className="w-full text-left relative hover:cursor-pointer">
-            <label className="block mb-2 font-semibold text-xl text-black">
-              Login As
-            </label>
-            <div className="relative rounded-xl px-3 py-2 border border-gray-300 transition-all duration-200 focus-within:outline focus-within:outline-2 focus-within:outline-primary">
-              <select
-                value={userType}
-                onChange={(e) => setUserType(e.target.value)}
-                className="w-full text-xl p-2 pr-10 outline-none bg-transparent text-black appearance-none hover:cursor-pointer"
-              >
-                <option value="user">User</option>
-                <option value="admin">Admin</option>
-              </select>
-
-              <span className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-500">
-                <IconChevronDown size={20} />
-              </span>
-            </div>
+          <div className="w-full text-left">
+            <label className="block mb-2 font-semibold text-xl">Login As</label>
+            <select
+              value={userType}
+              onChange={(e) => setUserType(e.target.value)}
+              className="w-full p-3 rounded-xl border border-gray-300 text-base text-black bg-white focus:outline-none focus:ring-2 focus:ring-primary"
+            >
+              <option value="user">User</option>
+              <option value="admin">Admin</option>
+            </select>
           </div>
-
           <CustomFormInput
             label="Email"
             type="email"

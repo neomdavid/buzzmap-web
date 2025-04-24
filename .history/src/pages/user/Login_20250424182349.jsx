@@ -72,7 +72,7 @@ const Login = () => {
               <select
                 value={userType}
                 onChange={(e) => setUserType(e.target.value)}
-                className="w-full text-xl p-2 pr-10 outline-none bg-transparent text-black appearance-none hover:cursor-pointer"
+                className="w-full text-xl p-2 pr-10 outline-none bg-transparent text-black appearance-none"
               >
                 <option value="user">User</option>
                 <option value="admin">Admin</option>

@@ -28,7 +28,7 @@ import { useState, useEffect } from "react";
 import { useGoogleMaps } from "../../components/GoogleMapsProvider.jsx";
 
 const Landing = () => {
-  return (
+
     <main className="flex flex-col overflow-hidden mt-12">
       {/* <StreetViewMap /> */}
       <div className="text-primary font-[Koulen] uppercase flex flex-col text-7xl  px-10 mb-10 lg:max-w-[80vw] lg:items-center lg:self-center text-center">
@@ -75,14 +75,15 @@ const Landing = () => {
       />
 
       <section className="flex flex-col lg:flex-row  justify-center max-w-[95vw] m-auto px-6 sm:px-6 gap-x-4">
-        <div className="rounded-xl overflow-hidden h-[400px] lg:h-[500px] mb-6 lg:mb-0 lg:flex-13 flex items-center justify-center bg-gray-100">
-          <DengueMap
-            style={{
-              width: "100%",
-              height: "100%",
-              borderRadius: "12px",
-            }}
-          />
+        <div className="rounded-xl overflow-hidden h-[400px] lg:h-[500px] mb-6 lg:mb-0 lg:flex-1 flex items-center justify-center bg-gray-100">
+            <DengueMap
+              style={{
+                width: "100%",
+                height: "100%",
+                borderRadius: "12px",
+              }}
+            />
+     
         </div>
         <div className="flex flex-col flex-10  mx-6 items-center text-center lg:items-end lg:text-right">
           <Heading

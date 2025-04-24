@@ -90,12 +90,12 @@ const SignUp = () => {
             onChange={(e) => setConfirmPassword(e.target.value)}
             isConfirm={true}
           />
-          <div className="mt-6 mb-7 flex justify-center  items-center gap-x-2">
+          <div className="mt-4 mb-4 flex justify-center  items-center gap-x-2">
             <input
               type="checkbox"
               className="checkbox checkbox-lg border-white bg-transparent checked:bg-transparent checked:text-white checked:border-white "
             />
-            <label className="text-md lg:text-[14px]">
+            <label className="text-md lg:text-[14px] mb-2">
               I agree to the Terms and Conditions
             </label>
           </div>

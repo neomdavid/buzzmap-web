@@ -76,7 +76,7 @@ const DengueMap = () => {
       <GoogleMap
         mapContainerStyle={containerStyle}
         center={QC_CENTER}
-        zoom={12}
+        zoom={9}
         onLoad={(map) => (mapRef.current = map)}
       >
         <Polygon

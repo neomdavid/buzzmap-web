@@ -75,7 +75,7 @@ const Login = () => {
                 className="w-full text-xl p-2 pr-10 outline-none bg-transparent text-black appearance-none hover:cursor-pointer"
               >
                 <option value="user">User</option>
-                <option value="admin">Admin</option>
+                <option value="admin">Surveillance</option>
               </select>
 
               <span className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-500">

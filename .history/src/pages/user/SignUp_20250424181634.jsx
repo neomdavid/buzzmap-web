@@ -90,7 +90,7 @@ const SignUp = () => {
             onChange={(e) => setConfirmPassword(e.target.value)}
             isConfirm={true}
           />
-          <div className="mt-6 mb-7 flex justify-center  items-center gap-x-2">
+          <div className="mt-4 mb-4 flex justify-center  items-center gap-x-2">
             <input
               type="checkbox"
               className="checkbox checkbox-lg border-white bg-transparent checked:bg-transparent checked:text-white checked:border-white "
@@ -113,7 +113,7 @@ const SignUp = () => {
             </p>
           )}
 
-          <div className="flex w-[60%] gap-x-4 mt-6 mb-2 ">
+          <div className="flex w-[60%] gap-x-4  ">
             <div className="flex-1 border-t-1 border-white/60 mt-3 text-primary ">
               -
             </div>

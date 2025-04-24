@@ -6,10 +6,8 @@ import { useLoginMutation } from "../../api/dengueApi";
 import { useDispatch } from "react-redux";
 import { login as setAuthCredentials } from "../../features/authSlice.js";
 import { toastSuccess } from "../../utils.jsx";
-import { IconChevronDown } from "@tabler/icons-react";
 
 const Login = () => {
-  const [userType, setUserType] = useState("user"); // 'user' is default
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const navigate = useNavigate();
@@ -51,7 +49,7 @@ const Login = () => {
       />
 
       <section
-        className="w-[87vw] h-[80vh] max-w-220 mt-25 rounded-2xl shadow-md text-primary  bg-white py-12 px-[7%] lg:px-25 flex flex-col justify-center items-center text-center text-xl lg:text-2xl
+        className="w-[87vw] h-[80vh] max-w-220 mt-25 rounded-2xl shadow-sm  text-primary  bg-white py-12 px-[7%] lg:px-25 flex flex-col justify-center items-center text-center text-xl lg:text-2xl
       lg:shadow-none lg:max-w-none lg:m-0 lg:rounded-none lg:absolute lg:right-0 lg:top-0  lg:h-[100vh] lg:w-[60vw] xl:w-250  "
       >
         <h1 className="mb-4 text-7xl lg:text-8xl ">Welcome back!</h1>
@@ -63,27 +61,6 @@ const Login = () => {
           onSubmit={handleSubmit}
           className="flex flex-col items-center gap-y-6 lg:gap-y-8 w-[85%]"
         >
-          {/* Dropdown Input */}
-          <div className="w-full text-left relative hover:cursor-pointer">
-            <label className="block mb-2 font-semibold text-xl text-black">
-              Login As
-            </label>
-            <div className="relative rounded-xl px-3 py-2 border border-gray-300 transition-all duration-200 focus-within:outline focus-within:outline-2 focus-within:outline-primary">
-              <select
-                value={userType}
-                onChange={(e) => setUserType(e.target.value)}
-                className="w-full text-xl p-2 pr-10 outline-none bg-transparent text-black appearance-none hover:cursor-pointer"
-              >
-                <option value="user">User</option>
-                <option value="admin">Admin</option>
-              </select>
-
-              <span className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-500">
-                <IconChevronDown size={20} />
-              </span>
-            </div>
-          </div>
-
           <CustomFormInput
             label="Email"
             type="email"
@@ -123,7 +100,7 @@ const Login = () => {
             Login
           </button>
           {isError && (
-            <p className="mt-[-4px] font-semibold text-red-500 font-light italic text-md">
+            <p className="mt-[-10px] font-semibold text-red-500 font-light italic text-md">
               {error?.data?.message ||
                 "Login failed. Please check your credentials."}
             </p>

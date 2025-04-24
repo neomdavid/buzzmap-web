@@ -90,7 +90,7 @@ const SignUp = () => {
             onChange={(e) => setConfirmPassword(e.target.value)}
             isConfirm={true}
           />
-          <div className="mt-6 mb-7 flex justify-center  items-center gap-x-2">
+          <div className="mt-7 mb-7 flex justify-center  items-center gap-x-2">
             <input
               type="checkbox"
               className="checkbox checkbox-lg border-white bg-transparent checked:bg-transparent checked:text-white checked:border-white "

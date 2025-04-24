@@ -64,7 +64,7 @@ const Login = () => {
           className="flex flex-col items-center gap-y-6 lg:gap-y-8 w-[85%]"
         >
           {/* Dropdown Input */}
-          <div className="w-full text-left relative hover:cursor-pointer">
+          <div className="w-full text-left relative">
             <label className="block mb-2 font-semibold text-xl text-black">
               Login As
             </label>
@@ -72,7 +72,7 @@ const Login = () => {
               <select
                 value={userType}
                 onChange={(e) => setUserType(e.target.value)}
-                className="w-full text-xl p-2 pr-10 outline-none bg-transparent text-black appearance-none hover:cursor-pointer"
+                className="w-full text-xl p-2 pr-10 outline-none bg-transparent text-black appearance-none"
               >
                 <option value="user">User</option>
                 <option value="admin">Admin</option>

@@ -16,8 +16,8 @@ const QC_BOUNDS = {
 };
 
 const QC_CENTER = {
-  lat: 14.676,
-  lng: 121.0437,
+  lat: (QC_BOUNDS.north + QC_BOUNDS.south) / 2,
+  lng: (QC_BOUNDS.east + QC_BOUNDS.west) / 2,
 };
 
 const RISK_LEVELS = ["High", "Medium", "Low"];
@@ -76,7 +76,7 @@ const DengueMap = () => {
       <GoogleMap
         mapContainerStyle={containerStyle}
         center={QC_CENTER}
-        zoom={12}
+        zoom={13}
         onLoad={(map) => (mapRef.current = map)}
       >
         <Polygon

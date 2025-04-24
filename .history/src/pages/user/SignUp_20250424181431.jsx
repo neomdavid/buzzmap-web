@@ -43,7 +43,7 @@ const SignUp = () => {
       />
 
       <section
-        className="w-[87vw] max-w-220 mt-25 rounded-2xl shadow-md  text-white  bg-primary py-14 px-[7%] lg:px-25 flex flex-col justify-center items-center text-center text-xl lg:text-xl
+        className="w-[87vw] max-w-220 mt-25 rounded-2xl shadow-md  text-white  bg-primary py-12 px-[7%] lg:px-25 flex flex-col justify-center items-center text-center text-xl lg:text-xl
       lg:max-w-none lg:m-0 lg:rounded-none lg:absolute lg:right-0 lg:top-0  lg:h-[100vh] lg:w-[60vw] xl:w-250  "
       >
         <h1 className="mb-4 text-7xl lg:text-8xl ">Join buzzmap!</h1>
@@ -90,7 +90,7 @@ const SignUp = () => {
             onChange={(e) => setConfirmPassword(e.target.value)}
             isConfirm={true}
           />
-          <div className="mt-6 mb-7 flex justify-center  items-center gap-x-2">
+          <div className="mt-4 mb-4 flex justify-center  items-center gap-x-2">
             <input
               type="checkbox"
               className="checkbox checkbox-lg border-white bg-transparent checked:bg-transparent checked:text-white checked:border-white "
@@ -113,7 +113,7 @@ const SignUp = () => {
             </p>
           )}
 
-          <div className="flex w-[60%] gap-x-4 mt-6 mb-2 ">
+          <div className="flex w-[60%] gap-x-4 mb-[-8px] ">
             <div className="flex-1 border-t-1 border-white/60 mt-3 text-primary ">
               -
             </div>
