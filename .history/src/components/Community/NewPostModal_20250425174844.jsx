@@ -99,36 +99,38 @@ const NewPostModal = ({ onSubmit }) => {
       const [lat, lng] = coordinates
         .split(",")
         .map((coord) => parseFloat(coord.trim()));
-      const postData = {
-        barangay: barangay,
-        specific_location: {
+
+      // Build FormData
+      const formData = new FormData();
+      formData.append("barangay", barangay);
+      formData.append(
+        "specific_location",
+        JSON.stringify({
           type: "Point",
           coordinates: [lng, lat],
-        },
-        date_and_time: new Date(`${date}T${time}`).toISOString(),
-        report_type: reportType,
-        description: description,
-        images: [], // Default as empty array
-      };
+        })
+      );
+      formData.append(
+        "date_and_time",
+        new Date(`${date}T${time}`).toISOString()
+      );
+      formData.append("report_type", reportType);
+      formData.append("description", description);
 
-      // If images are added, convert to base64 (optional if backend supports it)
       if (images.length > 0) {
-        console.log(`📸 Encoding ${images.length} image(s) as base64`);
-        const base64Images = await Promise.all(
-          images.map((img) => toBase64(img))
-        );
-        postData.images = base64Images;
+        console.log(`📸 Attaching ${images.length} image(s)`);
+        images.forEach((img) => {
+          formData.append("images", img); // make sure your backend supports multiple images under the same key
+        });
       }
-
-      console.log("📦 Final JSON body:", postData);
 
       const response = await fetch("http://localhost:4000/api/v1/reports/", {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
+          // Don't set Content-Type manually, browser will handle it for FormData
         },
-        body: JSON.stringify(postData),
+        body: formData,
       });
 
       if (!response.ok) throw new Error("Server error");

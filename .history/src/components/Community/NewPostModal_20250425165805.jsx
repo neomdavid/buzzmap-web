@@ -72,68 +72,46 @@ const NewPostModal = ({ onSubmit }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log("🔐 Current token:", token);
-    console.log("✅ SUBMIT button clicked");
 
-    console.log("📝 Current form values:");
-    console.log({
-      barangay,
-      coordinates,
-      date,
-      time,
-      reportType,
-      images,
-      description,
-    });
-
+    // Validate form
     if (!validateForm()) {
-      console.warn("❌ Form validation failed");
       showCustomToast("Please fill all required fields", "error");
       return;
     }
 
-    console.log("✅ Form validation passed");
-
     try {
-      // Prepare coordinates as [longitude, latitude]
-      const [lat, lng] = coordinates
-        .split(",")
-        .map((coord) => parseFloat(coord.trim()));
-      const postData = {
-        barangay: barangay,
-        specific_location: {
-          type: "Point",
-          coordinates: [lng, lat],
-        },
-        date_and_time: new Date(`${date}T${time}`).toISOString(),
-        report_type: reportType,
-        description: description,
-        images: [], // Default as empty array
-      };
+      const formData = new FormData();
 
-      // If images are added, convert to base64 (optional if backend supports it)
-      if (images.length > 0) {
-        console.log(`📸 Encoding ${images.length} image(s) as base64`);
-        const base64Images = await Promise.all(
-          images.map((img) => toBase64(img))
-        );
-        postData.images = base64Images;
-      }
+      // Append simple fields
+      formData.append("barangay", barangay);
+      formData.append("district", "Quezon City");
+      formData.append(
+        "date_and_time",
+        new Date(`${date}T${time}`).toISOString()
+      );
+      formData.append("report_type", reportType);
+      formData.append("description", description);
 
-      console.log("📦 Final JSON body:", postData);
+      // Append coordinates as separate fields (Multer-friendly format)
+      formData.append("specific_location[type]", "Point");
+      formData.append("specific_location[coordinates][0]", coordinates[0]);
+      formData.append("specific_location[coordinates][1]", coordinates[1]);
 
-      const response = await fetch("http://localhost:4000/api/v1/reports/", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(postData),
+      // Append each image file
+      images.forEach((image) => {
+        formData.append("images", image); // Field name must be "images"
       });
 
-      if (!response.ok) throw new Error("Server error");
+      // Debug: Log FormData contents
+      for (let [key, value] of formData.entries()) {
+        console.log(`${key}:`, value instanceof File ? value.name : value);
+      }
 
-      console.log("✅ Post uploaded successfully");
+      // Send the request
+      const response = await createPostWithImage(formData).unwrap();
+      console.log("✅ Post created successfully:", response);
+
+      // Success handling
       showCustomToast("Post created successfully!", "success");
       modalRef.current?.close();
 
@@ -145,26 +123,13 @@ const NewPostModal = ({ onSubmit }) => {
       setReportType("");
       setDescription("");
       setImages([]);
-      console.log("🧹 Form reset after successful submission");
 
-      if (onSubmit) {
-        console.log("📣 Calling onSubmit callback");
-        onSubmit();
-      }
+      if (onSubmit) onSubmit();
     } catch (error) {
       console.error("❌ Failed to create post:", error);
       showCustomToast("Failed to create post. Please try again.", "error");
     }
   };
-
-  // Utility to convert File to base64 string
-  const toBase64 = (file) =>
-    new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.readAsDataURL(file); // This gives you a base64-encoded data URI
-      reader.onload = () => resolve(reader.result);
-      reader.onerror = (error) => reject(error);
-    });
 
   const getCurrentLocation = () => {
     if (!navigator.geolocation) {

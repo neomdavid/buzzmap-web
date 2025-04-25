@@ -75,6 +75,7 @@ const NewPostModal = ({ onSubmit }) => {
     console.log("🔐 Current token:", token);
     console.log("✅ SUBMIT button clicked");
 
+    // Log all current values
     console.log("📝 Current form values:");
     console.log({
       barangay,
@@ -86,54 +87,69 @@ const NewPostModal = ({ onSubmit }) => {
       description,
     });
 
+    // Step 1: Validate form
     if (!validateForm()) {
       console.warn("❌ Form validation failed");
       showCustomToast("Please fill all required fields", "error");
       return;
     }
-
     console.log("✅ Form validation passed");
 
     try {
-      // Prepare coordinates as [longitude, latitude]
-      const [lat, lng] = coordinates
-        .split(",")
-        .map((coord) => parseFloat(coord.trim()));
+      // Step 2: Prepare post data
       const postData = {
         barangay: barangay,
+        district: "Quezon City", // Static
         specific_location: {
           type: "Point",
-          coordinates: [lng, lat],
+          coordinates: [parseFloat(coordinates[0]), parseFloat(coordinates[1])],
         },
         date_and_time: new Date(`${date}T${time}`).toISOString(),
         report_type: reportType,
         description: description,
-        images: [], // Default as empty array
+        images: [], // Always include this field
       };
 
-      // If images are added, convert to base64 (optional if backend supports it)
+      console.log("🧾 Prepared postData:", postData);
+
       if (images.length > 0) {
-        console.log(`📸 Encoding ${images.length} image(s) as base64`);
-        const base64Images = await Promise.all(
-          images.map((img) => toBase64(img))
+        console.log(`📸 Uploading post with ${images.length} image(s)`);
+
+        const formData = new FormData();
+        formData.append("barangay", postData.barangay);
+        formData.append("district", postData.district);
+        formData.append(
+          "specific_location",
+          JSON.stringify(postData.specific_location)
         );
-        postData.images = base64Images;
+        formData.append("date_and_time", postData.date_and_time);
+        formData.append("report_type", postData.report_type);
+        formData.append("description", postData.description);
+
+        // Still append images field even if empty for consistency
+        if (images.length === 0) {
+          formData.append("images", JSON.stringify([]));
+        }
+
+        images.forEach((image, idx) => {
+          console.log(`📎 Attaching image ${idx + 1}:`, image.name);
+          formData.append("images", image); // Assumes backend accepts multiple "images"
+        });
+        for (let [key, value] of formData.entries()) {
+          console.log(`${key}:`, value instanceof File ? value.name : value);
+        }
+
+        await createPostWithImage(formData).unwrap();
+        console.log("✅ Post with image uploaded successfully");
+      } else {
+        console.log("📝 Uploading post without images");
+        console.log("Posting: " + JSON.stringify(postData));
+
+        const response = await createPost(postData).unwrap();
+        console.log(response);
+        console.log("✅ Post without image uploaded successfully");
       }
 
-      console.log("📦 Final JSON body:", postData);
-
-      const response = await fetch("http://localhost:4000/api/v1/reports/", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(postData),
-      });
-
-      if (!response.ok) throw new Error("Server error");
-
-      console.log("✅ Post uploaded successfully");
       showCustomToast("Post created successfully!", "success");
       modalRef.current?.close();
 
@@ -145,6 +161,7 @@ const NewPostModal = ({ onSubmit }) => {
       setReportType("");
       setDescription("");
       setImages([]);
+
       console.log("🧹 Form reset after successful submission");
 
       if (onSubmit) {
@@ -156,15 +173,6 @@ const NewPostModal = ({ onSubmit }) => {
       showCustomToast("Failed to create post. Please try again.", "error");
     }
   };
-
-  // Utility to convert File to base64 string
-  const toBase64 = (file) =>
-    new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.readAsDataURL(file); // This gives you a base64-encoded data URI
-      reader.onload = () => resolve(reader.result);
-      reader.onerror = (error) => reject(error);
-    });
 
   const getCurrentLocation = () => {
     if (!navigator.geolocation) {
