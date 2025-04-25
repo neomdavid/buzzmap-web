@@ -111,7 +111,7 @@ export const dengueApi = createApi({
 
     createPostWithImage: builder.mutation({
       query: (formData) => ({
-        url: "reports",
+        url: "posts",
         method: "POST",
         body: formData,
         headers: {

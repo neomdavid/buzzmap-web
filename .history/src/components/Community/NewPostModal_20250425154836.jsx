@@ -17,7 +17,7 @@ const QC_BOUNDS = {
   east: 121.2,
 };
 
-const NewPostModal = ({ onSubmit }) => {
+const NewPostModal = () => {
   const [barangay, setBarangay] = useState("");
   const [coordinates, setCoordinates] = useState("");
   const [date, setDate] = useState("");
@@ -73,6 +73,7 @@ const NewPostModal = ({ onSubmit }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     console.log("🔐 Current token:", token);
+
     console.log("✅ SUBMIT button clicked");
 
     // Log all current values
@@ -99,15 +100,14 @@ const NewPostModal = ({ onSubmit }) => {
       // Step 2: Prepare post data
       const postData = {
         barangay: barangay,
-        district: "Quezon City", // Static
+        district: "Quezon City", // Static as per your requirements
         specific_location: {
           type: "Point",
-          coordinates: [parseFloat(coordinates[0]), parseFloat(coordinates[1])],
+          coordinates: [parseFloat(coordinates[0]), parseFloat(coordinates[1])], // Assuming coordinates is an array like [longitude, latitude]
         },
-        date_and_time: new Date(`${date}T${time}`).toISOString(),
-        report_type: reportType,
+        date_and_time: new Date(`${date}T${time}`).toISOString(), // Format date and time as ISO string
+        report_type: reportType, // Assuming this is correctly mapped to your backend
         description: description,
-        images: [], // Always include this field
       };
 
       console.log("🧾 Prepared postData:", postData);
@@ -116,29 +116,18 @@ const NewPostModal = ({ onSubmit }) => {
         console.log(`📸 Uploading post with ${images.length} image(s)`);
 
         const formData = new FormData();
-        formData.append("barangay", postData.barangay);
-        formData.append("district", postData.district);
-        formData.append(
-          "specific_location",
-          JSON.stringify(postData.specific_location)
-        );
-        formData.append("date_and_time", postData.date_and_time);
-        formData.append("report_type", postData.report_type);
-        formData.append("description", postData.description);
-
-        // Still append images field even if empty for consistency
-        if (images.length === 0) {
-          formData.append("images", JSON.stringify([]));
-        }
-
+        Object.entries(postData).forEach(([key, value]) => {
+          if (key === "specific_location") {
+            formData.append(key, JSON.stringify(value));
+          } else {
+            formData.append(key, value);
+          }
+        });
         images.forEach((image, idx) => {
           console.log(`📎 Attaching image ${idx + 1}:`, image.name);
-          formData.append("images", image); // Assumes backend accepts multiple "images"
+          formData.append("images", image);
         });
-        for (let [key, value] of formData.entries()) {
-          console.log(`${key}:`, value instanceof File ? value.name : value);
-        }
-
+        console.log("Posting: " + formData);
         await createPostWithImage(formData).unwrap();
         console.log("✅ Post with image uploaded successfully");
       } else {

@@ -6,7 +6,7 @@ import post2 from "../../assets/post2.jpg";
 import post3 from "../../assets/post3.jpg";
 import post4 from "../../assets/post4.jpg";
 import post5 from "../../assets/post5.jpg";
-import { formatDistanceToNow } from "date-fns";
+
 import {
   PostCard,
   CustomInput,
@@ -49,20 +49,9 @@ const Community = () => {
     setTime(now.toTimeString().split(" ")[0].slice(0, 5)); // HH:MM
   };
 
-  // Format timestamp to relative time
-  const formatTimestamp = (dateString) => {
-    try {
-      return formatDistanceToNow(new Date(dateString), { addSuffix: true });
-    } catch (error) {
-      console.error("Error formatting date:", error);
-      return "just now";
-    }
-  };
-
   const { data: posts, isLoading, isError, refetch } = useGetPostsQuery();
   const [createPost] = useCreatePostMutation();
   const [createPostWithImage] = useCreatePostWithImageMutation();
-  console.log(posts);
 
   const handleCreatePost = async (postData) => {
     try {
@@ -130,30 +119,58 @@ const Community = () => {
           </button>
         </section>
         {/* POST MODAL */}
-        <NewPostModal onSubmit={refetch} />
+        <NewPostModal />
         <section className="bg-base-200 px-8 py-6 rounded-lg flex flex-col gap-y-6">
-          {posts?.map((post) => (
-            <PostCard
-              key={post._id}
-              profileImage={profile1}
-              username={
-                post.anonymous ? "Anonymous" : post.user?.username || "User"
-              }
-              timestamp={formatTimestamp(post.createdAt)} // Updated this line
-              location={`Barangay: ${
-                post.barangay
-              }, Coordinates: ${post.specific_location?.coordinates.join(
-                ", "
-              )}`} // Showing both barangay and coordinates
-              dateTime={new Date(post.date_and_time).toLocaleString()}
-              reportType={post.report_type}
-              description={post.description}
-              likes={post.likesCount || "0"}
-              comments={post.commentsCount || "0"}
-              shares={post.sharesCount || "0"}
-              images={post.images}
-            />
-          ))}
+          <PostCard
+            profileImage={profile1}
+            username="Anonymous Crocodile"
+            timestamp="1 hour ago"
+            location="Barangay Bagumbayan, Taguig City"
+            dateTime="February 19, 2025 – 9:45 AM"
+            reportType="Breeding Site Found"
+            description="Discovered stagnant water in uncovered water containers behind a residential area. Mosquito larvae were visible. Urgent clean-up needed to prevent mosquito breeding."
+            likes="24k"
+            comments="24k"
+            shares="5k"
+          />
+
+          <PostCard
+            profileImage={profile1}
+            username="Anonymous Hippo"
+            timestamp="2 days ago"
+            location="Pasay City Market Area"
+            dateTime="February 17, 2025 – 3:20 PM"
+            reportType="Suspected Dengue Case"
+            description="Vendor reported experiencing high fever and body aches. Advised to seek medical attention. The market area has multiple potential breeding spots"
+            likes="24k"
+            comments="24k"
+            shares="5k"
+            images={[post1, post2, post3, post4, post5]}
+          />
+          <PostCard
+            profileImage={profile1}
+            username="Anonymous Crocodile"
+            timestamp="1 hour ago"
+            location="Barangay Bagumbayan, Taguig City"
+            dateTime="February 19, 2025 – 9:45 AM"
+            reportType="Breeding Site Found"
+            description="Discovered stagnant water in uncovered water containers behind a residential area. Mosquito larvae were visible. Urgent clean-up needed to prevent mosquito breeding."
+            likes="24k"
+            comments="24k"
+            shares="5k"
+          />
+          <PostCard
+            profileImage={profile1}
+            username="Anonymous Crocodile"
+            timestamp="1 hour ago"
+            location="Barangay Bagumbayan, Taguig City"
+            dateTime="February 19, 2025 – 9:45 AM"
+            reportType="Breeding Site Found"
+            description="Discovered stagnant water in uncovered water containers behind a residential area. Mosquito larvae were visible. Urgent clean-up needed to prevent mosquito breeding."
+            likes="24k"
+            comments="24k"
+            shares="5k"
+          />
         </section>
       </article>
 

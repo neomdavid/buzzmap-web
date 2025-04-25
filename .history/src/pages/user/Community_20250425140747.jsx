@@ -130,7 +130,7 @@ const Community = () => {
           </button>
         </section>
         {/* POST MODAL */}
-        <NewPostModal onSubmit={refetch} />
+        <NewPostModal />
         <section className="bg-base-200 px-8 py-6 rounded-lg flex flex-col gap-y-6">
           {posts?.map((post) => (
             <PostCard
@@ -140,11 +140,7 @@ const Community = () => {
                 post.anonymous ? "Anonymous" : post.user?.username || "User"
               }
               timestamp={formatTimestamp(post.createdAt)} // Updated this line
-              location={`Barangay: ${
-                post.barangay
-              }, Coordinates: ${post.specific_location?.coordinates.join(
-                ", "
-              )}`} // Showing both barangay and coordinates
+              location={`${post.barangay}, ${post.district}`}
               dateTime={new Date(post.date_and_time).toLocaleString()}
               reportType={post.report_type}
               description={post.description}

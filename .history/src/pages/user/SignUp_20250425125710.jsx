@@ -2,7 +2,7 @@ import { CustomFormInput, LogoNamed } from "../../components";
 import womanLowHand from "../../assets/woman_lowhand.png";
 import { Link, useNavigate } from "react-router-dom";
 import { useState } from "react";
-import { useRegisterMutation } from "../../api/dengueApi";
+import { useSignUpMutation } from "../../api/dengueApi";
 import { useDispatch } from "react-redux";
 import { setEmailForOtp } from "../../features/otpSlice";
 
@@ -14,7 +14,7 @@ const SignUp = () => {
   const [confirmPassword, setConfirmPassword] = useState("");
   const navigate = useNavigate();
 
-  const [signUp, { isLoading, isError, error }] = useRegisterMutation("");
+  const [signUp, { isLoading, isError, error }] = useSignUpMutation("");
 
   const dispatch = useDispatch();
 

@@ -40,7 +40,7 @@ const Navbar = () => {
                 : currentRoute.startsWith("/mapping")
                 ? "text-white"
                 : "text-primary"
-            } font-semibold text-lg`
+            } font-semibold text-lg hover:cursor-pointer`
           }
         >
           {link.name}
@@ -96,7 +96,7 @@ const Navbar = () => {
   const renderLoginButton = (darkMode = false) => (
     <button
       onClick={() => navigate("/login")}
-      className={`font-semibold py-2 px-4 rounded-lg border transition-all duration-300 text-lg hover:cursor-pointer ${
+      className={`font-semibold py-2 px-4 rounded-lg border transition-all duration-300 text-lg ${
         darkMode
           ? "text-white border-white hover:bg-white hover:text-primary"
           : "text-primary border-primary hover:bg-primary hover:text-white"

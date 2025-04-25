@@ -135,10 +135,9 @@ const NewPostModal = ({ onSubmit }) => {
           console.log(`📎 Attaching image ${idx + 1}:`, image.name);
           formData.append("images", image); // Assumes backend accepts multiple "images"
         });
-        for (let [key, value] of formData.entries()) {
+        for (let [key, vvalue] of formData.entries()) {
           console.log(`${key}:`, value instanceof File ? value.name : value);
         }
-
         await createPostWithImage(formData).unwrap();
         console.log("✅ Post with image uploaded successfully");
       } else {

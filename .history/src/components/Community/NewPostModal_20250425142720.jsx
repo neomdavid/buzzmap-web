@@ -2,12 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { DescriptionWithImages, RiskLevelLegends, SecondaryButton } from "../";
 import profile1 from "../../assets/profile1.png";
 import { MapPicker } from "../";
-import { showCustomToast, toastError } from "../../utils.jsx";
-import {
-  useCreatePostMutation,
-  useCreatePostWithImageMutation,
-} from "../../api/dengueApi";
-import { useSelector } from "react-redux";
+import { showCustomToast } from "../../utils.jsx";
 
 // Define Quezon City boundaries
 const QC_BOUNDS = {
@@ -17,23 +12,17 @@ const QC_BOUNDS = {
   east: 121.2,
 };
 
-const NewPostModal = ({ onSubmit }) => {
+const NewPostModal = () => {
   const [barangay, setBarangay] = useState("");
   const [coordinates, setCoordinates] = useState("");
   const [date, setDate] = useState("");
   const [time, setTime] = useState("");
   const [reportType, setReportType] = useState("");
-  const [description, setDescription] = useState("");
   const [formErrors, setFormErrors] = useState({});
   const [locationError, setLocationError] = useState("");
   const [locationMethod, setLocationMethod] = useState("map"); // 'map' or 'manual'
   const [images, setImages] = useState([]); // State for images
   const modalRef = useRef(null);
-  const token = useSelector((state) => state.auth.token);
-
-  // RTK Query mutations
-  const [createPost] = useCreatePostMutation();
-  const [createPostWithImage] = useCreatePostWithImageMutation();
 
   useEffect(() => {
     // Set current time when component mounts
@@ -72,11 +61,11 @@ const NewPostModal = ({ onSubmit }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log("🔐 Current token:", token);
-    console.log("✅ SUBMIT button clicked");
+
+    console.log("SUBMIT button clicked ✅");
 
     // Log all current values
-    console.log("📝 Current form values:");
+    console.log("Current form values:");
     console.log({
       barangay,
       coordinates,
@@ -84,70 +73,43 @@ const NewPostModal = ({ onSubmit }) => {
       time,
       reportType,
       images,
-      description,
     });
 
-    // Step 1: Validate form
     if (!validateForm()) {
-      console.warn("❌ Form validation failed");
       showCustomToast("Please fill all required fields", "error");
       return;
     }
-    console.log("✅ Form validation passed");
-
     try {
-      // Step 2: Prepare post data
       const postData = {
-        barangay: barangay,
-        district: "Quezon City", // Static
+        barangay,
+        district: "Quezon City", // Hardcoded as per your form
         specific_location: {
+          coordinates: coordinates
+            .split(",")
+            .map((coord) => parseFloat(coord.trim())),
           type: "Point",
-          coordinates: [parseFloat(coordinates[0]), parseFloat(coordinates[1])],
         },
-        date_and_time: new Date(`${date}T${time}`).toISOString(),
+        date_and_time: new Date(`${date}T${time}:00`).toISOString(),
         report_type: reportType,
-        description: description,
-        images: [], // Always include this field
+        description,
       };
 
-      console.log("🧾 Prepared postData:", postData);
-
       if (images.length > 0) {
-        console.log(`📸 Uploading post with ${images.length} image(s)`);
-
         const formData = new FormData();
-        formData.append("barangay", postData.barangay);
-        formData.append("district", postData.district);
-        formData.append(
-          "specific_location",
-          JSON.stringify(postData.specific_location)
-        );
-        formData.append("date_and_time", postData.date_and_time);
-        formData.append("report_type", postData.report_type);
-        formData.append("description", postData.description);
-
-        // Still append images field even if empty for consistency
-        if (images.length === 0) {
-          formData.append("images", JSON.stringify([]));
-        }
-
-        images.forEach((image, idx) => {
-          console.log(`📎 Attaching image ${idx + 1}:`, image.name);
-          formData.append("images", image); // Assumes backend accepts multiple "images"
+        Object.entries(postData).forEach(([key, value]) => {
+          if (key === "specific_location") {
+            formData.append(key, JSON.stringify(value));
+          } else {
+            formData.append(key, value);
+          }
         });
-        for (let [key, value] of formData.entries()) {
-          console.log(`${key}:`, value instanceof File ? value.name : value);
-        }
+        images.forEach((image) => {
+          formData.append("images", image);
+        });
 
         await createPostWithImage(formData).unwrap();
-        console.log("✅ Post with image uploaded successfully");
       } else {
-        console.log("📝 Uploading post without images");
-        console.log("Posting: " + JSON.stringify(postData));
-
-        const response = await createPost(postData).unwrap();
-        console.log(response);
-        console.log("✅ Post without image uploaded successfully");
+        await createPost(postData).unwrap();
       }
 
       showCustomToast("Post created successfully!", "success");
@@ -161,17 +123,7 @@ const NewPostModal = ({ onSubmit }) => {
       setReportType("");
       setDescription("");
       setImages([]);
-
-      console.log("🧹 Form reset after successful submission");
-
-      if (onSubmit) {
-        console.log("📣 Calling onSubmit callback");
-        onSubmit();
-      }
-    } catch (error) {
-      console.error("❌ Failed to create post:", error);
-      showCustomToast("Failed to create post. Please try again.", "error");
-    }
+    } catch {}
   };
 
   const getCurrentLocation = () => {
@@ -458,19 +410,18 @@ const NewPostModal = ({ onSubmit }) => {
                     onChange={(e) => setReportType(e.target.value)}
                   >
                     <option value="">Choose Report Type</option>
-                    <option value="Standing Water">Standing Water</option>
-                    <option value="Breeding Site">Breeding Site</option>
+                    <option value="Suspected Dengue Case">
+                      Suspected Dengue Case
+                    </option>
+                    <option value="Breeding Ground Site">
+                      Breeding Ground Site
+                    </option>
                   </select>
                 </div>
               </div>
             </section>
 
-            <DescriptionWithImages
-              images={images}
-              onImageChange={setImages}
-              description={description}
-              onDescriptionChange={setDescription}
-            />
+            <DescriptionWithImages images={images} onImageChange={setImages} />
 
             <div className="flex justify-end mt-6">
               <SecondaryButton

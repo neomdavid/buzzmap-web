@@ -2,7 +2,7 @@ import { CustomFormInput, LogoNamed } from "../../components";
 import womanLowHand from "../../assets/woman_lowhand.png";
 import { Link, useNavigate } from "react-router-dom";
 import { useState } from "react";
-import { useRegisterMutation } from "../../api/dengueApi";
+import { useSignUpMutation } from "../../api/dengueApi";
 import { useDispatch } from "react-redux";
 import { setEmailForOtp } from "../../features/otpSlice";
 
@@ -14,7 +14,7 @@ const SignUp = () => {
   const [confirmPassword, setConfirmPassword] = useState("");
   const navigate = useNavigate();
 
-  const [signUp, { isLoading, isError, error }] = useRegisterMutation("");
+  const [signUp, { isLoading, isError, error }] = useSignUpMutation("");
 
   const dispatch = useDispatch();
 
@@ -43,7 +43,7 @@ const SignUp = () => {
       />
 
       <section
-        className="w-[87vw] max-w-220 mt-25 rounded-2xl shadow-md  text-white  bg-primary py-14 px-[7%] lg:px-25 flex flex-col justify-center items-center text-center text-xl lg:text-xl
+        className="w-[87vw] card max-w-220 mt-25 rounded-2xl shadow-md  text-white  bg-primary py-14 px-[7%] lg:px-25 flex flex-col justify-center items-center text-center text-xl lg:text-xl
       lg:max-w-none lg:m-0 lg:rounded-none lg:absolute lg:right-0 lg:top-0  lg:h-[100vh] lg:w-[60vw] xl:w-250  "
       >
         <h1 className="mb-4 text-7xl lg:text-8xl ">Join buzzmap!</h1>

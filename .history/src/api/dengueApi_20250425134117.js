@@ -76,23 +76,13 @@ export const dengueApi = createApi({
         `reports?page=${page}&limit=${limit}&sort=${
           filter === "latest" ? "-createdAt" : "-likesCount"
         }`,
-      providesTags: (result, error, arg) => {
-        // Handle cases where result might be undefined or have different structure
-        if (!result) return [{ type: "Post", id: "LIST" }];
-
-        // Check for different possible response structures
-        const posts = result.data || result.docs || result.posts || result;
-
-        if (Array.isArray(posts)) {
-          return [
-            ...posts.map((post) => ({ type: "Post", id: post._id || post.id })),
-            { type: "Post", id: "LIST" },
-          ];
-        }
-
-        // Fallback if the structure is unexpected
-        return [{ type: "Post", id: "LIST" }];
-      },
+      providesTags: (result) =>
+        result
+          ? [
+              ...result.docs.map(({ _id }) => ({ type: "Post", id: _id })),
+              { type: "Post", id: "LIST" },
+            ]
+          : [{ type: "Post", id: "LIST" }],
     }),
 
     getPostById: builder.query({
@@ -111,7 +101,7 @@ export const dengueApi = createApi({
 
     createPostWithImage: builder.mutation({
       query: (formData) => ({
-        url: "reports",
+        url: "posts",
         method: "POST",
         body: formData,
         headers: {
