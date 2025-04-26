@@ -3,12 +3,9 @@ import { IconPlus, IconArrowRight, IconArrowLeft } from "@tabler/icons-react";
 import { useState } from "react";
 import { toastSuccess, toastError } from "../../utils.jsx";
 
-// Default super admin password for development
-const SUPER_ADMIN_PASSWORD = "Password!123";
-
 function SprAdmins() {
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [currentStep, setCurrentStep] = useState(1);
+  const [currentStep, setCurrentStep] = useState(1); // 1: Admin details, 2: Super admin auth
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
@@ -22,7 +19,6 @@ function SprAdmins() {
   });
   const [errors, setErrors] = useState({});
   const [authError, setAuthError] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Field validation logic
   const validateField = (name, value) => {
@@ -41,12 +37,8 @@ function SprAdmins() {
         break;
       case "password":
         if (!value) error = "Password is required";
-        else if (value.length < 8) error = "Must be at least 8 characters";
-        else if (!/(?=.*[a-z])/.test(value)) error = "Needs a lowercase letter";
-        else if (!/(?=.*[A-Z])/.test(value))
-          error = "Needs an uppercase letter";
-        else if (!/(?=.*\d)/.test(value)) error = "Needs a number";
-        else if (!/(?=.*\W)/.test(value)) error = "Needs a special character";
+        else if (!/(?=.*\d)(?=.*[a-z])(?=.*[A-Z])(?=.*\W)/.test(value))
+          error = "Password does not meet requirements";
         break;
       case "confirmPassword":
         if (value !== formData.password) error = "Passwords do not match";
@@ -121,7 +113,9 @@ function SprAdmins() {
   const verifySuperAdmin = async () => {
     try {
       // In a real app, this would be an API call to verify the super admin's credentials
-      if (superAdminAuth.password !== SUPER_ADMIN_PASSWORD) {
+      // For demo purposes, we'll use a simple check
+      if (superAdminAuth.password !== "superadmin123") {
+        // Replace with actual auth check
         throw new Error("Invalid super admin credentials");
       }
       return true;
@@ -133,21 +127,13 @@ function SprAdmins() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setIsSubmitting(true);
+
+    const isVerified = await verifySuperAdmin();
+    if (!isVerified) return;
 
     try {
-      const isVerified = await verifySuperAdmin();
-      if (!isVerified) {
-        setIsSubmitting(false);
-        return;
-      }
-
       // Here you would typically make an API call to create the admin
       console.log("Creating admin with data:", formData);
-
-      // Simulate API delay
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-
       setIsModalOpen(false);
       setCurrentStep(1);
       toastSuccess("New admin created successfully");
@@ -165,32 +151,22 @@ function SprAdmins() {
     } catch (error) {
       toastError("Failed to create admin");
       console.error("Admin creation error:", error);
-    } finally {
-      setIsSubmitting(false);
     }
   };
-
-  const isFormValid =
-    Object.values(errors).every((error) => !error) &&
-    formData.firstName &&
-    formData.lastName &&
-    formData.email &&
-    formData.password &&
-    formData.confirmPassword;
 
   return (
     <main className="flex flex-col w-full">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8 gap-4">
-        <p className="flex justify-center text-5xl font-extrabold mb-12  text-center md:justify-start md:text-left md:w-[48%] ">
+        <h1 className="text-5xl font-extrabold text-center md:text-left">
           Admin Management
-        </p>
+        </h1>
 
         <button
-          className="flex items-center justify-center gap-2 bg-primary text-white px-6 py-3 rounded-lg hover:bg-primary/90 transition-colors shadow-sm md:w-auto w-full hover:cursor-pointer"
+          className="flex items-center justify-center gap-2 bg-primary text-white px-6 py-3 rounded-lg hover:bg-primary/90 transition-colors shadow-sm md:w-auto w-full"
           onClick={() => setIsModalOpen(true)}
         >
           <IconPlus size={20} />
-          Create New Admin
+          Create an Admin
         </button>
       </div>
 
@@ -211,7 +187,7 @@ function SprAdmins() {
         <div className="modal-box gap-6 text-lg w-10/12 max-w-3xl p-8 sm:p-12 rounded-3xl">
           <form onSubmit={handleSubmit}>
             {currentStep === 1 ? (
-              <div className="flex flex-col gap-6">
+              <div className="flex flex-col gap-8">
                 <p className="text-center text-3xl font-bold">
                   Create New Admin
                 </p>
@@ -225,14 +201,12 @@ function SprAdmins() {
                       name="firstName"
                       value={formData.firstName}
                       onChange={handleInputChange}
-                      className={`p-3 bg-base-200 text-primary rounded-xl border-none ${
-                        errors.firstName ? "border-2 border-error" : ""
+                      className={`p-3 bg-base-200 text-primary rounded-3xl border-none ${
+                        errors.firstName ? "border border-error" : ""
                       }`}
                     />
                     {errors.firstName && (
-                      <p className="text-error text-sm mt-1">
-                        {errors.firstName}
-                      </p>
+                      <p className="text-error text-sm">{errors.firstName}</p>
                     )}
                   </div>
                   <div className="flex-1 flex flex-col gap-1">
@@ -241,14 +215,12 @@ function SprAdmins() {
                       name="lastName"
                       value={formData.lastName}
                       onChange={handleInputChange}
-                      className={`p-3 bg-base-200 text-primary rounded-xl border-none ${
-                        errors.lastName ? "border-2 border-error" : ""
+                      className={`p-3 bg-base-200 text-primary rounded-3xl border-none ${
+                        errors.lastName ? "border border-error" : ""
                       }`}
                     />
                     {errors.lastName && (
-                      <p className="text-error text-sm mt-1">
-                        {errors.lastName}
-                      </p>
+                      <p className="text-error text-sm">{errors.lastName}</p>
                     )}
                   </div>
                 </div>
@@ -260,12 +232,12 @@ function SprAdmins() {
                     type="email"
                     value={formData.email}
                     onChange={handleInputChange}
-                    className={`p-3 bg-base-200 text-primary rounded-xl border-none ${
-                      errors.email ? "border-2 border-error" : ""
+                    className={`p-3 bg-base-200 text-primary rounded-3xl border-none ${
+                      errors.email ? "border border-error" : ""
                     }`}
                   />
                   {errors.email && (
-                    <p className="text-error text-sm mt-1">{errors.email}</p>
+                    <p className="text-error text-sm">{errors.email}</p>
                   )}
                 </div>
 
@@ -276,16 +248,17 @@ function SprAdmins() {
                     type="password"
                     value={formData.password}
                     onChange={handleInputChange}
-                    className={`p-3 bg-base-200 text-primary rounded-xl border-none ${
-                      errors.password ? "border-2 border-error" : ""
+                    className={`p-3 bg-base-200 text-primary rounded-3xl border-none ${
+                      errors.password ? "border border-error" : ""
                     }`}
                   />
-                  <p className="text-xs italic text-gray-500 mt-1">
-                    Must be at least 8 characters with uppercase, lowercase,
-                    number, and special character
+                  <p className="text-xs italic text-gray-500">
+                    Password must be at least 8 characters long, contain both
+                    uppercase and lowercase letters, include at least one
+                    number, and contain one special character (e.g., !, @, #, $)
                   </p>
                   {errors.password && (
-                    <p className="text-error text-sm mt-1">{errors.password}</p>
+                    <p className="text-error text-sm">{errors.password}</p>
                   )}
                 </div>
 
@@ -298,12 +271,12 @@ function SprAdmins() {
                     type="password"
                     value={formData.confirmPassword}
                     onChange={handleInputChange}
-                    className={`p-3 bg-base-200 text-primary rounded-xl border-none ${
-                      errors.confirmPassword ? "border-2 border-error" : ""
+                    className={`p-3 bg-base-200 text-primary rounded-3xl border-none ${
+                      errors.confirmPassword ? "border border-error" : ""
                     }`}
                   />
                   {errors.confirmPassword && (
-                    <p className="text-error text-sm mt-1">
+                    <p className="text-error text-sm">
                       {errors.confirmPassword}
                     </p>
                   )}
@@ -316,8 +289,8 @@ function SprAdmins() {
                       (Optional)
                     </span>
                   </label>
-                  <div className="flex items-center gap-4 rounded-xl border-2 border-base-200 p-2 px-4">
-                    <label className="bg-primary text-xs text-white px-4 py-2 rounded-lg cursor-pointer hover:bg-primary/90 transition-colors">
+                  <div className="flex items-center gap-4 rounded-full border-2 border-base-200 p-2 px-5">
+                    <label className="bg-primary text-xs text-white px-4 py-2 rounded-lg cursor-pointer">
                       Choose File
                       <input
                         type="file"
@@ -344,23 +317,22 @@ function SprAdmins() {
                   </button>
                   <button
                     type="button"
-                    className={`flex items-center gap-2 bg-primary text-white px-6 py-2.5 rounded-xl hover:bg-primary/90 transition-colors hover:cursor-pointer ${
-                      !isFormValid ? "opacity-50 cursor-not-allowed" : ""
-                    }`}
+                    className="flex items-center gap-2 bg-primary text-white px-6 py-2.5 rounded-xl hover:bg-primary/90 transition-colors hover:cursor-pointer"
                     onClick={handleNextStep}
-                    disabled={!isFormValid}
+                    disabled={Object.values(errors).some((error) => error)}
                   >
                     Next <IconArrowRight size={20} />
                   </button>
                 </div>
               </div>
             ) : (
-              <div className="flex flex-col gap-6">
+              <div className="flex flex-col gap-8">
                 <p className="text-center text-3xl font-bold">
                   Super Admin Verification
                 </p>
                 <p className="text-center text-gray-600">
-                  Enter your super admin password to confirm this action
+                  To create a new admin, please verify your super admin
+                  credentials
                 </p>
 
                 <div className="w-full flex flex-col gap-1">
@@ -372,17 +344,12 @@ function SprAdmins() {
                     type="password"
                     value={superAdminAuth.password}
                     onChange={handleSuperAdminAuthChange}
-                    className={`p-3 bg-base-200 text-primary rounded-xl border-none ${
-                      authError ? "border-2 border-error" : ""
-                    }`}
-                    placeholder="Enter super admin password"
+                    className="p-3 bg-base-200 text-primary rounded-3xl border-none"
+                    placeholder="Enter your super admin password"
                   />
                   {authError && (
-                    <p className="text-error text-sm mt-1">{authError}</p>
+                    <p className="text-error text-sm">{authError}</p>
                   )}
-                  <p className="text-xs italic text-gray-500 mt-1">
-                    For development: Use "{SUPER_ADMIN_PASSWORD}"
-                  </p>
                 </div>
 
                 <div className="w-full flex justify-between gap-3 mt-4">
@@ -395,18 +362,9 @@ function SprAdmins() {
                   </button>
                   <button
                     type="submit"
-                    className={`flex items-center gap-2 bg-gradient-to-r from-[#245261] to-[#4AA8C7] text-white px-6 py-2.5 rounded-xl hover:opacity-90 transition-opacity hover:cursor-pointer ${
-                      isSubmitting ? "opacity-70 cursor-wait" : ""
-                    }`}
-                    disabled={isSubmitting}
+                    className="flex items-center gap-2 bg-gradient-to-r from-[#245261] to-[#4AA8C7] text-white px-6 py-2.5 rounded-xl hover:opacity-90 transition-opacity hover:cursor-pointer"
                   >
-                    {isSubmitting ? (
-                      "Processing..."
-                    ) : (
-                      <>
-                        Confirm Creation <IconArrowRight size={20} />
-                      </>
-                    )}
+                    Confirm Creation <IconArrowRight size={20} />
                   </button>
                 </div>
               </div>

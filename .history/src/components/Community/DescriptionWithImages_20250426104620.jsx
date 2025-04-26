@@ -22,7 +22,7 @@ const DescriptionWithImages = ({
   };
 
   return (
-    <div className="flex flex-col p-2 gap-2 ml-16">
+    <div className="flex flex-col p-2 gap-2 bg-base-200 ml-17">
       <div className="flex justify-between items-center">
         <p className="font-bold text-xl">
           📝 Description <span className="text-error">*</span>

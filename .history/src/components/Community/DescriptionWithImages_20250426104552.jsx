@@ -22,8 +22,8 @@ const DescriptionWithImages = ({
   };
 
   return (
-    <div className="flex flex-col p-2 gap-2 ml-16">
-      <div className="flex justify-between items-center">
+    <div className="flex flex-col p-2 gap-2 bg-base-200">
+      <div className="flex justify-between items-center bg-base-red w-full">
         <p className="font-bold text-xl">
           📝 Description <span className="text-error">*</span>
         </p>
@@ -43,7 +43,7 @@ const DescriptionWithImages = ({
 
       {/* Textarea for description */}
       <textarea
-        className="p-2 textarea textarea-bordered resize-none text-base w-full"
+        className="p-2 textarea textarea-bordered resize-none text-base"
         rows={4}
         placeholder="What did you see? Is there anything you'd like to share?"
         value={description}

@@ -181,16 +181,16 @@ function SprAdmins() {
   return (
     <main className="flex flex-col w-full">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8 gap-4">
-        <p className="flex justify-center text-5xl font-extrabold mb-12  text-center md:justify-start md:text-left md:w-[48%] ">
+        <h1 className="text-5xl font-extrabold text-center md:text-left">
           Admin Management
-        </p>
+        </h1>
 
         <button
-          className="flex items-center justify-center gap-2 bg-primary text-white px-6 py-3 rounded-lg hover:bg-primary/90 transition-colors shadow-sm md:w-auto w-full hover:cursor-pointer"
+          className="flex items-center justify-center gap-2 bg-primary text-white px-6 py-3 rounded-lg hover:bg-primary/90 transition-colors shadow-sm md:w-auto w-full"
           onClick={() => setIsModalOpen(true)}
         >
           <IconPlus size={20} />
-          Create New Admin
+          Create an Admin
         </button>
       </div>
 

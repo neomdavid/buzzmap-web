@@ -186,7 +186,7 @@ function SprAdmins() {
         </p>
 
         <button
-          className="flex items-center justify-center gap-2 bg-primary text-white px-6 py-3 rounded-lg hover:bg-primary/90 transition-colors shadow-sm md:w-auto w-full hover:cursor-pointer"
+          className="flex items-center justify-center gap-2 bg-primary text-white px-6 py-3 rounded-lg hover:bg-primary/90 transition-colors shadow-sm md:w-auto w-full"
           onClick={() => setIsModalOpen(true)}
         >
           <IconPlus size={20} />
