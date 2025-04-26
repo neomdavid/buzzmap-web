@@ -25,7 +25,7 @@ const SupersuperadminLayout = () => {
     <div className="flex h-screen overflow-hidden">
       {/* Sidebar */}
       <aside
-        className={`z-10 fixed shadow-md z-40 top-0 left-0 h-full w-80 
+        className={`z-1 fixed shadow-md z-40 top-0 left-0 h-full w-80 
 - bg-white  
 + bg-gradient-to-b from-[#255261] to-[#007da6] 
   p-8 flex flex-col justify-between transition-transform duration-300 

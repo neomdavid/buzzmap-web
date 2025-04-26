@@ -1,7 +1,7 @@
 import { AdminsTable } from "../../components";
 import { IconPlus } from "@tabler/icons-react";
 import { useState } from "react";
-import { toastSuccess } from "../../utils.jsx";
+
 function SprAdmins() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [formData, setFormData] = useState({
@@ -14,54 +14,12 @@ function SprAdmins() {
   });
   const [errors, setErrors] = useState({});
 
-  const validateField = (name, value) => {
-    let error = "";
-
-    switch (name) {
-      case "firstName":
-        if (!value.trim()) error = "First name is required";
-        break;
-      case "lastName":
-        if (!value.trim()) error = "Last name is required";
-        break;
-      case "email":
-        if (!value.trim()) error = "Email is required";
-        else if (!/^\S+@\S+\.\S+$/.test(value)) error = "Email is invalid";
-        break;
-      case "password":
-        if (!value) error = "Password is required";
-        else if (!/(?=.*\d)(?=.*[a-z])(?=.*[A-Z])(?=.*\W)/.test(value))
-          error = "Password does not meet requirements";
-        break;
-      case "confirmPassword":
-        if (value !== formData.password) error = "Passwords do not match";
-        break;
-      default:
-        break;
-    }
-
-    setErrors((prev) => ({
-      ...prev,
-      [name]: error,
-    }));
-  };
-
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({
       ...prev,
       [name]: value,
     }));
-
-    validateField(name, value);
-
-    // Also validate confirmPassword if password is changing
-    if (name === "password" || name === "confirmPassword") {
-      validateField(
-        "confirmPassword",
-        name === "confirmPassword" ? value : formData.confirmPassword
-      );
-    }
   };
 
   const handleFileChange = (e) => {
@@ -72,49 +30,39 @@ function SprAdmins() {
   };
 
   const validateForm = () => {
-    const fields = [
-      "firstName",
-      "lastName",
-      "email",
-      "password",
-      "confirmPassword",
-    ];
+    const newErrors = {};
 
-    fields.forEach((field) => validateField(field, formData[field]));
+    if (!formData.firstName.trim())
+      newErrors.firstName = "First name is required";
+    if (!formData.lastName.trim()) newErrors.lastName = "Last name is required";
+    if (!formData.email.trim()) {
+      newErrors.email = "Email is required";
+    } else if (!/^\S+@\S+\.\S+$/.test(formData.email)) {
+      newErrors.email = "Email is invalid";
+    }
 
-    return fields.every((field) => {
-      const error = (() => {
-        switch (field) {
-          case "firstName":
-            return !formData.firstName.trim();
-          case "lastName":
-            return !formData.lastName.trim();
-          case "email":
-            return (
-              !formData.email.trim() || !/^\S+@\S+\.\S+$/.test(formData.email)
-            );
-          case "password":
-            return (
-              !formData.password ||
-              !/(?=.*\d)(?=.*[a-z])(?=.*[A-Z])(?=.*\W)/.test(formData.password)
-            );
-          case "confirmPassword":
-            return formData.password !== formData.confirmPassword;
-          default:
-            return false;
-        }
-      })();
+    if (!formData.password) {
+      newErrors.password = "Password is required";
+    } else if (
+      !/(?=.*\d)(?=.*[a-z])(?=.*[A-Z])(?=.*\W)/.test(formData.password)
+    ) {
+      newErrors.password = "Password does not meet requirements";
+    }
 
-      return !error;
-    });
+    if (formData.password !== formData.confirmPassword) {
+      newErrors.confirmPassword = "Passwords do not match";
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
     if (validateForm()) {
+      // Submit form logic here
       console.log("Form submitted:", formData);
       setIsModalOpen(false);
-      toastSuccess("New Admin Created");
     }
   };
 
@@ -145,7 +93,7 @@ function SprAdmins() {
         open={isModalOpen}
         onClose={() => setIsModalOpen(false)}
       >
-        <div className="modal-box gap-6 text-lg w-10/12 max-w-3xl p-8 sm:p-12 rounded-3xl">
+        <div className="modal-box gap-6 text-lg w-10/12 max-w-5xl p-8 sm:p-12 rounded-3xl">
           <form onSubmit={handleSubmit}>
             <div className="flex flex-col gap-8">
               <p className="text-center text-3xl font-bold">Create New Admin</p>
@@ -262,14 +210,14 @@ function SprAdmins() {
               <div className="w-full flex justify-end gap-3 mt-4">
                 <button
                   type="button"
-                  className="bg-gray-300 text-white px-6 py-2.5 rounded-xl hover:bg-gray-400 transition-colors hover:cursor-pointer"
+                  className="bg-gray-300 text-white px-6 py-2.5 rounded-xl hover:bg-gray-400 transition-colors"
                   onClick={() => setIsModalOpen(false)}
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="bg-gradient-to-r from-[#245261] to-[#4AA8C7] text-white px-6 py-2.5 rounded-xl hover:opacity-90 transition-opacity hover:cursor-pointer"
+                  className="bg-gradient-to-r from-[#245261] to-[#4AA8C7] text-white px-6 py-2.5 rounded-xl hover:opacity-90 transition-opacity"
                 >
                   Create Admin
                 </button>

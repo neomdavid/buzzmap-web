@@ -1,15 +1,15 @@
-import { UsersTable } from "../../components";
-function SprUsers() {
+import { AdminsTable } from "../../components";
+function SprAdmins() {
   return (
     <main className=" flex flex-col w-full ">
       <p className="flex justify-center text-5xl font-extrabold mb-12  text-center md:justify-start md:text-left md:w-[48%] ">
-        User Management
+        Admin Management
       </p>
-      <div className="h-[75vh] bg-white rounded-xl shadow-sm p-4">
-        <UsersTable />
+      <div className="h-[50vh]">
+        <AdminsTable />
       </div>
     </main>
   );
 }
 
-export default SprUsers;
+export default SprAdmins;

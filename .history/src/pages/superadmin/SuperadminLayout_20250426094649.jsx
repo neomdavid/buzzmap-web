@@ -25,7 +25,7 @@ const SupersuperadminLayout = () => {
     <div className="flex h-screen overflow-hidden">
       {/* Sidebar */}
       <aside
-        className={`z-10 fixed shadow-md z-40 top-0 left-0 h-full w-80 
+        className={`z-100000 fixed shadow-md z-40 top-0 left-0 h-full w-80 
 - bg-white  
 + bg-gradient-to-b from-[#255261] to-[#007da6] 
   p-8 flex flex-col justify-between transition-transform duration-300 
@@ -110,8 +110,8 @@ const SupersuperadminLayout = () => {
             </button>
           </div>
 
-          <div className="flex items-center gap-x-4 ml-auto mt-9">
-            {/* <div className="relative flex items-center">
+          {/* <div className="flex items-center gap-x-4 ml-auto">
+            <div className="relative flex items-center">
               <input
                 className="bg-gray-200 text-primary px-4 py-2 pr-10 rounded-2xl focus:outline-none"
                 placeholder="Search here..."
@@ -120,8 +120,8 @@ const SupersuperadminLayout = () => {
             </div>
             <Link>
               <Envelope size={25} />
-            </Link> */}
-          </div>
+            </Link>
+          </div> */}
         </div>
 
         <section
