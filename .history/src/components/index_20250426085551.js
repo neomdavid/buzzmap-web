@@ -42,4 +42,4 @@ export { default as ReportTable2 } from "./Admin/ReportTable2.jsx";
 export { default as SampleTable } from "./Admin/SampleTable.jsx";
 
 //SUPERADMIN
-export { default as UsersTable } from "./Superadmin/UsersTable.jsx";
+export { default as UsersTable } from "./SuperAdmin/UsersTable.jsx";

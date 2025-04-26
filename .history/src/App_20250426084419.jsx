@@ -114,14 +114,6 @@ function App() {
           path: "/superadmin/dashboard",
           element: <SprDashboard />,
         },
-        {
-          path: "/superadmin/users",
-          element: <SprUsers />,
-        },
-        {
-          path: "/superadmin/admins",
-          element: <SprAdmins />,
-        },
       ],
     },
   ]);

@@ -24,12 +24,6 @@ import {
   DengueMapping,
   ReportsVerification,
 } from "./pages/admin";
-import {
-  SuperadminLayout,
-  SprDashboard,
-  SprUsers,
-  SprAdmins,
-} from "./pages/superadmin";
 
 function App() {
   const router = createBrowserRouter([
@@ -106,24 +100,7 @@ function App() {
         },
       ],
     },
-    {
-      path: "/superadmin",
-      element: <SuperadminLayout />,
-      children: [
-        {
-          path: "/superadmin/dashboard",
-          element: <SprDashboard />,
-        },
-        {
-          path: "/superadmin/users",
-          element: <SprUsers />,
-        },
-        {
-          path: "/superadmin/admins",
-          element: <SprAdmins />,
-        },
-      ],
-    },
+    { path: "/superadmin", element: <Superadminlayout /> },
   ]);
   return <RouterProvider router={router} />;
 }

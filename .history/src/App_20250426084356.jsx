@@ -111,16 +111,8 @@ function App() {
       element: <SuperadminLayout />,
       children: [
         {
-          path: "/superadmin/dashboard",
+          path: "/dashboard",
           element: <SprDashboard />,
-        },
-        {
-          path: "/superadmin/users",
-          element: <SprUsers />,
-        },
-        {
-          path: "/superadmin/admins",
-          element: <SprAdmins />,
         },
       ],
     },
