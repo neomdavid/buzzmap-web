@@ -7,7 +7,7 @@ const UserDetailsTab = ({ profileImage, username, timestamp }) => {
       <div className="flex gap-x-4">
         <img
           src={profileImage}
-          className="h-12 w-12 rounded-full"
+          className="h-11 w-11 rounded-full"
           alt="Profile"
         />
         <div className="flex flex-col">

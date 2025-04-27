@@ -7,12 +7,12 @@ const UserDetailsTab = ({ profileImage, username, timestamp }) => {
       <div className="flex gap-x-4">
         <img
           src={profileImage}
-          className="h-12 w-12 rounded-full"
+          className="h-11 w-11 rounded-full"
           alt="Profile"
         />
         <div className="flex flex-col">
-          <p className="font-bold text-md">{username}</p>
-          <p className="text-[12px] text-gray-500">{timestamp}</p>
+          <p className="font-bold">{username}</p>
+          <p className="text-md text-gray-500">{timestamp}</p>
         </div>
       </div>
       {/* Right Side: Dots Icon */}

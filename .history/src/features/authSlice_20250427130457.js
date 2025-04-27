@@ -2,7 +2,6 @@ import { createSlice } from "@reduxjs/toolkit";
 
 const initialState = {
   user: JSON.parse(localStorage.getItem("user")) || null,
-  // Directly access token as a string
   token: localStorage.getItem("token") || null,
   isAuthenticated: !!localStorage.getItem("token"),
 };
@@ -21,9 +20,8 @@ const authSlice = createSlice({
       const { user, token } = action.payload;
       state.user = user;
       state.token = token;
-      // Store the token as a plain string, not stringified
       localStorage.setItem("user", JSON.stringify(user));
-      localStorage.setItem("token", token); // Remove JSON.stringify here
+      localStorage.setItem("token", JSON.stringify(token));
       console.log(token);
       console.log(user);
     },

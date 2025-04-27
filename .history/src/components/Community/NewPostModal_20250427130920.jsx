@@ -71,6 +71,7 @@ const NewPostModal = ({ onSubmit }) => {
     return true;
   };
 
+  
   const handleSubmit = async (e) => {
     e.preventDefault();
     console.log("🔐 Current token:", token);
@@ -101,31 +102,31 @@ const NewPostModal = ({ onSubmit }) => {
         .split(",")
         .map((coord) => parseFloat(coord.trim()));
 
-      // Create FormData to handle file uploads
-      const formData = new FormData();
-      formData.append("barangay", barangay);
-      formData.append("specific_location[type]", "Point");
-      formData.append("specific_location[coordinates][0]", lng);
-      formData.append("specific_location[coordinates][1]", lat);
-      formData.append(
-        "date_and_time",
-        new Date(`${date}T${time}`).toISOString()
-      );
-      formData.append("report_type", reportType);
-      formData.append("description", description);
+      const postData = {
+        barangay: barangay,
+        specific_location: {
+          type: "Point",
+          coordinates: [lng, lat],
+        },
+        date_and_time: new Date(`${date}T${time}`).toISOString(),
+        report_type: reportType,
+        description: description,
+        images: [], // Default as empty array
+      };
 
-      // If images are added, append each image to the FormData
+      // If images are added, convert to base64 (optional if backend supports it)
       if (images.length > 0) {
-        console.log(`📸 Appending ${images.length} image(s)`);
-        images.forEach((img) => {
-          formData.append("images", img); // Append each image (file) to the FormData
-        });
+        console.log(`📸 Encoding ${images.length} image(s) as base64`);
+        const base64Images = await Promise.all(
+          images.map((img) => toBase64(img))
+        );
+        postData.images = base64Images;
       }
 
-      console.log("📦 Final FormData body:", formData);
+      console.log("📦 Final JSON body:", postData);
 
-      // Call createPost mutation with FormData
-      const response = await createPostWithImage(formData).unwrap();
+      // Call createPost mutation
+      const response = await createPost(postData).unwrap();
 
       console.log("✅ Post uploaded successfully", response);
       showCustomToast("Post created successfully!", "success");
@@ -150,6 +151,13 @@ const NewPostModal = ({ onSubmit }) => {
       showCustomToast("Failed to create post. Please try again.", "error");
     }
   };
+
+  return (
+    <form onSubmit={handleSubmit}>
+      {/* Your form fields here */}
+    </form>
+  );
+};
 
   // Utility to convert File to base64 string
   const toBase64 = (file) =>

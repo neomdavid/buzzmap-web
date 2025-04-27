@@ -8,7 +8,6 @@ import {
   useCreatePostWithImageMutation,
 } from "../../api/dengueApi";
 import { useSelector } from "react-redux";
-import axios from "axios";
 
 // Define Quezon City boundaries
 const QC_BOUNDS = {
@@ -101,12 +100,16 @@ const NewPostModal = ({ onSubmit }) => {
         .split(",")
         .map((coord) => parseFloat(coord.trim()));
 
-      // Create FormData to handle file uploads
+      // 📝 Create FormData and append fields one by one
       const formData = new FormData();
       formData.append("barangay", barangay);
-      formData.append("specific_location[type]", "Point");
-      formData.append("specific_location[coordinates][0]", lng);
-      formData.append("specific_location[coordinates][1]", lat);
+      formData.append(
+        "specific_location",
+        JSON.stringify({
+          type: "Point",
+          coordinates: [lng, lat],
+        })
+      );
       formData.append(
         "date_and_time",
         new Date(`${date}T${time}`).toISOString()
@@ -114,24 +117,28 @@ const NewPostModal = ({ onSubmit }) => {
       formData.append("report_type", reportType);
       formData.append("description", description);
 
-      // If images are added, append each image to the FormData
-      if (images.length > 0) {
-        console.log(`📸 Appending ${images.length} image(s)`);
-        images.forEach((img) => {
-          formData.append("images", img); // Append each image (file) to the FormData
-        });
-      }
+      // 🖼️ Append each image separately
+      images.forEach((imageFile) => {
+        formData.append("images", imageFile);
+      });
 
-      console.log("📦 Final FormData body:", formData);
+      // 🛰️ Submit FormData
+      const response = await fetch("http://localhost:4000/api/v1/reports/", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          // ⚠️ DO NOT manually set Content-Type
+        },
+        body: formData,
+      });
 
-      // Call createPost mutation with FormData
-      const response = await createPostWithImage(formData).unwrap();
+      if (!response.ok) throw new Error("Server error");
 
-      console.log("✅ Post uploaded successfully", response);
+      console.log("✅ Post uploaded successfully");
       showCustomToast("Post created successfully!", "success");
       modalRef.current?.close();
 
-      // Reset form
+      // 🧹 Reset form
       setBarangay("");
       setCoordinates("");
       setDate("");

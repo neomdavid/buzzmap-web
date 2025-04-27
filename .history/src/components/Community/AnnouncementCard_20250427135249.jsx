@@ -1,6 +1,6 @@
 import React from "react";
 import surveillanceLogo from "../../assets/icons/quezon_surveillance.png";
-import announcementImg from "../../assets/announcementimg.png"; // Assuming it's a local import
+import announcementImg from "../../assets/announcementimg.png";
 import profile1 from "../../assets/profile1.png";
 
 import { DotsThree } from "phosphor-react";
@@ -11,7 +11,7 @@ import Comment from "./Comment";
 const AnnouncementCard = () => {
   return (
     <div className="flex flex-col">
-      <section className="bg-primary text-white flex flex-col p-6 py-6 rounded-2xl">
+      <section className="bg-primary text-white flex flex-col p-6 py-6 rounded-2xl ">
         <div className="flex justify-between mb-8">
           <div className="flex gap-x-3">
             <img src={surveillanceLogo} className="h-14" />
@@ -46,10 +46,7 @@ const AnnouncementCard = () => {
             <br />
             <span className="italic underline font-semibold">Read more...</span>
           </p>
-          {/* Updated ImageGrid to handle the correct image path */}
-          <div className="mt-4">
-            <ImageGrid images={[announcementImg]} sourceType="import" />
-          </div>
+          <ImageGrid images={[announcementImg]} />
         </div>
 
         <div>
@@ -72,7 +69,6 @@ const AnnouncementCard = () => {
           </div>
         </div>
       </section>
-
       <section className="py-4 px-4">
         <p className="text-primary mb-4 opacity-65 font-semibold text-lg">
           Comments from the Community

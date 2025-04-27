@@ -8,7 +8,6 @@ import {
   useCreatePostWithImageMutation,
 } from "../../api/dengueApi";
 import { useSelector } from "react-redux";
-import axios from "axios";
 
 // Define Quezon City boundaries
 const QC_BOUNDS = {
@@ -96,17 +95,19 @@ const NewPostModal = ({ onSubmit }) => {
     console.log("✅ Form validation passed");
 
     try {
-      // Prepare coordinates as [longitude, latitude]
       const [lat, lng] = coordinates
         .split(",")
         .map((coord) => parseFloat(coord.trim()));
 
-      // Create FormData to handle file uploads
       const formData = new FormData();
       formData.append("barangay", barangay);
-      formData.append("specific_location[type]", "Point");
-      formData.append("specific_location[coordinates][0]", lng);
-      formData.append("specific_location[coordinates][1]", lat);
+      formData.append(
+        "specific_location",
+        JSON.stringify({
+          type: "Point",
+          coordinates: [lng, lat],
+        })
+      );
       formData.append(
         "date_and_time",
         new Date(`${date}T${time}`).toISOString()
@@ -114,20 +115,30 @@ const NewPostModal = ({ onSubmit }) => {
       formData.append("report_type", reportType);
       formData.append("description", description);
 
-      // If images are added, append each image to the FormData
       if (images.length > 0) {
-        console.log(`📸 Appending ${images.length} image(s)`);
-        images.forEach((img) => {
-          formData.append("images", img); // Append each image (file) to the FormData
+        console.log(`📸 Appending ${images.length} image(s) to FormData`);
+        images.forEach((image, index) => {
+          formData.append("images", image);
         });
+      } else {
+        console.log("📸 No images to upload");
       }
 
-      console.log("📦 Final FormData body:", formData);
+      console.log("📦 Final FormData ready for submission");
 
-      // Call createPost mutation with FormData
-      const response = await createPostWithImage(formData).unwrap();
+      const response = await fetch("http://localhost:4000/api/v1/reports/", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          // Don't set Content-Type manually when using FormData; browser will set it properly
+        },
+        body: formData,
+      });
 
-      console.log("✅ Post uploaded successfully", response);
+      if (!response.ok) throw new Error("Server error");
+      const result = await response.json();
+      console.log("✅ Response JSON:", result);
+      console.log("✅ Post uploaded successfully");
       showCustomToast("Post created successfully!", "success");
       modalRef.current?.close();
 

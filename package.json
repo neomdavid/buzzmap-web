@@ -19,6 +19,7 @@
     "@turf/turf": "^7.2.0",
     "@vitejs/plugin-react": "^4.3.4",
     "ag-grid-react": "^33.2.3",
+    "axios": "^1.9.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "date-fns": "^3.6.0",

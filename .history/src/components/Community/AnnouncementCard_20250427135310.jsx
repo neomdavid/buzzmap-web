@@ -48,7 +48,7 @@ const AnnouncementCard = () => {
           </p>
           {/* Updated ImageGrid to handle the correct image path */}
           <div className="mt-4">
-            <ImageGrid images={[announcementImg]} sourceType="import" />
+            <ImageGrid images={[announcementImg]} />
           </div>
         </div>
 

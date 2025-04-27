@@ -1,6 +1,6 @@
 import React from "react";
 
-const ImageGrid = ({ images = [], sourceType = "server" }) => {
+const ImageGrid = ({ images = [] }) => {
   if (images.length === 0) return null;
 
   return (
@@ -14,15 +14,13 @@ const ImageGrid = ({ images = [], sourceType = "server" }) => {
       }`}
     >
       {images.slice(0, 4).map((img, index) => {
-        // If the sourceType is "server", prepend the server URL
-        // Otherwise, assume it's an imported local image and use it directly
-        const imagePath =
-          sourceType === "server" ? `http://localhost:4000/${img}` : img;
+        // Replace backslashes with forward slashes in the image path
+        const imagePath = img.replace(/\\/g, "/");
 
         return (
           <div key={index} className="relative">
             <img
-              src={imagePath} // Use the correct image path
+              src={`http://localhost:4000/${imagePath}`} // Updated image path
               className="w-full aspect-[4/3] object-cover rounded-md"
               alt={`Image ${index + 1}`}
             />

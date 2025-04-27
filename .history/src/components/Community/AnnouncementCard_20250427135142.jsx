@@ -1,6 +1,6 @@
 import React from "react";
 import surveillanceLogo from "../../assets/icons/quezon_surveillance.png";
-import announcementImg from "../../assets/announcementimg.png"; // Assuming it's a local import
+import announcementImg from "../../assets/announcementimg.png";
 import profile1 from "../../assets/profile1.png";
 
 import { DotsThree } from "phosphor-react";
@@ -46,9 +46,9 @@ const AnnouncementCard = () => {
             <br />
             <span className="italic underline font-semibold">Read more...</span>
           </p>
-          {/* Updated ImageGrid to handle the correct image path */}
+          {/* Ensure images are displayed correctly */}
           <div className="mt-4">
-            <ImageGrid images={[announcementImg]} sourceType="import" />
+            <ImageGrid images={[announcementImg]} />
           </div>
         </div>
 

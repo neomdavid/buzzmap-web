@@ -23,7 +23,7 @@ const PostCard = ({
         username={username}
         timestamp={timestamp}
       />
-      <div className="text-primary flex flex-col gap-2">
+      <div className="text-primary gap-2">
         <p>
           <span className="font-bold">📍 Location:</span> {location}
         </p>

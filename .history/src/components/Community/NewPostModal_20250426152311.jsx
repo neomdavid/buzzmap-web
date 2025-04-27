@@ -8,7 +8,7 @@ import {
   useCreatePostWithImageMutation,
 } from "../../api/dengueApi";
 import { useSelector } from "react-redux";
-import axios from "axios";
+import axios from "axios"; // Make sure you imported axios
 
 // Define Quezon City boundaries
 const QC_BOUNDS = {
@@ -71,42 +71,59 @@ const NewPostModal = ({ onSubmit }) => {
     return true;
   };
 
+  import axios from "axios";
+import React, { useState } from "react";
+
+const NewPostModal = ({ token, onSubmit }) => {
+  const [district, setDistrict] = useState("");
+  const [barangay, setBarangay] = useState("");
+  const [coordinates, setCoordinates] = useState("");
+  const [date, setDate] = useState("");
+  const [time, setTime] = useState("");
+  const [reportType, setReportType] = useState("");
+  const [description, setDescription] = useState("");
+  const [images, setImages] = useState([]);
+
+  const handleImageChange = (e) => {
+    setImages(Array.from(e.target.files));
+  };
+
+  const validateForm = () => {
+    return (
+      district &&
+      barangay &&
+      coordinates &&
+      date &&
+      time &&
+      reportType &&
+      description
+    );
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log("🔐 Current token:", token);
-    console.log("✅ SUBMIT button clicked");
-
-    console.log("📝 Current form values:");
-    console.log({
-      barangay,
-      coordinates,
-      date,
-      time,
-      reportType,
-      images,
-      description,
-    });
-
     if (!validateForm()) {
-      console.warn("❌ Form validation failed");
-      showCustomToast("Please fill all required fields", "error");
+      alert("Please fill all required fields");
       return;
     }
 
-    console.log("✅ Form validation passed");
-
     try {
-      // Prepare coordinates as [longitude, latitude]
+      // split "lat, lng" into numbers
       const [lat, lng] = coordinates
         .split(",")
-        .map((coord) => parseFloat(coord.trim()));
+        .map((c) => parseFloat(c.trim()));
 
-      // Create FormData to handle file uploads
+      // build FormData
       const formData = new FormData();
+      formData.append("district", district);
       formData.append("barangay", barangay);
-      formData.append("specific_location[type]", "Point");
-      formData.append("specific_location[coordinates][0]", lng);
-      formData.append("specific_location[coordinates][1]", lat);
+      formData.append(
+        "specific_location",
+        JSON.stringify({
+          type: "Point",
+          coordinates: [lng, lat],
+        })
+      );
       formData.append(
         "date_and_time",
         new Date(`${date}T${time}`).toISOString()
@@ -114,24 +131,27 @@ const NewPostModal = ({ onSubmit }) => {
       formData.append("report_type", reportType);
       formData.append("description", description);
 
-      // If images are added, append each image to the FormData
-      if (images.length > 0) {
-        console.log(`📸 Appending ${images.length} image(s)`);
-        images.forEach((img) => {
-          formData.append("images", img); // Append each image (file) to the FormData
-        });
-      }
+      // append each image under the same key "images"
+      images.forEach((file) => {
+        formData.append("images", file);
+      });
 
-      console.log("📦 Final FormData body:", formData);
+      // send
+      const resp = await axios.post(
+        "http://localhost:4000/api/v1/reports/",
+        formData,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "multipart/form-data",
+          },
+        }
+      );
 
-      // Call createPost mutation with FormData
-      const response = await createPostWithImage(formData).unwrap();
-
-      console.log("✅ Post uploaded successfully", response);
-      showCustomToast("Post created successfully!", "success");
-      modalRef.current?.close();
-
-      // Reset form
+      console.log("✅ Success:", resp.data);
+      onSubmit?.();
+      // reset form
+      setDistrict("");
       setBarangay("");
       setCoordinates("");
       setDate("");
@@ -139,17 +159,73 @@ const NewPostModal = ({ onSubmit }) => {
       setReportType("");
       setDescription("");
       setImages([]);
-      console.log("🧹 Form reset after successful submission");
-
-      if (onSubmit) {
-        console.log("📣 Calling onSubmit callback");
-        onSubmit();
+    } catch (err) {
+      if (err.response) {
+        console.error("Server error:", err.response.data);
+        alert(err.response.data.message || "Server error");
+      } else if (err.request) {
+        console.error("No response:", err.request);
+        alert("No response from server");
+      } else {
+        console.error("Error:", err.message);
+        alert(err.message);
       }
-    } catch (error) {
-      console.error("❌ Failed to create post:", error);
-      showCustomToast("Failed to create post. Please try again.", "error");
     }
   };
+
+  return (
+    <form onSubmit={handleSubmit} encType="multipart/form-data">
+      <input
+        type="text"
+        placeholder="District"
+        value={district}
+        onChange={(e) => setDistrict(e.target.value)}
+      />
+      <input
+        type="text"
+        placeholder="Barangay"
+        value={barangay}
+        onChange={(e) => setBarangay(e.target.value)}
+      />
+      <input
+        type="text"
+        placeholder="Coordinates (lat, lng)"
+        value={coordinates}
+        onChange={(e) => setCoordinates(e.target.value)}
+      />
+      <input
+        type="date"
+        value={date}
+        onChange={(e) => setDate(e.target.value)}
+      />
+      <input
+        type="time"
+        value={time}
+        onChange={(e) => setTime(e.target.value)}
+      />
+      <input
+        type="text"
+        placeholder="Report Type"
+        value={reportType}
+        onChange={(e) => setReportType(e.target.value)}
+      />
+      <textarea
+        placeholder="Description"
+        value={description}
+        onChange={(e) => setDescription(e.target.value)}
+      />
+      <input
+        type="file"
+        accept="image/*"
+        multiple
+        onChange={handleImageChange}
+      />
+      <button type="submit">Submit Report</button>
+    </form>
+  );
+};
+
+export default NewPostModal;
 
   // Utility to convert File to base64 string
   const toBase64 = (file) =>

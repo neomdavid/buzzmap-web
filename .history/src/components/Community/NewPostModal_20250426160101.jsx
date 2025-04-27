@@ -8,7 +8,6 @@ import {
   useCreatePostWithImageMutation,
 } from "../../api/dengueApi";
 import { useSelector } from "react-redux";
-import axios from "axios";
 
 // Define Quezon City boundaries
 const QC_BOUNDS = {
@@ -100,34 +99,41 @@ const NewPostModal = ({ onSubmit }) => {
       const [lat, lng] = coordinates
         .split(",")
         .map((coord) => parseFloat(coord.trim()));
+      const postData = {
+        barangay: barangay,
+        specific_location: {
+          type: "Point",
+          coordinates: [lng, lat],
+        },
+        date_and_time: new Date(`${date}T${time}`).toISOString(),
+        report_type: reportType,
+        description: description,
+        images: [], // Default as empty array
+      };
 
-      // Create FormData to handle file uploads
-      const formData = new FormData();
-      formData.append("barangay", barangay);
-      formData.append("specific_location[type]", "Point");
-      formData.append("specific_location[coordinates][0]", lng);
-      formData.append("specific_location[coordinates][1]", lat);
-      formData.append(
-        "date_and_time",
-        new Date(`${date}T${time}`).toISOString()
-      );
-      formData.append("report_type", reportType);
-      formData.append("description", description);
-
-      // If images are added, append each image to the FormData
+      // If images are added, convert to base64 (optional if backend supports it)
       if (images.length > 0) {
-        console.log(`📸 Appending ${images.length} image(s)`);
-        images.forEach((img) => {
-          formData.append("images", img); // Append each image (file) to the FormData
-        });
+        console.log(`📸 Encoding ${images.length} image(s) as base64`);
+        const base64Images = await Promise.all(
+          images.map((img) => toBase64(img))
+        );
+        postData.images = base64Images;
       }
 
-      console.log("📦 Final FormData body:", formData);
+      console.log("📦 Final JSON body:", postData);
 
-      // Call createPost mutation with FormData
-      const response = await createPostWithImage(formData).unwrap();
+      const response = await fetch("http://localhost:4000/api/v1/reports/", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(postData),
+      });
 
-      console.log("✅ Post uploaded successfully", response);
+      if (!response.ok) throw new Error("Server error");
+      console.log("response:" + JSON.stringify(response));
+      console.log("✅ Post uploaded successfully");
       showCustomToast("Post created successfully!", "success");
       modalRef.current?.close();
 

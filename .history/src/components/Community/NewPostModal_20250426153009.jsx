@@ -8,7 +8,6 @@ import {
   useCreatePostWithImageMutation,
 } from "../../api/dengueApi";
 import { useSelector } from "react-redux";
-import axios from "axios";
 
 // Define Quezon City boundaries
 const QC_BOUNDS = {
@@ -76,8 +75,8 @@ const NewPostModal = ({ onSubmit }) => {
     console.log("🔐 Current token:", token);
     console.log("✅ SUBMIT button clicked");
 
-    console.log("📝 Current form values:");
-    console.log({
+    // Log current form values for debugging
+    console.log("📝 Current form values:", {
       barangay,
       coordinates,
       date,
@@ -93,45 +92,86 @@ const NewPostModal = ({ onSubmit }) => {
       return;
     }
 
-    console.log("✅ Form validation passed");
-
     try {
-      // Prepare coordinates as [longitude, latitude]
+      // Parse coordinates
       const [lat, lng] = coordinates
         .split(",")
         .map((coord) => parseFloat(coord.trim()));
 
-      // Create FormData to handle file uploads
-      const formData = new FormData();
-      formData.append("barangay", barangay);
-      formData.append("specific_location[type]", "Point");
-      formData.append("specific_location[coordinates][0]", lng);
-      formData.append("specific_location[coordinates][1]", lat);
-      formData.append(
-        "date_and_time",
-        new Date(`${date}T${time}`).toISOString()
-      );
-      formData.append("report_type", reportType);
-      formData.append("description", description);
+      // Create the base request body
+      const requestBody = {
+        barangay,
+        specific_location: {
+          type: "Point",
+          coordinates: [lng, lat],
+        },
+        date_and_time: new Date(`${date}T${time}`).toISOString(),
+        report_type: reportType,
+        description,
+      };
 
-      // If images are added, append each image to the FormData
+      // Choose the appropriate method based on whether there are images
+      let response;
       if (images.length > 0) {
-        console.log(`📸 Appending ${images.length} image(s)`);
-        images.forEach((img) => {
-          formData.append("images", img); // Append each image (file) to the FormData
+        console.log("📸 Using FormData for image upload");
+
+        // Use FormData when images are present
+        const formData = new FormData();
+        formData.append("barangay", barangay);
+        formData.append(
+          "specific_location",
+          JSON.stringify({
+            type: "Point",
+            coordinates: [lng, lat],
+          })
+        );
+        formData.append(
+          "date_and_time",
+          new Date(`${date}T${time}`).toISOString()
+        );
+        formData.append("report_type", reportType);
+        formData.append("description", description);
+
+        // Append each image file
+        images.forEach((imageFile) => {
+          formData.append("images", imageFile);
+        });
+
+        response = await fetch("http://localhost:4000/api/v1/reports/", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            // Don't set Content-Type - it will be set automatically
+          },
+          body: formData,
+        });
+      } else {
+        console.log("📄 Using JSON for request without images");
+
+        // Use plain JSON when no images
+        response = await fetch("http://localhost:4000/api/v1/reports/", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(requestBody),
         });
       }
 
-      console.log("📦 Final FormData body:", formData);
+      // Handle response
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error("❌ Server error response:", errorData);
+        throw new Error(errorData.message || "Server error");
+      }
 
-      // Call createPost mutation with FormData
-      const response = await createPostWithImage(formData).unwrap();
-
-      console.log("✅ Post uploaded successfully", response);
+      const responseData = await response.json();
+      console.log("✅ Post created successfully:", responseData);
       showCustomToast("Post created successfully!", "success");
-      modalRef.current?.close();
 
       // Reset form
+      modalRef.current?.close();
       setBarangay("");
       setCoordinates("");
       setDate("");
@@ -139,23 +179,25 @@ const NewPostModal = ({ onSubmit }) => {
       setReportType("");
       setDescription("");
       setImages([]);
-      console.log("🧹 Form reset after successful submission");
 
-      if (onSubmit) {
-        console.log("📣 Calling onSubmit callback");
-        onSubmit();
-      }
+      if (onSubmit) onSubmit();
     } catch (error) {
-      console.error("❌ Failed to create post:", error);
-      showCustomToast("Failed to create post. Please try again.", "error");
+      console.error("❌ Failed to create post:", {
+        error: error.message,
+        stack: error.stack,
+      });
+      showCustomToast(
+        error.message || "Failed to create post. Please try again.",
+        "error"
+      );
     }
   };
 
-  // Utility to convert File to base64 string
+  // Helper function to convert file to base64 (if needed)
   const toBase64 = (file) =>
     new Promise((resolve, reject) => {
       const reader = new FileReader();
-      reader.readAsDataURL(file); // This gives you a base64-encoded data URI
+      reader.readAsDataURL(file);
       reader.onload = () => resolve(reader.result);
       reader.onerror = (error) => reject(error);
     });

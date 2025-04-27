@@ -8,7 +8,7 @@ import {
   useCreatePostWithImageMutation,
 } from "../../api/dengueApi";
 import { useSelector } from "react-redux";
-import axios from "axios";
+import axios from "axios"; // Make sure you imported axios
 
 // Define Quezon City boundaries
 const QC_BOUNDS = {
@@ -101,12 +101,16 @@ const NewPostModal = ({ onSubmit }) => {
         .split(",")
         .map((coord) => parseFloat(coord.trim()));
 
-      // Create FormData to handle file uploads
+      // 📝 Create FormData and append fields one by one
       const formData = new FormData();
       formData.append("barangay", barangay);
-      formData.append("specific_location[type]", "Point");
-      formData.append("specific_location[coordinates][0]", lng);
-      formData.append("specific_location[coordinates][1]", lat);
+      formData.append(
+        "specific_location",
+        JSON.stringify({
+          type: "Point",
+          coordinates: [lng, lat],
+        })
+      );
       formData.append(
         "date_and_time",
         new Date(`${date}T${time}`).toISOString()
@@ -114,24 +118,30 @@ const NewPostModal = ({ onSubmit }) => {
       formData.append("report_type", reportType);
       formData.append("description", description);
 
-      // If images are added, append each image to the FormData
-      if (images.length > 0) {
-        console.log(`📸 Appending ${images.length} image(s)`);
-        images.forEach((img) => {
-          formData.append("images", img); // Append each image (file) to the FormData
-        });
-      }
+      // 🖼️ Append each image separately
+      images.forEach((imageFile) => {
+        formData.append("images", imageFile);
+      });
 
-      console.log("📦 Final FormData body:", formData);
+      console.log("📦 FormData ready. Sending...");
 
-      // Call createPost mutation with FormData
-      const response = await createPostWithImage(formData).unwrap();
+      // 🛰️ Submit FormData using Axios
+      const response = await axios.post(
+        "http://localhost:4000/api/v1/reports/",
+        formData,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "multipart/form-data", // Axios will handle boundary automatically
+          },
+        }
+      );
 
-      console.log("✅ Post uploaded successfully", response);
+      console.log("✅ Post uploaded successfully", response.data);
       showCustomToast("Post created successfully!", "success");
       modalRef.current?.close();
 
-      // Reset form
+      // 🧹 Reset form
       setBarangay("");
       setCoordinates("");
       setDate("");
@@ -146,8 +156,23 @@ const NewPostModal = ({ onSubmit }) => {
         onSubmit();
       }
     } catch (error) {
-      console.error("❌ Failed to create post:", error);
-      showCustomToast("Failed to create post. Please try again.", "error");
+      console.error("❌ Failed to create post:");
+      if (error.response) {
+        // Request made and server responded
+        console.error("Server responded with error:", error.response.data);
+        showCustomToast(
+          error.response.data.message || "Server error occurred.",
+          "error"
+        );
+      } else if (error.request) {
+        // Request made but no response
+        console.error("No response from server:", error.request);
+        showCustomToast("No response from server.", "error");
+      } else {
+        // Other errors
+        console.error("Error setting up request:", error.message);
+        showCustomToast("Error setting up request.", "error");
+      }
     }
   };
 
