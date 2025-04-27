@@ -1,0 +1,44 @@
+barangay
+: 
+"E. Rodriguez Sr."
+createdAt
+: 
+"2025-04-27T07:58:32.997Z"
+date_and_time
+: 
+"2025-04-27T07:58:00.000Z"
+description
+: 
+"fawefawefwe"
+images
+: 
+['uploads\\1745740712991.png']
+report_type
+: 
+"Standing Water"
+specific_location
+: 
+{type: 'Point', coordinates: Array(2)}
+status
+: 
+"Pending"
+updatedAt
+: 
+"2025-04-27T07:58:32.997Z"
+user
+: 
+username
+: 
+"davidneo2040"
+_id
+: 
+"68070fd6e253a71a364ae05f"
+[[Prototype]]
+: 
+Object
+__v
+: 
+0
+_id
+: 
+"680de3a817c3a8661cd92f3a

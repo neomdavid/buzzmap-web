@@ -1,0 +1,285 @@
+import React, { useEffect, useState, useRef } from "react";
+import { GoogleMap, Polygon, Marker, Rectangle } from "@react-google-maps/api";
+import { useGoogleMaps } from "./GoogleMapsProvider";
+import * as turf from "@turf/turf";
+
+import { CustomModalToast } from "./";
+
+const containerStyle = {
+  width: "100%",
+  height: "400px",
+};
+
+const QC_BOUNDS = {
+  north: 14.7406,
+  south: 14.4795,
+  east: 121.1535,
+  west: 121.022,
+};
+
+const RISK_LEVELS = ["High", "Medium", "Low"];
+const RISK_COLORS = {
+  High: "#e53e3e",
+  Medium: "#dd6b20",
+  Low: "#38a169",
+};
+
+const assignRiskLevel = () => RISK_LEVELS[Math.floor(Math.random() * 3)];
+
+export default function MapPicker({ onLocationSelect }) {
+  const [toast, setToast] = useState(null); // For storing the toast message
+
+  const [currentPosition, setCurrentPosition] = useState(null);
+  const [markerPosition, setMarkerPosition] = useState(null);
+  const [qcPolygonPaths, setQcPolygonPaths] = useState([]);
+  const [qcPolygon, setQcPolygon] = useState(null); // State to store QC polygon
+  const [barangayData, setBarangayData] = useState(null);
+  const mapRef = useRef(null);
+  const { isLoaded } = useGoogleMaps();
+
+  const showToast = (message, type) => {
+    setToast({ message, type });
+
+    setTimeout(() => {
+      setToast(null); // Hide the toast after 3 seconds
+    }, 3000);
+  };
+
+  useEffect(() => {
+    fetch("/quezon_city_boundaries.geojson")
+      .then((res) => res.json())
+      .then((data) => {
+        const coords = data.features[0].geometry.coordinates[0].map(
+          ([lng, lat]) => ({ lat, lng })
+        );
+        setQcPolygonPaths(coords);
+
+        // Store as turf polygon
+        const ring = [...data.features[0].geometry.coordinates[0]];
+        if (
+          ring.length > 0 &&
+          (ring[0][0] !== ring[ring.length - 1][0] ||
+            ring[0][1] !== ring[ring.length - 1][1])
+        ) {
+          ring.push(ring[0]);
+        }
+        const polygon = turf.polygon([ring]);
+        setQcPolygon(polygon); // Store the polygon
+      })
+      .catch(console.error);
+
+    fetch("/quezon_barangays_boundaries.geojson")
+      .then((res) => res.json())
+      .then((data) => {
+        const colored = {
+          ...data,
+          features: data.features.map((f) => {
+            const risk = assignRiskLevel();
+            return {
+              ...f,
+              properties: {
+                ...f.properties,
+                color: RISK_COLORS[risk],
+                riskLevel: risk,
+              },
+            };
+          }),
+        };
+        setBarangayData(colored);
+      })
+      .catch(console.error);
+
+    navigator.geolocation.getCurrentPosition(
+      ({ coords }) => {
+        const userLocation = { lat: coords.latitude, lng: coords.longitude };
+        const isInsideQC =
+          userLocation.lat >= QC_BOUNDS.south &&
+          userLocation.lat <= QC_BOUNDS.north &&
+          userLocation.lng >= QC_BOUNDS.west &&
+          userLocation.lng <= QC_BOUNDS.east;
+
+        if (!isInsideQC) {
+          showToast("You are currently outside Quezon City.", "warning");
+        }
+
+        setCurrentPosition(userLocation);
+        setMarkerPosition(isInsideQC ? userLocation : null);
+      },
+      () => {
+        const fallback = { lat: 14.676, lng: 121.0437 };
+        setCurrentPosition(fallback);
+        setMarkerPosition(null);
+      }
+    );
+  }, []);
+
+  const handleSelection = (coords) => {
+    const pt = turf.point([coords.lng, coords.lat]);
+
+    // Check if inside actual QC polygon
+    if (!qcPolygon || !turf.booleanPointInPolygon(pt, qcPolygon)) {
+      showToast("Please select a location within Quezon City.", "warning");
+      return { valid: false };
+    }
+
+    if (barangayData) {
+      let isInsideBarangay = false; // Flag to check if inside any barangay
+      for (let f of barangayData.features) {
+        let polys = [];
+        if (f.geometry.type === "Polygon") {
+          polys = [f.geometry.coordinates];
+        } else if (f.geometry.type === "MultiPolygon") {
+          polys = f.geometry.coordinates;
+        }
+
+        for (let polyCoords of polys) {
+          let ring = [...polyCoords[0]];
+          const [x0, y0] = ring[0];
+          const [xn, yn] = ring[ring.length - 1];
+          if (x0 !== xn || y0 !== yn) ring.push(ring[0]);
+          const poly = turf.polygon([ring]);
+          if (turf.booleanPointInPolygon(pt, poly)) {
+            isInsideBarangay = true; // Point is inside a barangay
+            return { valid: true, barangay: f.properties.name };
+          }
+        }
+      }
+
+      if (!isInsideBarangay) {
+        showToast("Please select a location within Quezon City.", "warning");
+        return { valid: false, barangay: null }; // Prevent pinning
+      }
+    }
+
+    return { valid: true, barangay: null };
+  };
+
+  const handleMapClick = (e) => {
+    const coords = { lat: e.latLng.lat(), lng: e.latLng.lng() };
+    const result = handleSelection(coords);
+
+    if (result.valid) {
+      setMarkerPosition(coords);
+      onLocationSelect(coords, result.barangay); // even if barangay is null
+    }
+  };
+
+  if (!isLoaded || !currentPosition) return <p>Loading map...</p>;
+
+  return (
+    <div style={{ position: "relative" }}>
+      <ToastContainer position="top-center" style={{ zIndex: 999999 }} />
+      <select
+        onChange={(e) => {
+          const barangayName = e.target.value;
+          const selected = barangayData?.features.find(
+            (f) => f.properties.name === barangayName
+          );
+          if (selected) {
+            let lng, lat;
+            if (selected.geometry.type === "Polygon") {
+              [lng, lat] = selected.geometry.coordinates[0][0];
+            } else {
+              [lng, lat] = selected.geometry.coordinates[0][0][0];
+            }
+            mapRef.current?.panTo({ lat, lng });
+            mapRef.current?.setZoom(15);
+          }
+        }}
+        style={{
+          position: "absolute",
+          top: 10,
+          left: "50%",
+          transform: "translateX(-50%)",
+          zIndex: 1000,
+          padding: "6px 10px",
+          fontSize: "14px",
+          borderRadius: "6px",
+          background: "#fff",
+          boxShadow: "0 1px 4px rgba(0,0,0,0.3)",
+          border: "1px solid #ccc",
+        }}
+      >
+        <option value="">Search barangay</option>
+        {barangayData?.features.map((f, idx) => (
+          <option key={idx} value={f.properties.name}>
+            {f.properties.name}
+          </option>
+        ))}
+      </select>
+
+      <GoogleMap
+        mapContainerStyle={{
+          ...containerStyle,
+        }}
+        center={currentPosition}
+        zoom={13}
+        onClick={handleMapClick}
+        onLoad={(map) => (mapRef.current = map)}
+      >
+        <Polygon
+          paths={qcPolygonPaths}
+          options={{
+            strokeColor: "#FF0000",
+            strokeOpacity: 0.8,
+            strokeWeight: 2,
+            fillColor: "#FF0000",
+            fillOpacity: 0.1,
+            zIndex: 1,
+          }}
+        />
+
+        <Rectangle
+          bounds={QC_BOUNDS}
+          options={{
+            fillOpacity: 0,
+            strokeWeight: 0,
+            clickable: true,
+            zIndex: 2,
+          }}
+          onClick={handleMapClick}
+        />
+
+        {Array.isArray(barangayData?.features) &&
+          barangayData.features.map((feature, index) => {
+            const geometry = feature.geometry;
+            const coordsArray =
+              geometry.type === "Polygon"
+                ? [geometry.coordinates]
+                : geometry.type === "MultiPolygon"
+                ? geometry.coordinates
+                : [];
+
+            return coordsArray.map((polygonCoords, i) => {
+              if (!Array.isArray(polygonCoords[0])) return null;
+
+              const path = polygonCoords[0].map(([lng, lat]) => ({ lat, lng }));
+              return (
+                <Polygon
+                  key={`${index}-${i}`}
+                  paths={path}
+                  options={{
+                    strokeColor: "#333",
+                    strokeOpacity: 0.6,
+                    strokeWeight: 1,
+                    fillOpacity: 0.5,
+                    fillColor: feature.properties.color,
+                    zIndex: 0,
+                  }}
+                />
+              );
+            });
+          })}
+
+        {markerPosition && <Marker position={markerPosition} />}
+      </GoogleMap>
+      {toast && (
+        <CustomModalToast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
+      )}
+    </div>
+  );
+}
