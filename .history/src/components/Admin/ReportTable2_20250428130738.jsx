@@ -33,7 +33,7 @@ const customTheme = themeQuartz.withParams({
 const StatusCell = (p) => {
   const status = p.value;
   const bgColor =
-    status === "Validated"
+    status === "Verified"
       ? "bg-success"
       : status === "Pending"
       ? "bg-warning"
@@ -259,7 +259,7 @@ function ReportTable2({ posts, isActionable = true }) {
             onClose={closeModal}
             coordinates={selectedReport.coordinates}
             type={selectedReportType}
-            username={selectedReport.username}
+            username={selectedReportType.username}
           />
         )}
     </>

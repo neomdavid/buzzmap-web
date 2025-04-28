@@ -33,7 +33,7 @@ const customTheme = themeQuartz.withParams({
 const StatusCell = (p) => {
   const status = p.value;
   const bgColor =
-    status === "Validated"
+    status === "Verified"
       ? "bg-success"
       : status === "Pending"
       ? "bg-warning"

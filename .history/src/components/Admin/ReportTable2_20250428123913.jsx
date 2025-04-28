@@ -6,7 +6,7 @@ import {
 } from "ag-grid-community";
 import { AgGridReact } from "ag-grid-react";
 import { IconSearch, IconCheck, IconX } from "@tabler/icons-react";
-import { ReportDetailsModal, VerifyReportModal } from "../"; // Import the modal
+import ReportDetailsModal from "./ReportDetailsModal"; // Import the modal
 
 ModuleRegistry.registerModules([AllCommunityModule]);
 
@@ -33,7 +33,7 @@ const customTheme = themeQuartz.withParams({
 const StatusCell = (p) => {
   const status = p.value;
   const bgColor =
-    status === "Validated"
+    status === "Verified"
       ? "bg-success"
       : status === "Pending"
       ? "bg-warning"
@@ -237,31 +237,8 @@ function ReportTable2({ posts, isActionable = true }) {
           onClose={closeModal}
           coordinates={selectedReport.coordinates}
           type={selectedReportType}
-          username={selectedReport.username}
         />
       )}
-      {isModalOpen &&
-        selectedReport &&
-        (selectedReportType === "reject" ||
-          selectedReportType === "verify") && (
-          <VerifyReportModal
-            reportId={selectedReport.id}
-            barangay={selectedReport.barangay}
-            location={`Barangay: ${selectedReport.barangay}, Coordinates: ${
-              selectedReport.specific_location?.coordinates?.join(", ") ||
-              "No coordinates available"
-            }`}
-            description={selectedReport.description}
-            reportType={selectedReport.report_type}
-            status={selectedReport.status}
-            dateAndTime={selectedReport.date}
-            images={selectedReport.images}
-            onClose={closeModal}
-            coordinates={selectedReport.coordinates}
-            type={selectedReportType}
-            username={selectedReport.username}
-          />
-        )}
     </>
   );
 }

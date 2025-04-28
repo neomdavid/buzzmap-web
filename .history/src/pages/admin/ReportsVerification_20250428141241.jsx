@@ -33,7 +33,7 @@ const ReportsVerification = () => {
           <p className="text-base-content text-4xl font-bold mb-2">
             Recent Dengue Reports
           </p>
-          <div className="h-[75vh]">
+          <div className="h-[60vh]">
             {/* Pass all posts to ReportTable2 but only display validated posts */}
             <ReportTable2 posts={posts} />
           </div>

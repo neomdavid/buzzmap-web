@@ -89,7 +89,7 @@ const ReportDetailsModal = ({
       >
         <div className="modal-box bg-white rounded-3xl shadow-2xl w-9/12 max-w-4xl p-12 relative">
           <button
-            className="absolute top-10 right-10 text-2xl font-semibold hover:text-gray-500 transition-colors duration-200 hover:cursor-pointer"
+            className="absolute top-10 right-10 text-2xl font-semibold hover:text-gray-500 transition-colors duration-200"
             onClick={onClose}
           >
             ✕
@@ -215,9 +215,9 @@ const ReportDetailsModal = ({
             ) : (
               <div className="flex flex-col">
                 <p className="text-left text-2xl font-bold mb-6">Report Area</p>
-                <hr className="text-accent/50 " />
+                <hr className="text-accent/50 mb-2" />
                 <div
-                  className="w-full h-70 mt-4 rounded-md overflow-hidden"
+                  className="w-full h-64 mt-4 rounded-md overflow-hidden"
                   ref={streetViewRef}
                 ></div>
               </div>
@@ -253,9 +253,9 @@ const ReportDetailsModal = ({
 
       {/* StreetView Modal */}
       <dialog ref={streetViewModalRef} className="modal">
-        <div className="modal-box bg-white rounded-3xl shadow-2xl w-11/12 max-w-5xl p-6 py-14 relative">
+        <div className="modal-box bg-white rounded-3xl shadow-2xl w-11/12 max-w-5xl p-6 py-12 relative">
           <button
-            className="absolute top-4 right-4 text-2xl font-semibold hover:text-gray-500 transition-colors duration-200  hover:cursor-pointer"
+            className="absolute top-4 right-4 text-2xl font-semibold hover:text-gray-500 transition-colors duration-200"
             onClick={() => streetViewModalRef.current.close()}
           >
             ✕

@@ -253,9 +253,9 @@ const ReportDetailsModal = ({
 
       {/* StreetView Modal */}
       <dialog ref={streetViewModalRef} className="modal">
-        <div className="modal-box bg-white rounded-3xl shadow-2xl w-11/12 max-w-5xl p-6 py-14 relative">
+        <div className="modal-box bg-white rounded-3xl shadow-2xl w-11/12 max-w-5xl p-6 py-12 relative">
           <button
-            className="absolute top-4 right-4 text-2xl font-semibold hover:text-gray-500 transition-colors duration-200  hover:cursor-pointer"
+            className="absolute top-4 right-4 text-2xl font-semibold hover:text-gray-500 transition-colors duration-200"
             onClick={() => streetViewModalRef.current.close()}
           >
             ✕
