@@ -17,7 +17,7 @@ const CEA = () => {
           <FormPublicPost />
           <FormDengueAlert />
         </div>
-        <div className="">
+        <div className="flex justify-center">
           <FormCoordinationRequest />
         </div>
 

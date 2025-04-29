@@ -17,11 +17,9 @@ const CEA = () => {
           <FormPublicPost />
           <FormDengueAlert />
         </div>
-        <div className="">
-          <FormCoordinationRequest />
-        </div>
 
         {/* Second Row - Coordination Request Form */}
+        <FormCoordinationRequest />
       </section>
     </main>
   );

@@ -45,7 +45,6 @@ export { default as ReportDetailsModal } from "./Admin/ReportDetailsModal.jsx";
 export { default as VerifyReportModal } from "./Admin/VerifyReportModal.jsx";
 export { default as FormPublicPost } from "./Admin/FormPublicPost.jsx";
 export { default as FormDengueAlert } from "./Admin/FormDengueAlert.jsx";
-export { default as FormCoordinationRequest } from "./Admin/FormCoordinationRequest.jsx";
 
 //SUPERADMIN
 export { default as UsersTable } from "./Superadmin/UsersTable.jsx";

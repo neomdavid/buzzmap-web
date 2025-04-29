@@ -2,7 +2,7 @@ import {
   DengueChartCard,
   DengueMap,
   ReportCard,
-  ReportTable2,
+  ReportTable,
 } from "../../components";
 import { reports } from "../../utils";
 const Dashboard = () => {
@@ -58,8 +58,8 @@ const Dashboard = () => {
           Recent Reports
         </p>
         <hr className="mb-6 border-[1.5px] border-gray-200" />
-        <div className="h-120">
-          <ReportTable2 posts={reports} isActionable={false} />
+        <div className="h-50">
+          <ReportTable rows={reports} />
         </div>
       </section>
 

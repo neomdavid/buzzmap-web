@@ -59,7 +59,7 @@ const Dashboard = () => {
         </p>
         <hr className="mb-6 border-[1.5px] border-gray-200" />
         <div className="h-120">
-          <ReportTable2 posts={reports} isActionable={false} />
+          <ReportTable2 posts={reports} />
         </div>
       </section>
 

@@ -11,17 +11,15 @@ const CEA = () => {
         Community Engagement and Awareness
       </p>
 
-      <section className="flex flex-col">
+      <section className="flex flex-col items-center">
         {/* First Row - Two Forms */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start mb-8">
           <FormPublicPost />
           <FormDengueAlert />
         </div>
-        <div className="">
-          <FormCoordinationRequest />
-        </div>
 
         {/* Second Row - Coordination Request Form */}
+        <FormCoordinationRequest />
       </section>
     </main>
   );
