@@ -60,7 +60,7 @@ const CoordinationRequestForm = () => {
   return (
     <form
       onSubmit={handleSubmit}
-      className="flex flex-col rounded-xl overflow-hidden shadow-md border border-gray-200 bg-white max-w-5 xl"
+      className="flex flex-col rounded-xl overflow-hidden shadow-md border border-gray-200 bg-white max-w-6xl"
     >
       <div className="w-full bg-primary text-white text-center py-3">
         <p className="text-xl font-semibold">Coordination Request</p>
