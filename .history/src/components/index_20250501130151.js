@@ -47,8 +47,6 @@ export { default as FormPublicPost } from "./Admin/FormPublicPost.jsx";
 export { default as FormDengueAlert } from "./Admin/FormDengueAlert.jsx";
 export { default as FormCoordinationRequest } from "./Admin/FormCoordinationRequest.jsx";
 export { default as InterventionsTable } from "./Admin/InterventionsTable.jsx";
-export { default as AddInterventionModal } from "./Admin/AddInterventionModal.jsx";
-export { default as InterventionDetailsModal } from "./Admin/InterventionDetailsModal.jsx";
 
 //SUPERADMIN
 export { default as UsersTable } from "./Superadmin/UsersTable.jsx";
