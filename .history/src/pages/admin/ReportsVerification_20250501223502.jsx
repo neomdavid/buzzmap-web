@@ -19,9 +19,10 @@ const ReportsVerification = () => {
       setValidatedPosts(posts.filter((post) => post.status === "Validated"));
     }
   }, [posts]);
-  // console.log(posts);
+
   if (isLoading) return <p>Loading...</p>;
   if (isError) return <p>Error loading posts</p>;
+  console.log(posts);
   return (
     <main className="flex flex-col w-full">
       <p className="flex justify-center text-5xl font-extrabold mb-10 text-center md:justify-start md:text-left md:w-[48%] ">

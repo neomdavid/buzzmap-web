@@ -78,7 +78,6 @@ function InterventionsTable({
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   const [selectedIntervention, setSelectedIntervention] = useState(null);
   const gridRef = useRef(null);
-
   const rowData = interventions.map((intervention) => ({
     id: intervention._id,
     barangay: intervention.barangay,
@@ -96,6 +95,7 @@ function InterventionsTable({
     personnel: intervention.personnel,
     status: intervention.status,
   }));
+  console.log(rowData);
 
   const columnDefs = useMemo(() => {
     const baseCols = [
@@ -161,11 +161,9 @@ function InterventionsTable({
     params.api.sizeColumnsToFit();
   }, []);
 
-  const openDetailsModal = (selectedRow) => {
-    const intervention = interventions.find(
-      (interv) => interv._id === selectedRow.id
-    );
-    setSelectedIntervention(intervention); // Find full intervention data
+  const openDetailsModal = (intervention) => {
+    console.log("opening");
+    setSelectedIntervention(intervention);
     setIsDetailsModalOpen(true);
   };
 
@@ -218,7 +216,7 @@ function InterventionsTable({
       {/* Intervention Details Modal */}
       {isDetailsModalOpen && selectedIntervention && (
         <InterventionDetailsModal
-          intervention={selectedIntervention} // Pass full intervention object
+          interventionId={selectedIntervention.id}
           onClose={closeDetailsModal}
         />
       )}

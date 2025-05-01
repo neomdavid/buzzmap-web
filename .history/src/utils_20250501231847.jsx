@@ -297,3 +297,6 @@ export const formatDateForInput = (dateString) => {
 
   return `${year}-${month}-${day}T${hours}:${minutes}`;
 };
+
+// Usage in your component:
+const formattedDate = formatDateForInput(intervention.date); // Format the intervention date

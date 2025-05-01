@@ -96,6 +96,7 @@ function InterventionsTable({
     personnel: intervention.personnel,
     status: intervention.status,
   }));
+  console.log(rowData);
 
   const columnDefs = useMemo(() => {
     const baseCols = [
@@ -161,11 +162,8 @@ function InterventionsTable({
     params.api.sizeColumnsToFit();
   }, []);
 
-  const openDetailsModal = (selectedRow) => {
-    const intervention = interventions.find(
-      (interv) => interv._id === selectedRow.id
-    );
-    setSelectedIntervention(intervention); // Find full intervention data
+  const openDetailsModal = (intervention) => {
+    setSelectedIntervention(intervention);
     setIsDetailsModalOpen(true);
   };
 
@@ -218,7 +216,7 @@ function InterventionsTable({
       {/* Intervention Details Modal */}
       {isDetailsModalOpen && selectedIntervention && (
         <InterventionDetailsModal
-          intervention={selectedIntervention} // Pass full intervention object
+          intervention={selectedIntervention}
           onClose={closeDetailsModal}
         />
       )}

@@ -210,7 +210,7 @@ export const dengueApi = createApi({
     updateIntervention: builder.mutation({
       query: ({ id, updatedData }) => ({
         url: `interventions/${id}`, // The endpoint to update intervention by ID
-        method: "PATCH",
+        method: "PUT",
         body: updatedData,
       }),
       invalidatesTags: (result, error, { id }) => [

@@ -3,25 +3,51 @@ import {
   FormCoordinationRequest,
   ActionRecommendationCard,
 } from "../../components";
-import { useGetAllInterventionsQuery } from "../../api/dengueApi"; // Import the hook
+import { Circle, MagnifyingGlass, Lightbulb } from "phosphor-react";
+const posts = [
+  {
+    id: 1,
+    barangay: "Barangay 1",
+    date: "2025-04-25T10:30:00Z", // ISO 8601 format
+    interventionType: "Community Clean-up Drive",
+    personnel: "John Doe",
+    status: "Complete",
+  },
+  {
+    id: 2,
+    barangay: "Barangay 2",
+    date: "2025-04-26T09:00:00Z",
+    interventionType: "Breeding Site Inspection",
+    personnel: "Jane Smith",
+    status: "Scheduled",
+  },
+  {
+    id: 3,
+    barangay: "Barangay 3",
+    date: "2025-04-27T08:00:00Z",
+    interventionType: "Larvicide Distribution",
+    personnel: "Mark Johnson",
+    status: "Ongoing",
+  },
+  {
+    id: 4,
+    barangay: "Barangay 4",
+    date: "2025-04-28T07:15:00Z",
+    interventionType: "School Awareness Campaign",
+    personnel: "Sara Lee",
+    status: "Complete",
+  },
+  {
+    id: 5,
+    barangay: "Barangay 5",
+    date: "2025-04-29T14:45:00Z",
+    interventionType: "Drainage System Flushing",
+    personnel: "David Brown",
+    status: "Scheduled",
+  },
+];
 
-const Interventions = () => {
-  // Fetch interventions using the RTK Query hook
-  const {
-    data: interventions,
-    isLoading,
-    error,
-  } = useGetAllInterventionsQuery();
-
-  // Check if the data is still loading or there's an error
-  if (isLoading) {
-    return <div>Loading...</div>;
-  }
-
-  if (error) {
-    return <div>Error loading interventions: {error.message}</div>;
-  }
-  console.log(interventions);
+function Interventions() {
   return (
     <main className="flex flex-col w-full ">
       <p className="flex justify-center text-5xl font-extrabold mb-12  text-center md:justify-start md:text-left md:w-[48%] ">
@@ -33,11 +59,7 @@ const Interventions = () => {
             Recent Intervention Records
           </p>
           <div className="h-135">
-            {/* Pass the interventions data to the table */}
-            <InterventionsTable
-              interventions={interventions}
-              onlyRecent={true}
-            />
+            <InterventionsTable posts={posts} onlyRecent={true} />
           </div>
         </div>
         <div className="flex flex-col w-full gap-10 lg:flex-row">
@@ -79,6 +101,5 @@ const Interventions = () => {
       </section>
     </main>
   );
-};
-
+}
 export default Interventions;

@@ -8,6 +8,7 @@ import { AgGridReact } from "ag-grid-react";
 import { IconPlus, IconDotsVertical } from "@tabler/icons-react";
 import { AddInterventionModal, InterventionDetailsModal } from "../";
 
+// Register ag-grid modules
 ModuleRegistry.registerModules([AllCommunityModule]);
 
 const defaultColDef = {
@@ -30,6 +31,7 @@ const customTheme = themeQuartz.withParams({
   wrapperBorderRadius: 0,
 });
 
+// Status cell renderer for ag-grid
 const StatusCell = (p) => {
   const status = p.value;
   const bgColor =
@@ -50,12 +52,13 @@ const StatusCell = (p) => {
   );
 };
 
+// Actions cell renderer for ag-grid
 const ActionsCell = (p) => {
   return (
     <div className="flex justify-center items-center h-full w-full">
       <button
         className="p-1 rounded-full hover:bg-gray-200"
-        onClick={() => p.context.openDetailsModal(p.data)}
+        onClick={() => p.context.openDetailsModal(p.data)} // Pass the entire intervention data
       >
         <IconDotsVertical size={20} />
       </button>
@@ -161,12 +164,10 @@ function InterventionsTable({
     params.api.sizeColumnsToFit();
   }, []);
 
-  const openDetailsModal = (selectedRow) => {
-    const intervention = interventions.find(
-      (interv) => interv._id === selectedRow.id
-    );
-    setSelectedIntervention(intervention); // Find full intervention data
-    setIsDetailsModalOpen(true);
+  const openDetailsModal = (intervention) => {
+    console.log(intervention);
+    setSelectedIntervention(intervention); // Pass the entire intervention data
+    setIsDetailsModalOpen(true); // Open the modal
   };
 
   const openAddModal = () => {
@@ -199,7 +200,7 @@ function InterventionsTable({
           paginationPageSize={10}
           onGridSizeChanged={onGridSizeChanged}
           onFirstDataRendered={onFirstDataRendered}
-          context={{ openDetailsModal }}
+          context={{ openDetailsModal }} // Pass the openDetailsModal function
           onGridReady={onGridReady}
         />
       </div>
@@ -218,7 +219,7 @@ function InterventionsTable({
       {/* Intervention Details Modal */}
       {isDetailsModalOpen && selectedIntervention && (
         <InterventionDetailsModal
-          intervention={selectedIntervention} // Pass full intervention object
+          intervention={selectedIntervention} // Pass the full intervention object
           onClose={closeDetailsModal}
         />
       )}

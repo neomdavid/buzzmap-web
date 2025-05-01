@@ -1,29 +1,72 @@
 import React, { useState, useEffect, useRef } from "react";
 import { IconX } from "@tabler/icons-react";
-import { useUpdateInterventionMutation } from "../../api/dengueApi"; // Import the RTK Query hook for updating intervention data
+import { useGetInterventionQuery } from "../../api/dengueApi"; // Import the RTK Query hook for fetching intervention data
 
 const InterventionDetailsModal = ({
-  intervention,
+  interventionId, // Receive interventionId as a prop to fetch data
   onClose,
   onSave,
   onDelete,
 }) => {
+  console.log(interventionId);
   const modalRef = useRef(null);
   const [isSuccess, setIsSuccess] = useState(false);
   const [isEditing, setIsEditing] = useState(false); // Track if the user is editing
   const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false); // For delete confirmation inside modal
-  const [updateIntervention] = useUpdateInterventionMutation(); // RTK Query hook for updating the intervention
 
+  const {
+    data: intervention,
+    isLoading,
+    error,
+  } = useGetInterventionQuery(interventionId); // Fetch single intervention
+  console.log(intervention);
   const [formData, setFormData] = useState({
-    barangay: intervention.barangay,
-    address: intervention.address,
-    date: intervention.date,
-    interventionType: intervention.interventionType,
-    personnel: intervention.personnel,
-    status: intervention.status,
+    // Initialize with current intervention data when fetched
+    barangay: "",
+    address: "",
+    date: "",
+    interventionType: "",
+    personnel: "",
+    status: "",
   });
 
-  // Handle input changes
+  useEffect(() => {
+    if (isLoading) {
+      return;
+    }
+
+    if (error) {
+      console.error("Error fetching intervention:", error);
+      return;
+    }
+
+    if (intervention) {
+      setFormData({
+        barangay: intervention.barangay,
+        address: intervention.address,
+        date: intervention.date,
+        interventionType: intervention.interventionType,
+        personnel: intervention.personnel,
+        status: intervention.status,
+      });
+    }
+  }, [isLoading, intervention, error]);
+
+  // Automatically close the modal after showing the details for a short time
+  useEffect(() => {
+    if (isSuccess) {
+      setTimeout(() => {
+        onClose();
+      }, 2000); // Close the modal after 2 seconds
+    }
+  }, [isSuccess, onClose]);
+
+  useEffect(() => {
+    if (modalRef.current) {
+      modalRef.current.showModal();
+    }
+  }, []);
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({
@@ -32,50 +75,37 @@ const InterventionDetailsModal = ({
     }));
   };
 
-  // Handle save button
-  const handleSave = async (e) => {
-    e.preventDefault();
-    try {
-      const response = await updateIntervention({
-        id: intervention._id, // intervention id
-        updatedData: formData, // the data to update
-      }).unwrap();
-
-      console.log("Intervention updated successfully:", response);
-      setIsSuccess(true); // Mark as successful
-      setIsEditing(false); // Switch back to readonly mode
-    } catch (error) {
-      console.error("Failed to update intervention:", error);
-    }
-  };
-
-  // Handle edit click
   const handleEditClick = () => {
     setIsEditing(true); // Switch to editable mode
   };
 
-  // Handle delete click
+  const handleSave = (e) => {
+    e.preventDefault();
+    onSave(formData); // Save the updated data
+    setIsEditing(false); // Switch back to readonly mode
+  };
+
   const handleDeleteClick = () => {
     setShowDeleteConfirmation(true); // Show delete confirmation inside the current modal
   };
 
-  // Handle delete confirmation
   const handleConfirmDelete = () => {
-    onDelete(intervention._id); // Perform the delete action
+    onDelete(interventionId); // Perform the delete action
     setShowDeleteConfirmation(false); // Hide the confirmation modal
     setIsSuccess(true); // Optionally set success status
   };
 
-  // Handle cancel delete
   const handleCancelDelete = () => {
     setShowDeleteConfirmation(false); // Revert back to original modal content
   };
 
-  useEffect(() => {
-    if (modalRef.current) {
-      modalRef.current.showModal();
-    }
-  }, []);
+  if (isLoading) {
+    return <div>Loading intervention...</div>; // Show loading indicator while fetching data
+  }
+
+  if (error) {
+    return <div>Error: {error.message}</div>; // Show error message if fetching fails
+  }
 
   return (
     <dialog
@@ -97,6 +127,7 @@ const InterventionDetailsModal = ({
             <p className="text-3xl font-bold mb-6 text-center">
               Are you sure you want to delete this intervention?
             </p>
+
             <div className="modal-action flex justify-center gap-6">
               <button
                 type="button"
@@ -121,61 +152,87 @@ const InterventionDetailsModal = ({
                 ? "Edit Intervention Details"
                 : "View Intervention Details"}
             </p>
+            {isEditing ? (
+              <></>
+            ) : (
+              <div className="w-full flex justify-center">
+                <p
+                  className={`${
+                    intervention.status === "Complete"
+                      ? "bg-success"
+                      : intervention.status === "Scheduled"
+                      ? "bg-warning"
+                      : "bg-info"
+                  } py-2 px-18 text-xl text-white font-bold rounded-2xl mb-6`}
+                >
+                  {intervention.status}
+                </p>
+              </div>
+            )}
+            {isEditing ? (
+              <p className="text-center text-3xl font-bold mt-[-16px] mb-4">
+                {intervention.id}
+              </p>
+            ) : (
+              <></>
+            )}
 
-            {/* Display form to edit or view */}
+            {/* Forms for editing and viewing */}
             <form
               onSubmit={handleSave}
               className="flex flex-col space-y-2 text-lg font-semibold"
             >
-              {!isEditing ? (
+              {/* View Form (when not editing) */}
+              {!isEditing && (
                 <>
                   <div className="flex gap-1">
-                    <p className="text-gray-500">Intervention ID: </p>
+                    <p className="text-gray-500 ">Intervention ID: </p>
                     <p className="font-semibold text-primary">
                       {intervention._id}
                     </p>
                   </div>
                   <div className="flex gap-1">
-                    <p className="text-gray-500">Barangay: </p>
+                    <p className="text-gray-500 ">Barangay: </p>
                     <p className="font-semibold text-primary">
                       {intervention.barangay}
                     </p>
                   </div>
                   {intervention.address && (
                     <div>
-                      <p className="text-gray-500">Address: </p>
+                      <p className="text-gray-500">Address</p>
                       <p className="font-semibold text-primary">
                         {intervention.address}
                       </p>
                     </div>
                   )}
                   <div className="flex gap-1">
-                    <p className="text-gray-500">Date and Time: </p>
+                    <p className="text-gray-500 ">Date and Time: </p>
                     <p className="font-semibold text-primary">
                       {intervention.date}
                     </p>
                   </div>
                   <div className="flex gap-1">
-                    <p className="text-gray-500">Type of Intervention: </p>
+                    <p className="text-gray-500 ">Type of Intervention: </p>
                     <p className="font-semibold text-primary">
                       {intervention.interventionType}
                     </p>
                   </div>
                   <div className="flex gap-1">
-                    <p className="text-gray-500">Assigned Personnel: </p>
+                    <p className="text-gray-500 ">Assigned Personnel: </p>
                     <p className="font-semibold text-primary">
                       {intervention.personnel}
                     </p>
                   </div>
                 </>
-              ) : (
+              )}
+
+              {/* Edit Form (when editing) */}
+              {isEditing && (
                 <>
                   <div className="flex flex-col gap-2">
                     <label className="text-primary text-lg">Location</label>
                     <select
-                      name="barangay"
-                      value={formData.barangay}
-                      onChange={handleChange}
+                      defaultValue={intervention.barangay}
                       className="border-2 font-normal border-primary/60 p-3 rounded-lg w-full"
                     >
                       <option>Barangay 1</option>
@@ -183,9 +240,7 @@ const InterventionDetailsModal = ({
                       <option>Barangay 3</option>
                     </select>
                     <input
-                      name="address"
-                      value={formData.address}
-                      onChange={handleChange}
+                      defaultValue="Specific Location"
                       className="border-2 font-normal border-primary/60 p-3 px-4 rounded-lg w-full"
                     />
                   </div>
@@ -210,10 +265,13 @@ const InterventionDetailsModal = ({
                       name="interventionType"
                       value={formData.interventionType}
                       onChange={handleChange}
+                      defaultValue={intervention.interventionType}
                       className="border-2 font-normal border-primary/60 p-3 px-4 rounded-lg w-full"
                       required
                     >
-                      <option value="Fogging">Fogging</option>
+                      <option value="Fogging">
+                        {intervention.interventionType}
+                      </option>
                       <option value="Larviciding">Larviciding</option>
                       <option value="Clean-up Drive">Clean-up Drive</option>
                       <option value="Education Campaign">
@@ -226,28 +284,39 @@ const InterventionDetailsModal = ({
                       Assigned Personnel
                     </label>
                     <input
-                      name="personnel"
-                      value={formData.personnel}
                       onChange={handleChange}
                       className="border-2 font-normal border-primary/60 p-3 px-4 rounded-lg w-full"
                       required
+                      defaultValue={intervention.personnel}
                     />
                   </div>
                   <div className="flex flex-col gap-2">
                     <label className="text-primary text-lg">Status</label>
                     <select
-                      name="status"
-                      value={formData.status}
-                      onChange={handleChange}
+                      defaultValue={intervention.status}
                       className="border-2 font-normal border-primary/60 p-3 rounded-lg w-full"
                     >
-                      <option value="Complete">Complete</option>
-                      <option value="Scheduled">Scheduled</option>
-                      <option value="Ongoing">Ongoing</option>
+                      <option>Complete</option>
+                      <option>Scheduled</option>
+                      <option>Ongoing</option>
                     </select>
                   </div>
+
+                  {intervention.address && (
+                    <div>
+                      <p className="text-gray-500">Address</p>
+                      <input
+                        type="text"
+                        name="address"
+                        value={formData.address}
+                        onChange={handleChange}
+                        className="input input-bordered w-full text-lg py-2"
+                      />
+                    </div>
+                  )}
                 </>
               )}
+
               {/* Action Buttons */}
               <div className="modal-action flex justify-center gap-6">
                 {isEditing ? (
@@ -270,14 +339,14 @@ const InterventionDetailsModal = ({
                   <>
                     <button
                       type="button"
-                      onClick={handleEditClick}
+                      onClick={() => setIsEditing(true)}
                       className="bg-primary text-white font-semibold py-1 px-12 rounded-xl hover:bg-primary/80 transition-all hover:cursor-pointer"
                     >
                       Edit
                     </button>
                     <button
                       type="button"
-                      onClick={handleDeleteClick}
+                      onClick={handleDeleteClick} // Show delete confirmation
                       className="bg-error text-white font-semibold py-1 px-12 rounded-xl hover:bg-error/80 transition-all hover:cursor-pointer"
                     >
                       Delete

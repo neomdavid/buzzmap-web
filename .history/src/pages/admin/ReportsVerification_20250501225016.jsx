@@ -19,7 +19,7 @@ const ReportsVerification = () => {
       setValidatedPosts(posts.filter((post) => post.status === "Validated"));
     }
   }, [posts]);
-  // console.log(posts);
+  console.log(posts);
   if (isLoading) return <p>Loading...</p>;
   if (isError) return <p>Error loading posts</p>;
   return (

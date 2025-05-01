@@ -80,7 +80,7 @@ function InterventionsTable({
   const gridRef = useRef(null);
 
   const rowData = interventions.map((intervention) => ({
-    id: intervention._id,
+    id: intervention.id,
     barangay: intervention.barangay,
     date: new Date(intervention.date).toLocaleString("en-US", {
       weekday: "short",
@@ -161,11 +161,8 @@ function InterventionsTable({
     params.api.sizeColumnsToFit();
   }, []);
 
-  const openDetailsModal = (selectedRow) => {
-    const intervention = interventions.find(
-      (interv) => interv._id === selectedRow.id
-    );
-    setSelectedIntervention(intervention); // Find full intervention data
+  const openDetailsModal = (intervention) => {
+    setSelectedIntervention(intervention);
     setIsDetailsModalOpen(true);
   };
 
@@ -218,7 +215,7 @@ function InterventionsTable({
       {/* Intervention Details Modal */}
       {isDetailsModalOpen && selectedIntervention && (
         <InterventionDetailsModal
-          intervention={selectedIntervention} // Pass full intervention object
+          intervention={selectedIntervention}
           onClose={closeDetailsModal}
         />
       )}

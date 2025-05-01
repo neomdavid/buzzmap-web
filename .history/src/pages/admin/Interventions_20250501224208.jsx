@@ -21,7 +21,7 @@ const Interventions = () => {
   if (error) {
     return <div>Error loading interventions: {error.message}</div>;
   }
-  console.log(interventions);
+
   return (
     <main className="flex flex-col w-full ">
       <p className="flex justify-center text-5xl font-extrabold mb-12  text-center md:justify-start md:text-left md:w-[48%] ">
@@ -34,10 +34,7 @@ const Interventions = () => {
           </p>
           <div className="h-135">
             {/* Pass the interventions data to the table */}
-            <InterventionsTable
-              interventions={interventions}
-              onlyRecent={true}
-            />
+            <InterventionsTable posts={interventions} onlyRecent={true} />
           </div>
         </div>
         <div className="flex flex-col w-full gap-10 lg:flex-row">
