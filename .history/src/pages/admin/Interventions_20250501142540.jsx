@@ -1,9 +1,4 @@
-import {
-  InterventionsTable,
-  FormCoordinationRequest,
-  ActionRecommendationCard,
-} from "../../components";
-import { Circle, MagnifyingGlass, Lightbulb } from "phosphor-react";
+import { InterventionsTable, FormCoordinationRequest } from "../../components";
 const posts = [
   {
     id: 1,
@@ -53,7 +48,7 @@ function Interventions() {
       <p className="flex justify-center text-5xl font-extrabold mb-12  text-center md:justify-start md:text-left md:w-[48%] ">
         Interventions
       </p>
-      <section className="flex flex-col gap-16">
+      <section>
         <div>
           <p className="text-base-content text-4xl font-bold mb-2">
             Recent Intervention Records
@@ -62,41 +57,11 @@ function Interventions() {
             <InterventionsTable posts={posts} onlyRecent={true} />
           </div>
         </div>
-        <div className="flex flex-col w-full gap-10 lg:flex-row">
-          <div className="lg:flex-21">
+        <div className="flex flex-col w-full">
+          <div className="">
             <FormCoordinationRequest />
           </div>
-          <div className="flex flex-col lg:flex-23 gap-4">
-            <p className="text-base-content text-4xl font-bold mb-1">
-              Prescriptive Action Recommendations
-            </p>
-            {/* High Risk (red) */}
-            <ActionRecommendationCard
-              barangay="Barangay Commonwealth"
-              riskLevel="high"
-              issueDetected="Spike in Breeding Site & Infestation Reports"
-              suggestedAction="Fogging Operation, Breeding Site Elimination"
-              urgencyLevel="Immediate Action Required"
-            />
-
-            {/* Medium Risk (yellow) */}
-            <ActionRecommendationCard
-              barangay="Barangay Fairview"
-              riskLevel="medium"
-              issueDetected="Moderate breeding sites detected"
-              suggestedAction="Larviciding, Community Cleanup"
-              urgencyLevel="Action Required Soon"
-            />
-
-            {/* Low Risk (green) */}
-            <ActionRecommendationCard
-              barangay="Barangay Holy Spirit"
-              riskLevel="low"
-              issueDetected="Minimal reports"
-              suggestedAction="Regular monitoring"
-              urgencyLevel="Monitor Situation"
-            />
-          </div>
+          <div className="">{/* Another container */}</div>
         </div>
       </section>
     </main>

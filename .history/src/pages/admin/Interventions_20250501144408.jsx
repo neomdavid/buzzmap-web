@@ -1,8 +1,4 @@
-import {
-  InterventionsTable,
-  FormCoordinationRequest,
-  ActionRecommendationCard,
-} from "../../components";
+import { InterventionsTable, FormCoordinationRequest } from "../../components";
 import { Circle, MagnifyingGlass, Lightbulb } from "phosphor-react";
 const posts = [
   {
@@ -66,36 +62,47 @@ function Interventions() {
           <div className="lg:flex-21">
             <FormCoordinationRequest />
           </div>
-          <div className="flex flex-col lg:flex-23 gap-4">
-            <p className="text-base-content text-4xl font-bold mb-1">
+          <div className="flex flex-col lg:flex-23">
+            <p className="text-base-content text-4xl font-bold mb-4">
               Prescriptive Action Recommendations
             </p>
-            {/* High Risk (red) */}
-            <ActionRecommendationCard
-              barangay="Barangay Commonwealth"
-              riskLevel="high"
-              issueDetected="Spike in Breeding Site & Infestation Reports"
-              suggestedAction="Fogging Operation, Breeding Site Elimination"
-              urgencyLevel="Immediate Action Required"
-            />
-
-            {/* Medium Risk (yellow) */}
-            <ActionRecommendationCard
-              barangay="Barangay Fairview"
-              riskLevel="medium"
-              issueDetected="Moderate breeding sites detected"
-              suggestedAction="Larviciding, Community Cleanup"
-              urgencyLevel="Action Required Soon"
-            />
-
-            {/* Low Risk (green) */}
-            <ActionRecommendationCard
-              barangay="Barangay Holy Spirit"
-              riskLevel="low"
-              issueDetected="Minimal reports"
-              suggestedAction="Regular monitoring"
-              urgencyLevel="Monitor Situation"
-            />
+            <div className="flex flex-col gap-1 border-2 border-error rounded-3xl p-6">
+              <div className="flex items-center gap-2 mb-2">
+                <p className="text-error font-extrabold text-2xl">
+                  Barangay Commonwealth
+                </p>
+                <p className="bg-error text-center text-white py-1 px-4 rounded-xl">
+                  Immediate Action Needed
+                </p>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="text-error ">
+                  <Circle weight="fill" />
+                </div>
+                <p className="text-error font-bold">
+                  <span className="font-semibold text-black">Risk Level: </span>
+                  High
+                </p>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="text-primary">
+                  <MagnifyingGlass />
+                </div>
+                <p className="text-black">
+                  <span className="font-semibold">Issue Detected: </span>
+                  Spike in Breeding Site & Infestation Reports
+                </p>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="text-primary">
+                  <Lightbulb weight="fill" />
+                </div>
+                <p className="text-black">
+                  <span className="font-semibold">Suggested Action: </span>
+                  Fogging Operation, Breeding Site Elimination
+                </p>
+              </div>
+            </div>
           </div>
         </div>
       </section>

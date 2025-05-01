@@ -66,8 +66,8 @@ function Interventions() {
           <div className="lg:flex-21">
             <FormCoordinationRequest />
           </div>
-          <div className="flex flex-col lg:flex-23 gap-4">
-            <p className="text-base-content text-4xl font-bold mb-1">
+          <div className="flex flex-col lg:flex-23">
+            <p className="text-base-content text-4xl font-bold mb-4">
               Prescriptive Action Recommendations
             </p>
             {/* High Risk (red) */}
@@ -76,7 +76,6 @@ function Interventions() {
               riskLevel="high"
               issueDetected="Spike in Breeding Site & Infestation Reports"
               suggestedAction="Fogging Operation, Breeding Site Elimination"
-              urgencyLevel="Immediate Action Required"
             />
 
             {/* Medium Risk (yellow) */}
@@ -85,7 +84,6 @@ function Interventions() {
               riskLevel="medium"
               issueDetected="Moderate breeding sites detected"
               suggestedAction="Larviciding, Community Cleanup"
-              urgencyLevel="Action Required Soon"
             />
 
             {/* Low Risk (green) */}
@@ -94,7 +92,6 @@ function Interventions() {
               riskLevel="low"
               issueDetected="Minimal reports"
               suggestedAction="Regular monitoring"
-              urgencyLevel="Monitor Situation"
             />
           </div>
         </div>

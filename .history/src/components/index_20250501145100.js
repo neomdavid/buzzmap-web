@@ -49,7 +49,7 @@ export { default as FormCoordinationRequest } from "./Admin/FormCoordinationRequ
 export { default as InterventionsTable } from "./Admin/InterventionsTable.jsx";
 export { default as AddInterventionModal } from "./Admin/AddInterventionModal.jsx";
 export { default as InterventionDetailsModal } from "./Admin/InterventionDetailsModal.jsx";
-export { default as ActionRecommendationCard } from "./Admin/ActionRecommendationCard.jsx";
+export { default as ActionRecommendations } from "./Admin/ActionRecommendations.jsx";
 
 //SUPERADMIN
 export { default as UsersTable } from "./Superadmin/UsersTable.jsx";

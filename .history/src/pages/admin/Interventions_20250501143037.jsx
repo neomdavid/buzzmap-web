@@ -1,9 +1,4 @@
-import {
-  InterventionsTable,
-  FormCoordinationRequest,
-  ActionRecommendationCard,
-} from "../../components";
-import { Circle, MagnifyingGlass, Lightbulb } from "phosphor-react";
+import { InterventionsTable, FormCoordinationRequest } from "../../components";
 const posts = [
   {
     id: 1,
@@ -62,40 +57,24 @@ function Interventions() {
             <InterventionsTable posts={posts} onlyRecent={true} />
           </div>
         </div>
-        <div className="flex flex-col w-full gap-10 lg:flex-row">
-          <div className="lg:flex-21">
+        <div className="flex flex-col w-full gap-10">
+          <div className="">
             <FormCoordinationRequest />
           </div>
-          <div className="flex flex-col lg:flex-23 gap-4">
-            <p className="text-base-content text-4xl font-bold mb-1">
-              Prescriptive Action Recommendations
+          <div className="flex flex-col">
+            <p className="text-base-content text-4xl font-bold mb-2">
+              Recent Intervention Records
             </p>
-            {/* High Risk (red) */}
-            <ActionRecommendationCard
-              barangay="Barangay Commonwealth"
-              riskLevel="high"
-              issueDetected="Spike in Breeding Site & Infestation Reports"
-              suggestedAction="Fogging Operation, Breeding Site Elimination"
-              urgencyLevel="Immediate Action Required"
-            />
-
-            {/* Medium Risk (yellow) */}
-            <ActionRecommendationCard
-              barangay="Barangay Fairview"
-              riskLevel="medium"
-              issueDetected="Moderate breeding sites detected"
-              suggestedAction="Larviciding, Community Cleanup"
-              urgencyLevel="Action Required Soon"
-            />
-
-            {/* Low Risk (green) */}
-            <ActionRecommendationCard
-              barangay="Barangay Holy Spirit"
-              riskLevel="low"
-              issueDetected="Minimal reports"
-              suggestedAction="Regular monitoring"
-              urgencyLevel="Monitor Situation"
-            />
+            <div className="flex flex-col gap-2 border-1 border-error rounded-2xl p-6">
+              <div className="flex items-center gap-2">
+                <p className="text-error font-extrabold text-2xl">
+                  Barangay Commonwealth
+                </p>
+                <p className="bg-error text-white py-1 px-4 rounded-xl">
+                  Immediate Action Needed
+                </p>
+              </div>
+            </div>
           </div>
         </div>
       </section>
