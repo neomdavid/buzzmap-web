@@ -1,0 +1,271 @@
+import React, { useState, useEffect, useRef } from "react";
+import { IconX } from "@tabler/icons-react";
+
+const InterventionDetailsModal = ({
+  intervention,
+  onClose,
+  onSave,
+  onDelete,
+}) => {
+  const modalRef = useRef(null);
+  const [isSuccess, setIsSuccess] = useState(false);
+  const [isEditing, setIsEditing] = useState(false); // Track if the user is editing
+  const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false); // For delete confirmation modal
+
+  const [formData, setFormData] = useState({
+    ...intervention, // Initialize with current intervention data
+  });
+
+  // Automatically close the modal after showing the details for a short time
+  useEffect(() => {
+    if (isSuccess) {
+      setTimeout(() => {
+        onClose();
+      }, 2000); // Close the modal after 2 seconds
+    }
+  }, [isSuccess, onClose]);
+
+  useEffect(() => {
+    if (modalRef.current) {
+      modalRef.current.showModal();
+    }
+  }, []);
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
+
+  const handleEditClick = () => {
+    setIsEditing(true); // Switch to editable mode
+  };
+
+  const handleSave = (e) => {
+    e.preventDefault();
+    onSave(formData); // Save the updated data
+    setIsEditing(false); // Switch back to readonly mode
+  };
+
+  const handleDeleteClick = () => {
+    console.log("deleteee");
+    setShowDeleteConfirmation(true); // Show delete confirmation modal
+  };
+
+  const handleConfirmDelete = () => {
+    onDelete(intervention.id); // Perform the delete action
+    setShowDeleteConfirmation(false); // Hide the confirmation modal
+  };
+
+  const handleCancelDelete = () => {
+    setShowDeleteConfirmation(false); // Close the confirmation modal
+  };
+
+  return (
+    <dialog
+      ref={modalRef}
+      className="modal transition-transform duration-300 ease-in-out"
+      onClick={(e) => e.target === e.currentTarget && onClose()}
+    >
+      <div className="modal-box bg-white rounded-4xl shadow-2xl w-11/12 max-w-3xl p-12 relative">
+        <button
+          className="absolute top-6 right-6 text-2xl font-semibold hover:text-gray-500"
+          onClick={onClose}
+        >
+          ✕
+        </button>
+
+        <p className="text-3xl font-bold mb-6 text-center">
+          {isEditing ? "Edit Intervention" : "View Intervention Details"}
+        </p>
+        <div className="w-full flex justify-center">
+          <p
+            className={`${
+              intervention.status === "Complete"
+                ? "bg-success"
+                : intervention.status === "Scheduled"
+                ? "bg-warning"
+                : "bg-info"
+            } py-2 px-18 text-xl text-white font-bold rounded-2xl`}
+          >
+            {intervention.status}
+          </p>
+        </div>
+
+        {/* Single Column Layout */}
+        <form
+          onSubmit={handleSave}
+          className="flex flex-col space-y-2 text-lg font-semibold"
+        >
+          <div className="flex gap-1">
+            <p className="text-gray-500 ">Intervention ID: </p>
+            <p className="font-semibold text-primary">{intervention.id}</p>
+          </div>
+          <div className="flex gap-1">
+            <p className="text-gray-500 ">Barangay: </p>
+            {isEditing ? (
+              <input
+                type="text"
+                name="barangay"
+                value={formData.barangay}
+                onChange={handleChange}
+                className="input input-bordered w-full text-lg py-2"
+                required
+              />
+            ) : (
+              <p className="font-semibold text-primary">
+                {intervention.barangay}
+              </p>
+            )}
+          </div>
+          {intervention.address && (
+            <div>
+              <p className="text-gray-500">Address</p>
+              {isEditing ? (
+                <input
+                  type="text"
+                  name="address"
+                  value={formData.address}
+                  onChange={handleChange}
+                  className="input input-bordered w-full text-lg py-2"
+                />
+              ) : (
+                <p className="font-semibold text-primary">
+                  {intervention.address}
+                </p>
+              )}
+            </div>
+          )}
+          <div className="flex gap-1">
+            <p className="text-gray-500 ">Date and Time: </p>
+            {isEditing ? (
+              <input
+                type="datetime-local"
+                name="date"
+                value={formData.date}
+                onChange={handleChange}
+                className="input input-bordered w-full text-lg py-2"
+                required
+              />
+            ) : (
+              <p className="font-semibold text-primary">{intervention.date}</p>
+            )}
+          </div>
+          <div className="flex gap-1">
+            <p className="text-gray-500 ">Type of Intervention: </p>
+            {isEditing ? (
+              <select
+                name="interventionType"
+                value={formData.interventionType}
+                onChange={handleChange}
+                className="select select-bordered w-full text-lg py-2"
+                required
+              >
+                <option value="Fogging">Fogging</option>
+                <option value="Larviciding">Larviciding</option>
+                <option value="Clean-up Drive">Clean-up Drive</option>
+                <option value="Education Campaign">Education Campaign</option>
+              </select>
+            ) : (
+              <p className="font-semibold text-primary">
+                {intervention.interventionType}
+              </p>
+            )}
+          </div>
+          <div className="flex gap-1">
+            <p className="text-gray-500 ">Assigned Personnel: </p>
+            {isEditing ? (
+              <input
+                type="text"
+                name="personnel"
+                value={formData.personnel}
+                onChange={handleChange}
+                className="input input-bordered w-full text-lg py-2"
+                required
+              />
+            ) : (
+              <p className="font-semibold text-primary">
+                {intervention.personnel}
+              </p>
+            )}
+          </div>
+
+          {/* Action Buttons */}
+          <div className="modal-action flex justify-center gap-6">
+            {isEditing ? (
+              <>
+                <button
+                  type="submit"
+                  className="bg-primary text-white font-semibold py-1 px-12 rounded-xl hover:bg-primary/80 transition-all"
+                >
+                  Save Changes
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsEditing(false)}
+                  className="bg-gray-300 text-gray-700 font-semibold py-1 px-12 rounded-xl hover:bg-gray-400 transition-all"
+                >
+                  Cancel
+                </button>
+              </>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  onClick={() => setIsEditing(true)}
+                  className="bg-primary text-white font-semibold py-1 px-12 rounded-xl hover:bg-primary/80 transition-all"
+                >
+                  Edit
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDeleteClick} // Show delete confirmation
+                  className="bg-error text-white font-semibold py-1 px-12 rounded-xl hover:bg-error/80 transition-all"
+                >
+                  Delete
+                </button>
+              </>
+            )}
+          </div>
+        </form>
+      </div>
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirmation && (
+        <div className="modal transition-transform duration-300 ease-in-out">
+          <div className="modal-box bg-white rounded-4xl shadow-2xl w-9/12 max-w-3xl p-12 relative">
+            <button
+              className="absolute top-6 right-6 text-2xl font-semibold hover:text-gray-500"
+              onClick={handleCancelDelete}
+            >
+              ✕
+            </button>
+
+            <p className="text-3xl font-bold mb-6 text-center">
+              Are you sure you want to delete this intervention?
+            </p>
+
+            <div className="modal-action flex justify-center gap-6">
+              <button
+                className="bg-error text-white font-semibold py-1 px-12 rounded-xl hover:bg-error/80 transition-all"
+                onClick={handleConfirmDelete} // Confirm deletion
+              >
+                Confirm Delete
+              </button>
+              <button
+                className="bg-gray-300 text-gray-700 font-semibold py-1 px-12 rounded-xl hover:bg-gray-400 transition-all"
+                onClick={handleCancelDelete} // Cancel deletion
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </dialog>
+  );
+};
+
+export default InterventionDetailsModal;
