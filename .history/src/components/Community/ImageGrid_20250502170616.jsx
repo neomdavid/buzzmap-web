@@ -16,11 +16,12 @@ const ImageGrid = ({ images = [], sourceType = "server" }) => {
       {images.slice(0, 4).map((img, index) => {
         // If the sourceType is "server", prepend the server URL
         // Otherwise, assume it's an imported local image and use it directly
+        const imagePath = sourceType === "server" ? `${img}` : img;
 
         return (
           <div key={index} className="relative">
             <img
-              src={img} // Use the correct image path
+              src={imagePath} // Use the correct image path
               className="w-full aspect-[4/3] object-cover rounded-md"
               alt={`Image ${index + 1}`}
             />
