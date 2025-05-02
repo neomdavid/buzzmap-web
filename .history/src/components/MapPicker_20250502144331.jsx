@@ -71,11 +71,19 @@ export default function MapPicker({ onLocationSelect }) {
     fetch("/quezon_barangays_boundaries.geojson")
       .then((res) => res.json())
       .then((data) => {
+        console.log(data);
         const colored = {
           ...data,
           features: data.features.map((f) => {
             const risk = assignRiskLevel();
-
+            console.log({
+              ...f,
+              properties: {
+                ...f.properties,
+                color: RISK_COLORS[risk],
+                riskLevel: risk,
+              },
+            });
             return {
               ...f,
               properties: {
@@ -124,6 +132,7 @@ export default function MapPicker({ onLocationSelect }) {
     }
 
     if (barangayData) {
+      console.log(barangayData);
       let isInsideBarangay = false; // Flag to check if inside any barangay
       for (let f of barangayData.features) {
         let polys = [];

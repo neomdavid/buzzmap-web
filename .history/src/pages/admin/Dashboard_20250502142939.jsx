@@ -113,12 +113,12 @@ const Dashboard = () => {
             },
             {
               label: "Ongoing",
-              value: interventionCounts.ongoing,
+              value: reportCounts.ongoing,
               color: "bg-info",
             },
             {
               label: "Scheduled",
-              value: interventionCounts.scheduled,
+              value: reportCounts.scheduled,
               color: "bg-warning",
             },
           ]}

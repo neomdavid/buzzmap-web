@@ -75,7 +75,6 @@ export default function MapPicker({ onLocationSelect }) {
           ...data,
           features: data.features.map((f) => {
             const risk = assignRiskLevel();
-
             return {
               ...f,
               properties: {
@@ -104,7 +103,7 @@ export default function MapPicker({ onLocationSelect }) {
         }
 
         setCurrentPosition(userLocation);
-        setMarkerPosition(isInsideQC ? userLocation : userLocation);
+        setMarkerPosition(isInsideQC ? userLocation : null);
       },
       () => {
         const fallback = { lat: 14.676, lng: 121.0437 };

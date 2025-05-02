@@ -298,17 +298,4 @@ export const formatDateForInput = (dateString) => {
   return `${year}-${month}-${day}T${hours}:${minutes}`;
 };
 
-// utils.js or utils.jsx
-
-export const getBarangayNames = (barangayData) => {
-  // Ensure barangayData is valid
-  if (!barangayData || !Array.isArray(barangayData.features)) {
-    return [];
-  }
-
-  // Extract barangay names from the GeoJSON features
-  const barangayNames = barangayData.features.map(
-    (feature) => feature.properties.name
-  );
-  return barangayNames;
-};
+console.log(fetch("/quezon_barangays_boundaries.geojson"));

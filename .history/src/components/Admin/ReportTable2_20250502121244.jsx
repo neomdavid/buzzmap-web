@@ -91,7 +91,6 @@ const ActionsCell = (p) => {
     </div>
   );
 };
-
 const onGridReady = (params) => {
   // Now it's safe to access grid API methods like columnApi
   const columnApi = params.columnApi;
@@ -107,7 +106,7 @@ function ReportTable2({ posts, isActionable = true, onlyRecent = false }) {
   const gridRef = useRef(null);
 
   // Format the rowData to match the structure of the grid
-  let rowData = posts.map((post) => ({
+  const rowData = posts.map((post) => ({
     id: post._id,
     username: post.user?.username || "Anonymous", // Assuming username is part of the post
     barangay: post.barangay, // Separate row for barangay
@@ -127,11 +126,6 @@ function ReportTable2({ posts, isActionable = true, onlyRecent = false }) {
     images: post.images || [], // Include images, default to empty array if undefined
   }));
 
-  // If onlyRecent is true, slice the top 5 recent reports
-  if (onlyRecent) {
-    rowData = rowData.slice(0, 5); // Show only the top 5 recent reports
-  }
-
   const columnDefs = useMemo(() => {
     const baseCols = [
       { field: "id", headerName: "ID", minWidth: 100 },
@@ -146,7 +140,7 @@ function ReportTable2({ posts, isActionable = true, onlyRecent = false }) {
       },
     ];
 
-    if (isActionable && !onlyRecent) {
+    if (isActionable) {
       baseCols.push({
         field: "actions",
         headerName: "Actions",
@@ -157,7 +151,7 @@ function ReportTable2({ posts, isActionable = true, onlyRecent = false }) {
     }
 
     return baseCols;
-  }, [isActionable, onlyRecent]);
+  }, [isActionable]);
 
   const theme = useMemo(() => customTheme, []);
 
@@ -195,6 +189,7 @@ function ReportTable2({ posts, isActionable = true, onlyRecent = false }) {
     console.log("Selected Report Data:", post); // Log the full post data to ensure everything is correct
     setSelectedReport(post);
     setSelectedReportType(type);
+    console.log(type);
     setIsModalOpen(true);
   };
 
@@ -216,7 +211,7 @@ function ReportTable2({ posts, isActionable = true, onlyRecent = false }) {
           columnDefs={columnDefs}
           defaultColDef={defaultColDef}
           theme={theme}
-          pagination={isActionable && !onlyRecent} // Only show pagination when not showing only recent
+          pagination={isActionable}
           paginationPageSize={10}
           onGridSizeChanged={onGridSizeChanged}
           onFirstDataRendered={onFirstDataRendered}

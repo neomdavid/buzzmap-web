@@ -24,7 +24,7 @@ const Dashboard = () => {
     isLoading: interventionsLoading,
     isError: interventionsError,
   } = useGetAllInterventionsQuery();
-  console.log(interventions);
+
   // Handle loading and error states for both posts and interventions
   if (postsLoading || interventionsLoading) return <div>Loading...</div>;
   if (postsError || interventionsError)
@@ -51,11 +51,6 @@ const Dashboard = () => {
     },
     { completed: 0, scheduled: 0, ongoing: 0 }
   );
-  const totalInterventions =
-    interventionCounts.completed +
-    interventionCounts.scheduled +
-    interventionCounts.ongoing;
-  console.log(interventionCounts);
 
   return (
     <main className="flex flex-col w-full">
@@ -102,7 +97,7 @@ const Dashboard = () => {
         {/* ReportCard for Completed Interventions */}
         <ReportCard
           title=" Interventions"
-          count={totalInterventions} // Count of completed interventions
+          count={interventionCounts.completed} // Count of completed interventions
           type="status"
           topBg="bg-warning"
           items={[
@@ -113,12 +108,12 @@ const Dashboard = () => {
             },
             {
               label: "Ongoing",
-              value: interventionCounts.ongoing,
+              value: reportCounts.ongoing,
               color: "bg-info",
             },
             {
               label: "Scheduled",
-              value: interventionCounts.scheduled,
+              value: reportCounts.scheduled,
               color: "bg-warning",
             },
           ]}

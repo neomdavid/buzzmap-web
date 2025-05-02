@@ -75,7 +75,6 @@ export default function MapPicker({ onLocationSelect }) {
           ...data,
           features: data.features.map((f) => {
             const risk = assignRiskLevel();
-
             return {
               ...f,
               properties: {

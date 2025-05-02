@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { IconX, IconCheck } from "@tabler/icons-react";
+import { IconX, IconCheck, IconAlertCircle } from "@tabler/icons-react";
 import { useCreateInterventionMutation } from "../../api/dengueApi"; // Import RTK query hook for create intervention
 
 const AddInterventionModal = ({ isOpen, onClose }) => {
@@ -15,9 +15,9 @@ const AddInterventionModal = ({ isOpen, onClose }) => {
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
-  const [barangayData, setBarangayData] = useState(null);
-  const [barangayOptions, setBarangayOptions] = useState([]);
 
+  // Mock barangay options (replace with real data if needed)
+  const barangayOptions = ["Barangay 1", "Barangay 2", "Barangay 3"];
   // Mock personnel options (replace with real data if needed)
   const personnelOptions = ["John Doe", "Jane Smith", "Carlos Rivera"];
 
@@ -53,18 +53,18 @@ const AddInterventionModal = ({ isOpen, onClose }) => {
         date: "",
         status: "Scheduled",
       });
-
-      // Show success toast
-      // Close modal after showing success message
-      setTimeout(() => {
-        onClose(); // Close the modal after successful submission
-        setShowConfirmation(false);
-        setIsSuccess(false);
-      }, 2000); // Auto-close after 2 seconds
     } catch (error) {
       console.error("Error submitting intervention:", error);
     } finally {
       setIsSubmitting(false);
+      // Close the modal after 2 seconds if successful
+      if (isSuccess) {
+        setTimeout(() => {
+          onClose(); // Close the modal after successful submission
+          setShowConfirmation(false);
+          setIsSuccess(false);
+        }, 2000); // Auto-close after 2 seconds
+      }
     }
   };
 

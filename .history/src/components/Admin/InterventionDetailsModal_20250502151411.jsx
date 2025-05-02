@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
-import { IconX, IconCheck } from "@tabler/icons-react";
+import { IconX } from "@tabler/icons-react";
 import { useUpdateInterventionMutation } from "../../api/dengueApi"; // Import the RTK Query hook for updating the intervention data
-import { toastSuccess, formatDateForInput } from "../../utils.jsx";
+
 const InterventionDetailsModal = ({
   intervention,
   onClose,
@@ -14,7 +14,6 @@ const InterventionDetailsModal = ({
   const [isSuccess, setIsSuccess] = useState(false);
   const [isEditing, setIsEditing] = useState(false); // Track if the user is editing
   const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false); // For delete confirmation inside modal
-  const [isLoading, setIsLoading] = useState(false); // Loading state for save operation
   const [updateIntervention] = useUpdateInterventionMutation(); // RTK Query hook for updating the intervention
 
   const [formData, setFormData] = useState({
@@ -29,16 +28,16 @@ const InterventionDetailsModal = ({
   // Handle input changes
   const handleChange = (e) => {
     const { name, value } = e.target;
+    console.log(name);
     setFormData((prev) => ({
       ...prev,
       [name]: value,
     }));
   };
-  console.log(formData.date);
+
   // Handle save button
   const handleSave = async (e) => {
     e.preventDefault();
-    setIsLoading(true); // Show loading indicator
     try {
       const response = await updateIntervention({
         id: intervention._id, // intervention id
@@ -50,10 +49,6 @@ const InterventionDetailsModal = ({
       setIsEditing(false); // Switch back to readonly mode
     } catch (error) {
       console.error("Failed to update intervention:", error);
-    } finally {
-      setIsLoading(false); // Hide loading indicator after the request completes
-      onClose();
-      toastSuccess("Intervention updated successfully");
     }
   };
 
@@ -78,13 +73,11 @@ const InterventionDetailsModal = ({
   const handleCancelDelete = () => {
     setShowDeleteConfirmation(false); // Revert back to original modal content
   };
-
   useEffect(() => {
     if (modalRef.current) {
       modalRef.current.showModal();
     }
   }, []);
-
   useEffect(() => {
     // Fetch the barangay data (geojson file)
     fetch("/quezon_barangays_boundaries.geojson")
@@ -223,7 +216,7 @@ const InterventionDetailsModal = ({
                     <input
                       type="datetime-local"
                       name="date"
-                      value={formatDateForInput(formData.date)}
+                      value={formData.date}
                       onChange={handleChange}
                       className="border-2 font-normal border-primary/60 p-3 px-4 rounded-lg w-full"
                       required
@@ -291,7 +284,7 @@ const InterventionDetailsModal = ({
                       type="submit"
                       className="bg-primary text-white font-semibold py-1 px-12 rounded-xl hover:bg-primary/80 transition-all hover:cursor-pointer"
                     >
-                      {isLoading ? "Saving changes..." : "Save changes"}
+                      Save Changes
                     </button>
                   </>
                 ) : (

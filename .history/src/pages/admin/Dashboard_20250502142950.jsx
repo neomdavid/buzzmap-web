@@ -118,7 +118,7 @@ const Dashboard = () => {
             },
             {
               label: "Scheduled",
-              value: interventionCounts.scheduled,
+              value: reportCounts.scheduled,
               color: "bg-warning",
             },
           ]}

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { IconX, IconCheck } from "@tabler/icons-react";
 import { useUpdateInterventionMutation } from "../../api/dengueApi"; // Import the RTK Query hook for updating the intervention data
-import { toastSuccess, formatDateForInput } from "../../utils.jsx";
+
 const InterventionDetailsModal = ({
   intervention,
   onClose,
@@ -34,7 +34,7 @@ const InterventionDetailsModal = ({
       [name]: value,
     }));
   };
-  console.log(formData.date);
+
   // Handle save button
   const handleSave = async (e) => {
     e.preventDefault();
@@ -52,8 +52,6 @@ const InterventionDetailsModal = ({
       console.error("Failed to update intervention:", error);
     } finally {
       setIsLoading(false); // Hide loading indicator after the request completes
-      onClose();
-      toastSuccess("Intervention updated successfully");
     }
   };
 
@@ -223,7 +221,7 @@ const InterventionDetailsModal = ({
                     <input
                       type="datetime-local"
                       name="date"
-                      value={formatDateForInput(formData.date)}
+                      value={formData.date}
                       onChange={handleChange}
                       className="border-2 font-normal border-primary/60 p-3 px-4 rounded-lg w-full"
                       required
@@ -291,7 +289,7 @@ const InterventionDetailsModal = ({
                       type="submit"
                       className="bg-primary text-white font-semibold py-1 px-12 rounded-xl hover:bg-primary/80 transition-all hover:cursor-pointer"
                     >
-                      {isLoading ? "Saving changes..." : "Save changes"}
+                      Save Changes
                     </button>
                   </>
                 ) : (

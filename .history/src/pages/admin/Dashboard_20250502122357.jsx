@@ -5,33 +5,18 @@ import {
   DengueChartCard,
   DengueMap,
 } from "../../components";
-import {
-  useGetPostsQuery,
-  useGetAllInterventionsQuery,
-} from "../../api/dengueApi.js"; // Import the intervention query hook
+import { useGetPostsQuery } from "../../api/dengueApi.js";
 
 const Dashboard = () => {
   // Fetching the posts from the API
-  const {
-    data: posts,
-    isLoading: postsLoading,
-    isError: postsError,
-  } = useGetPostsQuery();
+  const { data: posts, isLoading, isError } = useGetPostsQuery();
 
-  // Fetching the interventions from the API
-  const {
-    data: interventions,
-    isLoading: interventionsLoading,
-    isError: interventionsError,
-  } = useGetAllInterventionsQuery();
-  console.log(interventions);
-  // Handle loading and error states for both posts and interventions
-  if (postsLoading || interventionsLoading) return <div>Loading...</div>;
-  if (postsError || interventionsError)
-    return <div>Error fetching data...</div>;
+  // Handle loading and error states
+  if (isLoading) return <div>Loading...</div>;
+  if (isError) return <div>Error fetching data...</div>;
 
-  // Calculate counts for reports
-  const reportCounts = posts.reduce(
+  // Calculating counts based on the 'status' field of the posts array
+  const counts = posts.reduce(
     (acc, post) => {
       if (post.status === "Validated") acc.validated += 1;
       if (post.status === "Pending") acc.pending += 1;
@@ -41,22 +26,6 @@ const Dashboard = () => {
     { validated: 0, pending: 0, rejected: 0 }
   );
 
-  // Calculate counts for interventions
-  const interventionCounts = interventions.reduce(
-    (acc, intervention) => {
-      if (intervention.status === "Complete") acc.completed += 1;
-      if (intervention.status === "Scheduled") acc.scheduled += 1;
-      if (intervention.status === "Ongoing") acc.ongoing += 1;
-      return acc;
-    },
-    { completed: 0, scheduled: 0, ongoing: 0 }
-  );
-  const totalInterventions =
-    interventionCounts.completed +
-    interventionCounts.scheduled +
-    interventionCounts.ongoing;
-  console.log(interventionCounts);
-
   return (
     <main className="flex flex-col w-full">
       <div className="bg-primary text-white flex flex-col p-6 rounded-2xl mb-4">
@@ -65,69 +34,42 @@ const Dashboard = () => {
       </div>
 
       <section className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-12">
-        {/* ReportCard for Total Reports */}
         <ReportCard
-          title="Total Reports "
+          title="Total Reports"
           count={posts.length} // Total reports
           topBg="bg-base-content"
           type="status"
           items={[
             {
               label: "Validated",
-              value: reportCounts.validated,
+              value: counts.validated,
               color: "bg-success",
             },
-            {
-              label: "Pending",
-              value: reportCounts.pending,
-              color: "bg-warning",
-            },
-            {
-              label: "Rejected",
-              value: reportCounts.rejected,
-              color: "bg-error",
-            },
+            { label: "Pending", value: counts.pending, color: "bg-warning" },
+            { label: "Rejected", value: counts.rejected, color: "bg-error" },
           ]}
         />
-
-        {/* ReportCard for Total Alerts Sent */}
         <ReportCard
-          title="Total Alerts Sent (No backend yet)"
-          count={0} // This can be dynamic as well if you have alerts data
+          title="Total Alerts Sent"
+          count={45} // This can be dynamic as well if you have alerts data
           topBg="bg-error/90"
           type="interventions"
           items={[{ label: "Fogging" }, { label: "Clean Up Campaigns" }]}
         />
-
-        {/* ReportCard for Completed Interventions */}
         <ReportCard
-          title=" Interventions"
-          count={totalInterventions} // Count of completed interventions
-          type="status"
+          title="Ongoing Interventions"
+          count={2} // Change based on actual data
+          type="interventions"
           topBg="bg-warning"
           items={[
-            {
-              label: "Completed",
-              value: interventionCounts.completed,
-              color: "bg-success",
-            },
-            {
-              label: "Ongoing",
-              value: interventionCounts.ongoing,
-              color: "bg-info",
-            },
-            {
-              label: "Scheduled",
-              value: interventionCounts.scheduled,
-              color: "bg-warning",
-            },
+            { label: "Fogging" },
+            { label: "Clean Up Campaigns" },
+            { label: "Health Drive" },
           ]}
         />
-
-        {/* User Engagement */}
         <ReportCard
-          title="User Engagement (No backend yet) "
-          count={0}
+          title="User Engagement"
+          count={120} // Example value, adjust accordingly
           type="engagement"
           topBg="bg-success/80"
           items={[
@@ -151,8 +93,8 @@ const Dashboard = () => {
         <div className="w-full shadow-sm h-72 rounded-lg xl:flex-2 overflow-hidden">
           <DengueChartCard />
         </div>
-        <div className="flex  md:flex-row  gap-6 lg:flex-3">
-          <div className="flex-1 min-w-[150px] shadow-sm rounded-2xl h-70 overflow-hidden  ">
+        <div className="flex gap-6 lg:flex-3">
+          <div className="flex-1 min-w-[150px] shadow-sm rounded-2xl ">
             <DengueMap />
           </div>
           <div className="flex flex-col ">

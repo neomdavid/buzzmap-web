@@ -51,10 +51,6 @@ const Dashboard = () => {
     },
     { completed: 0, scheduled: 0, ongoing: 0 }
   );
-  const totalInterventions =
-    interventionCounts.completed +
-    interventionCounts.scheduled +
-    interventionCounts.ongoing;
   console.log(interventionCounts);
 
   return (
@@ -102,7 +98,7 @@ const Dashboard = () => {
         {/* ReportCard for Completed Interventions */}
         <ReportCard
           title=" Interventions"
-          count={totalInterventions} // Count of completed interventions
+          count={interventionCounts.completed} // Count of completed interventions
           type="status"
           topBg="bg-warning"
           items={[
@@ -113,12 +109,12 @@ const Dashboard = () => {
             },
             {
               label: "Ongoing",
-              value: interventionCounts.ongoing,
+              value: reportCounts.ongoing,
               color: "bg-info",
             },
             {
               label: "Scheduled",
-              value: interventionCounts.scheduled,
+              value: reportCounts.scheduled,
               color: "bg-warning",
             },
           ]}

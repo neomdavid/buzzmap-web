@@ -75,7 +75,6 @@ export default function MapPicker({ onLocationSelect }) {
           ...data,
           features: data.features.map((f) => {
             const risk = assignRiskLevel();
-
             return {
               ...f,
               properties: {
@@ -124,6 +123,7 @@ export default function MapPicker({ onLocationSelect }) {
     }
 
     if (barangayData) {
+      console.log(barangayData);
       let isInsideBarangay = false; // Flag to check if inside any barangay
       for (let f of barangayData.features) {
         let polys = [];

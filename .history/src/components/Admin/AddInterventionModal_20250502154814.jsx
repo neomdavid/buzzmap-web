@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { IconX, IconCheck } from "@tabler/icons-react";
 import { useCreateInterventionMutation } from "../../api/dengueApi"; // Import RTK query hook for create intervention
+import { toast } from "react-toastify"; // Import toast for success message
 
 const AddInterventionModal = ({ isOpen, onClose }) => {
   const modalRef = useRef(null);
@@ -55,6 +56,8 @@ const AddInterventionModal = ({ isOpen, onClose }) => {
       });
 
       // Show success toast
+      toast.success("Intervention submitted successfully!");
+
       // Close modal after showing success message
       setTimeout(() => {
         onClose(); // Close the modal after successful submission

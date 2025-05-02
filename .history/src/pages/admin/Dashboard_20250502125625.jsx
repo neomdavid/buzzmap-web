@@ -51,12 +51,7 @@ const Dashboard = () => {
     },
     { completed: 0, scheduled: 0, ongoing: 0 }
   );
-  const totalInterventions =
-    interventionCounts.completed +
-    interventionCounts.scheduled +
-    interventionCounts.ongoing;
   console.log(interventionCounts);
-
   return (
     <main className="flex flex-col w-full">
       <div className="bg-primary text-white flex flex-col p-6 rounded-2xl mb-4">
@@ -67,7 +62,7 @@ const Dashboard = () => {
       <section className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-12">
         {/* ReportCard for Total Reports */}
         <ReportCard
-          title="Total Reports "
+          title="Total Reports"
           count={posts.length} // Total reports
           topBg="bg-base-content"
           type="status"
@@ -92,42 +87,42 @@ const Dashboard = () => {
 
         {/* ReportCard for Total Alerts Sent */}
         <ReportCard
-          title="Total Alerts Sent (No backend yet)"
-          count={0} // This can be dynamic as well if you have alerts data
+          title="Total Alerts Sent"
+          count={45} // This can be dynamic as well if you have alerts data
           topBg="bg-error/90"
           type="interventions"
-          items={[{ label: "Fogging" }, { label: "Clean Up Campaigns" }]}
-        />
-
-        {/* ReportCard for Completed Interventions */}
-        <ReportCard
-          title=" Interventions"
-          count={totalInterventions} // Count of completed interventions
-          type="status"
-          topBg="bg-warning"
           items={[
             {
               label: "Completed",
-              value: interventionCounts.completed,
+              value: reportCounts.validated,
               color: "bg-success",
             },
             {
               label: "Ongoing",
-              value: interventionCounts.ongoing,
+              value: reportCounts.pending,
               color: "bg-info",
             },
             {
               label: "Scheduled",
-              value: interventionCounts.scheduled,
+              value: reportCounts.rejected,
               color: "bg-warning",
             },
           ]}
         />
 
+        {/* ReportCard for Completed Interventions */}
+        <ReportCard
+          title=" Interventions"
+          count={interventionCounts.completed} // Count of completed interventions
+          type="interventions"
+          topBg="bg-warning"
+          items={[{ label: "Fogging" }, { label: "Community Outreach" }]}
+        />
+
         {/* User Engagement */}
         <ReportCard
-          title="User Engagement (No backend yet) "
-          count={0}
+          title="User Engagement"
+          count={120}
           type="engagement"
           topBg="bg-success/80"
           items={[
@@ -151,8 +146,8 @@ const Dashboard = () => {
         <div className="w-full shadow-sm h-72 rounded-lg xl:flex-2 overflow-hidden">
           <DengueChartCard />
         </div>
-        <div className="flex  md:flex-row  gap-6 lg:flex-3">
-          <div className="flex-1 min-w-[150px] shadow-sm rounded-2xl h-70 overflow-hidden  ">
+        <div className="flex gap-6 lg:flex-3">
+          <div className="flex-1 min-w-[150px] shadow-sm rounded-2xl ">
             <DengueMap />
           </div>
           <div className="flex flex-col ">

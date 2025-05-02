@@ -24,7 +24,7 @@ const Dashboard = () => {
     isLoading: interventionsLoading,
     isError: interventionsError,
   } = useGetAllInterventionsQuery();
-  console.log(interventions);
+
   // Handle loading and error states for both posts and interventions
   if (postsLoading || interventionsLoading) return <div>Loading...</div>;
   if (postsError || interventionsError)
@@ -51,11 +51,6 @@ const Dashboard = () => {
     },
     { completed: 0, scheduled: 0, ongoing: 0 }
   );
-  const totalInterventions =
-    interventionCounts.completed +
-    interventionCounts.scheduled +
-    interventionCounts.ongoing;
-  console.log(interventionCounts);
 
   return (
     <main className="flex flex-col w-full">
@@ -67,7 +62,7 @@ const Dashboard = () => {
       <section className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-12">
         {/* ReportCard for Total Reports */}
         <ReportCard
-          title="Total Reports "
+          title="Total Reports (No backend yet)"
           count={posts.length} // Total reports
           topBg="bg-base-content"
           type="status"
@@ -92,8 +87,8 @@ const Dashboard = () => {
 
         {/* ReportCard for Total Alerts Sent */}
         <ReportCard
-          title="Total Alerts Sent (No backend yet)"
-          count={0} // This can be dynamic as well if you have alerts data
+          title="Total Alerts Sent"
+          count={45} // This can be dynamic as well if you have alerts data
           topBg="bg-error/90"
           type="interventions"
           items={[{ label: "Fogging" }, { label: "Clean Up Campaigns" }]}
@@ -102,7 +97,7 @@ const Dashboard = () => {
         {/* ReportCard for Completed Interventions */}
         <ReportCard
           title=" Interventions"
-          count={totalInterventions} // Count of completed interventions
+          count={interventionCounts.completed} // Count of completed interventions
           type="status"
           topBg="bg-warning"
           items={[
@@ -113,12 +108,12 @@ const Dashboard = () => {
             },
             {
               label: "Ongoing",
-              value: interventionCounts.ongoing,
+              value: reportCounts.ongoing,
               color: "bg-info",
             },
             {
               label: "Scheduled",
-              value: interventionCounts.scheduled,
+              value: reportCounts.scheduled,
               color: "bg-warning",
             },
           ]}
@@ -126,8 +121,8 @@ const Dashboard = () => {
 
         {/* User Engagement */}
         <ReportCard
-          title="User Engagement (No backend yet) "
-          count={0}
+          title="User Engagement"
+          count={120}
           type="engagement"
           topBg="bg-success/80"
           items={[
@@ -151,8 +146,8 @@ const Dashboard = () => {
         <div className="w-full shadow-sm h-72 rounded-lg xl:flex-2 overflow-hidden">
           <DengueChartCard />
         </div>
-        <div className="flex  md:flex-row  gap-6 lg:flex-3">
-          <div className="flex-1 min-w-[150px] shadow-sm rounded-2xl h-70 overflow-hidden  ">
+        <div className="flex gap-6 lg:flex-3">
+          <div className="flex-1 min-w-[150px] shadow-sm rounded-2xl ">
             <DengueMap />
           </div>
           <div className="flex flex-col ">

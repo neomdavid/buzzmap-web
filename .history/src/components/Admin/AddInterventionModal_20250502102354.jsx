@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef } from "react";
-import { IconX, IconCheck } from "@tabler/icons-react";
-import { useCreateInterventionMutation } from "../../api/dengueApi"; // Import RTK query hook for create intervention
+import { IconX, IconCheck, IconAlertCircle } from "@tabler/icons-react";
 
 const AddInterventionModal = ({ isOpen, onClose }) => {
   const modalRef = useRef(null);
+  const [barangayOptions, setBarangayOptions] = useState([]); // Store barangay options
   const [formData, setFormData] = useState({
     barangay: "",
     addressLine: "",
@@ -15,14 +15,23 @@ const AddInterventionModal = ({ isOpen, onClose }) => {
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
-  const [barangayData, setBarangayData] = useState(null);
-  const [barangayOptions, setBarangayOptions] = useState([]);
 
   // Mock personnel options (replace with real data if needed)
   const personnelOptions = ["John Doe", "Jane Smith", "Carlos Rivera"];
 
-  // RTK Query mutation hook for creating an intervention
-  const [createIntervention] = useCreateInterventionMutation();
+  // Fetch barangays from the GeoJSON file
+  useEffect(() => {
+    fetch("/quezon_barangays_boundaries.geojson")
+      .then((res) => res.json())
+      .then((data) => {
+        // Extract the barangay names from GeoJSON
+        const barangays = data.features.map(
+          (feature) => feature.properties.name
+        );
+        setBarangayOptions(barangays);
+      })
+      .catch(console.error);
+  }, []);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -32,7 +41,7 @@ const AddInterventionModal = ({ isOpen, onClose }) => {
     }));
   };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = (e) => {
     e.preventDefault();
     setShowConfirmation(true);
   };
@@ -40,8 +49,9 @@ const AddInterventionModal = ({ isOpen, onClose }) => {
   const confirmSubmit = async () => {
     setIsSubmitting(true);
     try {
-      // Submit intervention data via RTK Query
-      await createIntervention(formData).unwrap();
+      // Simulate API call
+      console.log("Submitting intervention:", formData);
+      await new Promise((resolve) => setTimeout(resolve, 1000));
 
       setIsSuccess(true);
       // Reset form after successful submission
@@ -53,18 +63,18 @@ const AddInterventionModal = ({ isOpen, onClose }) => {
         date: "",
         status: "Scheduled",
       });
-
-      // Show success toast
-      // Close modal after showing success message
-      setTimeout(() => {
-        onClose(); // Close the modal after successful submission
-        setShowConfirmation(false);
-        setIsSuccess(false);
-      }, 2000); // Auto-close after 2 seconds
     } catch (error) {
       console.error("Error submitting intervention:", error);
     } finally {
       setIsSubmitting(false);
+      // Close the modal after 2 seconds if successful
+      if (isSuccess) {
+        setTimeout(() => {
+          onClose(); // Close the modal after successful submission
+          setShowConfirmation(false);
+          setIsSuccess(false);
+        }, 2000); // Auto-close after 2 seconds
+      }
     }
   };
 
@@ -79,22 +89,6 @@ const AddInterventionModal = ({ isOpen, onClose }) => {
   }, [isOpen]);
 
   if (!isOpen) return null;
-
-  useEffect(() => {
-    // Fetch the barangay data (geojson file)
-    fetch("/quezon_barangays_boundaries.geojson")
-      .then((res) => res.json())
-      .then((data) => {
-        setBarangayData(data);
-
-        // Extract barangay names and set the options for the select
-        const barangayNames = data.features.map(
-          (feature) => feature.properties.name
-        );
-        setBarangayOptions(barangayNames);
-      })
-      .catch(console.error);
-  }, []);
 
   return (
     <>
