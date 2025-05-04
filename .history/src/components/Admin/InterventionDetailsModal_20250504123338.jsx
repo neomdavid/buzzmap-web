@@ -80,7 +80,6 @@ const InterventionDetailsModal = ({
       console.error("Error during delete:", err); // Log error in detail
       toastError(err.message);
     } finally {
-      toastError("Intervention Deleted");
       console.log("Finally block reached...");
       onClose();
     }

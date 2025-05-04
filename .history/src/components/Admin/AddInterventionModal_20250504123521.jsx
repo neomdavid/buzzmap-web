@@ -182,7 +182,6 @@ const AddInterventionModal = ({ isOpen, onClose }) => {
                   </div>
 
                   {/* Assigned Personnel */}
-                  {/* Assigned Personnel */}
                   <div className="form-control">
                     <label className="label text-primary text-lg font-bold mb-1">
                       Assigned Personnel
@@ -191,9 +190,15 @@ const AddInterventionModal = ({ isOpen, onClose }) => {
                       name="personnel"
                       value={formData.personnel}
                       onChange={handleChange}
-                      className="border-2 font-normal border-primary/60 p-3 px-4 rounded-lg w-full bg-base-200 text-lg py-2 cursor-pointer hover:bg-base-300 transition-all"
+                      className="select border-0 rounded-lg w-full bg-base-200 text-lg py-2 cursor-pointer hover:bg-base-300 transition-all"
                       required
                     />
+                    <option value="">Select Personnel</option>
+                    {personnelOptions.map((person, index) => (
+                      <option key={index} value={person}>
+                        {person}
+                      </option>
+                    ))}
                   </div>
 
                   {/* Date and Time */}

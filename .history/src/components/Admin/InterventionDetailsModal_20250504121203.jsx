@@ -4,7 +4,11 @@ import {
   useUpdateInterventionMutation,
   useDeleteInterventionMutation,
 } from "../../api/dengueApi"; // Import the RTK Query hook for updating the intervention data
-import { toastSuccess, toastError, formatDateForInput } from "../../utils.jsx";
+import {
+  toastSuccess,
+  toastWarning,
+  formatDateForInput,
+} from "../../utils.jsx";
 const InterventionDetailsModal = ({
   intervention,
   onClose,
@@ -14,6 +18,7 @@ const InterventionDetailsModal = ({
   const modalRef = useRef(null);
   const [barangayData, setBarangayData] = useState(null);
   const [barangayOptions, setBarangayOptions] = useState([]);
+  const [isSuccess, setIsSuccess] = useState(false);
   const [isEditing, setIsEditing] = useState(false); // Track if the user is editing
   const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false); // For delete confirmation inside modal
   const [isLoading, setIsLoading] = useState(false); // Loading state for save operation
@@ -49,6 +54,7 @@ const InterventionDetailsModal = ({
       }).unwrap();
 
       console.log("Intervention updated successfully:", response);
+      setIsSuccess(true); // Mark as successful
       setIsEditing(false); // Switch back to readonly mode
     } catch (error) {
       console.error("Failed to update intervention:", error);
@@ -71,18 +77,20 @@ const InterventionDetailsModal = ({
 
   // Handle delete confirmation
   const handleConfirmDelete = async () => {
-    console.log("Start delete action...");
-    setIsLoading(true); // Hide loading indicator after the request completes
+    setIsLoading(true);
     try {
-      const response = await deleteIntervention(intervention._id);
-      setIsLoading(false); // Hide loading indicator after the request completes
+      const response = await deleteIntervention(intervention._id).unwrap();
+      console.log(response);
+      setIsSuccess(true); // Mark as successful
+      setIsEditing(false); // Switch back to readonly mode
     } catch (err) {
-      console.error("Error during delete:", err); // Log error in detail
+      console.error(err);
       toastError(err.message);
     } finally {
-      toastError("Intervention Deleted");
-      console.log("Finally block reached...");
+      setIsLoading(false); // Hide loading indicator after the request completes
       onClose();
+      setShowDeleteConfirmation(false); // Hide the confirmation modal
+      toastSuccess("Intervention deleted successfully");
     }
   };
 

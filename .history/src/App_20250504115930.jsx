@@ -86,10 +86,6 @@ function App() {
       element: <AdminLayout />,
       children: [
         {
-          index: true,
-          element: <Navigate to="/admin/dashboard" replace />,
-        },
-        {
           path: "/admin/dashboard",
           index: true,
           element: <Dashboard />,

@@ -72,15 +72,17 @@ const InterventionDetailsModal = ({
   // Handle delete confirmation
   const handleConfirmDelete = async () => {
     console.log("Start delete action...");
-    setIsLoading(true); // Hide loading indicator after the request completes
+
     try {
+      console.log("About to send delete request...");
       const response = await deleteIntervention(intervention._id);
+      console.log("Delete Response:", response);
+      onClose();
       setIsLoading(false); // Hide loading indicator after the request completes
     } catch (err) {
       console.error("Error during delete:", err); // Log error in detail
       toastError(err.message);
     } finally {
-      toastError("Intervention Deleted");
       console.log("Finally block reached...");
       onClose();
     }
@@ -146,7 +148,7 @@ const InterventionDetailsModal = ({
                 onClick={handleConfirmDelete}
                 className="bg-error text-white font-semibold py-1 px-12 rounded-xl hover:bg-error/80 transition-all"
               >
-                {isLoading ? "Deleting..." : "Confirm Delete"}
+                {isLoading ? "Deleting..." : "Confirm Deletess"}
               </button>
             </div>
           </>

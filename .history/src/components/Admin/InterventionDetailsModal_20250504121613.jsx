@@ -4,7 +4,12 @@ import {
   useUpdateInterventionMutation,
   useDeleteInterventionMutation,
 } from "../../api/dengueApi"; // Import the RTK Query hook for updating the intervention data
-import { toastSuccess, toastError, formatDateForInput } from "../../utils.jsx";
+import {
+  toastSuccess,
+  toastWarning,
+  toastError,
+  formatDateForInput,
+} from "../../utils.jsx";
 const InterventionDetailsModal = ({
   intervention,
   onClose,
@@ -71,18 +76,17 @@ const InterventionDetailsModal = ({
 
   // Handle delete confirmation
   const handleConfirmDelete = async () => {
-    console.log("Start delete action...");
-    setIsLoading(true); // Hide loading indicator after the request completes
+    setIsLoading(true);
     try {
-      const response = await deleteIntervention(intervention._id);
-      setIsLoading(false); // Hide loading indicator after the request completes
+      const response = await deleteIntervention(intervention._id).unwrap();
+      setIsEditing(false); // Switch back to readonly mode
     } catch (err) {
-      console.error("Error during delete:", err); // Log error in detail
+      console.error(err);
       toastError(err.message);
     } finally {
-      toastError("Intervention Deleted");
-      console.log("Finally block reached...");
+      setIsLoading(false); // Hide loading indicator after the request completes
       onClose();
+      toastWarning("Intervention deleted successfully");
     }
   };
 
