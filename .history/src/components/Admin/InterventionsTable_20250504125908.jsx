@@ -79,30 +79,39 @@ function InterventionsTable({
   const [selectedIntervention, setSelectedIntervention] = useState(null);
   const gridRef = useRef(null);
 
-  let rowData = interventions.map((intervention) => ({
-    id: intervention._id,
-    barangay: intervention.barangay,
-    date: new Date(intervention.date).toLocaleString("en-US", {
-      weekday: "short",
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-      second: "2-digit",
-      hour12: true,
-    }),
-    interventionType: intervention.interventionType,
-    personnel: intervention.personnel,
-    status: intervention.status,
-  }));
+  let rowData = interventions.map((intervention) => {
+    const data = {
+      barangay: intervention.barangay,
+      date: new Date(intervention.date).toLocaleString("en-US", {
+        weekday: "short",
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        hour12: true,
+      }),
+      interventionType: intervention.interventionType,
+      personnel: intervention.personnel,
+      status: intervention.status,
+    };
+
+    // Include the id only if it's not 'onlyRecent'
+    if (!onlyRecent) {
+      data.id = intervention._id;
+    }
+
+    return data;
+  });
+
   if (onlyRecent) {
     rowData = rowData.slice(0, 5); // Show only the top 5 recent reports
   }
+
   const columnDefs = useMemo(() => {
     const baseCols = [
-      // Conditionally include the ID column if onlyRecent is false
-      ...(onlyRecent ? [] : [{ field: "id", headerName: "ID", minWidth: 100 }]),
+      { field: "id", headerName: "ID", minWidth: 100 },
       { field: "barangay", headerName: "Barangay", minWidth: 200 },
       { field: "date", headerName: "Date", minWidth: 140 },
       {

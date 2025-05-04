@@ -30,9 +30,9 @@ const Interventions = () => {
       <p className="flex justify-center text-5xl font-extrabold mb-12 text-center md:justify-start md:text-left md:w-[48%]">
         Interventions
       </p>
-      <section className="flex flex-col gap-16">
-        <div className="flex justify-between items-center mb-[-35px]">
-          <p className="text-base-content text-4xl font-bold ">
+      <section className="flex flex-col ">
+        <div className="flex justify-between items-center">
+          <p className="text-base-content text-4xl font-bold mb-2">
             Recent Intervention Records
           </p>
           {/* Link to View All Records */}

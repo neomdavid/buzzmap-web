@@ -31,8 +31,8 @@ const Interventions = () => {
         Interventions
       </p>
       <section className="flex flex-col gap-16">
-        <div className="flex justify-between items-center mb-[-35px]">
-          <p className="text-base-content text-4xl font-bold ">
+        <div className="flex justify-between items-center">
+          <p className="text-base-content text-4xl font-bold mb-[-20px]">
             Recent Intervention Records
           </p>
           {/* Link to View All Records */}

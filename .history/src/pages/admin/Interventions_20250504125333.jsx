@@ -31,14 +31,14 @@ const Interventions = () => {
         Interventions
       </p>
       <section className="flex flex-col gap-16">
-        <div className="flex justify-between items-center mb-[-35px]">
-          <p className="text-base-content text-4xl font-bold ">
+        <div className="flex justify-between items-center">
+          <p className="text-base-content text-4xl font-bold mb-2">
             Recent Intervention Records
           </p>
           {/* Link to View All Records */}
           <Link
             to="/admin/interventions/all"
-            className="bg-primary text-center text-nowrap font-semibold text-white py-1 px-3 rounded-full text-sm hover:bg-primary/80 transition-all duration-200"
+            className="bg-primary font-semibold text-white py-1 px-3 rounded-full text-md hover:underline"
           >
             View All Records
           </Link>
