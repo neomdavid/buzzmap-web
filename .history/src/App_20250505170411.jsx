@@ -47,12 +47,23 @@ const isAuthenticated = () => {
 
 // Route protection components
 const PublicRoute = ({ children }) => {
+  if (isAuthenticated()) {
+    const user = getUserData();
+    switch (user?.role) {
+      case "admin":
+        return <Navigate to="/admin/dashboard" replace />;
+      case "superadmin":
+        return <Navigate to="/superadmin/dashboard" replace />;
+      default:
+        return <Navigate to="/home" replace />;
+    }
+  }
   return children;
 };
 
 const PrivateRoute = ({ children, requiredRole }) => {
   if (!isAuthenticated()) {
-    toastError(`Please log in as ${requiredRole} to access ${requiredRole}.`);
+    toastError(`Please log in as ${requiredRole} to access ${requiredRole}`);
     return <Navigate to="/login" replace />;
   }
 

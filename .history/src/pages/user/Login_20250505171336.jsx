@@ -146,7 +146,7 @@ const Login = () => {
               isLoading && "bg-gray-100 disabled"
             }`}
           >
-            {isLoading ? "Logging in..." : "Login"}
+            Login
           </button>
           {isError && (
             <p className="mt-[-4px] font-semibold text-red-500 font-light italic text-md">

@@ -13,12 +13,11 @@ import {
 import { useState } from "react";
 import { NavLink, Link, Outlet, useLocation } from "react-router-dom";
 import { LogoNamed } from "../../components";
-import { useSelector, useDispatch } from "react-redux";
-import { logout } from "../../features/authSlice.js";
+import { useSelector } from "react-redux";
+
 const AdminLayout = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const currentRoute = useLocation().pathname;
-  const dispatch = useDispatch();
 
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
   const userFromStore = useSelector((state) => state.auth?.user);
@@ -39,8 +38,10 @@ const AdminLayout = () => {
             </div>
             <div className="flex flex-col items-center text-primary mb-4">
               <UserCircle size={80} weight="fill" className="mb-2" />
-              <p className="text-3xl font-extrabold">{user.name}</p>
-              <p className="text-gray-500 text-sm text-center">{user.email}</p>
+              <p className="text-3xl font-extrabold">Jane Doe</p>
+              <p className="text-gray-500 text-sm text-center">
+                janedoe@admin.buzzmap.com
+              </p>
             </div>
           </div>
 
@@ -95,10 +96,7 @@ const AdminLayout = () => {
         </div>
 
         <div className="py-3 px-3">
-          <Link
-            onClick={() => dispatch(logout())}
-            className="font-bold text-gray-500 text-lg hover:text-red-400 transition-all duration-200"
-          >
+          <Link className="font-bold text-gray-500 text-lg hover:text-red-400 transition-all duration-200">
             Logout
           </Link>
         </div>

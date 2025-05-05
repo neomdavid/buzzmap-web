@@ -167,19 +167,19 @@ function ReportTable2({ posts, isActionable = true, onlyRecent = false }) {
     const columnsToHide = [];
     let totalColsWidth = 0;
 
-    // if (allColumns) {
-    //   allColumns.forEach((col) => {
-    //     totalColsWidth += col.getMinWidth() || 100;
-    //     if (totalColsWidth > gridWidth) {
-    //       columnsToHide.push(col.getColId());
-    //     } else {
-    //       columnsToShow.push(col.getColId());
-    //     }
-    //   });
-    // }
+    if (allColumns) {
+      allColumns.forEach((col) => {
+        totalColsWidth += col.getMinWidth() || 100;
+        if (totalColsWidth > gridWidth) {
+          columnsToHide.push(col.getColId());
+        } else {
+          columnsToShow.push(col.getColId());
+        }
+      });
+    }
 
-    // params.columnApi.setColumnsVisible(columnsToShow, true);
-    // params.columnApi.setColumnsVisible(columnsToHide, false);
+    params.columnApi.setColumnsVisible(columnsToShow, true);
+    params.columnApi.setColumnsVisible(columnsToHide, false);
 
     setTimeout(() => {
       params.api.sizeColumnsToFit();

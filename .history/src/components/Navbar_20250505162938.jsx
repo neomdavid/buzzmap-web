@@ -16,12 +16,8 @@ const Navbar = () => {
 
   // Get user from Redux store
   const userFromStore = useSelector((state) => state.auth?.user);
-  let user;
-  if (userFromStore && userFromStore.role === "user") {
-    user = userFromStore;
-  } else {
-    user = { name: "Guest" };
-  }
+  console.log(userFromStore);
+  const user = userFromStore.role === "user" || { name: "Guest" };
   const toggleDrawer = () => setIsOpen(!isOpen);
 
   const renderLinks = (isDrawer = false) => (

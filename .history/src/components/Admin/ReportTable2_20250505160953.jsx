@@ -178,8 +178,8 @@ function ReportTable2({ posts, isActionable = true, onlyRecent = false }) {
     //   });
     // }
 
-    // params.columnApi.setColumnsVisible(columnsToShow, true);
-    // params.columnApi.setColumnsVisible(columnsToHide, false);
+    params.columnApi.setColumnsVisible(columnsToShow, true);
+    params.columnApi.setColumnsVisible(columnsToHide, false);
 
     setTimeout(() => {
       params.api.sizeColumnsToFit();

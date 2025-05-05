@@ -33,7 +33,6 @@ import {
   SprUsers,
   SprAdmins,
 } from "./pages/superadmin";
-import { toastError } from "./utils.jsx";
 
 // Helper functions
 const getUserData = () => {
@@ -47,19 +46,35 @@ const isAuthenticated = () => {
 
 // Route protection components
 const PublicRoute = ({ children }) => {
+  if (isAuthenticated()) {
+    const user = getUserData();
+    switch (user?.role) {
+      case "admin":
+        return <Navigate to="/admin/dashboard" replace />;
+      case "superadmin":
+        return <Navigate to="/superadmin/dashboard" replace />;
+      default:
+        return <Navigate to="/home" replace />;
+    }
+  }
   return children;
 };
 
 const PrivateRoute = ({ children, requiredRole }) => {
   if (!isAuthenticated()) {
-    toastError(`Please log in as ${requiredRole} to access ${requiredRole}.`);
     return <Navigate to="/login" replace />;
   }
 
   const user = getUserData();
   if (requiredRole && user?.role !== requiredRole) {
-    toastError("You don't have permission to access this page.");
-    return <Navigate to="/login" replace />;
+    return (
+      <div className="unauthorized-container">
+        <h1>Unauthorized Access</h1>
+        <p>You don't have permission to access this page.</p>
+        <p>Required role: {requiredRole}</p>
+        <button onClick={() => window.history.back()}>Go Back</button>
+      </div>
+    );
   }
 
   return children;

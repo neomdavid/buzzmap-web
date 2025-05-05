@@ -14,7 +14,7 @@ import { useState } from "react";
 import { NavLink, Link, Outlet, useLocation } from "react-router-dom";
 import { LogoNamed } from "../../components";
 import { useSelector, useDispatch } from "react-redux";
-import { logout } from "../../features/authSlice.js";
+import { logout } from "../features/authSlice.js";
 const AdminLayout = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const currentRoute = useLocation().pathname;
@@ -96,7 +96,7 @@ const AdminLayout = () => {
 
         <div className="py-3 px-3">
           <Link
-            onClick={() => dispatch(logout())}
+            onClick={dispatch(logout())}
             className="font-bold text-gray-500 text-lg hover:text-red-400 transition-all duration-200"
           >
             Logout

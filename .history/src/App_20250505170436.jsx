@@ -47,6 +47,17 @@ const isAuthenticated = () => {
 
 // Route protection components
 const PublicRoute = ({ children }) => {
+  if (isAuthenticated()) {
+    const user = getUserData();
+    switch (user?.role) {
+      case "admin":
+        return <Navigate to="/admin/dashboard" replace />;
+      case "superadmin":
+        return <Navigate to="/superadmin/dashboard" replace />;
+      default:
+        return <Navigate to="/home" replace />;
+    }
+  }
   return children;
 };
 

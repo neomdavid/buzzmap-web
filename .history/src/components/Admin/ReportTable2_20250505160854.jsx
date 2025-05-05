@@ -92,12 +92,12 @@ const ActionsCell = (p) => {
   );
 };
 
-// const onGridReady = (params) => {
-//   // Now it's safe to access grid API methods like columnApi
-//   const columnApi = params.columnApi;
-//   const gridWidth = params.api.getGridWidth();
-//   // Your operations here
-// };
+const onGridReady = (params) => {
+  // Now it's safe to access grid API methods like columnApi
+  const columnApi = params.columnApi;
+  const gridWidth = params.api.getGridWidth();
+  // Your operations here
+};
 
 function ReportTable2({ posts, isActionable = true, onlyRecent = false }) {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -167,19 +167,19 @@ function ReportTable2({ posts, isActionable = true, onlyRecent = false }) {
     const columnsToHide = [];
     let totalColsWidth = 0;
 
-    // if (allColumns) {
-    //   allColumns.forEach((col) => {
-    //     totalColsWidth += col.getMinWidth() || 100;
-    //     if (totalColsWidth > gridWidth) {
-    //       columnsToHide.push(col.getColId());
-    //     } else {
-    //       columnsToShow.push(col.getColId());
-    //     }
-    //   });
-    // }
+    if (allColumns) {
+      allColumns.forEach((col) => {
+        totalColsWidth += col.getMinWidth() || 100;
+        if (totalColsWidth > gridWidth) {
+          columnsToHide.push(col.getColId());
+        } else {
+          columnsToShow.push(col.getColId());
+        }
+      });
+    }
 
-    // params.columnApi.setColumnsVisible(columnsToShow, true);
-    // params.columnApi.setColumnsVisible(columnsToHide, false);
+    params.columnApi.setColumnsVisible(columnsToShow, true);
+    params.columnApi.setColumnsVisible(columnsToHide, false);
 
     setTimeout(() => {
       params.api.sizeColumnsToFit();
@@ -220,7 +220,7 @@ function ReportTable2({ posts, isActionable = true, onlyRecent = false }) {
           onGridSizeChanged={onGridSizeChanged}
           onFirstDataRendered={onFirstDataRendered}
           context={{ openModal }} // Pass openModal through context
-          // onGridReady={onGridReady} // Add this line
+          onGridReady={onGridReady} // Add this line
         />
       </div>
 

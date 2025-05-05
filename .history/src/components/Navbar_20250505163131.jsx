@@ -16,6 +16,7 @@ const Navbar = () => {
 
   // Get user from Redux store
   const userFromStore = useSelector((state) => state.auth?.user);
+  console.log(userFromStore);
   let user;
   if (userFromStore && userFromStore.role === "user") {
     user = userFromStore;
