@@ -8,7 +8,7 @@ import {
 import { useGoogleMaps } from "./GoogleMapsProvider";
 import * as turf from "@turf/turf";
 import { Circle, CheckCircle, Question } from "phosphor-react";
-import { useGetPatternRecognitionResultsQuery } from "../api/dengueApi";
+import { useGetPatternRecognitionResultsQuery } from "../api/dengueApi"; // Import your API hook
 
 const containerStyle = {
   width: "100%",
@@ -27,32 +27,13 @@ const QC_CENTER = {
   lng: 121.0437,
 };
 
+// Updated color scheme based on pattern types
 const PATTERN_COLORS = {
-  spike: "#e53e3e",
-  gradual_rise: "#dd6b20",
-  stability: "#38a169",
-  decline: "#3182ce",
-  default: "#718096",
-};
-
-// Helper function to extract barangay name from GeoJSON feature
-const getBarangayName = (feature) => {
-  // Case 1: Direct name in properties
-  if (feature.properties?.name) {
-    return feature.properties.name;
-  }
-
-  // Case 2: Name in @relations array
-  if (feature.properties?.["@relations"]) {
-    const relation = feature.properties["@relations"].find(
-      (rel) => rel.reltags?.name
-    );
-    if (relation?.reltags?.name) {
-      return relation.reltags.name;
-    }
-  }
-  // Case 3: Try to extract from other properties
-  return feature.properties?.ref || feature.id || "Unknown";
+  spike: "#e53e3e", // Red for spikes
+  gradual_rise: "#dd6b20", // Orange for gradual rise
+  stability: "#38a169", // Green for stability
+  decline: "#3182ce", // Blue for decline
+  default: "#718096", // Gray for unknown
 };
 
 const DengueMap = ({
@@ -69,10 +50,12 @@ const DengueMap = ({
   const mapRef = useRef(null);
   const { isLoaded } = useGoogleMaps();
 
+  // Fetch pattern recognition data
   const { data: patternData, isLoading: patternsLoading } =
     useGetPatternRecognitionResultsQuery();
 
   useEffect(() => {
+    // Load GeoJSON data
     fetch("/quezon_barangays_boundaries.geojson")
       .then((res) => res.json())
       .then((data) => {
@@ -83,53 +66,35 @@ const DengueMap = ({
         return data;
       })
       .then((geoData) => {
+        // Only process if we have both GeoJSON and pattern data
         if (patternData?.data) {
           processBarangayData(geoData, patternData.data);
         }
       });
-  }, [patternData]);
+  }, [patternData]); // Re-run when pattern data changes
 
   const processBarangayData = (geoData, patternResults) => {
     const colored = {
       ...geoData,
       features: geoData.features.map((f) => {
-        const barangayName = getBarangayName(f);
-        // Find matching pattern data (case insensitive, remove special chars)
-        const normalizedBarangayName = barangayName
-          .toLowerCase()
-          .replace(/[^a-z0-9]/g, "");
+        // Find matching pattern data for this barangay
+        const patternInfo = patternResults.find(
+          (item) =>
+            item.name?.toLowerCase() === f.properties.name?.toLowerCase()
+        );
 
-        const patternInfo = patternResults.find((item) => {
-          const normalizedItemName = item.name
-            ?.toLowerCase()
-            .replace(/[^a-z0-9]/g, "");
-          return normalizedItemName === normalizedBarangayName;
-        });
-        console.log(patternInfo);
-        // Fallback: Try matching by removing "Barangay" prefix
-        if (!patternInfo) {
-          const patternInfo = patternResults.find((item) => {
-            const normalizedItemName = item.name
-              ?.toLowerCase()
-              .replace("barangay", "")
-              .replace(/[^a-z0-9]/g, "")
-              .trim();
-            return normalizedItemName === normalizedBarangayName;
-          });
-        }
-        console.log(patternInfo?.risk_level);
-
+        // Determine pattern type and risk level
         let patternType =
-          patternInfo?.triggered_pattern?.toLowerCase() || "None";
-        let riskLevel = patternInfo?.risk_level.toLowerCase() || "unknown";
+          patternInfo?.triggered_pattern?.toLowerCase() || "default";
+        let riskLevel = patternInfo?.risk_level || "unknown";
+
+        // Get color based on pattern type
         const color = PATTERN_COLORS[patternType] || PATTERN_COLORS.default;
-        console.log(riskLevel);
 
         return {
           ...f,
           properties: {
             ...f.properties,
-            displayName: barangayName, // Store the display name separately
             patternType,
             riskLevel,
             color,
@@ -153,7 +118,7 @@ const DengueMap = ({
 
     setSelectedBarangay(feature);
     setInfoWindowPosition({ lat, lng });
-    setHighlightedBarangay(feature.properties.displayName);
+    setHighlightedBarangay(feature.properties.name);
   };
 
   if (!isLoaded || patternsLoading) return <p>Loading map...</p>;
@@ -170,7 +135,7 @@ const DengueMap = ({
           mapTypeId: defaultView,
         }}
       >
-        {/* Map elements remain the same */}
+        {/* Existing map elements */}
         <Polygon
           paths={qcPolygonPaths}
           options={{
@@ -192,6 +157,7 @@ const DengueMap = ({
           }}
         />
 
+        {/* Barangay polygons with real data */}
         {barangayData?.features.map((feature, index) => {
           const geometry = feature.geometry;
           const coordsArray =
@@ -208,7 +174,7 @@ const DengueMap = ({
             }));
 
             const isHighlighted =
-              feature.properties.displayName === highlightedBarangay;
+              feature.properties.name === highlightedBarangay;
 
             return (
               <Polygon
@@ -230,6 +196,7 @@ const DengueMap = ({
           });
         })}
 
+        {/* InfoWindow with real data */}
         {selectedBarangay && infoWindowPosition && (
           <InfoWindow
             position={infoWindowPosition}
@@ -298,15 +265,9 @@ const DengueMap = ({
                   </div>
                   <p className="text-lg">
                     <span className="font-semibold">Last Analyzed:</span>{" "}
-                    {isNaN(
-                      new Date(
-                        selectedBarangay.properties.lastAnalysisTime
-                      ).getTime()
-                    )
-                      ? "N/A"
-                      : new Date(
-                          selectedBarangay.properties.lastAnalysisTime
-                        ).toLocaleString()}
+                    {new Date(
+                      selectedBarangay.properties.lastAnalysisTime
+                    ).toLocaleString() || "N/A"}
                   </p>
                 </div>
               </div>

@@ -7,10 +7,7 @@ import {
   DengueChartCard,
   DengueTrendChart,
   DengueMap,
-  PieChart,
 } from "../../components";
-import PatternRecognitionResults from "@/components/Admin/PatternAlerts";
-import PatternAlerts from "@/components/Admin/PatternAlerts";
 
 // import { IconCheck, IconHourglassEmpty, IconSearch } from "@tabler/icons-react";
 const Analytics = () => {
@@ -123,8 +120,11 @@ const Analytics = () => {
             <p className="mb-2 text-base-content text-4xl font-bold">
               Pattern Recognition Alerts
             </p>
-            <div className="flex flex-col gap-y-5 h-95 xl:h-120 2xl:h-125 mt-[-10px] py-3 overflow-y-scroll">
-              <PatternAlerts />
+            <div className="flex flex-col gap-y-5 h-95 lg:h-120 mt-[-10px] py-3 overflow-y-scroll">
+              {" "}
+              {alerts.map((alert, index) => (
+                <AlertCard key={index} {...alert} />
+              ))}
             </div>
           </section>
         </div>
@@ -141,7 +141,6 @@ const Analytics = () => {
             />
           </div>
         </div>
-        <PieChart />
       </article>
     </main>
   );

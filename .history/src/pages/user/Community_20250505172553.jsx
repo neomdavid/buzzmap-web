@@ -106,13 +106,11 @@ const Community = () => {
             active={filter === "latest"}
             onClick={() => setFilter("latest")}
           />
-          {userFromStore && userFromStore.role == "user" && (
-            <FilterButton
-              text="My Posts"
-              active={filter === "myPosts"}
-              onClick={() => setFilter("myPosts")}
-            />
-          )}
+          <FilterButton
+            text="My Posts"
+            active={filter === "myPosts"}
+            onClick={() => setFilter("myPosts")}
+          />
         </section>
         <Heading
           text="Stay /ahead/ of dengue."
@@ -123,13 +121,12 @@ const Community = () => {
         </p>
         <section className="bg-base-200 px-8 py-5 rounded-lg mb-4">
           <p className="font-semibold text-lg text-center mb-3 lg:text-left">
-            Report a breeding site to Quezon City Epidemiology and Surveillance
-            Division.
+            Share your experience with the Community
           </p>
           <hr className="text-accent mb-4" />
           <button
             onClick={() => {
-              userFromStore && userFromStore.role == "user"
+              userFromStore
                 ? document.getElementById("my_modal_4").showModal()
                 : toastInfo("Log in to report a breeding site.");
             }}

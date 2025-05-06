@@ -9,8 +9,7 @@ import {
   DengueMap,
   PieChart,
 } from "../../components";
-import PatternRecognitionResults from "@/components/Admin/PatternAlerts";
-import PatternAlerts from "@/components/Admin/PatternAlerts";
+import PatternRecognitionResults from "@/components/Admin/PatternRecognitionResults";
 
 // import { IconCheck, IconHourglassEmpty, IconSearch } from "@tabler/icons-react";
 const Analytics = () => {
@@ -124,7 +123,7 @@ const Analytics = () => {
               Pattern Recognition Alerts
             </p>
             <div className="flex flex-col gap-y-5 h-95 xl:h-120 2xl:h-125 mt-[-10px] py-3 overflow-y-scroll">
-              <PatternAlerts />
+              <PatternRecognitionResults />
             </div>
           </section>
         </div>

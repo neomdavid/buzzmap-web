@@ -98,6 +98,7 @@ const DengueMap = ({
         const normalizedBarangayName = barangayName
           .toLowerCase()
           .replace(/[^a-z0-9]/g, "");
+        console.log(patternInfo);
 
         const patternInfo = patternResults.find((item) => {
           const normalizedItemName = item.name
@@ -117,13 +118,11 @@ const DengueMap = ({
             return normalizedItemName === normalizedBarangayName;
           });
         }
-        console.log(patternInfo?.risk_level);
 
         let patternType =
-          patternInfo?.triggered_pattern?.toLowerCase() || "None";
-        let riskLevel = patternInfo?.risk_level.toLowerCase() || "unknown";
+          patternInfo?.triggered_pattern?.toLowerCase() || "default";
+        let riskLevel = patternInfo?.risk_level || "unknown";
         const color = PATTERN_COLORS[patternType] || PATTERN_COLORS.default;
-        console.log(riskLevel);
 
         return {
           ...f,
@@ -298,15 +297,9 @@ const DengueMap = ({
                   </div>
                   <p className="text-lg">
                     <span className="font-semibold">Last Analyzed:</span>{" "}
-                    {isNaN(
-                      new Date(
-                        selectedBarangay.properties.lastAnalysisTime
-                      ).getTime()
-                    )
-                      ? "N/A"
-                      : new Date(
-                          selectedBarangay.properties.lastAnalysisTime
-                        ).toLocaleString()}
+                    {new Date(
+                      selectedBarangay.properties.lastAnalysisTime
+                    ).toLocaleString() || "N/A"}
                   </p>
                 </div>
               </div>

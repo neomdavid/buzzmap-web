@@ -106,13 +106,11 @@ const Community = () => {
             active={filter === "latest"}
             onClick={() => setFilter("latest")}
           />
-          {userFromStore && userFromStore.role == "user" && (
-            <FilterButton
-              text="My Posts"
-              active={filter === "myPosts"}
-              onClick={() => setFilter("myPosts")}
-            />
-          )}
+          <FilterButton
+            text="My Posts"
+            active={filter === "myPosts"}
+            onClick={() => setFilter("myPosts")}
+          />
         </section>
         <Heading
           text="Stay /ahead/ of dengue."
@@ -129,7 +127,7 @@ const Community = () => {
           <hr className="text-accent mb-4" />
           <button
             onClick={() => {
-              userFromStore && userFromStore.role == "user"
+              userFromStore
                 ? document.getElementById("my_modal_4").showModal()
                 : toastInfo("Log in to report a breeding site.");
             }}

@@ -298,15 +298,9 @@ const DengueMap = ({
                   </div>
                   <p className="text-lg">
                     <span className="font-semibold">Last Analyzed:</span>{" "}
-                    {isNaN(
-                      new Date(
-                        selectedBarangay.properties.lastAnalysisTime
-                      ).getTime()
-                    )
-                      ? "N/A"
-                      : new Date(
-                          selectedBarangay.properties.lastAnalysisTime
-                        ).toLocaleString()}
+                    {new Date(
+                      selectedBarangay.properties.lastAnalysisTime
+                    ).toLocaleString() || "N/A"}
                   </p>
                 </div>
               </div>

@@ -138,7 +138,7 @@ const NewPostModal = ({ onSubmit }) => {
       const response = await createPostWithImage(formData).unwrap();
 
       console.log("✅ Post uploaded successfully", response);
-      showCustomToast("Post reported to surveillance", "success");
+      showCustomToast("Post created successfully!", "success");
       modalRef.current?.close();
 
       // Reset form

@@ -21,7 +21,7 @@ import {
 import { LogoNamed } from "../../components";
 import { useSelector, useDispatch } from "react-redux";
 import { logout } from "../../features/authSlice.js";
-import { toastSuccess } from "../../utils.jsx";
+
 const AdminLayout = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const currentRoute = useLocation().pathname;
@@ -106,7 +106,6 @@ const AdminLayout = () => {
             onClick={() => {
               dispatch(logout());
               navigate("/");
-              toastSuccess("Logged out successfully.");
             }}
             className="font-bold text-gray-500 text-lg hover:text-red-400 transition-all duration-200"
           >

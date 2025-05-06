@@ -8,7 +8,7 @@ import {
 import { useGoogleMaps } from "./GoogleMapsProvider";
 import * as turf from "@turf/turf";
 import { Circle, CheckCircle, Question } from "phosphor-react";
-import { useGetPatternRecognitionResultsQuery } from "../api/dengueApi";
+import { useGetPatternRecognitionResultsQuery } from "./api/dengueApi";
 
 const containerStyle = {
   width: "100%",
@@ -51,6 +51,7 @@ const getBarangayName = (feature) => {
       return relation.reltags.name;
     }
   }
+
   // Case 3: Try to extract from other properties
   return feature.properties?.ref || feature.id || "Unknown";
 };
@@ -94,6 +95,7 @@ const DengueMap = ({
       ...geoData,
       features: geoData.features.map((f) => {
         const barangayName = getBarangayName(f);
+
         // Find matching pattern data (case insensitive, remove special chars)
         const normalizedBarangayName = barangayName
           .toLowerCase()
@@ -105,7 +107,7 @@ const DengueMap = ({
             .replace(/[^a-z0-9]/g, "");
           return normalizedItemName === normalizedBarangayName;
         });
-        console.log(patternInfo);
+
         // Fallback: Try matching by removing "Barangay" prefix
         if (!patternInfo) {
           const patternInfo = patternResults.find((item) => {
@@ -117,13 +119,11 @@ const DengueMap = ({
             return normalizedItemName === normalizedBarangayName;
           });
         }
-        console.log(patternInfo?.risk_level);
 
         let patternType =
-          patternInfo?.triggered_pattern?.toLowerCase() || "None";
-        let riskLevel = patternInfo?.risk_level.toLowerCase() || "unknown";
+          patternInfo?.triggered_pattern?.toLowerCase() || "default";
+        let riskLevel = patternInfo?.risk_level || "unknown";
         const color = PATTERN_COLORS[patternType] || PATTERN_COLORS.default;
-        console.log(riskLevel);
 
         return {
           ...f,
@@ -298,15 +298,9 @@ const DengueMap = ({
                   </div>
                   <p className="text-lg">
                     <span className="font-semibold">Last Analyzed:</span>{" "}
-                    {isNaN(
-                      new Date(
-                        selectedBarangay.properties.lastAnalysisTime
-                      ).getTime()
-                    )
-                      ? "N/A"
-                      : new Date(
-                          selectedBarangay.properties.lastAnalysisTime
-                        ).toLocaleString()}
+                    {new Date(
+                      selectedBarangay.properties.lastAnalysisTime
+                    ).toLocaleString() || "N/A"}
                   </p>
                 </div>
               </div>

@@ -94,44 +94,38 @@ const DengueMap = ({
       ...geoData,
       features: geoData.features.map((f) => {
         const barangayName = getBarangayName(f);
-        // Find matching pattern data (case insensitive, remove special chars)
         const normalizedBarangayName = barangayName
           .toLowerCase()
           .replace(/[^a-z0-9]/g, "");
 
-        const patternInfo = patternResults.find((item) => {
-          const normalizedItemName = item.name
-            ?.toLowerCase()
-            .replace(/[^a-z0-9]/g, "");
-          return normalizedItemName === normalizedBarangayName;
-        });
-        console.log(patternInfo);
-        // Fallback: Try matching by removing "Barangay" prefix
-        if (!patternInfo) {
-          const patternInfo = patternResults.find((item) => {
+        // Find and normalize matching pattern data
+        const patternInfo = normalizePatternData(
+          patternResults.find((item) => {
             const normalizedItemName = item.name
               ?.toLowerCase()
-              .replace("barangay", "")
-              .replace(/[^a-z0-9]/g, "")
-              .trim();
+              .replace(/[^a-z0-9]/g, "");
             return normalizedItemName === normalizedBarangayName;
-          });
-        }
-        console.log(patternInfo?.risk_level);
+          }) ||
+            patternResults.find((item) => {
+              const normalizedItemName = item.name
+                ?.toLowerCase()
+                .replace("barangay", "")
+                .replace(/[^a-z0-9]/g, "")
+                .trim();
+              return normalizedItemName === normalizedBarangayName;
+            })
+        );
 
-        let patternType =
-          patternInfo?.triggered_pattern?.toLowerCase() || "None";
-        let riskLevel = patternInfo?.risk_level.toLowerCase() || "unknown";
-        const color = PATTERN_COLORS[patternType] || PATTERN_COLORS.default;
-        console.log(riskLevel);
+        // Get color based on normalized pattern type
+        const color = PATTERN_COLORS[patternInfo?.patternType || "default"];
 
         return {
           ...f,
           properties: {
             ...f.properties,
-            displayName: barangayName, // Store the display name separately
-            patternType,
-            riskLevel,
+            displayName: barangayName,
+            patternType: patternInfo?.patternType || "default",
+            riskLevel: patternInfo?.riskLevel || "unknown",
             color,
             alert: patternInfo?.alert || "No recent data",
             lastAnalysisTime: patternInfo?.last_analysis_time,
@@ -298,15 +292,9 @@ const DengueMap = ({
                   </div>
                   <p className="text-lg">
                     <span className="font-semibold">Last Analyzed:</span>{" "}
-                    {isNaN(
-                      new Date(
-                        selectedBarangay.properties.lastAnalysisTime
-                      ).getTime()
-                    )
-                      ? "N/A"
-                      : new Date(
-                          selectedBarangay.properties.lastAnalysisTime
-                        ).toLocaleString()}
+                    {new Date(
+                      selectedBarangay.properties.lastAnalysisTime
+                    ).toLocaleString() || "N/A"}
                   </p>
                 </div>
               </div>
