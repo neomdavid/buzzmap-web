@@ -96,6 +96,8 @@ export const dengueApi = createApi({
     "Intervention",
     "Analytics",
     "PatternRecognition",
+    "Barangay",
+    "Alert",
   ],
   endpoints: (builder) => ({
     // Authentication Endpoints
@@ -362,6 +364,43 @@ export const dengueApi = createApi({
       query: (barangay) => `interventions/in-progress/${barangay}`,
       providesTags: (result, error, barangay) => [{ type: "Intervention", id: barangay }],
     }),
+
+    // Get all barangays
+    getBarangays: builder.query({
+      query: () => "barangays/get-all-barangays",
+      providesTags: ["Barangay"],
+    }),
+
+    // Send dengue alert
+    sendDengueAlert: builder.mutation({
+      query: (alertData) => ({
+        url: "alerts",
+        method: "POST",
+        body: alertData,
+      }),
+      invalidatesTags: ["Alert"],
+    }),
+
+    createAdminPost: builder.mutation({
+      query: (formData) => ({
+        url: "adminPosts",
+        method: "POST",
+        body: formData,
+      }),
+      invalidatesTags: [{ type: "Post", id: "LIST" }],
+    }),
+
+    // Get all admin posts (requires token)
+    getAllAdminPosts: builder.query({
+      query: () => "adminPosts",
+      providesTags: ["Post"],
+    }),
+
+    // Get all alerts
+    getAllAlerts: builder.query({
+      query: () => "alerts",
+      providesTags: ["Alert"],
+    }),
   }),
 });
 
@@ -404,4 +443,16 @@ export const {
 
   // Add this to the exported hooks
   useGetInterventionsInProgressQuery,
+
+  // Barangay hooks
+  useGetBarangaysQuery,
+
+  // Alert hooks
+  useSendDengueAlertMutation,
+
+  useCreateAdminPostMutation,
+
+  // Admin hooks
+  useGetAllAdminPostsQuery,
+  useGetAllAlertsQuery,
 } = dengueApi;

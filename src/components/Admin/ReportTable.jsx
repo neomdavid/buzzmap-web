@@ -16,7 +16,7 @@ const statusColors = {
 
 const columnHelper = createColumnHelper();
 
-const ReportTable = ({ rows, hasActions = false }) => {
+const ReportTable = ({ rows, columns }) => {
   const baseColumns = [
     columnHelper.accessor("id", {
       header: () => "Report ID",
@@ -92,11 +92,11 @@ const ReportTable = ({ rows, hasActions = false }) => {
     },
   });
 
-  const columns = hasActions ? [...baseColumns, actionColumn] : baseColumns;
+  const columnsToUse = columns || [...baseColumns, actionColumn];
 
   const table = useReactTable({
     data: rows,
-    columns,
+    columns: columnsToUse,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
   });
@@ -134,8 +134,6 @@ const ReportTable = ({ rows, hasActions = false }) => {
               <td
                 key={cell.id}
                 className={`${
-                  hasActions ? "bg-white py-3" : "p-2"
-                } px-2 rounded-md ${
                   ["date", "status"].includes(cell.column.id)
                     ? "text-center"
                     : ""

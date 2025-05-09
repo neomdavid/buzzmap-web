@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { CaretDown, CalendarBlank } from "phosphor-react";
+import { useGetAllAdminPostsQuery, useGetAllAlertsQuery } from "../../api/dengueApi";
 
 const CoordinationRequestForm = () => {
   const [selectedPartner, setSelectedPartner] = useState("");
@@ -37,6 +38,10 @@ const CoordinationRequestForm = () => {
     "Barangay 9",
     "Barangay 10",
   ];
+
+  const { data: alerts, isLoading: loadingAlerts } = useGetAllAlertsQuery();
+
+  console.log("alerts response:", alerts, "loading:", loadingAlerts);
 
   const handleSubmit = (e) => {
     e.preventDefault();

@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { CalendarBlank, Clock, Image, Plus, X } from "phosphor-react";
+import { useCreateAdminPostMutation } from "../../api/dengueApi";
+import { useSelector } from "react-redux"; // To get the token
 
 const FormPublicPost = () => {
   const [postType, setPostType] = useState("news");
@@ -9,29 +11,50 @@ const FormPublicPost = () => {
   const [postTime, setPostTime] = useState("");
   const [images, setImages] = useState([]);
   const [imagePreviews, setImagePreviews] = useState([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [success, setSuccess] = useState(false);
+
+  const [createAdminPost] = useCreateAdminPostMutation();
+  const token = useSelector((state) => state.auth.token);
 
   const postTypes = [
     { id: "news", label: "News Updates" },
-    { id: "prevention", label: "Prevention Tips" },
+    { id: "tip", label: "Prevention Tips" },
     { id: "announcement", label: "Official Announcements" },
   ];
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log({
-      postType,
-      postTitle,
-      postContent,
-      postDate,
-      postTime,
-      images: images.length,
-    });
-    setPostTitle("");
-    setPostContent("");
-    setPostDate("");
-    setPostTime("");
-    setImages([]);
-    setImagePreviews([]);
+    setIsSubmitting(true);
+
+    try {
+      const formData = new FormData();
+      formData.append("title", postTitle);
+      formData.append("content", postContent);
+      formData.append("publishDate", `${postDate}T${postTime}:00Z`);
+      formData.append("category", postType);
+      images.forEach((img) => formData.append("images", img));
+
+      await createAdminPost(formData, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }).unwrap();
+
+      setSuccess(true);
+      setPostTitle("");
+      setPostContent("");
+      setPostDate("");
+      setPostTime("");
+      setImages([]);
+      setImagePreviews([]);
+      setTimeout(() => setSuccess(false), 3000);
+    } catch (err) {
+      alert("Failed to publish post.");
+      console.error(err);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleImageUpload = (e) => {
@@ -40,10 +63,8 @@ const FormPublicPost = () => {
       alert("Maximum 8 images allowed");
       return;
     }
-
     const newImages = [...images, ...files];
     setImages(newImages);
-
     const newPreviews = files.map((file) => URL.createObjectURL(file));
     setImagePreviews([...imagePreviews, ...newPreviews]);
   };
@@ -202,11 +223,17 @@ const FormPublicPost = () => {
         <div className="w-full flex justify-center mt-4">
           <button
             type="submit"
+            disabled={isSubmitting}
             className="bg-primary hover:bg-primary-dark transition-colors rounded-full font-semibold text-white py-2 px-8 text-lg shadow-md hover:cursor-pointer hover:bg-primary/90"
           >
-            Publish Post
+            {isSubmitting ? "Publishing..." : "Publish Post"}
           </button>
         </div>
+        {success && (
+          <div className="text-success text-center font-semibold mt-2">
+            Post published successfully!
+          </div>
+        )}
       </div>
     </form>
   );
