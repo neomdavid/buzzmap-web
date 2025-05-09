@@ -27,13 +27,11 @@ const Dashboard = () => {
     isLoading: interventionsLoading,
     isError: interventionsError,
   } = useGetAllInterventionsQuery();
-  console.log(interventions);
   // Handle loading and error states for both posts and interventions
   if (postsLoading || interventionsLoading) return <div>Loading...</div>;
   if (postsError || interventionsError)
     return <div>Error fetching data...</div>;
 
-  console.log(posts);
   // Calculate counts for reports
   const reportCounts = posts.reduce(
     (acc, post) => {

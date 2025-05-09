@@ -8,6 +8,7 @@ import {
   DengueTrendChart,
   DengueMap,
   PieChart,
+  DengueMapLegend
 } from "../../components";
 import PatternRecognitionResults from "@/components/Admin/PatternAlerts";
 import PatternAlerts from "@/components/Admin/PatternAlerts";
@@ -134,11 +135,7 @@ const Analytics = () => {
             Barangay Dengue Risk and Case Density Map
           </p>
           <div className="rounded-xl shadow-sm h-140 overflow-hidden">
-            <DengueMap
-              zoom={12}
-              disableMapSwitch={true}
-              defaultView="satellite"
-            />
+            <DengueMap showLegends={true} />
           </div>
         </div>
         <PieChart />

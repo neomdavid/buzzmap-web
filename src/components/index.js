@@ -8,6 +8,8 @@ export { default as UserDetailsTab } from "./UserDetailsTab.jsx";
 export { default as DengueMap } from "./DengueMap.jsx";
 export { default as CustomFormInput } from "./CustomFormInput.jsx";
 export { default as MapPicker } from "./MapPicker.jsx";
+export { default as DengueMapLegend } from "./DengueMapLegend.jsx";
+
 
 //LANDING
 export { default as GoalCard } from "./Landing/GoalCard.jsx";

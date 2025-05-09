@@ -8,9 +8,11 @@ import { useGetPostsQuery } from "../../api/dengueApi.js";
 import { useState, useEffect } from "react";
 import post1 from "../../assets/post1.jpg";
 import post2 from "../../assets/post2.jpg";
+import VerifyReportModal from "../../components/Admin/VerifyReportModal";
 
 const ReportsVerification = () => {
   const { data: posts, isLoading, isError, refetch } = useGetPostsQuery();
+  const [selectedReport, setSelectedReport] = useState(null);
   const [validatedPosts, setValidatedPosts] = useState([]);
   console.log(posts);
   useEffect(() => {
@@ -34,7 +36,10 @@ const ReportsVerification = () => {
           </p>
           <div className="h-[75vh]">
             {/* Pass all posts to ReportTable2 but only display validated posts */}
-            <ReportTable2 posts={posts} />
+            <ReportTable2
+              posts={posts}
+              onSelectReport={setSelectedReport}
+            />
           </div>
         </section>
 
@@ -103,6 +108,23 @@ const ReportsVerification = () => {
           </div>
         </section> */}
       </div>
+      {selectedReport && (
+        <VerifyReportModal
+          reportId={selectedReport._id}
+          barangay={selectedReport.barangay}
+          description={selectedReport.description}
+          status={selectedReport.status}
+          dateAndTime={selectedReport.date_and_time}
+          images={selectedReport.images}
+          coordinates={selectedReport.specific_location?.coordinates}
+          username={selectedReport.user?.username}
+          onClose={() => setSelectedReport(null)}
+          onSuccess={() => {
+            setSelectedReport(null);
+            refetch();
+          }}
+        />
+      )}
     </main>
   );
 };

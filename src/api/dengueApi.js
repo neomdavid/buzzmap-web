@@ -1,19 +1,73 @@
 // api/dengueApi.js
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 
+// Custom error handler
+const customBaseQuery = fetchBaseQuery({
+  baseUrl: "http://localhost:4000/api/v1/",
+  prepareHeaders: (headers, { getState }) => {
+    const token = getState().auth.token;
+    if (token) {
+      headers.set("Authorization", `Bearer ${token}`);
+    }
+    return headers;
+  },
+});
+
+// Wrap the base query with error handling
+const baseQueryWithErrorHandling = async (args, api, extraOptions) => {
+  const result = await customBaseQuery(args, api, extraOptions);
+  
+  if (result.error) {
+    // Handle different error status codes
+    switch (result.error.status) {
+      case 401:
+        // Preserve the original error message from the backend
+        return {
+          error: {
+            status: 401,
+            data: result.error.data || { message: 'Please log in to continue' }
+          }
+        };
+      case 403:
+        // Handle forbidden
+        return {
+          error: {
+            status: 403,
+            data: result.error.data || { message: 'You do not have permission to perform this action' }
+          }
+        };
+      case 404:
+        // Handle not found
+        return {
+          error: {
+            status: 404,
+            data: result.error.data || { message: 'The requested resource was not found' }
+          }
+        };
+      case 500:
+        // Handle server error
+        return {
+          error: {
+            status: 500,
+            data: result.error.data || { message: 'Server error occurred. Please try again later' }
+          }
+        };
+      default:
+        // Handle other errors
+        return {
+          error: {
+            status: result.error.status,
+            data: result.error.data || { message: 'An unexpected error occurred' }
+          }
+        };
+    }
+  }
+  return result;
+};
+
 export const dengueApi = createApi({
   reducerPath: "dengueApi",
-  baseQuery: fetchBaseQuery({
-    baseUrl: "http://localhost:4000/api/v1/",
-    prepareHeaders: (headers, { getState }) => {
-      const token = getState().auth.token;
-      console.log("API TOKENNN:" + token);
-      if (token) {
-        headers.set("Authorization", `Bearer ${token}`);
-      }
-      return headers;
-    },
-  }),
+  baseQuery: baseQueryWithErrorHandling,
   tagTypes: [
     "Post",
     "Auth",
@@ -31,15 +85,37 @@ export const dengueApi = createApi({
         body: credentials,
       }),
       invalidatesTags: ["Auth"],
+      // Add optimistic update
+      async onQueryStarted(credentials, { dispatch, queryFulfilled }) {
+        try {
+          await queryFulfilled;
+        } catch (error) {
+          // Handle registration error
+          console.error('Registration failed:', error);
+        }
+      }
     }),
 
     login: builder.mutation({
-      query: (credentials) => ({
-        url: "auth/login",
-        method: "POST",
-        body: credentials,
-      }),
+      query: (credentials) => {
+        console.log('Login credentials:', credentials); // Log credentials before sending
+        return {
+          url: "auth/login",
+          method: "POST", 
+          body: credentials,
+        };
+      },
       invalidatesTags: ["Auth"],
+      // Add optimistic update
+      async onQueryStarted(credentials, { dispatch, queryFulfilled }) {
+        try {
+          const response = await queryFulfilled;
+          console.log('Login response:', response); // Log successful response
+        } catch (error) {
+          // Handle login error
+          console.error('Login failed:', error);
+        }
+      }
     }),
 
     verifyOtp: builder.mutation({
@@ -80,27 +156,20 @@ export const dengueApi = createApi({
 
     // Posts/Reports Endpoints
     getPosts: builder.query({
-      query: ({ page = 1, limit = 10, filter = "latest" } = {}) =>
-        `reports?page=${page}&limit=${limit}&sort=${
+      query: ({ page = 1, limit = 10, filter = "latest" } = {}) => ({
+        url: `reports?page=${page}&limit=${limit}&sort=${
           filter === "latest" ? "-createdAt" : "-likesCount"
         }`,
-      providesTags: (result, error, arg) => {
-        // Handle cases where result might be undefined or have different structure
-        if (!result) return [{ type: "Post", id: "LIST" }];
-
-        // Check for different possible response structures
-        const posts = result.data || result.docs || result.posts || result;
-
-        if (Array.isArray(posts)) {
-          return [
-            ...posts.map((post) => ({ type: "Post", id: post._id || post.id })),
-            { type: "Post", id: "LIST" },
-          ];
-        }
-
-        // Fallback if the structure is unexpected
-        return [{ type: "Post", id: "LIST" }];
-      },
+      }),
+      // Add cache lifetime
+      keepUnusedDataFor: 300, // 5 minutes
+      providesTags: (result) => 
+        result
+          ? [
+              ...result.map(({ id }) => ({ type: 'Post', id })),
+              { type: 'Post', id: 'LIST' },
+            ]
+          : [{ type: 'Post', id: 'LIST' }],
     }),
 
     getPostById: builder.query({
@@ -115,6 +184,34 @@ export const dengueApi = createApi({
         body: postData,
       }),
       invalidatesTags: [{ type: "Post", id: "LIST" }],
+      // Add optimistic update
+      async onQueryStarted(postData, { dispatch, queryFulfilled }) {
+        const optimisticPost = { 
+          ...postData, 
+          id: Date.now(),
+          createdAt: new Date().toISOString(),
+          likesCount: 0,
+          commentsCount: 0
+        };
+        
+        // Optimistically update the cache
+        dispatch(
+          dengueApi.util.updateQueryData('getPosts', undefined, (draft) => {
+            draft.unshift(optimisticPost);
+          })
+        );
+
+        try {
+          await queryFulfilled;
+        } catch {
+          // Revert on error
+          dispatch(
+            dengueApi.util.updateQueryData('getPosts', undefined, (draft) => {
+              draft.shift();
+            })
+          );
+        }
+      }
     }),
 
     createPostWithImage: builder.mutation({
@@ -144,7 +241,7 @@ export const dengueApi = createApi({
         method: "PATCH",
         body: { status }, // send the status inside the request body
       }),
-      invalidatesTags: (result, error, { id }) => [{ type: "Post", id }],
+      invalidatesTags: [{ type: "Post", id: "LIST" }],
     }),
 
     likePost: builder.mutation({

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useGoogleMaps } from "../GoogleMapsProvider";
 import { useValidatePostMutation } from "../../api/dengueApi.js";
+import { toast } from "react-toastify";
 
 const VerifyReportModal = ({
   reportId,
@@ -13,6 +14,7 @@ const VerifyReportModal = ({
   coordinates,
   type, // "verify" or "reject"
   username,
+  onSuccess,
 }) => {
   const modalRef = useRef(null);
   const streetViewRef = useRef(null);
@@ -20,18 +22,21 @@ const VerifyReportModal = ({
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [actionType, setActionType] = useState(null);
   const { isLoaded } = useGoogleMaps();
-  const [validatePost] = useValidatePostMutation();
+  const [validatePost, { isLoading }] = useValidatePostMutation();
 
   const handleConfirm = async () => {
-    console.log(actionType);
     const status = actionType === "verify" ? "Validated" : "Rejected";
-    console.log(status);
+    const requestPayload = { id: reportId, status };
+    console.log("Verify/Reject request payload:", requestPayload);
     try {
-      const response = await validatePost({ id: reportId, status }).unwrap();
-      console.log(response);
+      const response = await validatePost(requestPayload).unwrap();
+      console.log("Verify/Reject response:", response);
+      toast.success(`Report ${status === "Validated" ? "verified" : "rejected"} successfully!`);
       onClose();
+      if (typeof onSuccess === "function") onSuccess();
     } catch (error) {
-      console.error("Failed to validate the post:", error);
+      console.error("Verify/Reject error:", error);
+      toast.error("Failed to update report status.");
     }
   };
 
@@ -217,8 +222,9 @@ const VerifyReportModal = ({
                   className={`${
                     actionType === "verify" ? "bg-success" : "bg-error"
                   } text-white font-semibold px-8 py-3 rounded-xl hover:opacity-80 transition-all duration-200`}
+                  disabled={isLoading}
                 >
-                  Confirm {actionType}
+                  {isLoading ? "Processing..." : "Confirm"}
                 </button>
                 <button
                   onClick={handleCancel}

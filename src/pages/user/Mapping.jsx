@@ -9,6 +9,9 @@ import {
 import { useGoogleMaps } from "../../components/GoogleMapsProvider";
 import * as turf from "@turf/turf";
 import { toastWarn } from "../../utils.jsx";
+import LoadingSpinner from "../../components/ui/LoadingSpinner";
+import ErrorMessage from "../../components/ui/ErrorMessage";
+
 const containerStyle = {
   width: "100%",
   height: "100%",
@@ -37,25 +40,33 @@ const Mapping = () => {
   const [barangayData, setBarangayData] = useState(null);
   const [isFullScreen, setIsFullScreen] = useState(false);
   const [selectedBarangayInfo, setSelectedBarangayInfo] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const mapRef = useRef(null);
   const { isLoaded } = useGoogleMaps();
 
   useEffect(() => {
-    fetch("/quezon_city_boundaries.geojson")
-      .then((res) => res.json())
-      .then((data) => {
-        const coords = data.features[0].geometry.coordinates[0].map(
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        // Fetch QC boundaries
+        const qcResponse = await fetch("/quezon_city_boundaries.geojson");
+        if (!qcResponse.ok) throw new Error('Failed to load QC boundaries');
+        const qcData = await qcResponse.json();
+        const coords = qcData.features[0].geometry.coordinates[0].map(
           ([lng, lat]) => ({ lat, lng })
         );
         setQcPolygonPaths(coords);
-      });
 
-    fetch("/quezon_barangays_boundaries.geojson")
-      .then((res) => res.json())
-      .then((data) => {
+        // Fetch barangay data
+        const barangayResponse = await fetch("/quezon_barangays_boundaries.geojson");
+        if (!barangayResponse.ok) throw new Error('Failed to load barangay data');
+        const barangayData = await barangayResponse.json();
         const colored = {
-          ...data,
-          features: data.features.map((f) => {
+          ...barangayData,
+          features: barangayData.features.map((f) => {
             const risk = assignRiskLevel();
             return {
               ...f,
@@ -68,24 +79,31 @@ const Mapping = () => {
           }),
         };
         setBarangayData(colored);
-      });
 
-    navigator.geolocation.getCurrentPosition(
-      ({ coords }) => {
-        const p = { lat: coords.latitude, lng: coords.longitude };
-        setCurrentPosition(p);
-        setMarkerPosition(p);
-        handleLocationSelect(p);
-      },
-      () => {
-        const fallback = { lat: 14.676, lng: 121.0437 };
-        setCurrentPosition(fallback);
-        setMarkerPosition(fallback);
-        toast.warn("You are outside Quezon City! Default location set to QC.");
-        // Set the map to Quezon City
-        mapRef.current?.panTo({ lat: 14.676, lng: 121.0437 });
+        // Get user location
+        navigator.geolocation.getCurrentPosition(
+          ({ coords }) => {
+            const p = { lat: coords.latitude, lng: coords.longitude };
+            setCurrentPosition(p);
+            setMarkerPosition(p);
+            handleLocationSelect(p);
+          },
+          () => {
+            const fallback = { lat: 14.676, lng: 121.0437 };
+            setCurrentPosition(fallback);
+            setMarkerPosition(fallback);
+            toastWarn("You are outside Quezon City! Default location set to QC.");
+            mapRef.current?.panTo({ lat: 14.676, lng: 121.0437 });
+          }
+        );
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
       }
-    );
+    };
+
+    fetchData();
   }, []);
 
   const handleLocationSelect = (coords) => {
@@ -138,7 +156,10 @@ const Mapping = () => {
 
   const toggleFullScreen = () => setIsFullScreen((prev) => !prev);
 
-  if (!isLoaded || !currentPosition) return <p>Loading map...</p>;
+  if (!isLoaded) return <LoadingSpinner size={32} className="h-screen" />;
+  if (loading) return <LoadingSpinner size={32} className="h-screen" />;
+  if (error) return <ErrorMessage error={error} className="m-4" />;
+  if (!currentPosition) return <ErrorMessage error="Unable to get your location" className="m-4" />;
 
   return (
     <div className="flex flex-col pt-8 px-8 items-center bg-primary text-white h-[91.8vh] mt-[-13px] text-center">

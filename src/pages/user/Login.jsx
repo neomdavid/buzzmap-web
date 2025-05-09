@@ -5,7 +5,7 @@ import { useState } from "react";
 import { useLoginMutation } from "../../api/dengueApi";
 import { useDispatch } from "react-redux";
 import { login as setAuthCredentials } from "../../features/authSlice.js";
-import { toastSuccess } from "../../utils.jsx";
+import { toastSuccess, toastError } from "../../utils.jsx";
 import { IconChevronDown } from "@tabler/icons-react";
 
 const Login = () => {
