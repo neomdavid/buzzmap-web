@@ -32,8 +32,12 @@ const Dashboard = () => {
   if (postsError || interventionsError)
     return <div>Error fetching data...</div>;
 
+  // Make sure posts and interventions are arrays
+  const safePosts = Array.isArray(posts) ? posts : [];
+  const safeInterventions = Array.isArray(interventions) ? interventions : [];
+
   // Calculate counts for reports
-  const reportCounts = posts.reduce(
+  const reportCounts = safePosts.reduce(
     (acc, post) => {
       if (post.status === "Validated") acc.validated += 1;
       if (post.status === "Pending") acc.pending += 1;
@@ -44,7 +48,7 @@ const Dashboard = () => {
   );
 
   // Calculate counts for interventions
-  const interventionCounts = interventions.reduce(
+  const interventionCounts = safeInterventions.reduce(
     (acc, intervention) => {
       if (intervention.status === "Complete") acc.completed += 1;
       if (intervention.status === "Scheduled") acc.scheduled += 1;
@@ -72,7 +76,7 @@ const Dashboard = () => {
         {/* ReportCard for Total Reports */}
         <ReportCard
           title="Total Reports "
-          count={posts.length} // Total reports
+          count={safePosts.length} // Total reports
           topBg="bg-base-content"
           type="status"
           items={[
@@ -147,7 +151,7 @@ const Dashboard = () => {
         </p>
         <hr className="mb-6 border-[1.5px] border-gray-200" />
         <div className="h-120">
-          <ReportTable2 posts={posts} isActionable={false} onlyRecent={true} />
+          <ReportTable2 posts={safePosts} isActionable={false} onlyRecent={true} />
         </div>
       </section>
 

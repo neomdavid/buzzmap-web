@@ -448,9 +448,9 @@ const DengueMap = ({
               className="bg-white p-4 rounded-lg"
               style={{
                 border: `3px solid ${
-                  RISK_LEVEL_COLORS[
-                    (selectedBarangay?.properties?.riskLevel || "unknown").toLowerCase()
-                  ] || RISK_LEVEL_COLORS.unknown
+                  PATTERN_COLORS[
+                    (selectedBarangay?.properties?.patternType || "none").toLowerCase()
+                  ] || PATTERN_COLORS.default
                 }`,
                 width: "50vw",
                 maxWidth: 640,

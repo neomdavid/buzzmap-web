@@ -106,6 +106,15 @@ function ReportTable2({ posts, isActionable = true, onlyRecent = false }) {
 
   const gridRef = useRef(null);
 
+  // SAFETY CHECK: If posts is not an array, show a message and don't render the grid
+  if (!Array.isArray(posts)) {
+    return (
+      <div className="p-6 text-center text-red-500">
+        Failed to load reports data.
+      </div>
+    );
+  }
+
   // Format the rowData to match the structure of the grid
   let rowData = posts.map((post) => ({
     id: post._id,

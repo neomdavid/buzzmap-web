@@ -34,6 +34,7 @@ import {
   SprAdmins,
 } from "./pages/superadmin";
 import { toastError } from "./utils.jsx";
+import ErrorPage from "./pages/ErrorPage";
 
 // Helper functions
 const getUserData = () => {
@@ -71,6 +72,7 @@ function App() {
     {
       path: "/",
       element: <LandingLayout />,
+      errorElement: <ErrorPage />,
       children: [
         { index: true, element: <Navigate to="/home" replace /> },
         { path: "/home", element: <Landing /> },

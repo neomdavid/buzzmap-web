@@ -9,104 +9,102 @@ import { useState, useEffect } from "react";
 import post1 from "../../assets/post1.jpg";
 import post2 from "../../assets/post2.jpg";
 import VerifyReportModal from "../../components/Admin/VerifyReportModal";
+import dayjs from "dayjs";
+import {
+  IconChartBar,
+  IconChecks,
+  IconClock,
+  IconUserCircle,
+} from "@tabler/icons-react";
 
 const ReportsVerification = () => {
   const { data: posts, isLoading, isError, refetch } = useGetPostsQuery();
   const [selectedReport, setSelectedReport] = useState(null);
   const [validatedPosts, setValidatedPosts] = useState([]);
-  console.log(posts);
+
+  // Calculate summary stats
+  const totalReports = posts?.length || 0;
+  const totalValidated = posts?.filter(p => p.status === "Validated").length || 0;
+  const totalPending = posts?.filter(p => p.status === "Pending").length || 0;
+  const totalRejected = posts?.filter(p => p.status === "Rejected").length || 0;
+  const today = dayjs().format("YYYY-MM-DD");
+  const totalToday = posts?.filter(p => dayjs(p.date_and_time).format("YYYY-MM-DD") === today).length || 0;
+
+  // Most active barangay
+  const barangayCounts = {};
+  posts?.forEach(p => {
+    if (p.barangay) barangayCounts[p.barangay] = (barangayCounts[p.barangay] || 0) + 1;
+  });
+  const mostActiveBarangay = Object.entries(barangayCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || "N/A";
+
   useEffect(() => {
-    // Filter posts when the data is fetched
     if (posts) {
       setValidatedPosts(posts.filter((post) => post.status === "Validated"));
     }
   }, [posts]);
-  // console.log(posts);
+
   if (isLoading) return <p>Loading...</p>;
   if (isError) return <p>Error loading posts</p>;
+
   return (
     <main className="flex flex-col w-full">
       <p className="flex justify-center text-5xl font-extrabold mb-10 text-center md:justify-start md:text-left md:w-[48%] ">
         Reports Verification
       </p>
+
+      {/* --- SUMMARY CARDS --- */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
+        {/* Total Reports */}
+        <div className="flex flex-col rounded-2xl shadow bg-base-100 border border-base-200 px-6 py-5 items-center">
+          <IconChartBar size={28} className="text-primary mb-1" />
+          <span className="text-3xl font-bold text-primary">{totalReports}</span>
+          <span className="text-base font-medium text-gray-600 mt-1">Total Reports</span>
+        </div>
+        {/* Validated */}
+        <div className="flex flex-col rounded-2xl shadow bg-green-50 border border-green-100 px-6 py-5 items-center">
+          <IconChecks size={28} className="text-green-600 mb-1" />
+          <span className="text-3xl font-bold text-green-600">{totalValidated}</span>
+          <span className="text-base font-medium text-green-700 mt-1">Validated</span>
+        </div>
+        {/* Pending */}
+        <div className="flex flex-col rounded-2xl shadow bg-yellow-50 border border-yellow-100 px-6 py-5 items-center">
+          <IconClock size={28} className="text-yellow-600 mb-1" />
+          <span className="text-3xl font-bold text-yellow-600">{totalPending}</span>
+          <span className="text-base font-medium text-yellow-700 mt-1">Pending</span>
+        </div>
+        {/* Rejected */}
+        <div className="flex flex-col rounded-2xl shadow bg-red-50 border border-red-100 px-6 py-5 items-center">
+          <IconUserCircle size={28} className="text-red-600 mb-1" />
+          <span className="text-3xl font-bold text-red-600">{totalRejected}</span>
+          <span className="text-base font-medium text-red-700 mt-1">Rejected</span>
+        </div>
+        {/* Reports Today */}
+        <div className="flex flex-col rounded-2xl shadow bg-blue-50 border border-blue-100 px-6 py-5 items-center">
+          <IconClock size={28} className="text-blue-600 mb-1" />
+          <span className="text-3xl font-bold text-blue-600">{totalToday}</span>
+          <span className="text-base font-medium text-blue-700 mt-1">Reports Today</span>
+        </div>
+        {/* Most Active Barangay */}
+        <div className="flex flex-col rounded-2xl shadow bg-purple-50 border border-purple-100 px-6 py-5 items-center">
+          <IconUserCircle size={28} className="text-purple-600 mb-1" />
+          <span className="text-2xl font-bold text-purple-700">{mostActiveBarangay}</span>
+          <span className="text-base font-medium text-purple-700 mt-1">Most Active Barangay</span>
+        </div>
+      </div>
+      {/* --- END SUMMARY CARDS --- */}
+
       <div className="flex flex-col">
         <section className="flex flex-col gap-2">
           <p className="text-base-content text-4xl font-bold mb-2">
             Recent Breeding Sites Reports
           </p>
           <div className="h-[75vh]">
-            {/* Pass all posts to ReportTable2 but only display validated posts */}
             <ReportTable2
               posts={posts}
               onSelectReport={setSelectedReport}
             />
           </div>
         </section>
-
-        {/* Selected Report Section */}
-        {/* <section className="flex flex-col lg:flex-row mt-8 gap-6">
-          <div className="flex flex-3 flex-col text-center items-center p-7 py-4 border-2 border-primary rounded-2xl">
-            <p className="text-base-content font-semibold text-lg">
-              Selected Report
-            </p>
-            <p className="capitalize font-extrabold text-3xl mb-4">
-              Barangay Holy Spirit
-            </p>
-            <div className="flex flex-col gap-1 w-full text-left">
-              <p className="text-black ">
-                <span className="font-bold">Report ID: </span>RTP-00124
-              </p>
-              <p className="text-black">
-                <span className="font-bold">Specific Location: </span>BLK 12,
-                San Augustin Street, Holy Spirit, Quezon City
-              </p>
-              <p className="text-black">
-                <span className="font-bold">Reported on: </span>March 2, 2025
-              </p>
-              <p className="text-black">
-                <span className="font-bold">Description: </span>"Multiple dengue
-                cases reported in Blk 12. Residents noticed a surge in mosquito
-                activity near a stagnant water area. Urgent fogging needed."
-              </p>
-              <div className="text-black flex flex-col">
-                <p className="font-bold mb-[-7px]">Photo Evidence: </p>
-                <ImageGrid images={[post1, post2]} />
-              </div>
-            </div>
-          </div>
-
-          Report Statistics Section
-          <div className="flex-7 text-base-content">
-            <p className="text-4xl font-bold mb-2">Report Statistics</p>
-            <p className="font-semibold">
-              Dengue Reports by Barangay in Quezon City
-            </p>
-            <ReportStatistics
-              data={[
-                {
-                  barangay: "Holy Spirit",
-                  Verified: 1,
-                  Pending: 4,
-                  Rejected: 2,
-                },
-                { barangay: "Payatas", Verified: 3, Pending: 3, Rejected: 3 },
-                {
-                  barangay: "Batasan Hills",
-                  Verified: 4,
-                  Pending: 5,
-                  Rejected: 4,
-                },
-                {
-                  barangay: "Commonwealth",
-                  Verified: 2,
-                  Pending: 6,
-                  Rejected: 4,
-                },
-                { barangay: "Fairview", Verified: 1, Pending: 1, Rejected: 3 },
-              ]}
-            />
-          </div>
-        </section> */}
       </div>
       {selectedReport && (
         <VerifyReportModal

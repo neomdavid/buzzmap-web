@@ -15,54 +15,75 @@ const customBaseQuery = fetchBaseQuery({
 
 // Wrap the base query with error handling
 const baseQueryWithErrorHandling = async (args, api, extraOptions) => {
-  const result = await customBaseQuery(args, api, extraOptions);
-  
-  if (result.error) {
-    // Handle different error status codes
-    switch (result.error.status) {
-      case 401:
-        // Preserve the original error message from the backend
-        return {
-          error: {
-            status: 401,
-            data: result.error.data || { message: 'Please log in to continue' }
-          }
-        };
-      case 403:
-        // Handle forbidden
-        return {
-          error: {
-            status: 403,
-            data: result.error.data || { message: 'You do not have permission to perform this action' }
-          }
-        };
-      case 404:
-        // Handle not found
-        return {
-          error: {
-            status: 404,
-            data: result.error.data || { message: 'The requested resource was not found' }
-          }
-        };
-      case 500:
-        // Handle server error
-        return {
-          error: {
-            status: 500,
-            data: result.error.data || { message: 'Server error occurred. Please try again later' }
-          }
-        };
-      default:
-        // Handle other errors
-        return {
-          error: {
-            status: result.error.status,
-            data: result.error.data || { message: 'An unexpected error occurred' }
-          }
-        };
+  try {
+    const result = await customBaseQuery(args, api, extraOptions);
+    
+    if (result.error) {
+      
+      // Helper to ensure a message is always present
+      const getErrorData = (defaultMsg) => {
+        // Check for nested error message in data
+        if (result.error.data?.message) {
+          return result.error.data;
+        }
+        // Check for error message in data.status
+        if (result.error.data?.status === 'error' && result.error.data?.message) {
+          return result.error.data;
+        }
+        return { message: defaultMsg };
+      };
+
+      // Handle different error status codes
+      switch (result.error.status) {
+        case 401:
+          return {
+            error: {
+              status: 401,
+              data: getErrorData('Please log in to continue')
+            }
+          };
+        case 403:
+          return {
+            error: {
+              status: 403,
+              data: getErrorData('You do not have permission to perform this action')
+            }
+          };
+        case 404:
+          return {
+            error: {
+              status: 404,
+              data: getErrorData('The requested resource was not found')
+            }
+          };
+        case 500:
+          // Special handling for 500 errors that might contain specific error messages
+          const errorData = getErrorData('Server error occurred. Please try again later');
+          return {
+            error: {
+              status: 500,
+              data: errorData
+            }
+          };
+        default:
+          return {
+            error: {
+              status: result.error.status,
+              data: getErrorData('Something went wrong. Please try again later')
+            }
+          };
+      }
     }
+    return result;
+  } catch (error) {
+    // Handle network errors (e.g., server unreachable)
+    return {
+      error: {
+        status: 'NETWORK_ERROR',
+        data: { message: 'Network error. Please check your connection and try again.' }
+      }
+    };
   }
-  return result;
 };
 
 export const dengueApi = createApi({
@@ -98,7 +119,6 @@ export const dengueApi = createApi({
 
     login: builder.mutation({
       query: (credentials) => {
-        console.log('Login credentials:', credentials); // Log credentials before sending
         return {
           url: "auth/login",
           method: "POST", 
@@ -106,14 +126,14 @@ export const dengueApi = createApi({
         };
       },
       invalidatesTags: ["Auth"],
-      // Add optimistic update
       async onQueryStarted(credentials, { dispatch, queryFulfilled }) {
         try {
-          const response = await queryFulfilled;
-          console.log('Login response:', response); // Log successful response
+          await queryFulfilled;
         } catch (error) {
-          // Handle login error
-          console.error('Login failed:', error);
+          if (error.error?.status === 500) {
+            throw new Error('Network error. Please try again later.');
+          }
+          throw error;
         }
       }
     }),

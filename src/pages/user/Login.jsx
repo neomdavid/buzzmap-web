@@ -15,7 +15,6 @@ const Login = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
 
-  console.log(email);
 
   const [login, { isLoading, isError, error }] = useLoginMutation("");
 
@@ -52,10 +51,11 @@ const Login = () => {
           navigate("/mapping");
       }
     } catch (err) {
-      console.error("Login failed:", err);
-      toastError(
-        err?.data?.message || "Login failed. Please check your credentials."
-      );
+      if (err?.status === 500) {
+        toastError('Network error. Please check your connection and try again.');
+      } else {
+        toastError(err?.data?.message);
+      }
     }
   };
 
@@ -150,8 +150,9 @@ const Login = () => {
           </button>
           {isError && (
             <p className="mt-[-4px] font-semibold text-red-500 font-light italic text-md">
-              {error?.data?.message ||
-                "Login failed. Please check your credentials."}
+              {error?.status === 500 
+                ? "Network error. Please check your connection and try again."
+                : error?.data?.message || "Login failed. Please check your credentials."}
             </p>
           )}
           <div className="flex w-[60%] gap-x-4 mb-[-8px] ">
