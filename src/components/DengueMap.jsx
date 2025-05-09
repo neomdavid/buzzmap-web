@@ -77,6 +77,13 @@ const DengueMap = ({
   disableMapSwitch = false,
   defaultView = "roadmap",
   showLegends = true,
+  onBarangaySelect,
+  handlePolygonClick: customHandlePolygonClick,
+  searchQuery = "",
+  CustomInfoWindow,
+  getPolygonOptions,
+  selectedReport,
+  onMapLoad,
 }) => {
   const [qcPolygonPaths, setQcPolygonPaths] = useState([]);
   const [barangayData, setBarangayData] = useState(null);
@@ -192,7 +199,8 @@ const DengueMap = ({
     setBarangayData(colored);
   };
 
-  const handlePolygonClick = (feature) => {
+  // Default handlePolygonClick function
+  const defaultHandlePolygonClick = (feature) => {
     const center = turf.center(feature.geometry);
     const { coordinates } = center.geometry;
     const [lng, lat] = coordinates;
@@ -204,7 +212,14 @@ const DengueMap = ({
     setSelectedBarangay(feature);
     setInfoWindowPosition({ lat, lng });
     setHighlightedBarangay(feature.properties.displayName);
+    
+    if (onBarangaySelect) {
+      onBarangaySelect(feature);
+    }
   };
+
+  // Use custom handler if provided, otherwise use default
+  const handlePolygonClick = customHandlePolygonClick || defaultHandlePolygonClick;
 
   // Helper to zoom to a barangay
   const zoomToBarangay = (feature) => {
@@ -222,6 +237,50 @@ const DengueMap = ({
       });
     });
     mapRef.current.fitBounds(bounds);
+  };
+
+  // Add this effect to handle search
+  useEffect(() => {
+    if (!searchQuery || !mapRef.current || !barangayData) return;
+
+    // Find the barangay that matches the search query
+    const matchingBarangay = barangayData.features.find(feature => 
+      feature.properties.displayName.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+
+    if (matchingBarangay) {
+      // Center the map on the matching barangay
+      const center = turf.center(matchingBarangay.geometry);
+      const { coordinates } = center.geometry;
+      const [lng, lat] = coordinates;
+
+      if (lat && lng && !isNaN(lat) && !isNaN(lng)) {
+        mapRef.current.panTo({ lat, lng });
+        mapRef.current.setZoom(14); // Zoom in a bit to focus on the barangay
+        
+        // Select the barangay
+        setSelectedBarangay(matchingBarangay);
+        setInfoWindowPosition({ lat, lng });
+        
+        if (onBarangaySelect) {
+          onBarangaySelect(matchingBarangay);
+        }
+      }
+    }
+  }, [searchQuery, barangayData, onBarangaySelect]);
+
+  // Add logging for selectedReport
+  useEffect(() => {
+    console.log('DengueMap received selectedReport:', selectedReport);
+  }, [selectedReport]);
+
+  // Update the handleMapLoad function
+  const handleMapLoad = (map) => {
+    console.log('GoogleMap loaded in DengueMap');
+    mapRef.current = map;
+    if (onMapLoad) {
+      onMapLoad(map);
+    }
   };
 
   if (!isLoaded || patternsLoading) return <p>Loading map...</p>;
@@ -299,7 +358,7 @@ const DengueMap = ({
         mapContainerStyle={containerStyle}
         center={QC_CENTER}
         zoom={zoom}
-        onLoad={(map) => (mapRef.current = map)}
+        onLoad={handleMapLoad}
         options={{
           mapTypeControl: false,
           mapTypeId: defaultView,
@@ -332,54 +391,28 @@ const DengueMap = ({
               lng,
             }));
 
-            // Use pattern type for color in cases tab, risk level in breeding sites tab
-            let color;
-            let fillOpacity = 0.5;
-            let strokeWeight = 1;
+            // Get the color based on pattern type
+            const patternType = (feature?.properties?.patternType || "none").toLowerCase();
+            const color = PATTERN_COLORS[patternType] || PATTERN_COLORS.default;
 
-            if (activeTab === "cases") {
-              const patternType = (feature.properties.patternType || "none").toLowerCase();
-              color = PATTERN_COLORS[patternType] || PATTERN_COLORS.default;
-            } else {
-              const riskLevel = (feature.properties.riskLevel || "unknown").toLowerCase();
-              color = RISK_LEVEL_COLORS[riskLevel] || RISK_LEVEL_COLORS.unknown;
-            }
+            // Use custom polygon options if provided
+            const options = getPolygonOptions 
+              ? getPolygonOptions(feature)
+              : {
+                  strokeColor: color,
+                  strokeOpacity: 1,
+                  strokeWeight: 1,
+                  fillOpacity: 0.5,
+                  fillColor: color,
+                  zIndex: 5,
+                };
 
             return (
               <Polygon
                 key={`${index}-${i}`}
                 paths={path}
-                options={{
-                  strokeColor: color,
-                  strokeOpacity: 1,
-                  strokeWeight: strokeWeight,
-                  fillOpacity: fillOpacity,
-                  fillColor: color,
-                  zIndex: 5,
-                }}
-                onClick={() => {
-                  if (activeTab === "cases") {
-                    handlePolygonClick(feature);
-                    zoomToBarangay(feature);
-                  } else if (activeTab === "breeding-sites") {
-                    setSelectedBreedingSitesBarangay(feature);
-                    // Calculate centroid for InfoWindow
-                    let centroid = { lat: 0, lng: 0 };
-                    try {
-                      const coords = feature.geometry.type === "Polygon"
-                        ? feature.geometry.coordinates[0]
-                        : feature.geometry.coordinates[0][0];
-                      const lats = coords.map(c => c[1]);
-                      const lngs = coords.map(c => c[0]);
-                      centroid = {
-                        lat: lats.reduce((a, b) => a + b, 0) / lats.length,
-                        lng: lngs.reduce((a, b) => a + b, 0) / lngs.length,
-                      };
-                    } catch (e) {}
-                    setBreedingSitesInfoWindowPosition(centroid);
-                    zoomToBarangay(feature);
-                  }
-                }}
+                options={options}
+                onClick={() => handlePolygonClick(feature)}
               />
             );
           });
@@ -444,72 +477,33 @@ const DengueMap = ({
             position={infoWindowPosition}
             onCloseClick={() => setSelectedBarangay(null)}
           >
-            <div
-              className="bg-white p-4 rounded-lg"
-              style={{
-                border: `3px solid ${
-                  PATTERN_COLORS[
-                    (selectedBarangay?.properties?.patternType || "none").toLowerCase()
-                  ] || PATTERN_COLORS.default
-                }`,
-                width: "50vw",
-                maxWidth: 640,
-              }}
-            >
-              <p
-                className={`${infoWindowTitleClass} text-3xl font-bold`}
+            {CustomInfoWindow ? (
+              <CustomInfoWindow
+                feature={selectedBarangay}
+                position={infoWindowPosition}
+                onClose={() => setSelectedBarangay(null)}
+              />
+            ) : (
+              <div
+                className="bg-white p-4 rounded-lg"
+                style={{
+                  border: `3px solid ${
+                    PATTERN_COLORS[
+                      (selectedBarangay?.properties?.patternType || "none").toLowerCase()
+                    ] || PATTERN_COLORS.default
+                  }`,
+                  width: "50vw",
+                  maxWidth: 640,
+                }}
               >
-                Barangay {selectedBarangay.properties.name}
-              </p>
+                <p
+                  className={`${infoWindowTitleClass} text-3xl font-bold`}
+                >
+                  Barangay {selectedBarangay.properties.name}
+                </p>
 
-              <div className="mt-3 flex flex-col gap-3 text-black">
-                {/* Status Card */}
-                <div className={`p-3 rounded-lg border-2 ${
-                  selectedBarangay.properties.alert === "No recent data"
-                    ? "border-gray-400 bg-gray-100"
-                    : selectedBarangay.properties.patternType === "spike"
-                    ? "border-error bg-error/5"
-                    : selectedBarangay.properties.patternType === "gradual_rise"
-                    ? "border-warning bg-warning/5"
-                    : selectedBarangay.properties.patternType === "decline"
-                    ? "border-success bg-success/5"
-                    : selectedBarangay.properties.patternType === "stability"
-                    ? "border-info bg-info/5"
-                    : "border-gray-400 bg-gray-100"
-                }`}>
-                  <div className="flex items-center gap-3">
-                    <div className={`${
-                      selectedBarangay.properties.alert === "No recent data"
-                        ? "text-gray-400"
-                        : selectedBarangay.properties.patternType === "spike"
-                        ? "text-error"
-                        : selectedBarangay.properties.patternType === "gradual_rise"
-                        ? "text-warning"
-                        : selectedBarangay.properties.patternType === "decline"
-                        ? "text-success"
-                        : selectedBarangay.properties.patternType === "stability"
-                        ? "text-info"
-                        : "text-gray-400"
-                    }`}>
-                      <span className="inline-block w-4 h-4 rounded-full"></span>
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-gray-600">Status</p>
-                      <p className="text-lg font-semibold">
-                        {selectedBarangay.properties.alert
-                          ? selectedBarangay.properties.alert.replace(
-                              new RegExp(`^${selectedBarangay.properties.name}:?\\s*`, "i"),
-                              ""
-                            )
-                          : "No recent data"}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Pattern and Risk Level Row */}
-                <div className="grid grid-cols-2 gap-3">
-                  {/* Pattern Card */}
+                <div className="mt-3 flex flex-col gap-3 text-black">
+                  {/* Status Card */}
                   <div className={`p-3 rounded-lg border-2 ${
                     selectedBarangay.properties.alert === "No recent data"
                       ? "border-gray-400 bg-gray-100"
@@ -540,71 +534,118 @@ const DengueMap = ({
                         <span className="inline-block w-4 h-4 rounded-full"></span>
                       </div>
                       <div>
-                        <p className="text-sm font-medium text-gray-600">Pattern</p>
+                        <p className="text-sm font-medium text-gray-600">Status</p>
                         <p className="text-lg font-semibold">
-                          {selectedBarangay.properties.alert === "No recent data"
-                            ? "No recent data"
-                            : selectedBarangay.properties.patternType === "none" 
-                            ? "No pattern detected" 
-                            : selectedBarangay.properties.patternType.charAt(0).toUpperCase() + 
-                              selectedBarangay.properties.patternType.slice(1).replace('_', ' ')}
+                          {selectedBarangay.properties.alert
+                            ? selectedBarangay.properties.alert.replace(
+                                new RegExp(`^${selectedBarangay.properties.name}:?\\s*`, "i"),
+                                ""
+                              )
+                            : "No recent data"}
                         </p>
                       </div>
                     </div>
                   </div>
 
-                  {/* Risk Level Card */}
-                  <div className={`p-3 rounded-lg border-2 ${
-                    selectedBarangay.properties.riskLevel === "high"
-                      ? "border-error bg-error/5"
-                      : selectedBarangay.properties.riskLevel === "medium"
-                      ? "border-warning bg-warning/5"
-                      : "border-success bg-success/5"
-                  }`}>
-                    <div className="flex items-center gap-3">
-                      <div className={`${
-                        selectedBarangay.properties.riskLevel === "high"
+                  {/* Pattern and Risk Level Row */}
+                  <div className="grid grid-cols-2 gap-3">
+                    {/* Pattern Card */}
+                    <div className={`p-3 rounded-lg border-2 ${
+                      selectedBarangay.properties.alert === "No recent data"
+                        ? "border-gray-400 bg-gray-100"
+                        : selectedBarangay.properties.patternType === "spike"
+                        ? "border-error bg-error/5"
+                        : selectedBarangay.properties.patternType === "gradual_rise"
+                        ? "border-warning bg-warning/5"
+                        : selectedBarangay.properties.patternType === "decline"
+                        ? "border-success bg-success/5"
+                        : selectedBarangay.properties.patternType === "stability"
+                        ? "border-info bg-info/5"
+                        : "border-gray-400 bg-gray-100"
+                    }`}>
+                      <div className="flex items-center gap-3">
+                        <div className={`${
+                          selectedBarangay.properties.alert === "No recent data"
+                            ? "text-gray-400"
+                          : selectedBarangay.properties.patternType === "spike"
                           ? "text-error"
-                          : selectedBarangay.properties.riskLevel === "medium"
+                          : selectedBarangay.properties.patternType === "gradual_rise"
                           ? "text-warning"
-                          : "text-success"
-                      }`}>
+                          : selectedBarangay.properties.patternType === "decline"
+                          ? "text-success"
+                          : selectedBarangay.properties.patternType === "stability"
+                          ? "text-info"
+                          : "text-gray-400"
+                        }`}>
+                          <span className="inline-block w-4 h-4 rounded-full"></span>
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-gray-600">Pattern</p>
+                          <p className="text-lg font-semibold">
+                            {selectedBarangay.properties.alert === "No recent data"
+                              ? "No recent data"
+                              : selectedBarangay.properties.patternType === "none" 
+                              ? "No pattern detected" 
+                              : selectedBarangay.properties.patternType.charAt(0).toUpperCase() + 
+                                selectedBarangay.properties.patternType.slice(1).replace('_', ' ')}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Risk Level Card */}
+                    <div className={`p-3 rounded-lg border-2 ${
+                      selectedBarangay.properties.riskLevel === "high"
+                        ? "border-error bg-error/5"
+                        : selectedBarangay.properties.riskLevel === "medium"
+                        ? "border-warning bg-warning/5"
+                        : "border-success bg-success/5"
+                    }`}>
+                      <div className="flex items-center gap-3">
+                        <div className={`${
+                          selectedBarangay.properties.riskLevel === "high"
+                            ? "text-error"
+                            : selectedBarangay.properties.riskLevel === "medium"
+                            ? "text-warning"
+                            : "text-success"
+                        }`}>
+                          <span className="inline-block w-4 h-4 rounded-full"></span>
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-gray-600">Risk Level</p>
+                          <p className="text-lg font-semibold">
+                            {selectedBarangay.properties.riskLevel || "Unknown"}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Last Analyzed Card */}
+                  <div className="p-3 rounded-lg border-2 border-primary/20 bg-primary/5">
+                    <div className="flex items-center gap-3">
+                      <div className="text-primary">
                         <span className="inline-block w-4 h-4 rounded-full"></span>
                       </div>
                       <div>
-                        <p className="text-sm font-medium text-gray-600">Risk Level</p>
+                        <p className="text-sm font-medium text-gray-600">Last Analyzed</p>
                         <p className="text-lg font-semibold">
-                          {selectedBarangay.properties.riskLevel || "Unknown"}
+                          {isNaN(
+                            new Date(
+                              selectedBarangay.properties.lastAnalysisTime
+                            ).getTime()
+                          )
+                            ? "N/A"
+                            : new Date(
+                                selectedBarangay.properties.lastAnalysisTime
+                              ).toLocaleString()}
                         </p>
                       </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Last Analyzed Card */}
-                <div className="p-3 rounded-lg border-2 border-primary/20 bg-primary/5">
-                  <div className="flex items-center gap-3">
-                    <div className="text-primary">
-                      <span className="inline-block w-4 h-4 rounded-full"></span>
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-gray-600">Last Analyzed</p>
-                      <p className="text-lg font-semibold">
-                        {isNaN(
-                          new Date(
-                            selectedBarangay.properties.lastAnalysisTime
-                          ).getTime()
-                        )
-                          ? "N/A"
-                          : new Date(
-                              selectedBarangay.properties.lastAnalysisTime
-                            ).toLocaleString()}
-                      </p>
                     </div>
                   </div>
                 </div>
               </div>
-            </div>
+            )}
           </InfoWindow>
         )}
 
@@ -705,6 +746,91 @@ const DengueMap = ({
               </div>
             </div>
           </InfoWindow>
+        )}
+
+        {/* Show selected report marker */}
+        {selectedReport && (
+          <>
+            {console.log('Rendering selected report marker:', selectedReport)}
+            <Marker
+              position={{
+                lat: selectedReport.specific_location.coordinates[1],
+                lng: selectedReport.specific_location.coordinates[0]
+              }}
+              icon={{
+                path: window.google.maps.SymbolPath.CIRCLE,
+                scale: 10,
+                fillColor: selectedReport.report_type === "Breeding Site" ? "#2563eb" :
+                          selectedReport.report_type === "Standing Water" ? "#dd6b20" :
+                          "#e53e3e",
+                fillOpacity: 1,
+                strokeWeight: 2,
+                strokeColor: "#fff",
+              }}
+            />
+            <InfoWindow
+              position={{
+                lat: selectedReport.specific_location.coordinates[1],
+                lng: selectedReport.specific_location.coordinates[0]
+              }}
+            >
+              <div className="bg-white p-4 rounded-lg border-2 w-[300px]"
+                style={{
+                  borderColor: selectedReport.report_type === "Breeding Site" ? "#2563eb" :
+                              selectedReport.report_type === "Standing Water" ? "#dd6b20" :
+                              "#e53e3e"
+                }}
+              >
+                <p className="font-bold text-lg mb-2"
+                  style={{
+                    color: selectedReport.report_type === "Breeding Site" ? "#2563eb" :
+                           selectedReport.report_type === "Standing Water" ? "#dd6b20" :
+                           "#e53e3e"
+                  }}
+                >
+                  {selectedReport.report_type}
+                </p>
+                <div className="mt-2 space-y-2">
+                  <p>
+                    <span className="font-medium">Barangay:</span>{" "}
+                    {selectedReport.barangay}
+                  </p>
+                  <p>
+                    <span className="font-medium">Reported by:</span>{" "}
+                    {selectedReport.user?.username || ""}
+                  </p>
+                  <p>
+                    <span className="font-medium">Date:</span>{" "}
+                    {new Date(selectedReport.date_and_time).toLocaleDateString(
+                      "en-US",
+                      {
+                        year: "numeric",
+                        month: "long",
+                        day: "numeric",
+                        weekday: "long",
+                      }
+                    )}
+                  </p>
+                  <p>
+                    <span className="font-medium">Description:</span>{" "}
+                    {selectedReport.description}
+                  </p>
+                  {selectedReport.images && selectedReport.images.length > 0 && (
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {selectedReport.images.map((img, idx) => (
+                        <img
+                          key={idx}
+                          src={img}
+                          alt={`evidence-${idx + 1}`}
+                          className="w-20 h-20 object-cover rounded border"
+                        />
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </InfoWindow>
+          </>
         )}
       </GoogleMap>
 

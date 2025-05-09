@@ -6,6 +6,8 @@ export { default as CustomSearchBar } from "./CustomSearchBar.jsx";
 export { default as CustomDropDown } from "./CustomDropDown.jsx";
 export { default as UserDetailsTab } from "./UserDetailsTab.jsx";
 export { default as DengueMap } from "./DengueMap.jsx";
+export { default as DengueMapNoInfo } from "./DengueMapNoInfo.jsx";
+
 export { default as CustomFormInput } from "./CustomFormInput.jsx";
 export { default as MapPicker } from "./MapPicker.jsx";
 export { default as DengueMapLegend } from "./DengueMapLegend.jsx";

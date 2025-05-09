@@ -356,6 +356,12 @@ export const dengueApi = createApi({
       query: () => "analytics/retrieve-pattern-recognition-results",
       providesTags: ["PatternRecognition"],
     }),
+
+    // Add this to the endpoints object
+    getInterventionsInProgress: builder.query({
+      query: (barangay) => `interventions/in-progress/${barangay}`,
+      providesTags: (result, error, barangay) => [{ type: "Intervention", id: barangay }],
+    }),
   }),
 });
 
@@ -395,4 +401,7 @@ export const {
 
   //Pattern Recognition
   useGetPatternRecognitionResultsQuery,
+
+  // Add this to the exported hooks
+  useGetInterventionsInProgressQuery,
 } = dengueApi;

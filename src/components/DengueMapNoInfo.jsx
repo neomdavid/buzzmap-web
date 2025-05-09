@@ -1,0 +1,131 @@
+import React, { useState, forwardRef, useImperativeHandle } from 'react';
+import DengueMap from './DengueMap';
+import * as turf from '@turf/turf';
+
+const DengueMapNoInfo = forwardRef((props, ref) => {
+  const [selectedBarangay, setSelectedBarangay] = useState(null);
+  const [infoWindowPosition, setInfoWindowPosition] = useState(null);
+  const [mapRef, setMapRef] = useState(null);
+
+  // Update useImperativeHandle to properly expose the map methods
+  useImperativeHandle(ref, () => ({
+    panTo: (position) => {
+      console.log('DengueMapNoInfo panTo called with position:', position);
+      if (mapRef) {
+        mapRef.panTo(position);
+      } else {
+        console.error('Map reference is not available');
+      }
+    },
+    setZoom: (zoom) => {
+      console.log('DengueMapNoInfo setZoom called with zoom:', zoom);
+      if (mapRef) {
+        mapRef.setZoom(zoom);
+      } else {
+        console.error('Map reference is not available');
+      }
+    }
+  }), [mapRef]); // Add mapRef as a dependency
+
+  // Override the handlePolygonClick to not show InfoWindow
+  const handlePolygonClick = (feature) => {
+    const center = turf.center(feature.geometry);
+    const { coordinates } = center.geometry;
+    const [lng, lat] = coordinates;
+
+    if (lat && lng && !isNaN(lat) && !isNaN(lng)) {
+      props.mapRef?.current?.panTo({ lat, lng });
+    }
+
+    // Set selected barangay and InfoWindow position
+    setSelectedBarangay(feature);
+    setInfoWindowPosition({ lat, lng });
+
+    // Call onBarangaySelect with the feature
+    if (props.onBarangaySelect) {
+      props.onBarangaySelect(feature);
+    }
+  };
+
+  // Custom InfoWindow component for DengueMapNoInfo
+  const CustomInfoWindow = ({ feature, position, onClose }) => {
+    const patternType = (feature?.properties?.patternType || "none").toLowerCase();
+    const color = {
+      spike: "#e53e3e", // error - red
+      gradual_rise: "#dd6b20", // warning - orange
+      decline: "#38a169", // success - green
+      stability: "#3182ce", // info - blue
+      none: "#718096", // gray
+    }[patternType] || "#718096";
+
+    return (
+      <div
+        className="bg-white p-3 rounded-lg shadow-lg"
+        style={{
+          border: `2px solid ${color}`,
+          minWidth: "200px",
+          textAlign: "center"
+        }}
+      >
+        <p className="font-bold text-3xl" style={{ color }}>
+          {feature.properties.displayName}
+        </p>
+      </div>
+    );
+  };
+
+  // Custom polygon options to highlight selected barangay
+  const getPolygonOptions = (feature) => {
+    const patternType = (feature?.properties?.patternType || "none").toLowerCase();
+    const color = {
+      spike: "#e53e3e",
+      gradual_rise: "#dd6b20",
+      decline: "#38a169",
+      stability: "#3182ce",
+      none: "#718096",
+    }[patternType] || "#718096";
+
+    const isSelected = selectedBarangay?.properties?.displayName === feature.properties.displayName;
+
+    return {
+      strokeColor: color,
+      strokeOpacity: 1,
+      strokeWeight: isSelected ? 3 : 1, // Thicker border for selected
+      fillOpacity: 0.5,
+      fillColor: color,
+      zIndex: isSelected ? 6 : 5, // Higher z-index for selected
+    };
+  };
+
+  // Clear search query when clicking on a barangay
+  const handleBarangayClick = (feature) => {
+    handlePolygonClick(feature);
+    if (props.onSearchClear) {
+      props.onSearchClear();
+    }
+  };
+
+  // Update handleMapLoad
+  const handleMapLoad = (map) => {
+    console.log('Map loaded in DengueMapNoInfo');
+    setMapRef(map);
+    if (props.onMapLoad) {
+      props.onMapLoad(map);
+    }
+  };
+
+  return (
+    <DengueMap
+      {...props}
+      handlePolygonClick={handleBarangayClick}
+      CustomInfoWindow={CustomInfoWindow}
+      selectedBarangay={selectedBarangay}
+      infoWindowPosition={infoWindowPosition}
+      getPolygonOptions={getPolygonOptions}
+      onMapLoad={handleMapLoad}
+      selectedReport={props.selectedReport}
+    />
+  );
+});
+
+export default DengueMapNoInfo; 

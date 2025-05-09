@@ -135,7 +135,10 @@ const Analytics = () => {
             Barangay Dengue Risk and Case Density Map
           </p>
           <div className="rounded-xl shadow-sm h-140 overflow-hidden">
-            <DengueMap showLegends={true} />
+            <DengueMap 
+              showLegends={true} 
+              defaultTab="cases"
+            />
           </div>
         </div>
         <PieChart />
