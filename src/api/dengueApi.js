@@ -439,6 +439,19 @@ export const dengueApi = createApi({
       }),
       invalidatesTags: ["Alert"],
     }),
+
+    // Add this to your endpoints object in dengueApi
+    getBarangayWeeklyTrends: builder.query({
+      query: ({ barangay_name, number_of_weeks }) => ({
+        url: 'analytics/get-barangay-weekly-trends',
+        method: 'POST',
+        body: {
+          barangay_name,
+          number_of_weeks
+        }
+      }),
+      providesTags: ['Analytics']
+    }),
   }),
 });
 
@@ -501,4 +514,7 @@ export const {
 
   // Delete alert
   useDeleteAlertMutation,
+
+  // Add this to your exported hooks
+  useGetBarangayWeeklyTrendsQuery,
 } = dengueApi;

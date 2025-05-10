@@ -174,7 +174,7 @@ const Dashboard = () => {
       </section>
 
       <section className="flex mt-10 gap-4 flex-col xl:flex-row">
-        <div className="w-full shadow-sm h-72 rounded-lg xl:flex-2 overflow-hidden">
+        <div className="w-full shadow-sm h-86 rounded-lg xl:flex-2 overflow-hidden">
           <DengueChartCard />
         </div>
         <div className="flex  md:flex-row  gap-6 lg:flex-3">

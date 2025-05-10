@@ -2,7 +2,6 @@ import {
   Heading,
   PreventionCard,
   AltPreventionCard,
-  NewsGrid,
 } from "../../components";
 import sprayingAlcohol from "../../assets/sprayingalcohol.jpg";
 import tubImg from "../../assets/mosquito_tub.jpg";
@@ -17,38 +16,49 @@ import {
 import { IconSearch } from "@tabler/icons-react";
 import { ShieldCheck, Heartbeat, ArrowRight } from "phosphor-react";
 import patientImg from "../../assets/dengue-patient-1.jpg";
+import { useGetAllAdminPostsQuery } from "../../api/dengueApi";
+import { useMemo } from "react";
+import NewsGrid from "../../components/Prevention/NewsGrid";
 
-const articles = [
-  {
-    image: patientImg,
-    date: "2 days ago",
-    title:
-      "Philippine Health department flags worrisome uptick in dengue cases in Luzon",
-    description:
-      "PHILIPPINE health authorities on Monday flagged a 'concerning rise' in dengue cases lorem lorem lorem lorem lorem lorem lorem lorem lorem lorem lorem lorem lorem lorem lorem lorem lorem lorem lorem lorem lorem lorem lorem lorem lorem lorem lorem lorem....",
-  },
-  {
-    image: patientImg,
-    date: "2 days ago",
-    title: "DOH reports 'concerning rise' of dengue cases in 9 LGUs",
-    description:
-      "PHILIPPINE health authorities on Monday flagged a 'concerning rise'...",
-  },
-  {
-    image: patientImg,
-    date: "2 days ago",
-    title: "Health officials warn about dengue spread",
-    description: "The Department of Health has identified several hotspots...",
-  },
-  {
-    image: patientImg,
-    date: "2 days ago",
-    title: "Dengue cases continue to rise",
-    description:
-      "Officials are urging communities to eliminate mosquito breeding sites...",
-  },
-];
 const Prevention = () => {
+  // Fetch admin posts
+  const { data: adminPosts, isLoading } = useGetAllAdminPostsQuery();
+
+  // Add console.log to debug
+
+  // Filter and format news articles from admin posts
+  const newsArticles = useMemo(() => {
+    console.log('Raw admin posts:', adminPosts);
+    
+    if (!adminPosts) {
+      console.log('No admin posts available');
+      return [];
+    }
+    
+    const filteredNews = adminPosts.filter(post => {
+      console.log('Checking post:', post);
+      return post && post.category && post.category.toLowerCase() === 'news';
+    });
+    
+    console.log('Filtered news:', filteredNews);
+
+    const formattedArticles = filteredNews.map(post => {
+      if (!post) return null;
+      
+      const formatted = {
+        image: post.images?.[0] || patientImg,
+        date: post.publishDate ? new Date(post.publishDate).toLocaleDateString() : 'No date',
+        title: post.title || 'Untitled',
+        description: post.content || 'No content available',
+      };
+      console.log('Formatted article:', formatted);
+      return formatted;
+    }).filter(Boolean);
+
+    console.log('Final formatted articles:', formattedArticles);
+    return formattedArticles;
+  }, [adminPosts]);
+
   return (
     <main className="flex flex-col text-center items-center justify-center mt-2 py-8 overflow-x-hidden">
       <div className="mx-4">
@@ -258,8 +268,8 @@ const Prevention = () => {
           </figure>
         </div>
       </section>
-      <section className="text-primary flex flex-col font-normal w-full p-12  sm:px-24 ">
-        <div className="flex  justify-between items-center w-full mb-8 ">
+      <section className="text-primary flex flex-col font-normal w-full p-12 sm:px-24">
+        <div className="flex justify-between items-center w-full mb-8">
           <p className="italic text-left font-bold text-3xl">
             Latest News Updates
           </p>
@@ -275,7 +285,16 @@ const Prevention = () => {
             />
           </div>
         </div>
-        <NewsGrid articles={articles} />
+        
+        {isLoading ? (
+          <div className="flex justify-center items-center h-40">
+            <span className="loading loading-spinner loading-lg"></span>
+          </div>
+        ) : newsArticles.length > 0 ? (
+          <NewsGrid articles={newsArticles} />
+        ) : (
+          <p className="text-center text-gray-500">No news articles available</p>
+        )}
       </section>
     </main>
   );
