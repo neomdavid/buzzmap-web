@@ -1,14 +1,14 @@
 "use client";
 
 import {
-  Bar,
-  BarChart,
+  LineChart,
+  Line,
   XAxis,
   YAxis,
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  Cell,
+  Legend,
 } from "recharts";
 import { ChartContainer } from "../ui/chart";
 import { useGetBarangayWeeklyTrendsQuery, useGetBarangaysQuery, useGetPatternRecognitionResultsQuery } from "../../api/dengueApi";
@@ -40,23 +40,6 @@ const getSeverityColor = (cases, riskLevel) => {
   return "#22c55e";
 };
 
-const renderCustomBarLabel = ({ x, y, width, value }) => {
-  return (
-    <text
-      x={x + width / 2}
-      y={y}
-      fill="#444444"
-      textAnchor="middle"
-      dy={-6}
-      fontSize={10}
-      fontFamily="Inter"
-      fontWeight="500"
-    >
-      {value}
-    </text>
-  );
-};
-
 // Update the severity levels with direct color values
 const severityLevels = [
   { label: "High", color: "#ef4444" },
@@ -64,8 +47,7 @@ const severityLevels = [
   { label: "Low", color: "#22c55e" },
 ];
 
-export default function DengueTrendChart() {
-  const [selectedBarangay, setSelectedBarangay] = useState('bahay toro');
+export default function DengueTrendChart({ selectedBarangay, onBarangayChange }) {
   const [weeks, setWeeks] = useState(6);
 
   // Fetch barangays
@@ -151,7 +133,7 @@ export default function DengueTrendChart() {
         <div className="flex gap-4">
           <select
             value={selectedBarangay}
-            onChange={(e) => setSelectedBarangay(e.target.value)}
+            onChange={(e) => onBarangayChange(e.target.value)}
             className="select select-bordered w-full max-w-xs bg-white/10 text-base-content border-base-content/20 [&>option]:text-black"
           >
             {barangaysLoading ? (
@@ -180,11 +162,11 @@ export default function DengueTrendChart() {
       </div>
       <ChartContainer className="h-full w-full flex flex-col gap-2">
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart
+          <LineChart
             data={chartData}
             margin={{ left: -38, top: 10, right: 4, bottom: 5 }}
           >
-            <CartesianGrid strokeDasharray="0 0" vertical={false} />
+            <CartesianGrid strokeDasharray="3 3" vertical={false} />
             <XAxis
               dataKey="week"
               tick={{ fontSize: 11, fontFamily: "Inter", fill: "#000000" }}
@@ -195,19 +177,43 @@ export default function DengueTrendChart() {
               tick={{ fontSize: 11, fontFamily: "Inter", fill: "#000000" }}
             />
             <Tooltip />
-            <Bar dataKey="cases" radius={4} label={renderCustomBarLabel}>
-              {chartData.map((entry, index) => {
-                const color = getSeverityColor(entry.cases, entry.riskLevel);
-                console.log(`Bar ${index} color:`, color); // Debug log
-                return (
-                  <Cell
-                    key={`cell-${index}`}
-                    fill={color}
-                  />
-                );
-              })}
-            </Bar>
-          </BarChart>
+            <Legend 
+              formatter={(value) => "Number of Cases"}
+              wrapperStyle={{ color: "#000000" }}
+            />
+            <Line
+              type="monotone"
+              dataKey="cases"
+              stroke={getSeverityColor(0, selectedBarangayRisk)}
+              strokeWidth={3}
+              dot={{
+                r: 5,
+                stroke: getSeverityColor(0, selectedBarangayRisk),
+                strokeWidth: 2,
+                fill: getSeverityColor(0, selectedBarangayRisk),
+              }}
+              activeDot={{
+                r: 7,
+                stroke: getSeverityColor(0, selectedBarangayRisk),
+                strokeWidth: 2,
+                fill: getSeverityColor(0, selectedBarangayRisk),
+              }}
+              label={({ x, y, value }) => (
+                <text
+                  x={x}
+                  y={y}
+                  dy={-10}
+                  fill="#444444"
+                  textAnchor="middle"
+                  fontSize={10}
+                  fontFamily="Inter"
+                  fontWeight="500"
+                >
+                  {value}
+                </text>
+              )}
+            />
+          </LineChart>
         </ResponsiveContainer>
 
         {/* Custom Legend */}

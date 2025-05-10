@@ -1,16 +1,19 @@
 import { useState } from "react";
 import { useGetPatternRecognitionResultsQuery } from "../../api/dengueApi";
 
-const PatternAlerts = () => {
+const PatternAlerts = ({ selectedBarangay }) => {
   const { data, isLoading, error } = useGetPatternRecognitionResultsQuery();
   const [filter, setFilter] = useState("all"); // 'all', 'spike', 'gradual_rise', 'decline', 'stability'
 
   if (isLoading) return <div>Loading alerts...</div>;
   if (error) return <div>Error loading alerts</div>;
 
-  // Transform the API data
+  // Transform the API data and filter by selected barangay
   const alerts = data.data
-    .filter((alert) => alert.alert)
+    .filter((alert) => 
+      alert.alert && 
+      alert.name.toLowerCase() === selectedBarangay.toLowerCase()
+    )
     .map((alert) => ({
       ...alert,
       // Normalize pattern types to match your Python code

@@ -12,9 +12,12 @@ import {
 } from "../../components";
 import PatternRecognitionResults from "@/components/Admin/PatternAlerts";
 import PatternAlerts from "@/components/Admin/PatternAlerts";
+import { useState } from "react";
 
 // import { IconCheck, IconHourglassEmpty, IconSearch } from "@tabler/icons-react";
 const Analytics = () => {
+  const [selectedBarangay, setSelectedBarangay] = useState('bahay toro');
+
   return (
     <main className=" flex flex-col w-full ">
       <p className="flex justify-center text-5xl font-extrabold mb-12  text-center md:justify-start md:text-left md:w-[48%] ">
@@ -116,16 +119,19 @@ const Analytics = () => {
               Trends and Patterns
             </p>
             <div className="mt-[-14px] ml-[-12px]">
-              <DengueTrendChart />
+              <DengueTrendChart 
+                selectedBarangay={selectedBarangay}
+                onBarangayChange={setSelectedBarangay}
+              />
             </div>
           </section>
 
-          <section className="flex flex-col lg:col-span-5 gap-y-5 ">
+          <section className="flex flex-col lg:col-span-5 gap-y-5">
             <p className="mb-2 text-base-content text-4xl font-bold">
               Pattern Recognition Alerts
             </p>
             <div className="flex flex-col gap-y-5 h-95 xl:h-120 2xl:h-125 mt-[-10px] py-3 overflow-y-scroll">
-              <PatternAlerts />
+              <PatternAlerts selectedBarangay={selectedBarangay} />
             </div>
           </section>
         </div>
