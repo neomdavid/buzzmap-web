@@ -8,6 +8,7 @@ import {
 import {
   useGetPostsQuery,
   useGetAllInterventionsQuery,
+  useGetAllAlertsQuery,
 } from "../../api/dengueApi.js"; // Import the intervention query hook
 import { useSelector } from "react-redux";
 
@@ -27,6 +28,10 @@ const Dashboard = () => {
     isLoading: interventionsLoading,
     isError: interventionsError,
   } = useGetAllInterventionsQuery();
+
+  // Fetching the alerts from the API
+  const { data: alertsData, isLoading: alertsLoading, isError: alertsError } = useGetAllAlertsQuery();
+
   // Handle loading and error states for both posts and interventions
   if (postsLoading || interventionsLoading) return <div>Loading...</div>;
   if (postsError || interventionsError)
@@ -62,6 +67,19 @@ const Dashboard = () => {
     interventionCounts.scheduled +
     interventionCounts.ongoing;
   console.log(interventionCounts);
+
+  // Calculate total alerts
+  const totalAlerts = Array.isArray(alertsData?.data) ? alertsData.data.length : 0;
+
+  // Get the most recent 3 alerts (adjust as needed)
+  const recentAlerts = Array.isArray(alertsData?.data)
+    ? alertsData.data.slice(0, 3)
+    : [];
+
+  const alertItems = recentAlerts.map(alert => ({
+    label: (alert.barangays || []).map(b => typeof b === "string" ? b : b.name).join(", "),
+    value: (alert.messages && alert.messages.length > 0) ? alert.messages[0] : "No message"
+  }));
 
   return (
     <main className="flex flex-col w-full">
@@ -100,11 +118,11 @@ const Dashboard = () => {
 
         {/* ReportCard for Total Alerts Sent */}
         <ReportCard
-          title="Total Alerts Sent (No backend yet)"
-          count={0} // This can be dynamic as well if you have alerts data
+          title="Total Alerts Sent"
+          count={totalAlerts}
           topBg="bg-error/90"
           type="interventions"
-          items={[{ label: "Fogging" }, { label: "Clean Up Campaigns" }]}
+          items={alertItems}
         />
 
         {/* ReportCard for Completed Interventions */}
@@ -133,7 +151,7 @@ const Dashboard = () => {
         />
 
         {/* User Engagement */}
-        <ReportCard
+        {/* <ReportCard
           title="User Engagement (No backend yet) "
           count={0}
           type="engagement"
@@ -142,7 +160,7 @@ const Dashboard = () => {
             { label: "Reports", value: 45 },
             { label: "Discussions", value: 75 },
           ]}
-        />
+        /> */}
       </section>
 
       <section className="ml-1 mb-6 mt-6">

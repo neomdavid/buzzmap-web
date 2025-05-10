@@ -396,10 +396,48 @@ export const dengueApi = createApi({
       providesTags: ["Post"],
     }),
 
+    // Update an admin post
+    updateAdminPost: builder.mutation({
+      query: ({ id, formData }) => ({
+        url: `adminPosts/${id}`,
+        method: 'PATCH',
+        body: formData,
+      }),
+      invalidatesTags: ["Post"],
+    }),
+
+    // Delete an admin post
+    deleteAdminPost: builder.mutation({
+      query: (id) => ({
+        url: `adminPosts/${id}`,
+        method: "DELETE",
+      }),
+      invalidatesTags: ["Post"],
+    }),
+
     // Get all alerts
     getAllAlerts: builder.query({
       query: () => "alerts",
       providesTags: ["Alert"],
+    }),
+
+    // Update an alert
+    updateAlert: builder.mutation({
+      query: ({ id, updatedData }) => ({
+        url: `alerts/${id}`,
+        method: "PATCH",
+        body: updatedData,
+      }),
+      invalidatesTags: ["Alert"],
+    }),
+
+    // Delete an alert
+    deleteAlert: builder.mutation({
+      query: (id) => ({
+        url: `alerts/${id}`,
+        method: "DELETE",
+      }),
+      invalidatesTags: ["Alert"],
     }),
   }),
 });
@@ -455,4 +493,12 @@ export const {
   // Admin hooks
   useGetAllAdminPostsQuery,
   useGetAllAlertsQuery,
+  useUpdateAdminPostMutation,
+  useDeleteAdminPostMutation,
+
+  // Update alert
+  useUpdateAlertMutation,
+
+  // Delete alert
+  useDeleteAlertMutation,
 } = dengueApi;
