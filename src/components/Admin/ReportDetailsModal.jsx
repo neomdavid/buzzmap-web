@@ -245,17 +245,40 @@ const ReportDetailsModal = ({
 
       {/* StreetView Modal */}
       <dialog ref={streetViewModalRef} className="modal">
-        <div className="modal-box bg-white rounded-3xl shadow-2xl w-11/12 max-w-5xl p-6 py-14 relative">
+        <div className="modal-box bg-white rounded-3xl shadow-2xl w-11/12 max-w-5xl p-6 py-14 relative max-h-[85vh] overflow-y-auto">
           <button
-            className="absolute top-4 right-4 text-2xl font-semibold hover:text-gray-500 transition-colors duration-200  hover:cursor-pointer"
+            className="absolute top-4 right-4 text-2xl font-semibold hover:text-gray-500 transition-colors duration-200 hover:cursor-pointer"
             onClick={() => streetViewModalRef.current.close()}
           >
             ✕
           </button>
-          <div
-            id="street-view-container"
-            className="w-full h-[600px] rounded-lg overflow-hidden"
-          />
+
+          {/* Reported Photos Section */}
+          {images && images.length > 0 && (
+            <div className="mb-6">
+              <p className="text-xl font-bold mb-4">Reported Photos</p>
+              <div className="grid grid-cols-3 gap-4">
+                {images.map((img, idx) => (
+                  <div key={idx} className="relative">
+                    <img 
+                      src={img} 
+                      alt={`Reported Photo ${idx + 1}`}
+                      className="w-full h-48 object-cover rounded-lg shadow-md"
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* StreetView Container */}
+          <div className="space-y-4">
+            <p className="text-xl font-bold">Street View</p>
+            <div
+              id="street-view-container"
+              className="w-full h-[400px] rounded-lg overflow-hidden shadow-lg"
+            />
+          </div>
         </div>
       </dialog>
     </>

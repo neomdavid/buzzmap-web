@@ -12,6 +12,8 @@ const DengueMapping = () => {
   const [selectedFullReport, setSelectedFullReport] = useState(null);
   const mapRef = useRef(null);
   const modalRef = useRef(null);
+  const streetViewModalRef = useRef(null);
+  const mapContainerRef = useRef(null);
   const { data: posts } = useGetPostsQuery();
 
   const { data: interventions } = useGetInterventionsInProgressQuery(
@@ -116,6 +118,11 @@ const DengueMapping = () => {
       
       mapRef.current.panTo(position);
       mapRef.current.setZoom(17);
+
+      // Scroll to map container with center alignment
+      if (mapContainerRef.current) {
+        mapContainerRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
     } else {
       console.error('Map reference is not available');
     }
@@ -173,6 +180,25 @@ const DengueMapping = () => {
     }
   };
 
+  const openStreetViewModal = () => {
+    const streetViewElement = streetViewModalRef.current;
+    if (streetViewElement && selectedFullReport?.specific_location?.coordinates?.length === 2) {
+      streetViewElement.showModal();
+
+      new window.google.maps.StreetViewPanorama(
+        streetViewElement.querySelector("#street-view-container"),
+        {
+          position: { 
+            lat: selectedFullReport.specific_location.coordinates[1], 
+            lng: selectedFullReport.specific_location.coordinates[0] 
+          },
+          pov: { heading: 165, pitch: 0 },
+          zoom: 1,
+        }
+      );
+    }
+  };
+
   return (
     <main className="flex flex-col w-full">
       <p className="flex justify-center text-5xl font-extrabold mb-12 text-center md:justify-start md:text-left md:w-[48%]">
@@ -195,7 +221,7 @@ const DengueMapping = () => {
         </div>
       </div>
 
-      <div className="flex h-[50vh] mb-4">
+      <div className="flex h-[50vh] mb-4" ref={mapContainerRef}>
         <DengueMapNoInfo 
           ref={mapRef}
           onBarangaySelect={handleBarangaySelect}
@@ -338,7 +364,7 @@ const DengueMapping = () => {
         </div>
       </div>
 
-      {/* Replace the existing modal with this dialog-based modal */}
+      {/* Main Report Modal */}
       <dialog ref={modalRef} className="modal transition-transform duration-300 ease-in-out">
         <div className="modal-box bg-white rounded-3xl shadow-2xl w-9/12 max-w-4xl p-12 relative">
           <button
@@ -397,23 +423,71 @@ const DengueMapping = () => {
             )}
 
             {/* Action Buttons */}
-            <div className="flex justify-end gap-2 mt-6">
-              <button 
-                onClick={() => setShowFullReport(false)}
-                className="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 transition-colors"
+            <div className="flex justify-between items-center mt-6">
+              <button
+                onClick={openStreetViewModal}
+                className="btn bg-primary text-white hover:bg-primary/80 transition-colors"
               >
-                Close
+                View Street View
               </button>
-              <button 
-                onClick={() => {
-                  handleShowOnMap(selectedFullReport);
-                  setShowFullReport(false);
-                }}
-                className="bg-info text-white px-4 py-2 rounded-lg hover:bg-info/80 transition-colors"
-              >
-                Show on Map
-              </button>
+              
+              <div className="flex gap-2">
+                <button 
+                  onClick={() => setShowFullReport(false)}
+                  className="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 transition-colors"
+                >
+                  Close
+                </button>
+                <button 
+                  onClick={() => {
+                    handleShowOnMap(selectedFullReport);
+                    setShowFullReport(false);
+                  }}
+                  className="bg-info text-white px-4 py-2 rounded-lg hover:bg-info/80 transition-colors"
+                >
+                  Show on Map
+                </button>
+              </div>
             </div>
+          </div>
+        </div>
+      </dialog>
+
+      {/* StreetView Modal */}
+      <dialog ref={streetViewModalRef} className="modal">
+        <div className="modal-box bg-white rounded-3xl shadow-2xl w-11/12 max-w-5xl p-6 py-14 relative max-h-[85vh] overflow-y-auto">
+          <button
+            className="absolute top-4 right-4 text-2xl font-semibold hover:text-gray-500 transition-colors duration-200 hover:cursor-pointer"
+            onClick={() => streetViewModalRef.current.close()}
+          >
+            ✕
+          </button>
+
+          {/* Reported Photos Section */}
+          {selectedFullReport?.images && selectedFullReport.images.length > 0 && (
+            <div className="mb-6">
+              <p className="text-xl font-bold mb-4">Reported Photos</p>
+              <div className="grid grid-cols-3 gap-4">
+                {selectedFullReport.images.map((img, idx) => (
+                  <div key={idx} className="relative">
+                    <img 
+                      src={img} 
+                      alt={`Reported Photo ${idx + 1}`}
+                      className="w-full h-48 object-cover rounded-lg shadow-md"
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* StreetView Container */}
+          <div className="space-y-4">
+            <p className="text-xl font-bold">Street View</p>
+            <div
+              id="street-view-container"
+              className="w-full h-[400px] rounded-lg overflow-hidden shadow-lg"
+            />
           </div>
         </div>
       </dialog>
