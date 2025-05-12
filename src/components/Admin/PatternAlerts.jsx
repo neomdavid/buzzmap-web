@@ -1,183 +1,143 @@
 import { useState } from "react";
 import { useGetPatternRecognitionResultsQuery } from "../../api/dengueApi";
+import { MagnifyingGlass } from "phosphor-react";
 
-const PatternAlerts = ({ selectedBarangay }) => {
-  const { data, isLoading, error } = useGetPatternRecognitionResultsQuery();
-  const [filter, setFilter] = useState("all"); // 'all', 'spike', 'gradual_rise', 'decline', 'stability'
+export default function PatternAlerts({ selectedBarangay, selectedTab }) {
+  const [searchTerm, setSearchTerm] = useState("");
+  const { data: patternDataRaw, isLoading, error } = useGetPatternRecognitionResultsQuery();
+  const patternData = patternDataRaw?.data || [];
 
-  if (isLoading) return <div>Loading alerts...</div>;
-  if (error) return <div>Error loading alerts</div>;
+  // Debug logs for initial data
+  console.log('=== DEBUG LOGS ===');
+  console.log('Selected Tab:', selectedTab);
+  console.log('Selected Barangay:', selectedBarangay);
+  console.log('Search Term:', searchTerm);
+  console.log('Raw Pattern Data:', patternData);
 
-  // Transform the API data and filter by selected barangay
-  const alerts = data.data
-    .filter((alert) => 
-      alert.alert && 
-      alert.name.toLowerCase() === selectedBarangay.toLowerCase()
-    )
-    .map((alert) => ({
-      ...alert,
-      // Normalize pattern types to match your Python code
-      patternType:
-        alert.triggered_pattern?.toLowerCase() ||
-        (alert.alert.includes("Stable")
-          ? "stability"
-          : alert.alert.includes("Gradual")
-          ? "gradual_rise"
-          : alert.alert.includes("Decline")
-          ? "decline"
-          : alert.alert.includes("Spike")
-          ? "spike"
-          : "other"),
-    }));
+  let filteredData = patternData;
+  
+  // First apply tab filtering
+  if (selectedTab === "selected") {
+    filteredData = patternData.filter(
+      item => item.name.toLowerCase() === selectedBarangay.toLowerCase()
+    );
+  } else if (selectedTab === "all") {
+    filteredData = patternData;
+  } else if (selectedTab === "spikes") {
+    filteredData = patternData.filter(item => {
+      const patternType = item.triggered_pattern?.toLowerCase() || '';
+      return patternType === 'spike';
+    });
+  } else if (selectedTab === "gradual") {
+    filteredData = patternData.filter(item => {
+      const patternType = item.triggered_pattern?.toLowerCase() || '';
+      return patternType === 'gradual';
+    });
+  } else if (selectedTab === "stability") {
+    filteredData = patternData.filter(item => {
+      const patternType = item.triggered_pattern?.toLowerCase() || '';
+      return patternType === 'stable' || patternType === 'stability';
+    });
+  } else if (selectedTab === "decline") {
+    filteredData = patternData.filter(item => {
+      const patternType = item.triggered_pattern?.toLowerCase() || '';
+      return patternType === 'decline' || patternType === 'decreasing';
+    });
+  }
 
-  // Filter alerts based on selection
-  const filteredAlerts =
-    filter === "all"
-      ? alerts
-      : alerts.filter((alert) => alert.patternType === filter);
+  // Then apply search filtering
+  if (searchTerm) {
+    filteredData = filteredData.filter(item => {
+      const searchLower = searchTerm.toLowerCase();
+      return item.name.toLowerCase().includes(searchLower);
+    });
+  }
 
-  // Format for AlertCard with proper message parsing
-  const formattedAlerts = filteredAlerts.map((alert) => {
-    let messages = [];
-    let title = alert.name;
+  // Final debug log
+  console.log('Final filtered data:', filteredData);
+  console.log('=== END DEBUG LOGS ===');
 
-    switch (alert.patternType) {
-      case "spike":
-        const spikeMatch = alert.alert.match(/(\d+)%/);
-        const casesMatch = alert.alert.match(/\((\d+) → (\d+) cases\)/);
-        messages = [
-          { label: "Status:", text: "Dengue Spike Detected" },
-          {
-            label: "Increase:",
-            text: spikeMatch
-              ? `${spikeMatch[1]}% from average`
-              : "Significant increase",
-          },
-          {
-            label: "Cases:",
-            text: casesMatch
-              ? `${casesMatch[1]} → ${casesMatch[2]}`
-              : "Case increase",
-          },
-        ];
-        break;
-
-      case "gradual_rise":
-        messages = [
-          { label: "Status:", text: "Gradual Rise Observed" },
-          { text: alert.alert.split(":")[1]?.trim() || "" },
-        ];
-        break;
-
-      case "decline":
-        const declineMatch = alert.alert.match(/(\d+)%/);
-        messages = [
-          { label: "Status:", text: "Case Decline Detected" },
-          {
-            label: "Decrease:",
-            text: declineMatch
-              ? `${declineMatch[1]}% reduction`
-              : "Significant decrease",
-          },
-        ];
-        break;
-
-      case "stability":
-        messages = [
-          { label: "Status:", text: "Stable - No cases reported" },
-          { text: alert.alert.split(":")[1]?.trim() || "" },
-        ];
-        break;
-
-      default:
-        messages = [{ text: alert.alert }];
-    }
-
-    return {
-      title: title,
-      messages: messages,
-      borderColor:
-        alert.risk_level?.toLowerCase() === "low" &&
-        alert.patternType === "decline"
-          ? "border-success"
-          : alert.risk_level?.toLowerCase() === "low"
-          ? "border-info"
-          : alert.risk_level?.toLowerCase() === "high"
-          ? "border-error"
-          : "border-warning",
-      bgColor:
-        alert.risk_level?.toLowerCase() === "low" &&
-        alert.patternType === "decline"
-          ? "bg-success"
-          : alert.risk_level?.toLowerCase() === "low"
-          ? "bg-info"
-          : alert.risk_level?.toLowerCase() === "high"
-          ? "bg-error"
-          : "bg-warning",
-    };
-  });
+  if (isLoading) {
+    return <div>Loading...</div>;
+  }
+  if (error) {
+    return <div>Error loading pattern alerts.</div>;
+  }
 
   return (
-    <div>
-      {/* Filter Controls - Now with 4 categories */}
-      <div className="flex flex-wrap gap-2 mb-4">
-        <button
-          onClick={() => setFilter("all")}
-          className={`px-3 py-1 rounded-full text-sm ${
-            filter === "all" ? "bg-primary text-white" : "bg-gray-200"
-          }`}
-        >
-          All Alerts
-        </button>
-        <button
-          onClick={() => setFilter("spike")}
-          className={`px-3 py-1 rounded-full text-sm ${
-            filter === "spike" ? "bg-error text-white" : "bg-gray-200"
-          }`}
-        >
-          Spikes
-        </button>
-        <button
-          onClick={() => setFilter("gradual_rise")}
-          className={`px-3 py-1 rounded-full text-sm ${
-            filter === "gradual_rise" ? "bg-warning text-white" : "bg-gray-200"
-          }`}
-        >
-          Gradual Rise
-        </button>
-        <button
-          onClick={() => setFilter("stability")}
-          className={`px-3 py-1 rounded-full text-sm ${
-            filter === "stability" ? "bg-info text-white" : "bg-gray-200"
-          }`}
-        >
-          Stability
-        </button>
-        <button
-          onClick={() => setFilter("decline")}
-          className={`px-3 py-1 rounded-full text-sm ${
-            filter === "decline" ? "bg-success text-white" : "bg-gray-200"
-          }`}
-        >
-          Declines
-        </button>
+    <div className="flex flex-col gap-4 w-full px-4">
+      {/* Search Input */}
+      <div className="relative w-full">
+        <input
+          type="text"
+          placeholder="Search barangay..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="w-full px-4 py-2 pl-10 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent bg-white"
+        />
+        <MagnifyingGlass
+          className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+          size={20}
+        />
       </div>
 
-      {/* Alerts List - Using your original AlertCard */}
-      <div className="space-y-4">
-        {formattedAlerts.length > 0 ? (
-          formattedAlerts.map((alert, index) => (
-            <AlertCard key={index} {...alert} />
-          ))
-        ) : (
-          <div className="text-center py-4 text-gray-500">
-            No {filter === "all" ? "" : filter.replace("_", " ")} alerts found
-          </div>
-        )}
-      </div>
+      {filteredData.length === 0 ? (
+        <div className="text-gray-500">No alerts found.</div>
+      ) : (
+        filteredData.map(item => {
+          // Determine colors based on pattern type
+          let borderColor, bgColor;
+          let messages = [];
+          
+          if (!item.triggered_pattern) {
+            // No pattern data - use gray colors
+            borderColor = "border-gray-300";
+            bgColor = "bg-gray-300";
+            messages = [
+              { label: "Status:", text: "No pattern data recorded" }
+            ];
+          } else {
+            // Has pattern data - use pattern-based colors
+            if (item.triggered_pattern?.toLowerCase() === 'spike') {
+              borderColor = "border-error";
+              bgColor = "bg-error";
+            } else if (item.triggered_pattern?.toLowerCase() === 'gradual') {
+              borderColor = "border-warning";
+              bgColor = "bg-warning";
+            } else if (item.triggered_pattern?.toLowerCase() === 'stable' || 
+                      item.triggered_pattern?.toLowerCase() === 'stability') {
+              borderColor = "border-info";
+              bgColor = "bg-info";
+            } else if (item.triggered_pattern?.toLowerCase() === 'decline' || 
+                      item.triggered_pattern?.toLowerCase() === 'decreasing') {
+              borderColor = "border-success";
+              bgColor = "bg-success";
+            }
+
+            // Remove barangay name from alert text
+            const alertText = item.alert?.replace(/^[^:]+:\s*/, '') || '';
+
+            messages = [
+              { label: "Pattern Type:", text: item.triggered_pattern },
+              { label: "Risk Level:", text: item.risk_level },
+              { label: "Alert:", text: alertText }
+            ];
+          }
+
+          return (
+            <AlertCard
+              key={item._id}
+              title={item.name}
+              borderColor={borderColor}
+              bgColor={bgColor}
+              messages={messages}
+            />
+          );
+        })
+      )}
     </div>
   );
-};
+}
 
 // Your original AlertCard component (completely unchanged)
 const AlertCard = ({
@@ -209,5 +169,3 @@ const AlertCard = ({
     </div>
   );
 };
-
-export default PatternAlerts;

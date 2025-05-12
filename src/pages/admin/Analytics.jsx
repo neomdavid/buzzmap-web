@@ -15,8 +15,20 @@ import PatternAlerts from "@/components/Admin/PatternAlerts";
 import { useState } from "react";
 
 // import { IconCheck, IconHourglassEmpty, IconSearch } from "@tabler/icons-react";
+
+// Add the TABS array
+const TABS = [
+  { label: "Selected Barangay", value: "selected" },
+  { label: "All Alerts", value: "all" },
+  { label: "Spikes", value: "spikes" },
+  { label: "Gradual Rise", value: "gradual" },
+  { label: "Stability", value: "stability" },
+  { label: "Decline", value: "decline" },
+];
+
 const Analytics = () => {
   const [selectedBarangay, setSelectedBarangay] = useState('bahay toro');
+  const [selectedTab, setSelectedTab] = useState('selected'); // NEW
 
   return (
     <main className=" flex flex-col w-full ">
@@ -130,8 +142,27 @@ const Analytics = () => {
             <p className="mb-2 text-base-content text-4xl font-bold">
               Pattern Recognition Alerts
             </p>
+            {/* TABS */}
+            <div className="flex flex-wrap gap-2 mb-4">
+              {TABS.map(tab => (
+                <button
+                  key={tab.value}
+                  className={`px-3 py-1 rounded-full ${
+                    selectedTab === tab.value 
+                      ? 'bg-primary text-white' 
+                      : 'bg-gray-200 text-black'
+                  }`}
+                  onClick={() => setSelectedTab(tab.value)}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
             <div className="flex flex-col gap-y-5 h-95 xl:h-120 2xl:h-125 mt-[-10px] py-3 overflow-y-scroll">
-              <PatternAlerts selectedBarangay={selectedBarangay} />
+              <PatternAlerts 
+                selectedBarangay={selectedBarangay} 
+                selectedTab={selectedTab}
+              />
             </div>
           </section>
         </div>

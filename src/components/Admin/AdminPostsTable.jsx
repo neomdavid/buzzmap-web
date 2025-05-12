@@ -277,7 +277,7 @@ const AdminPostsTable = () => {
               <div className="modal-action">
                 <button 
                   type="submit" 
-                  className="btn btn-success"
+                  className="btn btn-primary text-white rounded-lg"
                   disabled={isSubmitting}
                 >
                   {isSubmitting ? (

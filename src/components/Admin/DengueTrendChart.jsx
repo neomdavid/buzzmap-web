@@ -14,37 +14,35 @@ import { ChartContainer } from "../ui/chart";
 import { useGetBarangayWeeklyTrendsQuery, useGetBarangaysQuery, useGetPatternRecognitionResultsQuery } from "../../api/dengueApi";
 import { useState } from "react";
 
-const getSeverityColor = (cases, riskLevel) => {
-  console.log('Getting color for:', { cases, riskLevel }); // Debug log
+const getPatternColor = (patternType) => {
+  console.log('Getting color for pattern:', patternType); // Debug log
   
-  // Convert risk level to lowercase for case-insensitive comparison
-  const riskLevelLower = riskLevel?.toLowerCase();
+  // Convert pattern type to lowercase for case-insensitive comparison
+  const patternTypeLower = patternType?.toLowerCase();
   
-  // First check the risk level from pattern recognition
-  if (riskLevelLower === 'high') {
-    console.log('Using High risk color');
+  if (patternTypeLower === 'spike') {
     return "#ef4444"; // Red
   }
-  if (riskLevelLower === 'medium') {
-    console.log('Using Medium risk color');
+  if (patternTypeLower === 'gradual') {
     return "#f97316"; // Orange
   }
-  if (riskLevelLower === 'low') {
-    console.log('Using Low risk color');
+  if (patternTypeLower === 'stable' || patternTypeLower === 'stability') {
+    return "#3b82f6"; // Blue
+  }
+  if (patternTypeLower === 'decline' || patternTypeLower === 'decreasing') {
     return "#22c55e"; // Green
   }
   
-  // Fallback to case-based coloring if no risk level
-  if (cases >= 50) return "#ef4444";
-  if (cases >= 30) return "#f97316";
-  return "#22c55e";
+  // Default color if no pattern type
+  return "#9ca3af"; // Gray
 };
 
-// Update the severity levels with direct color values
-const severityLevels = [
-  { label: "High", color: "#ef4444" },
-  { label: "Medium", color: "#f97316" },
-  { label: "Low", color: "#22c55e" },
+// Update the pattern levels
+const patternLevels = [
+  { label: "Spike", color: "#ef4444" },      // error/red
+  { label: "Gradual Rise", color: "#f97316" }, // warning/orange
+  { label: "Stability", color: "#3b82f6" },    // info/blue
+  { label: "Decline", color: "#22c55e" },      // success/green
 ];
 
 export default function DengueTrendChart({ selectedBarangay, onBarangayChange }) {
@@ -57,12 +55,12 @@ export default function DengueTrendChart({ selectedBarangay, onBarangayChange })
   const { data: patternData } = useGetPatternRecognitionResultsQuery();
   console.log('Pattern Recognition Data:', patternData);
 
-  // Get risk level for selected barangay
-  const selectedBarangayRisk = patternData?.data?.find(
+  // Get pattern type for selected barangay
+  const selectedBarangayPattern = patternData?.data?.find(
     barangay => barangay.name.toLowerCase() === selectedBarangay.toLowerCase()
-  )?.risk_level || 'Low';
+  )?.triggered_pattern || '';
 
-  console.log('Selected Barangay Risk Level:', selectedBarangayRisk);
+  console.log('Selected Barangay Pattern:', selectedBarangayPattern);
 
   const { data: trendsData, isLoading, error } = useGetBarangayWeeklyTrendsQuery({
     barangay_name: selectedBarangay,
@@ -75,17 +73,16 @@ export default function DengueTrendChart({ selectedBarangay, onBarangayChange })
         .map(([week, cases]) => ({
           week: week,
           cases: cases,
-          riskLevel: selectedBarangayRisk // Add risk level to each data point
+          patternType: selectedBarangayPattern // Add pattern type to each data point
         }))
         .sort((a, b) => {
-          // Sort by week number
           const weekA = parseInt(a.week.split(' ')[1]);
           const weekB = parseInt(b.week.split(' ')[1]);
           return weekA - weekB;
         })
     : [];
 
-  console.log('Transformed Chart Data with Risk Levels:', chartData);
+  console.log('Transformed Chart Data with Pattern Types:', chartData);
 
   // Log the data being passed to the chart
   console.log('Data being rendered in chart:', {
@@ -120,13 +117,11 @@ export default function DengueTrendChart({ selectedBarangay, onBarangayChange })
             Dengue Cases Trend - {selectedBarangay}
           </p>
           <p className="text-base-content text-sm">
-            Risk Level: <span style={{
-              color: selectedBarangayRisk?.toLowerCase() === 'high' ? '#ef4444' :
-                     selectedBarangayRisk?.toLowerCase() === 'medium' ? '#f97316' :
-                     '#22c55e',
+            Pattern: <span style={{
+              color: getPatternColor(selectedBarangayPattern),
               fontWeight: 'bold'
             }}>
-              {selectedBarangayRisk}
+              {selectedBarangayPattern}
             </span>
           </p>
         </div>
@@ -179,24 +174,30 @@ export default function DengueTrendChart({ selectedBarangay, onBarangayChange })
             <Tooltip />
             <Legend 
               formatter={(value) => "Number of Cases"}
-              wrapperStyle={{ color: "#000000" }}
+              wrapperStyle={{ 
+                color: "#000000",
+                fontSize: "14px",
+                marginLeft: "45px",
+                marginBottom: "-2px"
+              }}
+              align="left"
             />
             <Line
               type="monotone"
               dataKey="cases"
-              stroke={getSeverityColor(0, selectedBarangayRisk)}
+              stroke={getPatternColor(selectedBarangayPattern)}
               strokeWidth={3}
               dot={{
                 r: 5,
-                stroke: getSeverityColor(0, selectedBarangayRisk),
+                stroke: getPatternColor(selectedBarangayPattern),
                 strokeWidth: 2,
-                fill: getSeverityColor(0, selectedBarangayRisk),
+                fill: getPatternColor(selectedBarangayPattern),
               }}
               activeDot={{
                 r: 7,
-                stroke: getSeverityColor(0, selectedBarangayRisk),
+                stroke: getPatternColor(selectedBarangayPattern),
                 strokeWidth: 2,
-                fill: getSeverityColor(0, selectedBarangayRisk),
+                fill: getPatternColor(selectedBarangayPattern),
               }}
               label={({ x, y, value }) => (
                 <text
@@ -217,8 +218,8 @@ export default function DengueTrendChart({ selectedBarangay, onBarangayChange })
         </ResponsiveContainer>
 
         {/* Custom Legend */}
-        <div className="mt-[-2px] flex justify-start gap-14 ml-3">
-          {severityLevels.map(({ label, color }) => (
+        <div className="mt-[8px] flex justify-start gap-14 ml-3">
+          {patternLevels.map(({ label, color }) => (
             <div key={label} className="flex items-center gap-2">
               <div
                 className="w-4 h-4 rounded-full"
