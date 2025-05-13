@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ArrowLeft } from "phosphor-react";
+import { ArrowLeft, MagnifyingGlass, UserCircle } from "phosphor-react";
 import profile1 from "../../assets/profile1.png";
 import post1 from "../../assets/post1.jpg";
 import post2 from "../../assets/post2.jpg";
@@ -25,6 +25,8 @@ import {
 } from "../../api/dengueApi.js";
 import { useSelector } from "react-redux";
 import { toastInfo } from "../../utils.jsx";
+import React from "react";
+import { useNavigate } from "react-router-dom";
 
 const Community = () => {
   const [showAside, setShowAside] = useState(false);
@@ -36,7 +38,20 @@ const Community = () => {
   const [time, setTime] = useState("");
   const [reportType, setReportType] = useState("");
   const [filter, setFilter] = useState("latest"); // 'latest', 'popular', 'myPosts'
+  const [searchQuery, setSearchQuery] = useState("");
+  const [isSearching, setIsSearching] = useState(false);
   const userFromStore = useSelector((state) => state.auth?.user);
+  const [searchParams, setSearchParams] = useState({
+    barangay: '',
+    report_type: '',
+    status: 'Validated', // Default to showing only validated posts
+    username: '',
+    description: '',
+    sortBy: 'createdAt',
+    sortOrder: 'desc'
+  });
+  const navigate = useNavigate();
+
   const getCurrentLocation = () => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition((position) => {
@@ -61,7 +76,68 @@ const Community = () => {
     }
   };
 
-  const { data: posts, isLoading, isError, refetch } = useGetPostsQuery();
+  // Get all posts without filtering
+  const { data: posts, isLoading, isError, refetch } = useGetPostsQuery({
+    ...searchParams,
+    // Only include non-empty values
+    ...Object.fromEntries(
+      Object.entries(searchParams).filter(([_, value]) => value !== '')
+    )
+  });
+
+  // Filter and sort posts based on the selected tab
+  const filteredPosts = React.useMemo(() => {
+    if (!posts) return [];
+    
+    // First filter for validated posts
+    let filtered = posts.filter(post => post.status === "Validated");
+    
+    // Apply search filter if there's a search query
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter(post => 
+        // Search in username
+        (post.user?.username?.toLowerCase().includes(query)) ||
+        // Search in barangay
+        (post.barangay?.toLowerCase().includes(query)) ||
+        // Search in report type
+        (post.report_type?.toLowerCase().includes(query)) ||
+        // Search in description
+        (post.description?.toLowerCase().includes(query))
+      );
+    }
+    
+    // Then apply the selected filter
+    switch (filter) {
+      case "popular":
+        filtered = filtered.sort((a, b) => 
+          (b.likesCount || 0) - (a.likesCount || 0)
+        );
+        break;
+      
+      case "latest":
+        filtered = filtered.sort((a, b) => 
+          new Date(b.createdAt) - new Date(a.createdAt)
+        );
+        break;
+      
+      case "myPosts":
+        if (userFromStore) {
+          filtered = filtered
+            .filter(post => post.user?._id === userFromStore._id)
+            .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        }
+        break;
+      
+      default:
+        filtered = filtered.sort((a, b) => 
+          new Date(b.createdAt) - new Date(a.createdAt)
+        );
+    }
+    
+    return filtered;
+  }, [posts, filter, userFromStore, searchQuery]);
+
   const [createPost] = useCreatePostMutation();
   const [createPostWithImage] = useCreatePostWithImageMutation();
   console.log(posts);
@@ -89,31 +165,109 @@ const Community = () => {
     }
   };
 
+  // Update the handleSearch function
+  const handleSearch = (e) => {
+    e.preventDefault();
+    const searchValue = searchQuery.trim();
+    if (searchValue) {
+      console.log('Navigating to search with query:', searchValue);
+      navigate(`/search?q=${encodeURIComponent(searchValue)}`);
+    }
+  };
+
+  // Add a clear search handler
+  const handleClearSearch = (e) => {
+    e.preventDefault();
+    setSearchParams({
+      barangay: '',
+      report_type: '',
+      status: 'Validated',
+      username: '',
+      description: '',
+      sortBy: 'createdAt',
+      sortOrder: 'desc'
+    });
+    setSearchQuery('');
+    setIsSearching(false);
+    refetch();
+  };
+
   if (isLoading) return <div>Loading posts...</div>;
   if (isError) return <div>Error loading posts</div>;
   return (
     <main className="pl-6 text-primary text-lg flex gap-x-6 max-w-[1350px] m-auto relative mt-12">
       <article className="flex-8 shadow-xl p-12 rounded-lg w-[100vw] lg:w-[65vw]">
-        <CustomSearchBar />
-        <section className="flex gap-x-2 font-semibold w-full mb-8">
-          <FilterButton
-            text="Popular"
-            active={filter === "popular"}
-            onClick={() => setFilter("popular")}
-          />
-          <FilterButton
-            text="Latest"
-            active={filter === "latest"}
-            onClick={() => setFilter("latest")}
-          />
-          {userFromStore && userFromStore.role == "user" && (
-            <FilterButton
-              text="My Posts"
-              active={filter === "myPosts"}
-              onClick={() => setFilter("myPosts")}
+        <form onSubmit={handleSearch} className="mb-6">
+          <div className="relative">
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search by name, barangay, report type, or description..."
+              className="w-full px-4 py-2 pl-10 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
             />
-          )}
-        </section>
+            <div className="absolute left-3 top-2.5">
+              <MagnifyingGlass size={20} className="text-gray-400" />
+            </div>
+          </div>
+        </form>
+
+        {!searchQuery && (
+          <section className="flex gap-x-2 font-semibold w-full mb-8">
+            <FilterButton
+              text="Popular"
+              active={filter === "popular"}
+              onClick={() => {
+                setFilter("popular");
+                setSearchParams(prev => ({
+                  ...prev,
+                  sortBy: 'likesCount',
+                  sortOrder: 'desc'
+                }));
+              }}
+            />
+            <FilterButton
+              text="Latest"
+              active={filter === "latest"}
+              onClick={() => {
+                setFilter("latest");
+                setSearchParams(prev => ({
+                  ...prev,
+                  sortBy: 'createdAt',
+                  sortOrder: 'desc'
+                }));
+              }}
+            />
+            {userFromStore && userFromStore.role === "user" && (
+              <FilterButton
+                text="My Posts"
+                active={filter === "myPosts"}
+                onClick={() => {
+                  setFilter("myPosts");
+                  setSearchParams(prev => ({
+                    ...prev,
+                    username: userFromStore.username
+                  }));
+                }}
+              />
+            )}
+          </section>
+        )}
+
+        {isSearching && (
+          <div className="flex justify-between items-center mb-8">
+            <p className="text-gray-600">
+              Search results for "{searchQuery}"
+            </p>
+            <button
+              onClick={handleClearSearch}
+              className="text-primary hover:text-accent"
+            >
+              Clear Search
+            </button>
+          </div>
+        )}
+
         <Heading
           text="Stay /ahead/ of dengue."
           className="text-[47px] sm:text-7xl lg:text-8xl text-center mb-4 leading-21"
@@ -141,23 +295,41 @@ const Community = () => {
         {/* POST MODAL */}
         <NewPostModal onSubmit={refetch} />
         <section className="bg-base-200 px-8 py-6 rounded-lg flex flex-col gap-y-6">
-          {posts?.filter((post) => post.status === "Validated").length === 0 ? (
+          {isLoading ? (
+            <div className="text-center">Loading posts...</div>
+          ) : isError ? (
+            <div className="text-center text-error">Error loading posts</div>
+          ) : filteredPosts.length === 0 ? (
             <p className="text-center text-gray-500">
-              No validated posts available.
-            </p> // Show this when no posts are available
+              {searchQuery
+                ? "No posts found matching your search."
+                : filter === "myPosts"
+                  ? "You haven't made any posts yet."
+                  : "No validated posts available."}
+            </p>
           ) : (
-            posts
-              ?.filter((post) => post.status === "Validated") // Filter only validated posts
-              .map((post) => (
+            <>
+              {searchQuery && (
+                <p className="text-sm text-gray-500 mb-4">
+                  Found {filteredPosts.length} result{filteredPosts.length !== 1 ? 's' : ''}
+                </p>
+              )}
+              {filteredPosts.map((post) => (
                 <PostCard
                   key={post._id}
-                  profileImage={profile1}
-                  username={
-                    post.anonymous ? "Anonymous" : post.user?.username || "User"
+                  profileImage={
+                    post.isAnonymous
+                      ? <UserCircle size={48} className="text-gray-400 mr-[-6px]" />
+                      : profile1
                   }
-                  timestamp={formatTimestamp(post.createdAt)} // Updated this line
-                  barangay={post.barangay} // Pass Barangay here
-                  coordinates={post.specific_location?.coordinates || []} // Pass Coordinates here
+                  username={
+                    post.isAnonymous
+                      ? post.anonymousId || "Anonymous"
+                      : post.user?.username || "User"
+                  }
+                  timestamp={formatTimestamp(post.createdAt)}
+                  barangay={post.barangay}
+                  coordinates={post.specific_location?.coordinates || []}
                   dateTime={new Date(post.date_and_time).toLocaleString()}
                   reportType={post.report_type}
                   description={post.description}
@@ -166,7 +338,8 @@ const Community = () => {
                   shares={post.sharesCount || "0"}
                   images={post.images}
                 />
-              ))
+              ))}
+            </>
           )}
         </section>
       </article>

@@ -46,15 +46,15 @@ export default function MapPicker({ onLocationSelect }) {
   const { data: patternDataRaw } = useGetPatternRecognitionResultsQuery();
   const patternData = patternDataRaw?.data || [];
 
-  // Add debug logs
-  useEffect(() => {
-    console.log('Pattern Recognition Data:', {
-      raw: patternDataRaw,
-      processed: patternData,
-      firstItem: patternData[0],
-      length: patternData.length
-    });
-  }, [patternDataRaw, patternData]);
+  // // Add debug logs
+  // useEffect(() => {
+  //   console.log('Pattern Recognition Data:', {
+  //     raw: patternDataRaw,
+  //     processed: patternData,
+  //     firstItem: patternData[0],
+  //     length: patternData.length
+  //   });
+  // }, [patternDataRaw, patternData]);
 
   // Add toast timeout cleanup
   useEffect(() => {
@@ -74,7 +74,6 @@ export default function MapPicker({ onLocationSelect }) {
     fetch("/quezon_barangays_boundaries.geojson")
       .then((res) => res.json())
       .then((data) => {
-        console.log('Barangay data loaded successfully');
         setBarangayData(data);
         setIsDataLoaded(true);
       })
@@ -85,7 +84,6 @@ export default function MapPicker({ onLocationSelect }) {
 
   const findBarangay = (coords) => {
     if (!barangayData || !isDataLoaded) {
-      console.log('Barangay data not loaded yet');
       return null;
     }
 
@@ -110,7 +108,6 @@ export default function MapPicker({ onLocationSelect }) {
         
         if (turf.booleanPointInPolygon(pt, poly)) {
           foundBarangay = feature.properties.name;
-          console.log('Found barangay:', foundBarangay);
           break;
         }
       }
@@ -121,20 +118,16 @@ export default function MapPicker({ onLocationSelect }) {
   };
 
   const handleMapLoad = (map) => {
-    console.log('Map loaded');
     mapRef.current = map;
     
     map.addListener('click', (e) => {
-      console.log('Map clicked');
       const coords = {
         lat: e.latLng.lat(),
         lng: e.latLng.lng()
       };
-      console.log('Click coordinates:', coords);
       
       // Only proceed if data is loaded
       if (!isDataLoaded) {
-        console.log('Waiting for barangay data to load...');
         setToastMessage("Please wait for the map data to load");
         setToastType("warning");
         return;
@@ -154,7 +147,6 @@ export default function MapPicker({ onLocationSelect }) {
 
       // Find which barangay contains this point
       const barangayName = findBarangay(coords);
-      console.log('Found barangay:', barangayName);
       
       if (barangayName) {
         // Store the barangay name in state
@@ -165,7 +157,6 @@ export default function MapPicker({ onLocationSelect }) {
         
         // Format coordinates as string for NewPostModal
         const coordString = `${coords.lat.toFixed(6)}, ${coords.lng.toFixed(6)}`;
-        console.log('Sending to parent:', { coordString, barangayName });
         
         // Pass both coordinates and barangay name
         onLocationSelect(coordString, barangayName);
@@ -256,7 +247,6 @@ export default function MapPicker({ onLocationSelect }) {
         }
       },
       (error) => {
-        console.error("Error getting location:", error);
         setToastMessage("Unable to retrieve your location");
         setToastType("error");
       }
@@ -315,7 +305,6 @@ export default function MapPicker({ onLocationSelect }) {
       >
         {barangayData && barangayData.features.map((feature, index) => {
           if (!feature || !feature.properties || !feature.properties.name) {
-            console.log('Invalid feature:', feature);
             return null;
           }
 

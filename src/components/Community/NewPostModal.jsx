@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { DescriptionWithImages, RiskLevelLegends, SecondaryButton } from "../";
 import profile1 from "../../assets/profile1.png";
+// import anonProfile from "../../assets/anon-profile.png";
 import { MapPicker, CustomModalToast } from "../";
 import { showCustomToast, toastError } from "../../utils.jsx";
 import {
@@ -9,6 +10,7 @@ import {
 } from "../../api/dengueApi";
 import { useSelector } from "react-redux";
 import axios from "axios";
+import { IconUserCircle } from "@tabler/icons-react";
 
 // Define Quezon City boundaries
 const QC_BOUNDS = {
@@ -32,6 +34,7 @@ const NewPostModal = ({ onSubmit }) => {
   const modalRef = useRef(null);
   const token = useSelector((state) => state.auth.token);
   const [toast, setToast] = useState(null); // For storing the toast message
+  const [isAnonymous, setIsAnonymous] = useState(false);
 
   // RTK Query mutations
   const [createPost] = useCreatePostMutation();
@@ -68,13 +71,14 @@ const NewPostModal = ({ onSubmit }) => {
     if (!date) errors.date = "Date is required.";
     if (!time) errors.time = "Time is required.";
     if (!reportType) errors.reportType = "Report type is required.";
+    if (!description || description.trim() === "") errors.description = "Description is required.";
 
     setFormErrors(errors);
 
     if (Object.keys(errors).length > 0) {
       // Show first error in a toast (optional, improve UX)
       const firstError = Object.values(errors)[0];
-      showToast(firstError, "error"); // You can use toastWarn if that's your style
+      showToast(firstError, "error");
       return false;
     }
 
@@ -123,6 +127,7 @@ const NewPostModal = ({ onSubmit }) => {
       );
       formData.append("report_type", reportType);
       formData.append("description", description);
+      formData.append("isAnonymous", isAnonymous);
 
       // If images are added, append each image to the FormData
       if (images.length > 0) {
@@ -223,16 +228,40 @@ const NewPostModal = ({ onSubmit }) => {
         </form>
         <main className="p-3 pr-10">
           <p className="text-4xl font-bold text-center">New Post</p>
-          <hr className="text-gray-300 mt-4 mb-6" />
+          <hr className="text-gray-300 mt-4 mb-2" />
+
+          {/* --- ANONYMOUS SWITCH --- */}
+          <div className="flex items-center justify-between mb-4 bg-base-200 p-4 rounded-lg">
+            <span className="font-semibold text-[14px]">Participate anonymously</span>
+            <label className="inline-flex items-center cursor-pointer relative">
+              <input
+                type="checkbox"
+                checked={isAnonymous}
+                onChange={() => setIsAnonymous((prev) => !prev)}
+                className="sr-only peer"
+              />
+              <div className="w-11 h-6 bg-gray-200 rounded-full peer peer-checked:bg-primary transition-all"></div>
+              <div
+                className={`absolute w-5 h-5 bg-white rounded-full shadow left-0.5 top-0.5 transition-all
+                  ${isAnonymous ? 'translate-x-5' : ''}`}
+              ></div>
+            </label>
+          </div>
+          {/* --- END ANONYMOUS SWITCH --- */}
 
           <form className="flex flex-col" onSubmit={handleSubmit}>
             <section className="flex mb-4">
               <div>
-                <img
-                  src={profile1}
-                  className="h-15 w-15 rounded-full mr-4"
-                  alt="Profile"
-                />
+                {/* --- PROFILE/ANONYMOUS AVATAR ONLY --- */}
+                {isAnonymous ? (
+                  <IconUserCircle size={48} className="text-gray-400 mr-2" />
+                ) : (
+                  <img
+                    src={profile1}
+                    className="h-15 w-15 rounded-full mr-4"
+                    alt="Profile"
+                  />
+                )}
               </div>
 
               <div className="flex flex-col w-full gap-4">
@@ -252,8 +281,8 @@ const NewPostModal = ({ onSubmit }) => {
                   <div className="flex gap-4 mb-2">
                     <button
                       type="button"
-                      className={`btn btn-lg ${
-                        locationMethod === "map" ? "btn-primary" : "btn-ghost"
+                      className={`btn  btn-lg ${
+                        locationMethod === "map" ? "btn-primary text-white" : "btn-ghost"
                       }`}
                       onClick={() => setLocationMethod("map")}
                     >
@@ -263,7 +292,7 @@ const NewPostModal = ({ onSubmit }) => {
                       type="button"
                       className={`btn btn-lg ${
                         locationMethod === "manual"
-                          ? "btn-primary"
+                          ? "btn-primary text-white "
                           : "btn-ghost"
                       }`}
                       onClick={() => setLocationMethod("manual")}
@@ -368,7 +397,7 @@ const NewPostModal = ({ onSubmit }) => {
                           <button
                             type="button"
                             onClick={getCurrentLocation}
-                            className="btn btn-ghost text-lg"
+                            className="btn text-lg"
                           >
                             Use Current
                           </button>
@@ -423,7 +452,7 @@ const NewPostModal = ({ onSubmit }) => {
                   <button
                     type="button"
                     onClick={setNow}
-                    className="btn btn-ghost btn-lg self-start"
+                    className="btn btn-md btn-outline cursor-pointer mt-2 btn-lg self-center"
                   >
                     Use Current Date & Time
                   </button>
@@ -461,6 +490,11 @@ const NewPostModal = ({ onSubmit }) => {
               description={description}
               onDescriptionChange={setDescription}
             />
+            {formErrors.description && (
+              <div className="w-full pl-20">
+                <span className="text-error text-sm">{formErrors.description}</span>
+              </div>
+            )}
 
             <div className="flex justify-end mt-6">
               <SecondaryButton

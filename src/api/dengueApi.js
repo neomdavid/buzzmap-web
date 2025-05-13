@@ -178,13 +178,43 @@ export const dengueApi = createApi({
 
     // Posts/Reports Endpoints
     getPosts: builder.query({
-      query: ({ page = 1, limit = 10, filter = "latest" } = {}) => ({
-        url: `reports?page=${page}&limit=${limit}&sort=${
-          filter === "latest" ? "-createdAt" : "-likesCount"
-        }`,
-      }),
-      // Add cache lifetime
-      keepUnusedDataFor: 300, // 5 minutes
+      query: ({ 
+        search,
+        barangay,
+        report_type,
+        status,
+        startDate,
+        endDate,
+        sortBy,
+        sortOrder,
+        username,
+        description
+      } = {}) => {
+        let url = 'reports';
+        const params = new URLSearchParams();
+
+        // Add all search parameters if they exist
+        if (search) params.append('search', search);
+        if (barangay) params.append('barangay', barangay);
+        if (report_type) params.append('report_type', report_type);
+        if (status) params.append('status', status);
+        if (startDate) params.append('startDate', startDate);
+        if (endDate) params.append('endDate', endDate);
+        if (sortBy) params.append('sortBy', sortBy);
+        if (sortOrder) params.append('sortOrder', sortOrder);
+        if (username) params.append('username', username);
+        if (description) params.append('description', description);
+
+        // Add the query string if we have any parameters
+        const queryString = params.toString();
+        if (queryString) {
+          url += `?${queryString}`;
+        }
+
+        // Log the final URL
+        console.log('API Request URL:', url);
+        return url;
+      },
       providesTags: (result) => 
         result
           ? [

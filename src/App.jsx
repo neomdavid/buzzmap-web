@@ -3,6 +3,8 @@ import {
   createBrowserRouter,
   Navigate,
   RouterProvider,
+  Routes,
+  Route,
 } from "react-router-dom";
 import {
   About,
@@ -35,6 +37,7 @@ import {
 } from "./pages/superadmin";
 import { toastError } from "./utils.jsx";
 import ErrorPage from "./pages/ErrorPage";
+import SearchResults from './pages/user/SearchResults';
 
 // Helper functions
 const getUserData = () => {
@@ -145,6 +148,12 @@ function App() {
         { path: "/superadmin/users", element: <SprUsers /> },
         { path: "/superadmin/admins", element: <SprAdmins /> },
       ],
+    },
+
+    // Search results route
+    {
+      path: "/search",
+      element: <SearchResults />,
     },
 
     // Fallback route
