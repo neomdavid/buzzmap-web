@@ -425,9 +425,8 @@ const DengueMap = ({
             onCloseClick={() => setSelectedBreedingSitesBarangay(null)}
           >
             <div
-              className="rounded-xl shadow-lg bg-white px-5 py-4 min-w-[180px] border-2"
+              className="rounded-xl shadow-lg bg-white px-5 py-4 min-w-[180px] border-2 text-center"
               style={{
-                textAlign: "center",
                 maxWidth: 240,
                 borderColor:
                   RISK_LEVEL_COLORS[
@@ -485,7 +484,7 @@ const DengueMap = ({
               />
             ) : (
               <div
-                className="bg-white p-4 rounded-lg"
+                className="bg-white p-4 rounded-lg text-center"
                 style={{
                   border: `3px solid ${
                     PATTERN_COLORS[
@@ -690,7 +689,7 @@ const DengueMap = ({
             onCloseClick={() => setSelectedBreedingSite(null)}
           >
             <div
-              className="bg-white p-4 rounded-lg border-2 w-[300px]"
+              className="bg-white p-4 rounded-lg border-2 w-[300px] text-center"
               style={{
                 borderColor: BREEDING_SITE_TYPE_COLORS[selectedBreedingSite.report_type] || "#2563eb",
               }}
@@ -774,7 +773,7 @@ const DengueMap = ({
                 lng: selectedReport.specific_location.coordinates[0]
               }}
             >
-              <div className="bg-white p-4 rounded-lg border-2 w-[300px]"
+              <div className="bg-white p-4 rounded-lg border-2 w-[300px] text-center"
                 style={{
                   borderColor: selectedReport.report_type === "Breeding Site" ? "#2563eb" :
                               selectedReport.report_type === "Standing Water" ? "#dd6b20" :

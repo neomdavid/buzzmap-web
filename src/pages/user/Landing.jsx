@@ -22,10 +22,11 @@ import {
 import ScrambledText from "../../components/Landing/ScrambledText";
 import AltPreventionCard from "../../components/Landing/AltPreventionCard";
 import { Link } from "react-router-dom";
-import DengueMap from "../../components/DengueMap";
 import StreetViewMap from "../../components/StreetViewMap";
 import { useState, useEffect } from "react";
 import { useGoogleMaps } from "../../components/GoogleMapsProvider.jsx";
+import Mapping from "./Mapping";
+import RiskMap from "../../components/RiskMap";
 
 const Landing = () => {
   return (
@@ -76,13 +77,7 @@ const Landing = () => {
 
       <section className="flex flex-col lg:flex-row  justify-center max-w-[95vw] m-auto px-6 sm:px-6 gap-x-4">
         <div className="rounded-xl overflow-hidden h-[400px] lg:h-[500px] mb-6 lg:mb-0 lg:flex-13 flex items-center justify-center bg-gray-100">
-          <DengueMap
-            style={{
-              width: "100%",
-              height: "100%",
-              borderRadius: "12px",
-            }}
-          />
+          <RiskMap height="400px" />
         </div>
         <div className="flex flex-col flex-10  mx-6 items-center text-center lg:items-end lg:text-right">
           <Heading
@@ -97,7 +92,7 @@ const Landing = () => {
           </p>
           <br />
           <p className="text-primary text-md mb-6">
-            BuzzMap’s dengue mapping feature uses real-time crowdsourced data to
+            BuzzMap's dengue mapping feature uses real-time crowdsourced data to
             track and visualize dengue outbreaks in your area. Users report
             dengue cases and mosquito breeding sites, which are then plotted on
             an interactive map. This helps the community stay informed, identify
@@ -107,6 +102,7 @@ const Landing = () => {
             text="Explore the Dengue Map"
             maxWidth={"max-w-[230px]"}
             Icon={ArrowRight}
+            to="/mapping"
           />
           <div className="flex flex-col  sm:flex-row justify-around gap-4 w-full mt-8">
             <GoalCard
@@ -210,7 +206,7 @@ const Landing = () => {
           />
         </p>
         <p>
-          safe<span className="font-bold italic">—let’s fight</span>
+          safe<span className="font-bold italic">—let's fight</span>
         </p>
         <p className="font-bold italic">dengue together!</p>
       </article>

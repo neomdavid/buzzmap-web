@@ -162,15 +162,6 @@ const NewPostModal = ({ onSubmit }) => {
     }
   };
 
-  // Utility to convert File to base64 string
-  const toBase64 = (file) =>
-    new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.readAsDataURL(file); // This gives you a base64-encoded data URI
-      reader.onload = () => resolve(reader.result);
-      reader.onerror = (error) => reject(error);
-    });
-
   const getCurrentLocation = () => {
     if (!navigator.geolocation) {
       alert("Geolocation is not supported by your browser");
@@ -205,14 +196,17 @@ const NewPostModal = ({ onSubmit }) => {
   };
 
   const handleLocationSelect = (coords, barangayName) => {
-    if (!isInQuezonCity(coords.lat, coords.lng)) {
-      setLocationError("Please select a location within Quezon City");
-      return;
-    }
-
+    console.log('NewPostModal received:', { coords, barangayName });
+    
     setLocationError("");
-    setCoordinates(`${coords.lat}, ${coords.lng}`);
-    setBarangay(barangayName || "");
+    setCoordinates(coords);
+    setBarangay(barangayName || ""); // Always set barangay, even if empty
+    
+    // Debug log to verify state updates
+    console.log('Updated state:', {
+      coordinates: coords,
+      barangay: barangayName || ""
+    });
   };
 
   return (
@@ -387,7 +381,6 @@ const NewPostModal = ({ onSubmit }) => {
                   )}
                 </div>
 
-                {/* Rest of your form remains the same */}
                 {/* 🕑 Date & Time Section */}
                 <div className="flex flex-col gap-2">
                   <div className="flex items-center gap-2">
