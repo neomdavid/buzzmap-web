@@ -96,8 +96,55 @@ const RiskMap = ({ height = "400px" }) => {
         height,
       }}
       center={currentPosition}
-      zoom={13}
+      zoom={12}
       onLoad={(map) => (mapRef.current = map)}
+      options={{
+        mapTypeControl: false,
+        streetViewControl: false,
+        fullscreenControl: false,
+        zoomControl: true,
+        scaleControl: false,
+        rotateControl: false,
+        clickableIcons: false,
+        gestureHandling: 'greedy',
+        styles: [
+          {
+            featureType: "poi",
+            elementType: "labels",
+            stylers: [{ visibility: "off" }]
+          },
+          {
+            featureType: "poi.medical",
+            elementType: "all",
+            stylers: [{ visibility: "on" }]
+          },
+          {
+            featureType: "poi.health",
+            elementType: "all",
+            stylers: [{ visibility: "on" }]
+          },
+          {
+            featureType: "poi.hospital",
+            elementType: "all",
+            stylers: [{ visibility: "on" }]
+          },
+          {
+            featureType: "transit",
+            elementType: "all",
+            stylers: [{ visibility: "off" }]
+          },
+          {
+            featureType: "administrative.locality",
+            elementType: "labels",
+            stylers: [{ visibility: "on" }]
+          },
+          {
+            featureType: "administrative.neighborhood",
+            elementType: "labels",
+            stylers: [{ visibility: "on" }]
+          }
+        ]
+      }}
     >
       <Polygon
         paths={qcPolygonPaths}

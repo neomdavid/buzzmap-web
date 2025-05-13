@@ -48,7 +48,7 @@ const Login = () => {
           navigate("/superadmin/dashboard");
           break;
         default:
-          navigate("/mapping");
+          navigate("/");
       }
     } catch (err) {
       if (err?.status === 500) {
@@ -76,17 +76,17 @@ const Login = () => {
       />
 
       <section
-        className="w-[87vw] h-[80vh] max-w-220 mt-25 rounded-2xl shadow-md text-primary  bg-white py-12 px-[7%] lg:px-25 flex flex-col justify-center items-center text-center text-xl lg:text-2xl
-      lg:shadow-none lg:max-w-none lg:m-0 lg:rounded-none lg:absolute lg:right-0 lg:top-0  lg:h-[100vh] lg:w-[60vw] xl:w-250  "
+        className="w-[87vw] h-[80vh] max-w-220 mt-25 rounded-2xl shadow-md text-primary bg-white py-8 px-[7%] lg:px-25 flex flex-col justify-center items-center text-center text-xl lg:text-2xl
+        lg:shadow-none lg:max-w-none lg:m-0 lg:rounded-none lg:absolute lg:right-0 lg:top-0 lg:h-[100vh] lg:w-[60vw] xl:w-250 overflow-y-auto"
       >
-        <h1 className="mb-4 text-7xl lg:text-8xl ">Welcome back!</h1>
-        <p className="mb-10">
+        <h1 className="mb-2 text-7xl lg:text-8xl">Welcome back!</h1>
+        <p className="mb-4">
           <span className="font-bold">Login</span> to stay informed and help
           prevent dengue outbreaks in your community.
         </p>
         <form
           onSubmit={handleSubmit}
-          className="flex flex-col items-center gap-y-6 lg:gap-y-8 w-[85%]"
+          className="flex flex-col items-center gap-y-3 lg:gap-y-4 w-[85%]"
         >
           {/* Dropdown Input */}
           <div className="w-full text-left relative hover:cursor-pointer">
@@ -168,7 +168,7 @@ const Login = () => {
             Google
           </button>
         </form>
-        <p className="mt-6 text-md lg:text-[14px]">
+        <p className="mt-4 text-md lg:text-[14px]">
           Don't have an account?{" "}
           <Link
             to="/signup"

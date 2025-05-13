@@ -1,10 +1,21 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import patientImg from "../../assets/dengue-patient-1.jpg";
 
 const NewsGrid = ({ articles = [] }) => {
   const navigate = useNavigate();
 
+  // Add logging at the start of the component
+  console.log('NewsGrid component rendered');
+  console.log('Articles received:', articles);
+
+  useEffect(() => {
+    console.log('NewsGrid useEffect triggered');
+    console.log('Articles in useEffect:', articles);
+  }, [articles]);
+
   if (!Array.isArray(articles) || articles.length === 0) {
+    console.log('Articles is not an array or empty:', articles);
     return <p>No articles available</p>;
   }
 
@@ -88,33 +99,48 @@ const NewsGrid = ({ articles = [] }) => {
 
       {/* Right side - smaller articles */}
       <div className="flex gap-10 xl:col-span-2 xl:flex-col">
-        {remainingArticles.map((article, index) => (
-          <div
-            key={index}
-            className="w-full sm:col-span-6 gap-3 flex flex-col rounded-xl overflow-hidden cursor-pointer hover:shadow-lg transition-shadow duration-300"
-            onClick={() => handleArticleClick(article._id)}
-            role="button"
-            tabIndex={0}
-            onKeyDown={(e) =>
-              e.key === "Enter" && handleArticleClick(article._id)
-            }
-          >
-            <img
-              className="w-full h-60 object-cover rounded-xl"
-              src={article.images?.[0]?.replace('h/', '')}
-              alt={article.title}
-            />
-            <div className="flex flex-col gap-3 p-3">
-              <p className="text-left font-semibold">{article.date}</p>
-              <p className="text-left font-semibold text-3xl truncate max-w-full">
-                {truncateText(article.title, 80)}
-              </p>
-              <p className="text-left text-lg truncate max-w-full">
-                {truncateText(article.description, 120)}
-              </p>
+        {remainingArticles.map((article, index) => {
+          console.log('Processing article:', article);
+          
+          if (!article) {
+            console.log('Null article at index:', index);
+            return null;
+          }
+          
+          const imageUrl = article.images?.[0]?.replace('h/', '') || patientImg;
+          
+          return (
+            <div
+              key={index}
+              className="w-full sm:col-span-6 gap-3 flex flex-col rounded-xl overflow-hidden cursor-pointer hover:shadow-lg transition-shadow duration-300"
+              onClick={() => handleArticleClick(article._id)}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) =>
+                e.key === "Enter" && handleArticleClick(article._id)
+              }
+            >
+              <img
+                className="w-full h-60 object-cover rounded-xl"
+                src={imageUrl}
+                alt={article.title}
+                onError={(e) => {
+                  console.log('Image failed to load:', imageUrl);
+                  e.target.src = patientImg;
+                }}
+              />
+              <div className="flex flex-col gap-3 p-3">
+                <p className="text-left font-semibold">{article.date}</p>
+                <p className="text-left font-semibold text-3xl truncate max-w-full">
+                  {truncateText(article.title, 80)}
+                </p>
+                <p className="text-left text-lg truncate max-w-full">
+                  {truncateText(article.description, 120)}
+                </p>
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

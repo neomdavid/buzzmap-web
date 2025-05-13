@@ -39,21 +39,21 @@ const SignUp = () => {
       </div>
       <img
         src={womanLowHand}
-        className="absolute hidden right-[59vw] bottom-[-36px] w-203 lg:block xl:bottom-[-44px] xl:w-250 xl:right-249 2xl:w-260 "
+        className="absolute hidden right-[59vw] bottom-[-36px] w-203 lg:block xl:bottom-[-44px] xl:w-250 xl:right-249 2xl:w-260"
       />
 
       <section
-        className="w-[87vw] max-w-220 mt-25 rounded-2xl shadow-md  text-white  bg-primary py-14 px-[7%] lg:px-25 flex flex-col justify-center items-center text-center text-xl lg:text-xl
-      lg:max-w-none lg:m-0 lg:rounded-none lg:absolute lg:right-0 lg:top-0  lg:h-[100vh] lg:w-[60vw] xl:w-250  "
+        className="w-[87vw] max-w-220 mt-25 rounded-2xl shadow-md text-white bg-primary py-8 px-[7%] lg:px-25 flex flex-col justify-center items-center text-center text-xl lg:text-xl
+        lg:max-w-none lg:m-0 lg:rounded-none lg:absolute lg:right-0 lg:top-0 lg:h-[100vh] lg:w-[60vw] xl:w-250 overflow-y-auto"
       >
-        <h1 className="mb-4 text-7xl lg:text-8xl ">Join buzzmap!</h1>
-        <p className="mb-6">
-          <span className="font-bold ">Sign Up</span> to join us today and be
+        <h1 className="mb-2 text-7xl lg:text-8xl">Join buzzmap!</h1>
+        <p className="mb-4">
+          <span className="font-bold">Sign Up</span> to join us today and be
           part of the movement to track, report, and prevent dengue outbreaks.
         </p>
         <form
           onSubmit={handleSubmit}
-          className="flex flex-col items-center gap-y-3 lg:gap-y-8  w-[90%]"
+          className="flex flex-col items-center gap-y-3 lg:gap-y-4 w-[90%]"
         >
           <div className="flex flex-row  gap-x-4 w-full">
             <CustomFormInput
@@ -126,7 +126,7 @@ const SignUp = () => {
             Google
           </button>
         </form>
-        <p className="mt-8 text-md lg:text-[14px]">
+        <p className="mt-4 text-md lg:text-[14px]">
           Already have an account?{" "}
           <Link
             to="/login"

@@ -452,6 +452,12 @@ export const dengueApi = createApi({
       }),
       providesTags: ['Analytics']
     }),
+
+    // Get a single admin post by ID
+    getSingleAdminPost: builder.query({
+      query: (id) => `adminPosts/${id}`,
+      providesTags: (result, error, id) => [{ type: "Post", id }],
+    }),
   }),
 });
 
@@ -517,4 +523,7 @@ export const {
 
   // Add this to your exported hooks
   useGetBarangayWeeklyTrendsQuery,
+
+  // Add this to the exported hooks
+  useGetSingleAdminPostQuery,
 } = dengueApi;

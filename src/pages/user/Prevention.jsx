@@ -20,11 +20,33 @@ import { useGetAllAdminPostsQuery } from "../../api/dengueApi";
 import { useMemo } from "react";
 import NewsGrid from "../../components/Prevention/NewsGrid";
 
+// Add this temporary test component
+const TestNewsGrid = ({ articles = [] }) => {
+  console.log('TestNewsGrid rendered with articles:', articles);
+  
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+      {articles.map((article, index) => (
+        <div key={index} className="flex flex-col gap-4">
+          <img 
+            src={article.image}
+            alt={article.title}
+            className="w-full h-48 object-cover rounded-lg"
+          />
+          <div className="flex flex-col gap-2">
+            <p className="text-sm text-gray-500">{article.date}</p>
+            <h3 className="text-xl font-bold">{article.title}</h3>
+            <p className="text-gray-600">{article.description}</p>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+};
+
 const Prevention = () => {
   // Fetch admin posts
   const { data: adminPosts, isLoading } = useGetAllAdminPostsQuery();
-
-  // Add console.log to debug
 
   // Filter and format news articles from admin posts
   const newsArticles = useMemo(() => {
@@ -46,7 +68,8 @@ const Prevention = () => {
       if (!post) return null;
       
       const formatted = {
-        image: post.images?.[0] || patientImg,
+        _id: post._id,
+        images: post.images || [],
         date: post.publishDate ? new Date(post.publishDate).toLocaleDateString() : 'No date',
         title: post.title || 'Untitled',
         description: post.content || 'No content available',
@@ -291,7 +314,10 @@ const Prevention = () => {
             <span className="loading loading-spinner loading-lg"></span>
           </div>
         ) : newsArticles.length > 0 ? (
-          <NewsGrid articles={newsArticles} />
+          <>
+            {console.log('Rendering NewsGrid with articles:', newsArticles)}
+            <NewsGrid articles={newsArticles} />
+          </>
         ) : (
           <p className="text-center text-gray-500">No news articles available</p>
         )}
