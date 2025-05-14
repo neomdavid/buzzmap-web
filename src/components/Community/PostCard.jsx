@@ -42,7 +42,17 @@ const PostCard = ({
         </p>
         <p className="font-bold">
           📝 Description: <br />
-          <span className="font-normal block ml-1">{description}</span>
+          <span
+            className="font-normal block ml-1 max-h-24 overflow-hidden text-ellipsis break-words"
+            style={{
+              display: '-webkit-box',
+              WebkitLineClamp: 3,
+              WebkitBoxOrient: 'vertical',
+              overflow: 'hidden',
+            }}
+          >
+            {description}
+          </span>
         </p>
       </div>
 

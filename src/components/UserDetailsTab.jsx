@@ -6,11 +6,11 @@ const UserDetailsTab = ({ profileImage, username, timestamp }) => {
       {/* Left Side: Profile Image + User Info */}
       <div className="flex gap-x-4 items-center">
         {typeof profileImage === "string" ? (
-          <img
-            src={profileImage}
-            className="h-12 w-12 rounded-full"
-            alt="Profile"
-          />
+        <img
+          src={profileImage}
+          className="h-12 w-12 rounded-full"
+          alt="Profile"
+        />
         ) : (
           profileImage
         )}

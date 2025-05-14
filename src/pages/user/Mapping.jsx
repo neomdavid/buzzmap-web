@@ -5,6 +5,7 @@ import {
   Marker,
   Rectangle,
   InfoWindow,
+  MarkerClusterer,
 } from "@react-google-maps/api";
 import { useGoogleMaps } from "../../components/GoogleMapsProvider";
 import * as turf from "@turf/turf";
@@ -13,6 +14,7 @@ import LoadingSpinner from "../../components/ui/LoadingSpinner";
 import ErrorMessage from "../../components/ui/ErrorMessage";
 import { useGetPatternRecognitionResultsQuery, useGetBarangaysQuery, useGetPostsQuery } from "../../api/dengueApi";
 import { MapPin } from "phosphor-react";
+import { useNavigate } from "react-router-dom";
 
 const containerStyle = {
   width: "100%",
@@ -53,6 +55,7 @@ const Mapping = () => {
   const [breedingSites, setBreedingSites] = useState([]);
   const [selectedBreedingSite, setSelectedBreedingSite] = useState(null);
   const [selectedBarangayId, setSelectedBarangayId] = useState(null);
+  const navigate = useNavigate();
 
   // Get pattern recognition data
   const { data: patternData } = useGetPatternRecognitionResultsQuery();
@@ -507,35 +510,41 @@ const Mapping = () => {
             });
           })}
 
-          {/* Show breeding site markers when enabled */}
-          {showBreedingSites &&
-            breedingSites.map((site, index) => (
-              <Marker
-                key={index}
-                position={{
-                  lat: site.specific_location.coordinates[1],
-                  lng: site.specific_location.coordinates[0],
-                }}
-                icon={{
-                  path: window.google.maps.SymbolPath.CIRCLE,
-                  scale: 8,
-                  fillColor: "#2563eb",
-                  fillOpacity: 1,
-                  strokeWeight: 2,
-                  strokeColor: "#fff",
-                }}
-                onClick={() => {
-                  setSelectedBreedingSite(site);
-                  if (mapRef.current) {
-                    mapRef.current.panTo({
+          {/* Show breeding site markers when enabled, now with clustering */}
+          {showBreedingSites && (
+            <MarkerClusterer options={{ gridSize: 30 }}>
+              {(clusterer) =>
+                breedingSites.map((site, index) => (
+                  <Marker
+                    key={index}
+                    position={{
                       lat: site.specific_location.coordinates[1],
                       lng: site.specific_location.coordinates[0],
-                    });
-                    mapRef.current.setZoom(17);
-                  }
-                }}
-              />
-            ))}
+                    }}
+                    clusterer={clusterer}
+                    icon={{
+                      path: window.google.maps.SymbolPath.CIRCLE,
+                      scale: 8,
+                      fillColor: "#2563eb",
+                      fillOpacity: 1,
+                      strokeWeight: 2,
+                      strokeColor: "#fff",
+                    }}
+                    onClick={() => {
+                      setSelectedBreedingSite(site);
+                      if (mapRef.current) {
+                        mapRef.current.panTo({
+                          lat: site.specific_location.coordinates[1],
+                          lng: site.specific_location.coordinates[0],
+                        });
+                        mapRef.current.setZoom(17);
+                      }
+                    }}
+                  />
+                ))
+              }
+            </MarkerClusterer>
+          )}
 
           {selectedBarangayInfo && (
             <InfoWindow
@@ -732,6 +741,16 @@ const Mapping = () => {
                     </div>
                   )}
                 </div>
+                <button
+                  className="mt-4 px-4 py-2 bg-primary text-white rounded shadow hover:bg-primary/80"
+                  onClick={() => {
+                    navigate(`/mapping/${selectedBreedingSite._id}`, {
+                      state: { breedingSite: selectedBreedingSite }
+                    });
+                  }}
+                >
+                  View Details
+                </button>
               </div>
             </InfoWindow>
           )}

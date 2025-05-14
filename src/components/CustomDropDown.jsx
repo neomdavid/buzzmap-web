@@ -33,7 +33,7 @@ const CustomDropDown = ({
 
   return fillColor === "dark" ? (
     <div
-      className={`w-full max-w-sm relative text-white z-1000000 ${className}`}
+      className={`w-full max-w-sm relative text-white z-10 ${className}`}
     >
       <div className="relative">
         <input
@@ -44,7 +44,7 @@ const CustomDropDown = ({
           onChange={handleInputChange}
           onFocus={() => setShowDropdown(true)}
         />
-        <IconChevronDown className="absolute right-4 top-1/2 transform -translate-y-1/2 w-6 h-6 text-white pointer-events-none hover:cursor-pointer z-100000000" />
+        <IconChevronDown className="absolute right-4 top-1/2 transform -translate-y-1/2 w-6 h-6 text-white pointer-events-none hover:cursor-pointer z-10" />
       </div>
 
       {showDropdown && filteredOptions.length > 0 && (
@@ -63,7 +63,7 @@ const CustomDropDown = ({
     </div>
   ) : (
     <div
-      className={`w-full max-w-sm relative text-white z-1000000 ${className}`}
+      className={`w-full max-w-sm relative text-white z-10 ${className}`}
     >
       <div className="relative">
         <input
@@ -74,7 +74,7 @@ const CustomDropDown = ({
           onChange={handleInputChange}
           onFocus={() => setShowDropdown(true)}
         />
-        <IconSearch className="absolute right-4 top-1/2 transform -translate-y-1/2 w-6 h-6 text-primary pointer-events-none hover:cursor-pointer z-100000000" />
+        <IconSearch className="absolute right-4 top-1/2 transform -translate-y-1/2 w-6 h-6 text-primary pointer-events-none hover:cursor-pointer z-10" />
       </div>
 
       {showDropdown && filteredOptions.length > 0 && (

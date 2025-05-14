@@ -59,9 +59,9 @@ const Landing = () => {
         </p>
       </div>
       <div className="flex flex-col gap-4 sm:flex-row w-[80%] m-auto mt-2  gap-x-3 justify-center items-center">
-        <SecondaryButton text={"Check Dengue Hotspots"} className="w-md " />
-        <SecondaryButton text={"Report a Dengue Case"} className="w-md " />
-        <SecondaryButton text={"Get Prevention Tips"} className="w-md " />
+        <SecondaryButton text={"Check Dengue Hotspots"} to="/mapping" className="w-md " />
+        <SecondaryButton text={"Report a Breeding Site"} to="/community" className="w-md " />
+        <SecondaryButton text={"Get Prevention Tips"} to="/prevention" className="w-md " />
       </div>
 
       <img

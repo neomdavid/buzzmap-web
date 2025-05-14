@@ -2,6 +2,7 @@ import { ArrowLeft } from "phosphor-react";
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from 'react-router-dom';
 import { useGetSingleAdminPostQuery } from '../../api/dengueApi';
+import { PostContentDisplay } from "../../components/Admin/FormPublicPost";
 
 const SingleArticle = () => {
   const { id } = useParams();
@@ -84,6 +85,10 @@ const SingleArticle = () => {
     );
   }
 
+  // Debug: Log images and currentSlide
+  console.log("article.images:", article?.images);
+  console.log("currentSlide:", currentSlide);
+
   return (
     <main className="mt-[-50px] pt-10 flex flex-col text-primary">
       <div className="flex p-6 items-center gap-3 pt-8 justify-center w-full bg-primary text-white">
@@ -105,7 +110,7 @@ const SingleArticle = () => {
 
       {/* Carousel */}
       {article.images && article.images.length > 0 && (
-        <div className="w-[80%] mx-auto my-10 rounded-lg overflow-hidden max-w-5xl">
+        <div className="w-[60%] mx-auto my-10 rounded-lg overflow-hidden max-w-3xl">
           <div className="relative group">
             {/* Current Slide */}
             <div className={`w-full ${aspectRatioClasses[aspectRatio]} relative`}>
@@ -150,10 +155,7 @@ const SingleArticle = () => {
       {/* Article Content */}
       <div className="flex justify-center text-center p-12 mt-[-30px] w-full">
         <div className="max-w-7xl">
-          <div
-            className="text-md"
-            dangerouslySetInnerHTML={{ __html: article.content }}
-          />
+          <PostContentDisplay content={article.content} />
         </div>
       </div>
     </main>

@@ -239,4 +239,23 @@ const FormPublicPost = () => {
   );
 };
 
+// Helper component to render post content with preserved newlines and blue hashtags
+export const PostContentDisplay = ({ content }) => (
+  <div style={{ whiteSpace: "pre-line" }}>
+    {content.split('\n').map((line, idx) =>
+      line.trim().startsWith('#') ? (
+        <span key={idx} style={{ color: 'blue' }}>
+          {line}
+          {'\n'}
+        </span>
+      ) : (
+        <span key={idx}>
+          {line}
+          {'\n'}
+        </span>
+      )
+    )}
+  </div>
+);
+
 export default FormPublicPost;

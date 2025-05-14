@@ -6,6 +6,7 @@ const RecentReportCard = ({
   username,
   timestamp,
   date,
+  time,
   reportType,
   description,
 }) => {
@@ -18,8 +19,12 @@ const RecentReportCard = ({
       />
       <div className="flex flex-col relative gap-y-1 text-[11.5px] h-[90px] overflow-hidden text-ellipsis pr-4">
         <p className="truncate">
-          <span className="font-semibold">🕒 Date & Time: </span>
+          <span className="font-semibold">🕒 Date: </span>
           {date}
+        </p>
+        <p className="truncate">
+          <span className="font-semibold">🕒 Time: </span>
+          {time}
         </p>
         <p className="truncate">
           <span className="font-semibold">⚠️ Report Type: </span>

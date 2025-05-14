@@ -399,6 +399,18 @@ export const dengueApi = createApi({
     getBarangays: builder.query({
       query: () => "barangays/get-all-barangays",
       providesTags: ["Barangay"],
+      transformResponse: (response) => {
+        // If response is an array, sort it alphabetically by name/displayName
+        if (Array.isArray(response)) {
+          return response.sort((a, b) => {
+            // Use displayName if available, otherwise fallback to name
+            const nameA = (a.displayName || a.name || "").toLowerCase();
+            const nameB = (b.displayName || b.name || "").toLowerCase();
+            return nameA.localeCompare(nameB);
+          });
+        }
+        return response;
+      },
     }),
 
     // Send dengue alert
@@ -488,6 +500,14 @@ export const dengueApi = createApi({
       query: (id) => `adminPosts/${id}`,
       providesTags: (result, error, id) => [{ type: "Post", id }],
     }),
+
+    getNearbyReports: builder.mutation({
+      query: (body) => ({
+        url: "reports/nearby",
+        method: "POST",
+        body,
+      }),
+    }),
   }),
 });
 
@@ -556,4 +576,6 @@ export const {
 
   // Add this to the exported hooks
   useGetSingleAdminPostQuery,
+
+  useGetNearbyReportsMutation,
 } = dengueApi;

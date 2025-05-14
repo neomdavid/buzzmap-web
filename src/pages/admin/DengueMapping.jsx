@@ -311,7 +311,7 @@ const DengueMapping = () => {
           <p className="text-[30px] text-base-content font-bold">Reports nearby</p>
           {nearbyReports.length > 0 ? (
             nearbyReports.map((report, index) => (
-              <div key={index} className="flex flex-col items-start bg-white rounded-2xl p-4 text-black gap-2">
+              <div key={index} className="flex flex-col items-start bg-white rounded-2xl p-4 text-black gap-2 w-full">
                 <p className={`${
                   report.report_type === "Breeding Site" ? "bg-info" :
                   report.report_type === "Standing Water" ? "bg-warning" :
@@ -330,15 +330,27 @@ const DengueMapping = () => {
                     day: 'numeric'
                   })}
                 </p>
-                <div className="flex gap-2">
-                  <div className={`${
+                <div className="flex gap-2 items-start w-full">
+                  <div className={`shrink-0 mt-1 ${
                     report.report_type === "Breeding Site" ? "text-info" :
                     report.report_type === "Standing Water" ? "text-warning" :
                     "text-error"
                   }`}>
                     <Circle size={16} weight="fill" />
                   </div>
-                  <p>{report.description}</p>
+                  <p
+                    className="flex-1 min-w-0 overflow-hidden break-words"
+                    style={{
+                      display: '-webkit-box',
+                      WebkitLineClamp: 2,
+                      WebkitBoxOrient: 'vertical',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      wordBreak: 'break-word',
+                    }}
+                  >
+                    {report.description}
+                  </p>
                 </div>
                 <div className="flex justify-end w-full gap-2">
                   <button 

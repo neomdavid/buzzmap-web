@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, forwardRef } from "react";
 import { DescriptionWithImages, RiskLevelLegends, SecondaryButton } from "../";
 import profile1 from "../../assets/profile1.png";
 // import anonProfile from "../../assets/anon-profile.png";
@@ -20,7 +20,7 @@ const QC_BOUNDS = {
   east: 121.2,
 };
 
-const NewPostModal = ({ onSubmit }) => {
+const NewPostModal = forwardRef(({ onSubmit }, ref) => {
   const [barangay, setBarangay] = useState("");
   const [coordinates, setCoordinates] = useState("");
   const [date, setDate] = useState("");
@@ -31,7 +31,6 @@ const NewPostModal = ({ onSubmit }) => {
   const [locationError, setLocationError] = useState("");
   const [locationMethod, setLocationMethod] = useState("map"); // 'map' or 'manual'
   const [images, setImages] = useState([]); // State for images
-  const modalRef = useRef(null);
   const token = useSelector((state) => state.auth.token);
   const [toast, setToast] = useState(null); // For storing the toast message
   const [isAnonymous, setIsAnonymous] = useState(false);
@@ -144,7 +143,6 @@ const NewPostModal = ({ onSubmit }) => {
 
       console.log("✅ Post uploaded successfully", response);
       showCustomToast("Post reported to surveillance", "success");
-      modalRef.current?.close();
 
       // Reset form
       setBarangay("");
@@ -157,8 +155,10 @@ const NewPostModal = ({ onSubmit }) => {
       console.log("🧹 Form reset after successful submission");
 
       if (onSubmit) {
-        console.log("📣 Calling onSubmit callback");
         onSubmit();
+        // Close the modal dialog (for Community page)
+        const dlg = document.getElementById("my_modal_4");
+        if (dlg) dlg.close();
       }
     } catch (error) {
       // If backend error occurs, display the custom toast with error message
@@ -202,7 +202,7 @@ const NewPostModal = ({ onSubmit }) => {
 
   const handleLocationSelect = (coords, barangayName) => {
     console.log('NewPostModal received:', { coords, barangayName });
-    
+
     setLocationError("");
     setCoordinates(coords);
     setBarangay(barangayName || ""); // Always set barangay, even if empty
@@ -217,7 +217,7 @@ const NewPostModal = ({ onSubmit }) => {
   return (
     <dialog
       id="my_modal_4"
-      ref={modalRef}
+      ref={ref}
       className="modal text-xl text-primary"
     >
       <div className="modal-box w-10/12 max-w-5xl">
@@ -256,11 +256,11 @@ const NewPostModal = ({ onSubmit }) => {
                 {isAnonymous ? (
                   <IconUserCircle size={48} className="text-gray-400 mr-2" />
                 ) : (
-                  <img
-                    src={profile1}
-                    className="h-15 w-15 rounded-full mr-4"
-                    alt="Profile"
-                  />
+                <img
+                  src={profile1}
+                  className="h-15 w-15 rounded-full mr-4"
+                  alt="Profile"
+                />
                 )}
               </div>
 
@@ -517,6 +517,6 @@ const NewPostModal = ({ onSubmit }) => {
       )}
     </dialog>
   );
-};
+});
 
 export default NewPostModal;

@@ -196,7 +196,7 @@ const Community = () => {
   if (isError) return <div>Error loading posts</div>;
   return (
     <main className="pl-6 text-primary text-lg flex gap-x-6 max-w-[1350px] m-auto relative mt-12">
-      <article className="flex-8 shadow-xl p-12 rounded-lg w-[100vw] lg:w-[65vw]">
+      <article className="flex-8 shadow-xl p-12 rounded-lg w-[90vw] lg:w-[30vw]">
         <form onSubmit={handleSearch} className="mb-6">
           <div className="relative">
             <input
@@ -347,7 +347,7 @@ const Community = () => {
       <aside
         className={`bg-base-300 px-6 py-8 shadow-2xl rounded-sm overflow-y-scroll transition-transform duration-300 ease-in-out 
     fixed inset-y-0 right-0 w-[70vw] top-[68px] max-w-[70vw] pt-20 lg:pt-6 z-50 lg:z-0 lg:sticky lg:top-22 lg:h-[calc(100vh-1.5rem)] 
-    lg:w-[35vw] lg:max-w-[450px] lg:shadow-sm ${
+    lg:w-[40vw] lg:max-w-[450px] lg:shadow-sm ${
       showAside ? "translate-x-0" : "translate-x-full"
     } lg:translate-x-0`}
       >
