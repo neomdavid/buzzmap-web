@@ -292,6 +292,10 @@ md:w-[35vw]   max-w-[370px] "
         <NewPostModal
           ref={newPostModalRef}
           onSubmit={() => setShowNewPostModal(false)}
+          initialCoordinates={report?.specific_location
+            ? `${report.specific_location.coordinates[1]}, ${report.specific_location.coordinates[0]}`
+            : ""}
+          initialBarangay={report?.barangay || ""}
         />
       )}
     </aside>

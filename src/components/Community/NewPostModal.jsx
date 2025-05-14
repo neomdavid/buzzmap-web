@@ -20,9 +20,9 @@ const QC_BOUNDS = {
   east: 121.2,
 };
 
-const NewPostModal = forwardRef(({ onSubmit }, ref) => {
-  const [barangay, setBarangay] = useState("");
-  const [coordinates, setCoordinates] = useState("");
+const NewPostModal = forwardRef(({ onSubmit, initialCoordinates = "", initialBarangay = "" }, ref) => {
+  const [barangay, setBarangay] = useState(initialBarangay);
+  const [coordinates, setCoordinates] = useState(initialCoordinates);
   const [date, setDate] = useState("");
   const [time, setTime] = useState("");
   const [reportType, setReportType] = useState("");
@@ -52,6 +52,11 @@ const NewPostModal = forwardRef(({ onSubmit }, ref) => {
     // Set current time when component mounts
     setNow();
   }, []);
+
+  useEffect(() => {
+    if (initialCoordinates) setCoordinates(initialCoordinates);
+    if (initialBarangay) setBarangay(initialBarangay);
+  }, [initialCoordinates, initialBarangay]);
 
   const isInQuezonCity = (lat, lng) => {
     return (

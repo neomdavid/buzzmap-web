@@ -1,5 +1,5 @@
 import { useLocation, useParams } from "react-router-dom";
-import { GoogleMap, Marker } from "@react-google-maps/api";
+import { GoogleMap, Marker, Polyline, InfoWindow, OverlayView } from "@react-google-maps/api";
 import SideNavDetails from "../../components/Mapping/SideNavDetails";
 import { useGoogleMaps } from "../../components/GoogleMapsProvider";
 import { useGetPostByIdQuery, useGetPostsQuery, useGetNearbyReportsMutation } from "../../api/dengueApi";
@@ -95,7 +95,95 @@ const SpecificLocation = () => {
           center={position}
           zoom={18}
         >
+          {/* Main selected report marker */}
           <Marker position={position} />
+
+          {/* Markers and always-visible popups for nearby reports */}
+          {nearbyReports.map((r) => {
+            const markerPosition = {
+              lat: r.specific_location.coordinates[1],
+              lng: r.specific_location.coordinates[0],
+            };
+            return (
+              <React.Fragment key={r._id}>
+                <Marker
+                  position={markerPosition}
+                  icon={{
+                    path: window.google.maps.SymbolPath.CIRCLE,
+                    scale: 6,
+                    fillColor: "#14b8a6",
+                    fillOpacity: 1,
+                    strokeWeight: 2,
+                    strokeColor: "#fff",
+                  }}
+                />
+                <OverlayView
+                  position={markerPosition}
+                  mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}
+                >
+                  <div
+                    className="bg-white border border-primary rounded-lg shadow-lg p-2 text-primary text-xs max-w-[220px] min-w-[120px]"
+                    style={{
+                      transform: "translate(-50%, -120%)", // Center above marker
+                      pointerEvents: "auto",
+                      zIndex: 10,
+                    }}
+                  >
+                    <div className="font-bold mb-1">{r.report_type}</div>
+                    <div className="mb-1">
+                      <span className="font-semibold">Barangay:</span> {r.barangay}
+                    </div>
+                    <div className="mb-1">
+                      <span className="font-semibold">Date:</span>{" "}
+                      {new Date(r.date_and_time).toLocaleDateString("en-US", {
+                        year: "numeric",
+                        month: "long",
+                        day: "numeric",
+                      })}
+                      <br />
+                      <span className="font-semibold">Time:</span>{" "}
+                      {new Date(r.date_and_time).toLocaleTimeString("en-US", {
+                        hour: "numeric",
+                        minute: "2-digit",
+                        hour12: true,
+                      })}
+                    </div>
+                    <div className="mb-1">
+                      <span className="font-semibold">By:</span>{" "}
+                      {r.isAnonymous ? "Anonymous" : r.user?.username || "Unknown"}
+                    </div>
+                    <div>
+                      <span className="font-semibold">Description:</span>{" "}
+                      {r.description.length > 60
+                        ? r.description.slice(0, 60) + "..."
+                        : r.description}
+                    </div>
+                  </div>
+                </OverlayView>
+              </React.Fragment>
+            );
+          })}
+
+          {/* Lines from selected report to each nearby report */}
+          {nearbyReports.map((r) => (
+            <Polyline
+              key={`line-${r._id}`}
+              path={[
+                position,
+                {
+                  lat: r.specific_location.coordinates[1],
+                  lng: r.specific_location.coordinates[0],
+                },
+              ]}
+              options={{
+                strokeColor: "#F59E42", // orange or any color you want
+                strokeOpacity: 0.8,
+                strokeWeight: 2,
+                zIndex: 2,
+                strokeDashArray: [8, 8],
+              }}
+            />
+          ))}
         </GoogleMap>
       </div>
       <SideNavDetails
