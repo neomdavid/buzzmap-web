@@ -11,9 +11,11 @@ import {
   useGetAllAlertsQuery,
 } from "../../api/dengueApi.js"; // Import the intervention query hook
 import { useSelector } from "react-redux";
+import { useNavigate } from "react-router-dom";
 
 const Dashboard = () => {
   const userFromStore = useSelector((state) => state.auth?.user);
+  const navigate = useNavigate();
 
   // Fetching the posts from the API
   const {
@@ -92,63 +94,78 @@ const Dashboard = () => {
 
       <section className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-12">
         {/* ReportCard for Total Reports */}
-        <ReportCard
-          title="Total Reports "
-          count={safePosts.length} // Total reports
-          topBg="bg-base-content"
-          type="status"
-          items={[
-            {
-              label: "Validated",
-              value: reportCounts.validated,
-              color: "bg-success",
-            },
-            {
-              label: "Pending",
-              value: reportCounts.pending,
-              color: "bg-warning",
-            },
-            {
-              label: "Rejected",
-              value: reportCounts.rejected,
-              color: "bg-error",
-            },
-          ]}
-        />
+        <div
+          className="cursor-pointer"
+          onClick={() => navigate("/admin/reportsverification")}
+        >
+          <ReportCard
+            title="Total Reports "
+            count={safePosts.length} // Total reports
+            topBg="bg-base-content"
+            type="status"
+            items={[
+              {
+                label: "Validated",
+                value: reportCounts.validated,
+                color: "bg-success",
+              },
+              {
+                label: "Pending",
+                value: reportCounts.pending,
+                color: "bg-warning",
+              },
+              {
+                label: "Rejected",
+                value: reportCounts.rejected,
+                color: "bg-error",
+              },
+            ]}
+          />
+        </div>
 
         {/* ReportCard for Total Alerts Sent */}
-        <ReportCard
-          title="Total Alerts Sent"
-          count={totalAlerts}
-          topBg="bg-error/90"
-          type="interventions"
-          items={alertItems}
-        />
+        <div
+          className="cursor-pointer"
+          onClick={() => navigate("/admin/CEA")}
+        >
+          <ReportCard
+            title="Total Alerts Sent"
+            count={totalAlerts}
+            topBg="bg-error/90"
+            type="interventions"
+            items={alertItems}
+          />
+        </div>
 
         {/* ReportCard for Completed Interventions */}
-        <ReportCard
-          title=" Interventions"
-          count={totalInterventions} // Count of completed interventions
-          type="status"
-          topBg="bg-warning"
-          items={[
-            {
-              label: "Completed",
-              value: interventionCounts.completed,
-              color: "bg-success",
-            },
-            {
-              label: "Ongoing",
-              value: interventionCounts.ongoing,
-              color: "bg-info",
-            },
-            {
-              label: "Scheduled",
-              value: interventionCounts.scheduled,
-              color: "bg-warning",
-            },
-          ]}
-        />
+        <div
+          className="cursor-pointer"
+          onClick={() => navigate("/admin/interventions")}
+        >
+          <ReportCard
+            title=" Interventions"
+            count={totalInterventions} // Count of completed interventions
+            type="status"
+            topBg="bg-warning"
+            items={[
+              {
+                label: "Completed",
+                value: interventionCounts.completed,
+                color: "bg-success",
+              },
+              {
+                label: "Ongoing",
+                value: interventionCounts.ongoing,
+                color: "bg-info",
+              },
+              {
+                label: "Scheduled",
+                value: interventionCounts.scheduled,
+                color: "bg-warning",
+              },
+            ]}
+          />
+        </div>
 
         {/* User Engagement */}
         {/* <ReportCard
