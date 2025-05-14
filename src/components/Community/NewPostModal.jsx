@@ -314,6 +314,7 @@ const NewPostModal = forwardRef(({ onSubmit, initialCoordinates = "", initialBar
                           onLocationSelect={handleLocationSelect}
                           bounds={QC_BOUNDS}
                           defaultCity="Quezon City"
+                          defaultCoordinates={coordinates}
                         />
                       </div>
 

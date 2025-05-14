@@ -31,7 +31,7 @@ const RISK_LEVEL_COLORS = {
   unknown: "#718096",   // gray
 };
 
-export default function MapPicker({ onLocationSelect }) {
+export default function MapPicker({ onLocationSelect, bounds, defaultCity, defaultCoordinates }) {
   const [currentPosition, setCurrentPosition] = useState(null);
   const [markerPosition, setMarkerPosition] = useState(null);
   const [barangayData, setBarangayData] = useState(null);
@@ -41,6 +41,7 @@ export default function MapPicker({ onLocationSelect }) {
   const [toastType, setToastType] = useState(null);
   const mapRef = useRef(null);
   const { isLoaded } = useGoogleMaps();
+  const [zoom, setZoom] = useState(13); // default zoom
 
   // Add the pattern recognition query
   const { data: patternDataRaw } = useGetPatternRecognitionResultsQuery();
@@ -81,6 +82,18 @@ export default function MapPicker({ onLocationSelect }) {
         console.error('Error loading barangay boundaries:', error);
       });
   }, []);
+
+  // Set marker position if defaultCoordinates is provided
+  useEffect(() => {
+    if (defaultCoordinates) {
+      const [lat, lng] = defaultCoordinates.split(",").map((c) => parseFloat(c.trim()));
+      if (!isNaN(lat) && !isNaN(lng)) {
+        setMarkerPosition({ lat, lng });
+        setCurrentPosition({ lat, lng });
+        setZoom(18); // Zoom in when default coordinates are set
+      }
+    }
+  }, [defaultCoordinates]);
 
   const findBarangay = (coords) => {
     if (!barangayData || !isDataLoaded) {
@@ -293,7 +306,7 @@ export default function MapPicker({ onLocationSelect }) {
       <GoogleMap
         mapContainerStyle={containerStyle}
         center={currentPosition}
-        zoom={13}
+        zoom={zoom}
         onLoad={handleMapLoad}
         options={{
           clickableIcons: false,

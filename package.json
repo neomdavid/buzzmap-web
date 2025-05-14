@@ -32,6 +32,7 @@
     "leaflet": "^1.9.4",
     "lucide-react": "^0.487.0",
     "phosphor-react": "1.4.1",
+    "rc-slider": "^11.1.8",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-draggable": "^4.4.6",

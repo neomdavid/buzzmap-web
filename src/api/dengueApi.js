@@ -225,7 +225,7 @@ export const dengueApi = createApi({
     }),
 
     getPostById: builder.query({
-      query: (id) => `posts/${id}`,
+      query: (id) => `reports/${id}`,
       providesTags: (result, error, id) => [{ type: "Post", id }],
     }),
 

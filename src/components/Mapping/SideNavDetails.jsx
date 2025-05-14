@@ -3,6 +3,8 @@ import UPBuilding from "../../assets/UPBuilding.jpg";
 import { useEffect, useState, useMemo, useRef } from "react";
 import { useGetPostsQuery } from "../../api/dengueApi";
 import NewPostModal from "../Community/NewPostModal";
+import { useSelector } from "react-redux";
+import { toastInfo } from "../../utils.jsx";
 
 // Helper: Haversine formula for distance in meters
 function getDistanceMeters(lat1, lng1, lat2, lng2) {
@@ -20,11 +22,14 @@ function getDistanceMeters(lat1, lng1, lat2, lng2) {
   return R * c;
 }
 
-const SideNavDetails = ({ report, nearbyCount, nearbyReports = [], onReportBreedingSite }) => {
+const SideNavDetails = ({ report, nearbyCount, nearbyReports = [], radius = 2, onReportBreedingSite }) => {
   console.log("SideNavDetails nearbyReports prop:", nearbyReports);
   console.log("SideNavDetails report prop:", report);
 
-  // Extract coordinates for geocoding
+  // Get user from Redux store
+  const userFromStore = useSelector((state) => state.auth?.user);
+
+  // Extract coordinates for geocoding and street view
   const coordinates = report?.specific_location
     ? {
         lat: report.specific_location.coordinates[1],
@@ -103,6 +108,12 @@ const SideNavDetails = ({ report, nearbyCount, nearbyReports = [], onReportBreed
   const [showNewPostModal, setShowNewPostModal] = useState(false);
   const newPostModalRef = useRef(null);
 
+  // Google Street View Static API URL
+  const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+  const streetViewUrl = coordinates
+    ? `https://maps.googleapis.com/maps/api/streetview?size=600x300&location=${coordinates.lat},${coordinates.lng}&fov=80&heading=70&pitch=0&key=${apiKey}`
+    : UPBuilding;
+
   useEffect(() => {
     if (!coordinates) {
       setAddress("No location selected");
@@ -156,11 +167,28 @@ md:w-[35vw]   max-w-[370px] "
           className="mt-4 text-sm mb-4"
           fillColor="white"
         />
-        <img
-          src={UPBuilding}
-          className="w-full object-cover rounded-2xl mb-4 md:h-[20vh]"
-        />
-        <p className="text-[27px] mr-4 ml-1 mb-3 tracking-wide leading-8 md:text-[23px]">
+        {/* Use Google Maps Street View iframe (not satellite) */}
+        {coordinates ? (
+          <div style={{ width: "100%", height: "180px", marginBottom: "0.5rem" }}>
+            <iframe
+              width="100%"
+              height="180"
+              style={{ border: 0, borderRadius: "16px" }}
+              loading="lazy"
+              allowFullScreen
+              referrerPolicy="no-referrer-when-downgrade"
+              src={`https://www.google.com/maps?q=&layer=c&cbll=${coordinates.lat},${coordinates.lng}&cbp=11,0,0,0,0&z=18&output=svembed`}
+              title="Street View"
+            />
+          </div>
+        ) : (
+          <img
+            src={UPBuilding}
+            className="w-full object-cover rounded-2xl mb-4 md:h-[20vh]"
+            alt="Street View"
+          />
+        )}
+        <p className="text-[27px] mr-4 ml-1 mb-3 mt-2 tracking-wide leading-8 md:text-[23px]">
           {address}
         </p>
         <p className="text-[16px] font-light mr-4 ml-1 md:text-[12px]">
@@ -171,7 +199,7 @@ md:w-[35vw]   max-w-[370px] "
       <div className="flex flex-col">
         <div className="flex flex-col text-[14px] ml-[-2px] font-light md:text-[13px]">
           <p className="text-[16px] font-semibold mb-2 md:text-[14px]">
-            Number of Nearby Reports: {nearbyCount}
+            Number of Nearby Reports (within {radius} km): {nearbyCount}
           </p>
           <p>📊 Most Common Nearby Type: {mostCommonType}</p>
           <p>🕒 Most Recent Nearby Report: {mostRecentDate}</p>
@@ -215,7 +243,13 @@ md:w-[35vw]   max-w-[370px] "
       <div className="flex flex-col items-center mx-2 gap-y-4 text-[12px] text-primary">
         <button
           type="button"
-          onClick={() => setShowNewPostModal(true)}
+          onClick={() => {
+            if (!userFromStore || userFromStore.name === "Guest") {
+              toastInfo("You must be logged in to report a breeding site.");
+              return;
+            }
+            setShowNewPostModal(true);
+          }}
           className={`
             flex items-center text-center gap-2 p-4 px-8 justify-center shadow-lg rounded-xl font-semibold 
             hover:cursor-pointer hover:scale-105 transition-transform duration-300 active:opacity-70 
