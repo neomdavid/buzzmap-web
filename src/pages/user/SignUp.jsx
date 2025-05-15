@@ -5,6 +5,7 @@ import { useState } from "react";
 import { useRegisterMutation } from "../../api/dengueApi";
 import { useDispatch } from "react-redux";
 import { setEmailForOtp } from "../../features/otpSlice";
+import { toastError } from "../../utils.jsx";
 
 const SignUp = () => {
   const [username, setUsername] = useState("");
@@ -20,12 +21,27 @@ const SignUp = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    // Add basic validation
+    if (!username.trim() || !email.trim() || !password.trim()) {
+      toastError("Please fill in all required fields");
+      return;
+    }
+
     try {
-      const res = await signUp({ username, email, password }).unwrap();
+      const res = await signUp({ 
+        username, 
+        email, 
+        password,
+        role: "user"
+      }).unwrap();
+      
       dispatch(setEmailForOtp(email));
       navigate("/otp"); // go to OTP screen
     } catch (err) {
-      console.log(err);
+      console.log('Registration error:', err);
+      // Display the error message from the backend
+      toastError(err?.data?.message || "Registration failed. Please try again.");
     }
   };
 

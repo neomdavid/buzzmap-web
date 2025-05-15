@@ -1,9 +1,10 @@
 import { AdminsTable } from "../../components";
 import { IconPlus, IconArrowRight, IconArrowLeft } from "@tabler/icons-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { toastSuccess, toastError } from "../../utils.jsx";
 import { useCreateAdminMutation, useVerifyAdminOTPMutation, useLoginMutation, useGetAccountsQuery } from "../../api/dengueApi";
 import { useSelector } from "react-redux";
+import { UserGear, CheckCircle, XCircle, Clock } from "phosphor-react";
 
 function SprAdmins() {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -29,6 +30,34 @@ function SprAdmins() {
 
   // Get super admin email from Redux store
   const superAdminEmail = useSelector((state) => state.auth?.user?.email);
+
+  // Add these statistics states
+  const [stats, setStats] = useState({
+    totalAdmins: 0,
+    activeAdmins: 0,
+    disabledAdmins: 0,
+    unverifiedAdmins: 0,
+    lastUpdated: new Date()
+  });
+
+  // Add these new states
+  const [statusFilter, setStatusFilter] = useState("");
+  const [roleFilter, setRoleFilter] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+
+  // Update stats when accounts data changes
+  useEffect(() => {
+    if (accounts) {
+      const adminAccounts = accounts.filter(acc => acc.role === 'admin');
+      setStats({
+        totalAdmins: adminAccounts.length,
+        activeAdmins: adminAccounts.filter(acc => acc.status === 'active').length,
+        disabledAdmins: adminAccounts.filter(acc => acc.status === 'disabled').length,
+        unverifiedAdmins: adminAccounts.filter(acc => acc.status === 'unverified').length,
+        lastUpdated: new Date()
+      });
+    }
+  }, [accounts]);
 
   // Field validation logic
   const validateField = (name, value) => {
@@ -236,6 +265,109 @@ function SprAdmins() {
 
   return (
     <main className="flex flex-col w-full">
+      {/* Add Statistics Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <div className="bg-white p-6 rounded-xl shadow-sm">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-500">Total Admins</p>
+              <p className="text-2xl font-bold">{stats.totalAdmins}</p>
+            </div>
+            <div className="bg-primary/10 p-3 rounded-lg">
+              <UserGear size={24} className="text-primary" />
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white p-6 rounded-xl shadow-sm">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-500">Active Admins</p>
+              <p className="text-2xl font-bold text-success">{stats.activeAdmins}</p>
+            </div>
+            <div className="bg-success/10 p-3 rounded-lg">
+              <CheckCircle size={24} className="text-success" />
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white p-6 rounded-xl shadow-sm">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-500">Disabled Admins</p>
+              <p className="text-2xl font-bold text-error">{stats.disabledAdmins}</p>
+            </div>
+            <div className="bg-error/10 p-3 rounded-lg">
+              <XCircle size={24} className="text-error" />
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white p-6 rounded-xl shadow-sm">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-500">Unverified Admins</p>
+              <p className="text-2xl font-bold text-warning">{stats.unverifiedAdmins}</p>
+            </div>
+            <div className="bg-warning/10 p-3 rounded-lg">
+              <Clock size={24} className="text-warning" />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Add Filters Section */}
+      <div className="bg-white p-4 rounded-xl shadow-sm mb-8">
+        <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
+          <div className="flex flex-col md:flex-row gap-4 w-full">
+            <div className="flex-1">
+              <input
+                type="text"
+                placeholder="Search by username or email..."
+                className="input input-bordered w-full"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
+            <div className="flex gap-4">
+              <select 
+                className="select select-bordered w-full max-w-xs"
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+              >
+                <option value="">All Status</option>
+                <option value="active">Active</option>
+                <option value="disabled">Disabled</option>
+                <option value="unverified">Unverified</option>
+              </select>
+
+              <select 
+                className="select select-bordered w-full max-w-xs"
+                value={roleFilter}
+                onChange={(e) => setRoleFilter(e.target.value)}
+              >
+                <option value="">All Roles</option>
+                <option value="admin">Admin</option>
+                <option value="superadmin">Super Admin</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="flex gap-2">
+            <button 
+              className="btn btn-ghost"
+              onClick={() => {
+                setStatusFilter("");
+                setRoleFilter("");
+                setSearchQuery("");
+              }}
+            >
+              Clear Filters
+            </button>
+          </div>
+        </div>
+      </div>
+
       <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8 gap-4">
         <p className="flex justify-center text-5xl font-extrabold mb-12  text-center md:justify-start md:text-left md:w-[48%] ">
           Admin Management
@@ -251,7 +383,16 @@ function SprAdmins() {
       </div>
 
       <div className="bg-white rounded-xl shadow-sm p-4">
-        <AdminsTable />
+        <AdminsTable 
+          statusFilter={statusFilter} 
+          roleFilter={roleFilter}
+          searchQuery={searchQuery}
+        />
+      </div>
+
+      {/* Add Last Updated Info */}
+      <div className="mt-4 text-sm text-gray-500 text-right">
+        Last updated: {stats.lastUpdated.toLocaleString()}
       </div>
 
       {/* Modal */}

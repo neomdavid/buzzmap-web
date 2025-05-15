@@ -20,11 +20,11 @@ const baseQueryWithErrorHandling = async (args, api, extraOptions) => {
     
     if (result.error) {
       // If the error has a specific message from the backend, use that
-      if (result.error.data?.error) {
+      if (result.error.data?.message) {
         return {
           error: {
             status: result.error.status,
-            data: { message: result.error.data.error }
+            data: { message: result.error.data.message }
           }
         };
       }
@@ -73,12 +73,8 @@ const baseQueryWithErrorHandling = async (args, api, extraOptions) => {
             }
           };
         default:
-          return {
-            error: {
-              status: result.error.status,
-              data: getErrorData('Something went wrong. Please try again later')
-            }
-          };
+          // For 400 and other status codes, return the original error
+          return result;
       }
     }
     return result;
@@ -562,6 +558,15 @@ export const dengueApi = createApi({
       }),
       invalidatesTags: ['Accounts'],
     }),
+
+    // Add this to the endpoints object in dengueApi
+    getUsers: builder.query({
+      query: () => ({
+        url: '/accounts/role/user',
+        method: 'GET',
+      }),
+      providesTags: ['Accounts'],
+    }),
   }),
 });
 
@@ -646,4 +651,7 @@ export const {
 
   // Add this to the exported hooks
   useToggleAccountStatusMutation,
+
+  // Add this to the exported hooks
+  useGetUsersQuery,
 } = dengueApi;

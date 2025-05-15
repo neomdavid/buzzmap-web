@@ -6,6 +6,9 @@ import {
 import { AgGridReact } from "ag-grid-react";
 import { useState, useMemo, useRef, useCallback, useEffect } from "react";
 import { IconSearch, IconBan, IconTrash } from "@tabler/icons-react";
+import { useGetUsersQuery, useDeleteAccountMutation, useLoginMutation, useToggleAccountStatusMutation } from "../../api/dengueApi";
+import { useSelector } from "react-redux";
+import { toastSuccess, toastError } from "../../utils.jsx";
 
 ModuleRegistry.registerModules([AllCommunityModule]);
 
@@ -29,24 +32,440 @@ const customTheme = themeQuartz.withParams({
   wrapperBorderRadius: 0,
 });
 
-const ActionsCell = (p) => {
-  return (
-    <div className="py-2 h-full w-full flex items-center gap-2">
-      <button className="flex items-center gap-1 text-primary hover:bg-gray-200 p-1 rounded-md">
-        <IconSearch size={13} stroke={2.5} />
-        <p className="text-sm">view</p>
-      </button>
-      <button className="flex items-center gap-1 text-warning hover:bg-gray-200 p-1 rounded-md">
-        <IconBan size={15} stroke={2} />
-        <p className="text-sm">ban</p>
-      </button>
-      <button className="flex items-center gap-1 text-error hover:bg-gray-200 p-1 rounded-md">
-        <IconTrash size={15} stroke={2.5} />
-        <p className="text-sm">remove</p>
-      </button>
-    </div>
+function UsersTable({ statusFilter, roleFilter, searchQuery }) {
+  const { data: users, isLoading, error, refetch } = useGetUsersQuery();
+  const gridRef = useRef(null);
+  
+  // Add state for modals and actions
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showBanModal, setShowBanModal] = useState(false);
+  const [selectedUser, setSelectedUser] = useState(null);
+  const [superAdminPassword, setSuperAdminPassword] = useState("");
+  const [authError, setAuthError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isBanning, setIsBanning] = useState(true);
+
+  // Add mutations
+  const [deleteAccount] = useDeleteAccountMutation();
+  const [login] = useLoginMutation();
+  const [toggleStatus] = useToggleAccountStatusMutation();
+  const superAdminEmail = useSelector((state) => state.auth?.user?.email);
+
+  const verifySuperAdmin = async () => {
+    try {
+      const loginData = {
+        email: superAdminEmail,
+        password: superAdminPassword,
+        role: "superadmin"
+      };
+
+      const response = await login(loginData).unwrap();
+      return true;
+    } catch (error) {
+      setAuthError("Incorrect super admin password.");
+      return false;
+    }
+  };
+
+  const handleDeleteClick = (user) => {
+    setSelectedUser(user);
+    setShowDeleteModal(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!superAdminPassword.trim()) {
+      setAuthError("Please enter your password");
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const isVerified = await verifySuperAdmin();
+      if (!isVerified) {
+        setIsSubmitting(false);
+        return;
+      }
+
+      await deleteAccount(selectedUser._id).unwrap();
+      toastSuccess("User account deleted successfully");
+      setShowDeleteModal(false);
+      setSuperAdminPassword("");
+      setAuthError("");
+      await refetch();
+    } catch (error) {
+      toastError(error?.data?.message || "Failed to delete user account");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleBanClick = (user) => {
+    setSelectedUser(user);
+    setIsBanning(user.status !== "banned");
+    setShowBanModal(true);
+  };
+
+  const handleBanConfirm = async () => {
+    if (!superAdminPassword.trim()) {
+      setAuthError("Please enter your password");
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      console.log('Starting ban/unban process for user:', selectedUser);
+      
+      const isVerified = await verifySuperAdmin();
+      console.log('Super admin verification result:', isVerified);
+      
+      if (!isVerified) {
+        setIsSubmitting(false);
+        return;
+      }
+
+      const newStatus = isBanning ? "banned" : "active";
+      console.log('Sending toggle status request:', {
+        id: selectedUser._id,
+        status: newStatus
+      });
+
+      const response = await toggleStatus({
+        id: selectedUser._id,
+        status: newStatus
+      }).unwrap();
+
+      console.log('Toggle status API response:', response);
+
+      toastSuccess(`User ${isBanning ? 'banned' : 'unbanned'} successfully`);
+      setShowBanModal(false);
+      setSuperAdminPassword("");
+      setAuthError("");
+      
+      console.log('Refreshing data...');
+      await refetch();
+      
+    } catch (error) {
+      console.error('Error in handleBanConfirm:', {
+        error,
+        errorMessage: error?.data?.message,
+        errorStatus: error?.status
+      });
+      toastError(error?.data?.message || `Failed to ${isBanning ? 'ban' : 'unban'} user`);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleModalClose = () => {
+    setShowDeleteModal(false);
+    setShowBanModal(false);
+    setSelectedUser(null);
+    setSuperAdminPassword("");
+    setAuthError("");
+    setIsSubmitting(false);
+  };
+
+  // Move ActionsCell inside UsersTable component
+  const ActionsCell = useCallback((p) => {
+    return (
+      <div className="py-2 h-full w-full flex items-center gap-2">
+        <button className="flex items-center gap-1 text-primary hover:bg-gray-200 p-1 rounded-md">
+          <IconSearch size={13} stroke={2.5} />
+          <p className="text-sm">view</p>
+        </button>
+        <button 
+          onClick={() => handleBanClick(p.data)}
+          className="flex items-center gap-1 text-warning hover:bg-gray-200 p-1 rounded-md"
+        >
+          <IconBan size={15} stroke={2} />
+          <p className="text-sm">{p.data.status === "banned" ? "unban" : "ban"}</p>
+        </button>
+        <button 
+          onClick={() => handleDeleteClick(p.data)}
+          className="flex items-center gap-1 text-error hover:bg-gray-200 p-1 rounded-md"
+        >
+          <IconTrash size={15} stroke={2.5} />
+          <p className="text-sm">remove</p>
+        </button>
+      </div>
+    );
+  }, []); // Add empty dependency array since handlers are stable
+
+  // Transform the data for the grid
+  const rowData = useMemo(() => {
+    if (!users) return [];
+    
+    console.log('Raw users data before transformation:', users);
+    
+    const transformedData = users
+      .filter(user => {
+        // Apply status filter
+        const statusMatch = !statusFilter || user.status === statusFilter;
+        
+        // Apply role filter
+        const roleMatch = !roleFilter || user.role === roleFilter;
+
+        // Apply search filter
+        const searchMatch = !searchQuery || 
+          user.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          user.email.toLowerCase().includes(searchQuery.toLowerCase());
+
+        return statusMatch && roleMatch && searchMatch;
+      })
+      .map(user => {
+        // Use the status directly from the API response
+        const transformed = {
+          username: user.username,
+          email: user.email,
+          role: user.role,
+          joined: user.createdAt || user.updatedAt,
+          status: user.status, // Use the status directly from the API
+          _id: user._id
+        };
+        console.log('Transformed user data:', {
+          original: user,
+          transformed: transformed
+        });
+        return transformed;
+      });
+
+    console.log('Final transformed data:', transformedData);
+    return transformedData;
+  }, [users, statusFilter, roleFilter, searchQuery]);
+
+  const columnDefs = useMemo(
+    () => [
+      { 
+        field: "username", 
+        minWidth: 120,
+        flex: 1 
+      },
+      { 
+        field: "email", 
+        minWidth: 180,
+        flex: 1.5 
+      },
+      { 
+        field: "role", 
+        minWidth: 100, 
+        cellRenderer: RoleCell,
+        flex: 1 
+      },
+      {
+        field: "joined",
+        headerName: "Joined Date",
+        minWidth: 140,
+        cellRenderer: DateCell,
+        flex: 1,
+        sortable: true,
+        sort: 'desc'
+      },
+      {
+        field: "status",
+        headerName: "Status",
+        minWidth: 140,
+        cellRenderer: StatusCell,
+        flex: 1
+      },
+      {
+        field: "actions",
+        headerName: "Actions",
+        minWidth: 200,
+        maxWidth: 200,
+        flex: 0,
+        filter: false,
+        cellRenderer: ActionsCell,
+      },
+    ],
+    [ActionsCell] // Add ActionsCell to dependencies
   );
-};
+
+  const theme = useMemo(() => customTheme, []);
+
+  // Simplified onGridSizeChanged function
+  const onGridSizeChanged = useCallback((params) => {
+    if (gridRef.current) {
+      params.api.sizeColumnsToFit();
+    }
+  }, []);
+
+  const onFirstDataRendered = useCallback((params) => {
+    params.api.sizeColumnsToFit();
+  }, []);
+
+  // Calculate dynamic height based on number of rows
+  const calculateHeight = () => {
+    const rowHeight = 60; // Height of each row
+    const headerHeight = 48; // Height of the header
+    const paginationHeight = 48; // Height of pagination
+    const maxHeight = 600; // Maximum height
+    
+    const calculatedHeight = (rowData.length * rowHeight) + headerHeight + paginationHeight;
+    return Math.min(calculatedHeight, maxHeight);
+  };
+
+  return (
+    <>
+      <div
+        className="ag-theme-quartz"
+        ref={gridRef}
+        style={{ 
+          height: `${calculateHeight()}px`,
+          width: "100%",
+          minHeight: "200px"
+        }}
+      >
+        {isLoading ? (
+          <div className="h-full flex items-center justify-center">
+            <p className="text-lg">Loading users...</p>
+          </div>
+        ) : error ? (
+          <div className="h-full flex items-center justify-center">
+            <p className="text-lg text-error">Error loading users</p>
+          </div>
+        ) : (
+          <AgGridReact
+            ref={gridRef}
+            rowData={rowData}
+            columnDefs={columnDefs}
+            defaultColDef={{
+              ...defaultColDef,
+              sortable: true
+            }}
+            theme={theme}
+            pagination={true}
+            paginationPageSize={10}
+            rowHeight={60}
+            headerHeight={48}
+            paginationPageSizeSelector={[5, 10, 20, 50]}
+            onGridSizeChanged={onGridSizeChanged}
+            onFirstDataRendered={onFirstDataRendered}
+            domLayout="normal"
+            suppressPaginationPanel={false}
+          />
+        )}
+      </div>
+
+      {/* Delete Confirmation Modal */}
+      <dialog id="delete_modal" className="modal" open={showDeleteModal}>
+        <div className="modal-box gap-6 text-lg w-10/12 max-w-3xl p-8 sm:p-12 rounded-3xl">
+          <div className="flex flex-col gap-6">
+            <p className="text-center text-3xl font-bold text-error">
+              Confirm User Deletion
+            </p>
+            <p className="text-center text-gray-600">
+              Please enter your super admin password to confirm this action
+            </p>
+
+            <div className="w-full flex flex-col gap-1">
+              <label className="text-primary font-bold">
+                Super Admin Password*
+              </label>
+              <input
+                type="password"
+                value={superAdminPassword}
+                onChange={(e) => {
+                  setSuperAdminPassword(e.target.value);
+                  setAuthError("");
+                }}
+                className={`p-3 bg-base-200 text-primary rounded-xl border-none ${
+                  authError ? "border-2 border-error" : ""
+                }`}
+                placeholder="Enter super admin password"
+              />
+              {authError && (
+                <p className="text-error text-sm mt-1">{authError}</p>
+              )}
+            </div>
+
+            <div className="w-full flex justify-end gap-3 mt-4">
+              <button
+                type="button"
+                className="bg-gray-300 text-white px-6 py-2.5 rounded-xl hover:bg-gray-400 transition-colors hover:cursor-pointer"
+                onClick={handleModalClose}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleDeleteConfirm}
+                className={`flex items-center gap-2 bg-error text-white px-6 py-2.5 rounded-xl hover:opacity-90 transition-opacity hover:cursor-pointer ${
+                  isSubmitting ? "opacity-70 cursor-wait" : ""
+                }`}
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? "Processing..." : "Delete User"}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <form method="dialog" className="modal-backdrop">
+          <button onClick={handleModalClose}>close</button>
+        </form>
+      </dialog>
+
+      {/* Ban Confirmation Modal */}
+      <dialog id="ban_modal" className="modal" open={showBanModal}>
+        <div className="modal-box gap-6 text-lg w-10/12 max-w-3xl p-8 sm:p-12 rounded-3xl">
+          <div className="flex flex-col gap-6">
+            <p className="text-center text-3xl font-bold text-warning">
+              Confirm User {isBanning ? 'Ban' : 'Unban'}
+            </p>
+            <p className="text-center text-gray-600">
+              Please enter your super admin password to {isBanning ? 'ban' : 'unban'} this user
+            </p>
+
+            <div className="w-full flex flex-col gap-1">
+              <label className="text-primary font-bold">
+                Super Admin Password*
+              </label>
+              <input
+                type="password"
+                value={superAdminPassword}
+                onChange={(e) => {
+                  setSuperAdminPassword(e.target.value);
+                  setAuthError("");
+                }}
+                className={`p-3 bg-base-200 text-primary rounded-xl border-none ${
+                  authError ? "border-2 border-error" : ""
+                }`}
+                placeholder="Enter super admin password"
+              />
+              {authError && (
+                <p className="text-error text-sm mt-1">{authError}</p>
+              )}
+            </div>
+
+            <div className="w-full flex justify-end gap-3 mt-4">
+              <button
+                type="button"
+                className="bg-gray-300 text-white px-6 py-2.5 rounded-xl hover:bg-gray-400 transition-colors hover:cursor-pointer"
+                onClick={handleModalClose}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleBanConfirm}
+                className={`flex items-center gap-2 bg-warning text-white px-6 py-2.5 rounded-xl hover:opacity-90 transition-opacity hover:cursor-pointer ${
+                  isSubmitting ? "opacity-70 cursor-wait" : ""
+                }`}
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? "Processing..." : `${isBanning ? 'Ban' : 'Unban'} User`}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <form method="dialog" className="modal-backdrop">
+          <button onClick={handleModalClose}>close</button>
+        </form>
+      </dialog>
+    </>
+  );
+}
 
 const DateCell = ({ value }) => {
   const date = new Date(value);
@@ -127,262 +546,5 @@ const RoleCell = ({ value }) => {
     </div>
   );
 };
-
-const mockUsers = [
-  {
-    username: "johndoe",
-    email: "john@example.com",
-    role: "user",
-    joined: "2024-01-05",
-    lastPosted: "2025-04-25",
-    status: "active",
-  },
-  {
-    username: "sarahk",
-    email: "sarah.k@example.com",
-    role: "user",
-    joined: "2023-11-12",
-    lastPosted: "2025-04-10",
-    status: "unverified",
-  },
-  {
-    username: "mike_t",
-    email: "mike.t@example.com",
-    role: "user",
-    joined: "2024-02-18",
-    lastPosted: "2025-04-22",
-    status: "active",
-  },
-  {
-    username: "emily_w",
-    email: "emily.w@example.com",
-    role: "user",
-    joined: "2024-03-30",
-    lastPosted: "2025-03-28",
-    status: "banned",
-  },
-  {
-    username: "david_b",
-    email: "david.b@example.com",
-    role: "user",
-    joined: "2023-12-10",
-    lastPosted: "2025-04-20",
-    status: "active",
-  },
-  {
-    username: "lisa_t",
-    email: "lisa.t@example.com",
-    role: "user",
-    joined: "2024-01-15",
-    lastPosted: "2025-04-05",
-    status: "unverified",
-  },
-  {
-    username: "robert_g",
-    email: "robert.g@example.com",
-    role: "user",
-    joined: "2024-01-22",
-    lastPosted: "2025-02-14",
-    status: "removed",
-  },
-  {
-    username: "jen_lee",
-    email: "jen.lee@example.com",
-    role: "user",
-    joined: "2023-09-08",
-    lastPosted: "2025-04-18",
-    status: "active",
-  },
-  {
-    username: "kevin_m",
-    email: "kevin.m@example.com",
-    role: "user",
-    joined: "2024-04-01",
-    lastPosted: "2025-04-24",
-    status: "active",
-  },
-  {
-    username: "amanda_w",
-    email: "amanda.w@example.com",
-    role: "user",
-    joined: "2023-07-19",
-    lastPosted: "2025-03-10",
-    status: "banned",
-  },
-  {
-    username: "steve_h",
-    email: "steve.h@example.com",
-    role: "user",
-    joined: "2023-05-30",
-    lastPosted: "2025-04-12",
-    status: "active",
-  },
-  {
-    username: "michelle_c",
-    email: "michelle.c@example.com",
-    role: "user",
-    joined: "2024-02-28",
-    lastPosted: "2025-04-23",
-    status: "active",
-  },
-  {
-    username: "ryan_m",
-    email: "ryan.m@example.com",
-    role: "user",
-    joined: "2023-11-11",
-    lastPosted: "2025-04-19",
-    status: "unverified",
-  },
-  {
-    username: "natalie_k",
-    email: "natalie.k@example.com",
-    role: "user",
-    joined: "2023-06-25",
-    lastPosted: "2025-01-15",
-    status: "removed",
-  },
-  {
-    username: "peter_w",
-    email: "peter.w@example.com",
-    role: "user",
-    joined: "2024-03-05",
-    lastPosted: "2025-04-21",
-    status: "active",
-  },
-  {
-    username: "olivia_m",
-    email: "olivia.m@example.com",
-    role: "user",
-    joined: "2023-04-17",
-    lastPosted: "2025-04-08",
-    status: "active",
-  },
-  {
-    username: "daniel_s",
-    email: "daniel.s@example.com",
-    role: "user",
-    joined: "2024-01-30",
-    lastPosted: "2025-03-30",
-    status: "banned",
-  },
-  {
-    username: "hannah_g",
-    email: "hannah.g@example.com",
-    role: "user",
-    joined: "2023-10-05",
-    lastPosted: "2025-04-17",
-    status: "active",
-  },
-  {
-    username: "alex_h",
-    email: "alex.h@example.com",
-    role: "user",
-    joined: "2023-12-20",
-    lastPosted: "2025-04-14",
-    status: "unverified",
-  },
-  {
-    username: "sophia_l",
-    email: "sophia.l@example.com",
-    role: "user",
-    joined: "2024-01-10",
-    lastPosted: "2025-04-16",
-    status: "active",
-  },
-];
-
-function UsersTable() {
-  const [rowData] = useState(mockUsers);
-  const gridRef = useRef(null);
-
-  const columnDefs = useMemo(
-    () => [
-      { field: "username", minWidth: 120 },
-      { field: "email", minWidth: 180 },
-      { field: "role", minWidth: 100, cellRenderer: RoleCell },
-      {
-        field: "joined",
-        headerName: "Joined Date",
-        minWidth: 140,
-        cellRenderer: DateCell,
-      },
-      {
-        field: "lastPosted",
-        headerName: "Last Posted",
-        minWidth: 140,
-        cellRenderer: DateCell,
-      },
-      {
-        field: "status",
-        headerName: "Verification",
-        minWidth: 140,
-        cellRenderer: StatusCell,
-      },
-      {
-        field: "actions",
-        minWidth: 200,
-        filter: false,
-        cellRenderer: ActionsCell,
-      },
-    ],
-    []
-  );
-
-  const theme = useMemo(() => customTheme, []);
-
-  const onGridSizeChanged = useCallback((params) => {
-    const gridWidth = gridRef.current?.offsetWidth;
-    const allColumns = params.columnApi.getAllColumns();
-    const columnsToShow = [];
-    const columnsToHide = [];
-    let totalColsWidth = 0;
-
-    if (allColumns) {
-      allColumns.forEach((col) => {
-        totalColsWidth += col.getMinWidth() || 100;
-        if (totalColsWidth > gridWidth) {
-          columnsToHide.push(col.getColId());
-        } else {
-          columnsToShow.push(col.getColId());
-        }
-      });
-    }
-
-    params.columnApi.setColumnsVisible(columnsToShow, true);
-    params.columnApi.setColumnsVisible(columnsToHide, false);
-
-    setTimeout(() => {
-      params.api.sizeColumnsToFit();
-    }, 10);
-  }, []);
-
-  const onFirstDataRendered = useCallback((params) => {
-    params.api.sizeColumnsToFit();
-  }, []);
-
-  const showPagination = rowData.length > 10;
-
-  return (
-    <div
-      className="ag-theme-quartz"
-      ref={gridRef}
-      style={{ height: "100%", width: "100%" }}
-    >
-      <AgGridReact
-        ref={gridRef}
-        rowData={rowData}
-        columnDefs={columnDefs}
-        defaultColDef={defaultColDef}
-        theme={theme}
-        pagination={showPagination}
-        paginationPageSize={10}
-        rowHeight={60}
-        paginationPageSizeSelector={showPagination ? [5, 10, 20] : undefined}
-        onGridSizeChanged={onGridSizeChanged}
-        onFirstDataRendered={onFirstDataRendered}
-      />
-    </div>
-  );
-}
 
 export default UsersTable;

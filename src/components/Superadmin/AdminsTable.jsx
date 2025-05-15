@@ -105,7 +105,7 @@ const RoleCell = ({ value }) => {
   );
 };
 
-function AdminsTable() {
+function AdminsTable({ statusFilter, roleFilter, searchQuery }) {
   const { data: accounts, isLoading, error, refetch } = useGetAccountsQuery();
   const gridRef = useRef(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -260,22 +260,41 @@ function AdminsTable() {
   // Add this console.log to see the API response
   console.log('Accounts API Response:', accounts);
 
-  // Transform API data to match table structure and filter for admin/superadmin
+  // Update the rowData transformation to remove date filtering
   const rowData = useMemo(() => {
     if (!accounts) return [];
     
     return accounts
-      .filter(account => account.role === 'admin' || account.role === 'superadmin')
+      .filter(account => {
+        // First filter by role (admin/superadmin)
+        const roleMatch = account.role === 'admin' || account.role === 'superadmin';
+        
+        // Then apply status filter if it exists
+        const statusMatch = !statusFilter || 
+          (statusFilter === 'active' && account.verified && !account.disabled) ||
+          (statusFilter === 'disabled' && account.disabled) ||
+          (statusFilter === 'unverified' && !account.verified);
+        
+        // Then apply role filter if it exists
+        const roleTypeMatch = !roleFilter || account.role === roleFilter;
+
+        // Add search filter
+        const searchMatch = !searchQuery || 
+          account.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          account.email.toLowerCase().includes(searchQuery.toLowerCase());
+
+        return roleMatch && statusMatch && roleTypeMatch && searchMatch;
+      })
       .map(account => ({
         username: account.username,
         email: account.email,
-        role: account.role.charAt(0).toUpperCase() + account.role.slice(1), // Capitalize role
+        role: account.role.charAt(0).toUpperCase() + account.role.slice(1),
         joined: account.createdAt || account.updatedAt,
-        status: account.status === "disabled" ? "disabled" : 
+        status: account.disabled ? "disabled" : 
                 (account.verified ? "active" : "unverified"),
-        _id: account._id // Keep ID for actions
+        _id: account._id
       }));
-  }, [accounts]);
+  }, [accounts, statusFilter, roleFilter, searchQuery]);
 
   const columnDefs = useMemo(
     () => [
@@ -301,6 +320,8 @@ function AdminsTable() {
         minWidth: 140,
         flex: 1,
         cellRenderer: DateCell,
+        sortable: true,
+        sort: 'desc'
       },
       {
         field: "status",
@@ -369,7 +390,10 @@ function AdminsTable() {
             ref={gridRef}
             rowData={rowData}
             columnDefs={columnDefs}
-            defaultColDef={defaultColDef}
+            defaultColDef={{
+              ...defaultColDef,
+              sortable: true
+            }}
             theme={theme}
             pagination={true}
             paginationPageSize={10}
