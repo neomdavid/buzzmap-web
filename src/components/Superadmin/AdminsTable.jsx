@@ -6,6 +6,9 @@ import {
 import { AgGridReact } from "ag-grid-react";
 import { useState, useMemo, useRef, useCallback } from "react";
 import { IconSearch, IconBan, IconTrash } from "@tabler/icons-react";
+import { useGetAccountsQuery, useDeleteAccountMutation, useLoginMutation, useToggleAccountStatusMutation } from "../../api/dengueApi";
+import { useSelector } from "react-redux";
+import { toastSuccess, toastError } from "../../utils.jsx";
 
 ModuleRegistry.registerModules([AllCommunityModule]);
 
@@ -29,25 +32,6 @@ const customTheme = themeQuartz.withParams({
   wrapperBorderRadius: 0,
 });
 
-const ActionsCell = (p) => {
-  return (
-    <div className="py-2 h-full w-full flex items-center gap-2">
-      <button className="flex items-center gap-1 text-primary hover:bg-gray-200 p-1 rounded-md">
-        <IconSearch size={13} stroke={2.5} />
-        <p className="text-sm">view</p>
-      </button>
-      <button className="flex items-center gap-1 text-warning hover:bg-gray-200 p-1 rounded-md">
-        <IconBan size={15} stroke={2} />
-        <p className="text-sm">disable</p>
-      </button>
-      <button className="flex items-center gap-1 text-error hover:bg-gray-200 p-1 rounded-md">
-        <IconTrash size={15} stroke={2.5} />
-        <p className="text-sm">remove</p>
-      </button>
-    </div>
-  );
-};
-
 const DateCell = ({ value }) => {
   const date = new Date(value);
   const formatted = date.toLocaleDateString("en-US", {
@@ -64,16 +48,16 @@ const StatusCell = ({ value }) => {
   let textColor = "";
 
   switch (value) {
+    case "disabled":
+      bgColor = "bg-error";
+      textColor = "text-white";
+      break;
     case "active":
       bgColor = "bg-success";
       textColor = "text-white";
       break;
-    case "disabled":
+    case "unverified":
       bgColor = "bg-warning";
-      textColor = "text-white";
-      break;
-    case "removed":
-      bgColor = "bg-error";
       textColor = "text-white";
       break;
     default:
@@ -97,16 +81,12 @@ const RoleCell = ({ value }) => {
   let textColor = "";
 
   switch (value.toLowerCase()) {
-    case "super admin":
-      bgColor = "bg-purple-500";
+    case "superadmin":
+      bgColor = "bg-purple-600";
       textColor = "text-white";
       break;
     case "admin":
-      bgColor = "bg-blue-500";
-      textColor = "text-white";
-      break;
-    case "moderator":
-      bgColor = "bg-teal-500";
+      bgColor = "bg-blue-600";
       textColor = "text-white";
       break;
     default:
@@ -125,101 +105,215 @@ const RoleCell = ({ value }) => {
   );
 };
 
-const ProfileCell = ({ value }) => {
-  return (
-    <div className="h-full flex items-center">
-      <img
-        src={value}
-        alt="Profile"
-        className="w-8 h-8 rounded-full object-cover"
-        onError={(e) => {
-          e.target.onerror = null;
-          e.target.src = "https://via.placeholder.com/32";
-        }}
-      />
-    </div>
-  );
-};
-
-const mockAdmins = [
-  {
-    profile: "https://randomuser.me/api/portraits/men/1.jpg",
-    username: "admin1",
-    email: "admin1@example.com",
-    role: "Admin",
-    joined: "2023-05-15",
-    status: "active",
-  },
-  {
-    profile: "https://randomuser.me/api/portraits/women/2.jpg",
-    username: "admin2",
-    email: "admin2@example.com",
-    role: "Super Admin",
-    joined: "2022-11-20",
-    status: "active",
-  },
-  {
-    profile: "https://randomuser.me/api/portraits/men/3.jpg",
-    username: "admin3",
-    email: "admin3@example.com",
-    role: "Admin",
-    joined: "2024-02-10",
-    status: "disabled",
-  },
-  {
-    profile: "https://randomuser.me/api/portraits/women/4.jpg",
-    username: "admin4",
-    email: "admin4@example.com",
-    role: "Admin",
-    joined: "2023-08-05",
-    status: "removed",
-  },
-  {
-    profile: "https://randomuser.me/api/portraits/men/5.jpg",
-    username: "admin5",
-    email: "admin5@example.com",
-    role: "Admin",
-    joined: "2024-01-30",
-    status: "active",
-  },
-];
-
 function AdminsTable() {
-  const [rowData] = useState(mockAdmins);
+  const { data: accounts, isLoading, error, refetch } = useGetAccountsQuery();
   const gridRef = useRef(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [selectedAccountId, setSelectedAccountId] = useState(null);
+  const [superAdminPassword, setSuperAdminPassword] = useState("");
+  const [authError, setAuthError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showStatusModal, setShowStatusModal] = useState(false);
+  const [selectedAccount, setSelectedAccount] = useState(null);
+  const [isDisabling, setIsDisabling] = useState(true);
+
+  const [deleteAccount] = useDeleteAccountMutation();
+  const [login] = useLoginMutation();
+  const [toggleStatus] = useToggleAccountStatusMutation();
+  const superAdminEmail = useSelector((state) => state.auth?.user?.email);
+
+  const handleDeleteClick = (accountId) => {
+    setSelectedAccountId(accountId);
+    setShowDeleteModal(true);
+  };
+
+  const verifySuperAdmin = async () => {
+    try {
+      const loginData = {
+        email: superAdminEmail,
+        password: superAdminPassword,
+        role: "superadmin"
+      };
+
+      const response = await login(loginData).unwrap();
+      return true;
+    } catch (error) {
+      setAuthError("Incorrect super admin password.");
+      return false;
+    }
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!superAdminPassword.trim()) {
+      setAuthError("Please enter your password");
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const isVerified = await verifySuperAdmin();
+      if (!isVerified) {
+        setIsSubmitting(false);
+        return;
+      }
+
+      await deleteAccount(selectedAccountId).unwrap();
+      toastSuccess("Account deleted successfully");
+      setShowDeleteModal(false);
+      setSuperAdminPassword("");
+      setAuthError("");
+      await refetch();
+    } catch (error) {
+      toastError(error?.data?.message || "Failed to delete account");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleModalClose = () => {
+    setShowDeleteModal(false);
+    setSelectedAccountId(null);
+    setSuperAdminPassword("");
+    setAuthError("");
+    setIsSubmitting(false);
+  };
+
+  const handleStatusClick = (account) => {
+    setSelectedAccount(account);
+    setIsDisabling(account.status !== "disabled");
+    setShowStatusModal(true);
+  };
+
+  const handleStatusConfirm = async () => {
+    if (!superAdminPassword.trim()) {
+      setAuthError("Please enter your password");
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const isVerified = await verifySuperAdmin();
+      if (!isVerified) {
+        setIsSubmitting(false);
+        return;
+      }
+
+      await toggleStatus({
+        id: selectedAccount._id,
+        status: isDisabling ? "disabled" : "active"
+      }).unwrap();
+
+      toastSuccess(`Account ${isDisabling ? 'disabled' : 'enabled'} successfully`);
+      setShowStatusModal(false);
+      setSuperAdminPassword("");
+      setAuthError("");
+      await refetch();
+    } catch (error) {
+      toastError(error?.data?.message || `Failed to ${isDisabling ? 'disable' : 'enable'} account`);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleStatusModalClose = () => {
+    setShowStatusModal(false);
+    setSelectedAccount(null);
+    setSuperAdminPassword("");
+    setAuthError("");
+    setIsSubmitting(false);
+  };
+
+  const ActionsCell = (p) => {
+    // Check if the account is a super admin
+    const isSuperAdmin = p.data.role.toLowerCase() === "superadmin";
+
+    return (
+      <div className="py-2 h-full w-full flex items-center gap-2">
+        <button className="flex items-center gap-1 text-primary hover:bg-gray-200 p-1 rounded-md">
+          <IconSearch size={13} stroke={2.5} />
+          <p className="text-sm">view</p>
+        </button>
+        {/* Only show disable/enable button if not super admin */}
+        {!isSuperAdmin && (
+          <button 
+            onClick={() => handleStatusClick(p.data)}
+            className="flex items-center gap-1 text-warning hover:bg-gray-200 p-1 rounded-md"
+          >
+            <IconBan size={15} stroke={2} />
+            <p className="text-sm">{p.data.status === "disabled" ? "enable" : "disable"}</p>
+          </button>
+        )}
+        {/* Only show remove button if not super admin */}
+        {!isSuperAdmin && (
+          <button 
+            onClick={() => handleDeleteClick(p.data._id)}
+            className="flex items-center gap-1 text-error hover:bg-gray-200 p-1 rounded-md"
+          >
+            <IconTrash size={15} stroke={2.5} />
+            <p className="text-sm">remove</p>
+          </button>
+        )}
+      </div>
+    );
+  };
+
+  // Add this console.log to see the API response
+  console.log('Accounts API Response:', accounts);
+
+  // Transform API data to match table structure and filter for admin/superadmin
+  const rowData = useMemo(() => {
+    if (!accounts) return [];
+    
+    return accounts
+      .filter(account => account.role === 'admin' || account.role === 'superadmin')
+      .map(account => ({
+        username: account.username,
+        email: account.email,
+        role: account.role.charAt(0).toUpperCase() + account.role.slice(1), // Capitalize role
+        joined: account.createdAt || account.updatedAt,
+        status: account.status === "disabled" ? "disabled" : 
+                (account.verified ? "active" : "unverified"),
+        _id: account._id // Keep ID for actions
+      }));
+  }, [accounts]);
 
   const columnDefs = useMemo(
     () => [
-      {
-        field: "profile",
-        headerName: "Photo",
-        minWidth: 80,
-        maxWidth: 80,
-        cellRenderer: ProfileCell,
-        filter: false,
-        sortable: false,
+      { 
+        field: "username", 
+        minWidth: 120,
+        flex: 1 
       },
-      { field: "username", minWidth: 120 },
-      { field: "email", minWidth: 180 },
+      { 
+        field: "email", 
+        minWidth: 180,
+        flex: 1.5 
+      },
       {
         field: "role",
         minWidth: 120,
+        flex: 1,
         cellRenderer: RoleCell,
       },
       {
         field: "joined",
         headerName: "Joined Date",
         minWidth: 140,
+        flex: 1,
         cellRenderer: DateCell,
       },
       {
         field: "status",
         minWidth: 120,
+        flex: 1,
         cellRenderer: StatusCell,
       },
       {
         field: "actions",
-        minWidth: 180,
+        headerName: "Actions",
+        minWidth: 250,
+        maxWidth: 250,
+        flex: 0,
         filter: false,
         cellRenderer: ActionsCell,
       },
@@ -229,58 +323,187 @@ function AdminsTable() {
 
   const theme = useMemo(() => customTheme, []);
 
+  // Simplified onGridSizeChanged function
   const onGridSizeChanged = useCallback((params) => {
-    const gridWidth = gridRef.current?.offsetWidth;
-    const allColumns = params.columnApi.getAllColumns();
-    const columnsToShow = [];
-    const columnsToHide = [];
-    let totalColsWidth = 0;
-
-    if (allColumns) {
-      allColumns.forEach((col) => {
-        totalColsWidth += col.getMinWidth() || 100;
-        if (totalColsWidth > gridWidth) {
-          columnsToHide.push(col.getColId());
-        } else {
-          columnsToShow.push(col.getColId());
-        }
-      });
-    }
-
-    params.columnApi.setColumnsVisible(columnsToShow, true);
-    params.columnApi.setColumnsVisible(columnsToHide, false);
-
-    setTimeout(() => {
+    if (gridRef.current) {
       params.api.sizeColumnsToFit();
-    }, 10);
+    }
   }, []);
 
   const onFirstDataRendered = useCallback((params) => {
     params.api.sizeColumnsToFit();
   }, []);
 
-  const showPagination = rowData.length > 10;
+  // Calculate dynamic height based on number of rows
+  const calculateHeight = () => {
+    const rowHeight = 60; // Height of each row
+    const headerHeight = 48; // Height of the header
+    const paginationHeight = 48; // Height of pagination
+    const maxHeight = 600; // Maximum height
+    
+    const calculatedHeight = (rowData.length * rowHeight) + headerHeight + paginationHeight;
+    return Math.min(calculatedHeight, maxHeight);
+  };
 
   return (
-    <div
-      className="ag-theme-quartz"
-      ref={gridRef}
-      style={{ height: "100%", width: "100%" }}
-    >
-      <AgGridReact
+    <>
+      <div
+        className="ag-theme-quartz"
         ref={gridRef}
-        rowData={rowData}
-        columnDefs={columnDefs}
-        defaultColDef={defaultColDef}
-        theme={theme}
-        pagination={showPagination}
-        paginationPageSize={10}
-        rowHeight={60}
-        paginationPageSizeSelector={showPagination ? [5, 10, 20] : undefined}
-        onGridSizeChanged={onGridSizeChanged}
-        onFirstDataRendered={onFirstDataRendered}
-      />
-    </div>
+        style={{ 
+          height: `${calculateHeight()}px`,
+          width: "100%",
+          minHeight: "200px"
+        }}
+      >
+        {isLoading ? (
+          <div className="h-full flex items-center justify-center">
+            <p className="text-lg">Loading accounts...</p>
+          </div>
+        ) : error ? (
+          <div className="h-full flex items-center justify-center">
+            <p className="text-lg text-error">Error loading accounts</p>
+          </div>
+        ) : (
+          <AgGridReact
+            ref={gridRef}
+            rowData={rowData}
+            columnDefs={columnDefs}
+            defaultColDef={defaultColDef}
+            theme={theme}
+            pagination={true}
+            paginationPageSize={10}
+            rowHeight={60}
+            headerHeight={48}
+            paginationPageSizeSelector={[5, 10, 20, 50]}
+            onGridSizeChanged={onGridSizeChanged}
+            onFirstDataRendered={onFirstDataRendered}
+            domLayout="normal"
+            suppressPaginationPanel={false}
+          />
+        )}
+      </div>
+
+      {/* Delete Confirmation Modal */}
+      <dialog id="delete_modal" className="modal" open={showDeleteModal}>
+        <div className="modal-box gap-6 text-lg w-10/12 max-w-3xl p-8 sm:p-12 rounded-3xl">
+          <div className="flex flex-col gap-6">
+            <p className="text-center text-3xl font-bold text-error">
+              Confirm Account Deletion
+            </p>
+            <p className="text-center text-gray-600">
+              Please enter your super admin password to confirm this action
+            </p>
+
+            <div className="w-full flex flex-col gap-1">
+              <label className="text-primary font-bold">
+                Super Admin Password*
+              </label>
+              <input
+                type="password"
+                value={superAdminPassword}
+                onChange={(e) => {
+                  setSuperAdminPassword(e.target.value);
+                  setAuthError("");
+                }}
+                className={`p-3 bg-base-200 text-primary rounded-xl border-none ${
+                  authError ? "border-2 border-error" : ""
+                }`}
+                placeholder="Enter super admin password"
+              />
+              {authError && (
+                <p className="text-error text-sm mt-1">{authError}</p>
+              )}
+            </div>
+
+            <div className="w-full flex justify-end gap-3 mt-4">
+              <button
+                type="button"
+                className="bg-gray-300 text-white px-6 py-2.5 rounded-xl hover:bg-gray-400 transition-colors hover:cursor-pointer"
+                onClick={handleModalClose}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleDeleteConfirm}
+                className={`flex items-center gap-2 bg-error text-white px-6 py-2.5 rounded-xl hover:opacity-90 transition-opacity hover:cursor-pointer ${
+                  isSubmitting ? "opacity-70 cursor-wait" : ""
+                }`}
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? "Processing..." : "Delete Account"}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Click outside to close */}
+        <form method="dialog" className="modal-backdrop">
+          <button onClick={handleModalClose}>close</button>
+        </form>
+      </dialog>
+
+      {/* Add new status toggle modal */}
+      <dialog id="status_modal" className="modal" open={showStatusModal}>
+        <div className="modal-box gap-6 text-lg w-10/12 max-w-3xl p-8 sm:p-12 rounded-3xl">
+          <div className="flex flex-col gap-6">
+            <p className="text-center text-3xl font-bold text-warning">
+              Confirm Account {isDisabling ? 'Disable' : 'Enable'}
+            </p>
+            <p className="text-center text-gray-600">
+              Please enter your super admin password to {isDisabling ? 'disable' : 'enable'} this account
+            </p>
+
+            <div className="w-full flex flex-col gap-1">
+              <label className="text-primary font-bold">
+                Super Admin Password*
+              </label>
+              <input
+                type="password"
+                value={superAdminPassword}
+                onChange={(e) => {
+                  setSuperAdminPassword(e.target.value);
+                  setAuthError("");
+                }}
+                className={`p-3 bg-base-200 text-primary rounded-xl border-none ${
+                  authError ? "border-2 border-error" : ""
+                }`}
+                placeholder="Enter super admin password"
+              />
+              {authError && (
+                <p className="text-error text-sm mt-1">{authError}</p>
+              )}
+            </div>
+
+            <div className="w-full flex justify-end gap-3 mt-4">
+              <button
+                type="button"
+                className="bg-gray-300 text-white px-6 py-2.5 rounded-xl hover:bg-gray-400 transition-colors hover:cursor-pointer"
+                onClick={handleStatusModalClose}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleStatusConfirm}
+                className={`flex items-center gap-2 bg-warning text-white px-6 py-2.5 rounded-xl hover:opacity-90 transition-opacity hover:cursor-pointer ${
+                  isSubmitting ? "opacity-70 cursor-wait" : ""
+                }`}
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? "Processing..." : `${isDisabling ? 'Disable' : 'Enable'} Account`}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Click outside to close */}
+        <form method="dialog" className="modal-backdrop">
+          <button onClick={handleStatusModalClose}>close</button>
+        </form>
+      </dialog>
+    </>
   );
 }
 

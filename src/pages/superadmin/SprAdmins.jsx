@@ -2,21 +2,19 @@ import { AdminsTable } from "../../components";
 import { IconPlus, IconArrowRight, IconArrowLeft } from "@tabler/icons-react";
 import { useState } from "react";
 import { toastSuccess, toastError } from "../../utils.jsx";
-
-// Default super admin password for development
-const SUPER_ADMIN_PASSWORD = "Password!123";
+import { useCreateAdminMutation, useVerifyAdminOTPMutation, useLoginMutation, useGetAccountsQuery } from "../../api/dengueApi";
+import { useSelector } from "react-redux";
 
 function SprAdmins() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState({
-    firstName: "",
-    lastName: "",
+    username: "",
     email: "",
     password: "",
     confirmPassword: "",
-    profilePicture: null,
   });
+  const [otp, setOtp] = useState("");
   const [superAdminAuth, setSuperAdminAuth] = useState({
     password: "",
   });
@@ -24,16 +22,21 @@ function SprAdmins() {
   const [authError, setAuthError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const [createAdmin] = useCreateAdminMutation();
+  const [verifyOTP] = useVerifyAdminOTPMutation();
+  const [login] = useLoginMutation();
+  const { data: accounts } = useGetAccountsQuery();
+
+  // Get super admin email from Redux store
+  const superAdminEmail = useSelector((state) => state.auth?.user?.email);
+
   // Field validation logic
   const validateField = (name, value) => {
     let error = "";
 
     switch (name) {
-      case "firstName":
-        if (!value.trim()) error = "First name is required";
-        break;
-      case "lastName":
-        if (!value.trim()) error = "Last name is required";
+      case "username":
+        if (!value.trim()) error = "Username is required";
         break;
       case "email":
         if (!value.trim()) error = "Email is required";
@@ -43,8 +46,7 @@ function SprAdmins() {
         if (!value) error = "Password is required";
         else if (value.length < 8) error = "Must be at least 8 characters";
         else if (!/(?=.*[a-z])/.test(value)) error = "Needs a lowercase letter";
-        else if (!/(?=.*[A-Z])/.test(value))
-          error = "Needs an uppercase letter";
+        else if (!/(?=.*[A-Z])/.test(value)) error = "Needs an uppercase letter";
         else if (!/(?=.*\d)/.test(value)) error = "Needs a number";
         else if (!/(?=.*\W)/.test(value)) error = "Needs a special character";
         break;
@@ -87,29 +89,28 @@ function SprAdmins() {
     setAuthError("");
   };
 
-  const handleFileChange = (e) => {
-    setFormData((prev) => ({
-      ...prev,
-      profilePicture: e.target.files[0],
-    }));
-  };
-
   const validateForm = () => {
-    const fields = [
-      "firstName",
-      "lastName",
-      "email",
-      "password",
-      "confirmPassword",
-    ];
-
+    const fields = ["username", "email", "password", "confirmPassword"];
     fields.forEach((field) => validateField(field, formData[field]));
-
     return fields.every((field) => !errors[field]);
   };
 
-  const handleNextStep = () => {
+  const handleNextStep = async () => {
     if (validateForm()) {
+      // Check if email already exists in accounts
+      const emailExists = accounts?.some(account => 
+        account.email.toLowerCase() === formData.email.trim().toLowerCase()
+      );
+
+      if (emailExists) {
+        setErrors(prev => ({
+          ...prev,
+          email: "An account with this email already exists"
+        }));
+        return; // Don't proceed to next step if email exists
+      }
+
+      // If email doesn't exist, proceed to next step
       setCurrentStep(2);
     }
   };
@@ -120,13 +121,22 @@ function SprAdmins() {
 
   const verifySuperAdmin = async () => {
     try {
-      // In a real app, this would be an API call to verify the super admin's credentials
-      if (superAdminAuth.password !== SUPER_ADMIN_PASSWORD) {
-        throw new Error("Invalid super admin credentials");
-      }
+      const loginData = {
+        email: superAdminEmail,
+        password: superAdminAuth.password,
+        role: "superadmin"
+      };
+      console.log('Super admin verification attempt:', { email: superAdminEmail, role: "superadmin" });
+
+      const response = await login(loginData).unwrap();
       return true;
     } catch (error) {
-      setAuthError(error.message);
+      console.error('Super admin verification failed:', {
+        status: error?.status,
+        message: error?.data?.message,
+        error: error
+      });
+      setAuthError("Incorrect super admin password.");
       return false;
     }
   };
@@ -135,6 +145,14 @@ function SprAdmins() {
     e.preventDefault();
     setIsSubmitting(true);
 
+    // Move requestData declaration outside try block
+    const requestData = {
+      username: formData.username.trim(),
+      email: formData.email.trim(),
+      password: formData.password,
+      role: "admin"
+    };
+
     try {
       const isVerified = await verifySuperAdmin();
       if (!isVerified) {
@@ -142,41 +160,79 @@ function SprAdmins() {
         return;
       }
 
-      // Here you would typically make an API call to create the admin
-      console.log("Creating admin with data:", formData);
+      // Log the exact request body being sent
+      console.log('Sending request to /accounts:', JSON.stringify(requestData, null, 2));
 
-      // Simulate API delay
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-
-      setIsModalOpen(false);
-      setCurrentStep(1);
-      toastSuccess("New admin created successfully");
-
-      // Reset form
-      setFormData({
-        firstName: "",
-        lastName: "",
-        email: "",
-        password: "",
-        confirmPassword: "",
-        profilePicture: null,
-      });
-      setSuperAdminAuth({ password: "" });
+      const response = await createAdmin(requestData).unwrap();
+      
+      toastSuccess("Admin account created successfully. Please check your email for verification.");
+      setCurrentStep(3);
     } catch (error) {
-      toastError("Failed to create admin");
-      console.error("Admin creation error:", error);
+      // Now requestData is accessible here
+      console.error('Admin creation failed:', {
+        requestBody: requestData,
+        errorStatus: error?.status,
+        errorMessage: error?.data?.message,
+        fullError: error
+      });
+      toastError(error?.data?.message || "Failed to create admin");
     } finally {
       setIsSubmitting(false);
     }
   };
 
+  const handleVerifyOTP = async () => {
+    // Check if OTP is empty
+    if (!otp.trim()) {
+      toastError("Please enter the OTP");
+      return;
+    }
+
+    try {
+      await verifyOTP({
+        email: formData.email,
+        otp: otp,
+        purpose: "account-verification"
+      }).unwrap();
+
+      toastSuccess("Email verified successfully!");
+      setIsModalOpen(false);
+      setCurrentStep(1);
+      setFormData({
+        username: "",
+        email: "",
+        password: "",
+        confirmPassword: "",
+      });
+      setOtp("");
+    } catch (error) {
+      toastError(error?.data?.message || "Failed to verify OTP");
+    }
+  };
+
   const isFormValid =
     Object.values(errors).every((error) => !error) &&
-    formData.firstName &&
-    formData.lastName &&
+    formData.username &&
     formData.email &&
     formData.password &&
     formData.confirmPassword;
+
+  // Add this function to handle modal close
+  const handleModalClose = () => {
+    setIsModalOpen(false);
+    setCurrentStep(1); // Reset to first step
+    setFormData({
+      username: "",
+      email: "",
+      password: "",
+      confirmPassword: "",
+    });
+    setOtp("");
+    setSuperAdminAuth({ password: "" });
+    setErrors({});
+    setAuthError("");
+    setIsSubmitting(false);
+  };
 
   return (
     <main className="flex flex-col w-full">
@@ -194,7 +250,7 @@ function SprAdmins() {
         </button>
       </div>
 
-      <div className="h-[calc(100vh-200px)] bg-white rounded-xl shadow-sm p-4">
+      <div className="bg-white rounded-xl shadow-sm p-4">
         <AdminsTable />
       </div>
 
@@ -203,10 +259,7 @@ function SprAdmins() {
         id="admin_modal"
         className="modal"
         open={isModalOpen}
-        onClose={() => {
-          setIsModalOpen(false);
-          setCurrentStep(1);
-        }}
+        onClose={handleModalClose}
       >
         <div className="modal-box gap-6 text-lg w-10/12 max-w-3xl p-8 sm:p-12 rounded-3xl">
           <form onSubmit={handleSubmit}>
@@ -216,41 +269,19 @@ function SprAdmins() {
                   Create New Admin
                 </p>
 
-                <div className="flex flex-col sm:flex-row gap-6 w-full">
-                  <div className="flex-1 flex flex-col gap-1">
-                    <label className="text-primary font-bold">
-                      First Name*
-                    </label>
-                    <input
-                      name="firstName"
-                      value={formData.firstName}
-                      onChange={handleInputChange}
-                      className={`p-3 bg-base-200 text-primary rounded-xl border-none ${
-                        errors.firstName ? "border-2 border-error" : ""
-                      }`}
-                    />
-                    {errors.firstName && (
-                      <p className="text-error text-sm mt-1">
-                        {errors.firstName}
-                      </p>
-                    )}
-                  </div>
-                  <div className="flex-1 flex flex-col gap-1">
-                    <label className="text-primary font-bold">Last Name*</label>
-                    <input
-                      name="lastName"
-                      value={formData.lastName}
-                      onChange={handleInputChange}
-                      className={`p-3 bg-base-200 text-primary rounded-xl border-none ${
-                        errors.lastName ? "border-2 border-error" : ""
-                      }`}
-                    />
-                    {errors.lastName && (
-                      <p className="text-error text-sm mt-1">
-                        {errors.lastName}
-                      </p>
-                    )}
-                  </div>
+                <div className="w-full flex flex-col gap-1">
+                  <label className="text-primary font-bold">Username*</label>
+                  <input
+                    name="username"
+                    value={formData.username}
+                    onChange={handleInputChange}
+                    className={`p-3 bg-base-200 text-primary rounded-xl border-none ${
+                      errors.username ? "border-2 border-error" : ""
+                    }`}
+                  />
+                  {errors.username && (
+                    <p className="text-error text-sm mt-1">{errors.username}</p>
+                  )}
                 </div>
 
                 <div className="w-full flex flex-col gap-1">
@@ -309,36 +340,11 @@ function SprAdmins() {
                   )}
                 </div>
 
-                <div className="flex flex-col gap-1">
-                  <label className="text-primary font-bold">
-                    Profile picture{" "}
-                    <span className="text-sm font-normal italic">
-                      (Optional)
-                    </span>
-                  </label>
-                  <div className="flex items-center gap-4 rounded-xl border-2 border-base-200 p-2 px-4">
-                    <label className="bg-primary text-xs text-white px-4 py-2 rounded-lg cursor-pointer hover:bg-primary/90 transition-colors">
-                      Choose File
-                      <input
-                        type="file"
-                        className="hidden"
-                        onChange={handleFileChange}
-                        accept="image/*"
-                      />
-                    </label>
-                    <p className="text-sm">
-                      {formData.profilePicture
-                        ? formData.profilePicture.name
-                        : "No File Chosen"}
-                    </p>
-                  </div>
-                </div>
-
                 <div className="w-full flex justify-end gap-3 mt-4">
                   <button
                     type="button"
                     className="bg-gray-300 text-white px-6 py-2.5 rounded-xl hover:bg-gray-400 transition-colors hover:cursor-pointer"
-                    onClick={() => setIsModalOpen(false)}
+                    onClick={handleModalClose}
                   >
                     Cancel
                   </button>
@@ -354,7 +360,7 @@ function SprAdmins() {
                   </button>
                 </div>
               </div>
-            ) : (
+            ) : currentStep === 2 ? (
               <div className="flex flex-col gap-6">
                 <p className="text-center text-3xl font-bold">
                   Super Admin Verification
@@ -380,9 +386,6 @@ function SprAdmins() {
                   {authError && (
                     <p className="text-error text-sm mt-1">{authError}</p>
                   )}
-                  <p className="text-xs italic text-gray-500 mt-1">
-                    For development: Use "{SUPER_ADMIN_PASSWORD}"
-                  </p>
                 </div>
 
                 <div className="w-full flex justify-between gap-3 mt-4">
@@ -410,20 +413,50 @@ function SprAdmins() {
                   </button>
                 </div>
               </div>
+            ) : (
+              <div className="flex flex-col gap-6">
+                <p className="text-center text-3xl font-bold">
+                  Verify Email
+                </p>
+                <p className="text-center text-gray-600">
+                  Please enter the OTP sent to {formData.email}
+                </p>
+
+                <div className="w-full flex flex-col gap-1">
+                  <label className="text-primary font-bold">OTP*</label>
+                  <input
+                    type="text"
+                    value={otp}
+                    onChange={(e) => setOtp(e.target.value)}
+                    className="p-3 bg-base-200 text-primary rounded-xl border-none"
+                    placeholder="Enter OTP"
+                  />
+                </div>
+
+                <div className="w-full flex justify-between gap-3 mt-4">
+                  <button
+                    type="button"
+                    className="bg-gray-300 text-white px-6 py-2.5 rounded-xl hover:bg-gray-400 transition-colors hover:cursor-pointer"
+                    onClick={handleModalClose}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleVerifyOTP}
+                    className="flex items-center gap-2 bg-gradient-to-r from-[#245261] to-[#4AA8C7] text-white px-6 py-2.5 rounded-xl hover:opacity-90 transition-opacity hover:cursor-pointer"
+                  >
+                    Verify OTP
+                  </button>
+                </div>
+              </div>
             )}
           </form>
         </div>
 
         {/* Click outside to close */}
         <form method="dialog" className="modal-backdrop">
-          <button
-            onClick={() => {
-              setIsModalOpen(false);
-              setCurrentStep(1);
-            }}
-          >
-            close
-          </button>
+          <button onClick={handleModalClose}>close</button>
         </form>
       </dialog>
     </main>

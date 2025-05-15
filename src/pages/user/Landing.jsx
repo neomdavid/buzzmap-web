@@ -3,6 +3,8 @@ import tubImg from "../../assets/mosquito_tub.jpg";
 import cleaningImg from "../../assets/cleaning.jpg";
 import logoFooter from "../../assets/logo_ligthbg.svg";
 import logoSurveillance from "../../assets/icons/quezon_surveillance.png";
+import profile1 from "../../assets/profile1.png";
+
 import {
   GoalCard,
   Heading,
@@ -18,17 +20,50 @@ import {
   ShieldCheck,
   Heartbeat,
   Quotes,
+  ArrowFatLineRight,
 } from "phosphor-react";
 import ScrambledText from "../../components/Landing/ScrambledText";
 import AltPreventionCard from "../../components/Landing/AltPreventionCard";
 import { Link } from "react-router-dom";
 import StreetViewMap from "../../components/StreetViewMap";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useGoogleMaps } from "../../components/GoogleMapsProvider.jsx";
 import Mapping from "./Mapping";
 import RiskMap from "../../components/RiskMap";
+import NewPostModal from "../../components/Community/NewPostModal";
+import { useSelector } from "react-redux";
+import { useNavigate } from "react-router-dom";
+import { toastInfo } from "../../utils";
 
 const Landing = () => {
+  const modalRef = useRef(null);
+  const navigate = useNavigate();
+  
+  // Get user from Redux store (same as Navbar)
+  const userFromStore = useSelector((state) => state.auth?.user);
+  let user;
+  if (userFromStore && userFromStore.role === "user") {
+    user = userFromStore;
+  } else {
+    user = { name: "Guest" };
+  }
+
+  const handleReportClick = () => {
+    if (user.name === "Guest") {
+      // Show toast message instead of navigating directly
+      toastInfo("Please log in to share your report");
+      // Optional: navigate to login after a short delay
+      setTimeout(() => {
+        navigate("/login");
+      }, 1500);
+    } else {
+      // If user is logged in, open the modal
+      if (modalRef.current) {
+        modalRef.current.showModal();
+      }
+    }
+  };
+
   return (
     <main className="flex flex-col overflow-hidden mt-12">
       {/* <StreetViewMap /> */}
@@ -79,10 +114,10 @@ const Landing = () => {
         <div className="rounded-xl overflow-hidden h-[400px] lg:h-[500px] mb-6 lg:mb-0 lg:flex-13 flex items-center justify-center bg-gray-100">
           <RiskMap height="400px" />
         </div>
-        <div className="flex flex-col flex-10  mx-6 items-center text-center lg:items-end lg:text-right">
+        <div className="mb-16 flex flex-col flex-10  mx-6 items-center text-center lg:items-end lg:text-right">
           <Heading
             text="see the /danger zones/"
-            className="text-5xl sm:text-6xl"
+            className="text-5xl sm:text-7xl"
           />
           <p className="text-primary text-xl font-semibold mt-5">
             By tracking and visualizing dengue hotspots, users can stay
@@ -125,7 +160,28 @@ const Landing = () => {
             />
           </div>
         </div>
+   
       </section>
+      <div className="flex flex-col text-center items-center mx-14  p-10 py-16 bg-gradient-to-r from-[#245261] to-[#4AA8C7] text-white rounded-2xl">
+          <h1 className="text-5xl sm:text-7xl mb-2">YOUR COMMUNITY SPEAKS</h1>
+          <p className="font-bold italic mb-8 text-md">Spread Awareness. Check the Latest Dengue Updates! </p>
+          <div 
+            className="flex items-center justify-center sm:w-[60%] max-w-[600px] px-10 py-5 bg-white rounded-2xl gap-3 mb-8 cursor-pointer hover:bg-gray-50 transition-colors"
+            onClick={handleReportClick}
+          >
+            <img src={profile1} className="h-12 w-12 rounded-full" />
+            <input 
+              type="text" 
+              placeholder={user.name === "Guest" ? "Login to share your report..." : "Share your report here..."}
+              className="flex-1 input rounded-2xl input-primary placeholder:text-primary placeholder:italic"
+              readOnly
+            />
+            <div className="text-primary ml-[-3px]">
+              <ArrowFatLineRight size={25} weight="fill" />
+            </div>
+          </div>
+          <Link to="/community" className="bg-gradient-to-b from-[#FADD37] to-[#F8A900] italic text-primary font-semibold px-6 py-3 rounded-xl hover:scale-105 transition-transform duration-300 active:opacity-70 hover:cursor-pointer">Read more dengue reports <span className="font-extrabold">here</span>.</Link>
+      </div>
       <article className="bg-primary mt-8 flex flex-col items-center py-20">
         <h1 className="uppercase text-5xl sm:text-6xl text-white">
           DON'T WAIT FOR AN
@@ -237,6 +293,7 @@ const Landing = () => {
 
         <div className="font-bold self-end text-sm">©2025</div>
       </footer>
+      <NewPostModal ref={modalRef} />
     </main>
   );
 };

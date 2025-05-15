@@ -19,6 +19,15 @@ const baseQueryWithErrorHandling = async (args, api, extraOptions) => {
     const result = await customBaseQuery(args, api, extraOptions);
     
     if (result.error) {
+      // If the error has a specific message from the backend, use that
+      if (result.error.data?.error) {
+        return {
+          error: {
+            status: result.error.status,
+            data: { message: result.error.data.error }
+          }
+        };
+      }
       
       // Helper to ensure a message is always present
       const getErrorData = (defaultMsg) => {
@@ -57,12 +66,10 @@ const baseQueryWithErrorHandling = async (args, api, extraOptions) => {
             }
           };
         case 500:
-          // Special handling for 500 errors that might contain specific error messages
-          const errorData = getErrorData('Server error occurred. Please try again later');
           return {
             error: {
               status: 500,
-              data: errorData
+              data: getErrorData('Server error occurred. Please try again later')
             }
           };
         default:
@@ -76,7 +83,6 @@ const baseQueryWithErrorHandling = async (args, api, extraOptions) => {
     }
     return result;
   } catch (error) {
-    // Handle network errors (e.g., server unreachable)
     return {
       error: {
         status: 'NETWORK_ERROR',
@@ -98,6 +104,7 @@ export const dengueApi = createApi({
     "PatternRecognition",
     "Barangay",
     "Alert",
+    "Accounts",
   ],
   endpoints: (builder) => ({
     // Authentication Endpoints
@@ -508,6 +515,53 @@ export const dengueApi = createApi({
         body,
       }),
     }),
+
+    getAccounts: builder.query({
+      query: () => ({
+        url: '/accounts',
+        method: 'GET',
+      }),
+      providesTags: ['Accounts'],
+    }),
+
+    // Create admin account
+    createAdmin: builder.mutation({
+      query: (adminData) => ({
+        url: 'accounts',
+        method: 'POST',
+        body: adminData,
+      }),
+      invalidatesTags: ['Accounts'],
+    }),
+
+    // Verify OTP
+    verifyAdminOTP: builder.mutation({
+      query: (otpData) => ({
+        url: 'auth/verify-otp',
+        method: 'POST',
+        body: otpData,
+      }),
+      invalidatesTags: ['Accounts'],
+    }),
+
+    // Add this to the endpoints object
+    deleteAccount: builder.mutation({
+      query: (id) => ({
+        url: `accounts/${id}`,
+        method: 'DELETE',
+      }),
+      invalidatesTags: ['Accounts'],
+    }),
+
+    // Add this to the endpoints object
+    toggleAccountStatus: builder.mutation({
+      query: ({ id, status }) => ({
+        url: `accounts/${id}/toggle-status`,
+        method: 'PATCH',
+        body: { status },
+      }),
+      invalidatesTags: ['Accounts'],
+    }),
   }),
 });
 
@@ -578,4 +632,18 @@ export const {
   useGetSingleAdminPostQuery,
 
   useGetNearbyReportsMutation,
+
+  useGetAccountsQuery,
+
+  // Add this to the exported hooks
+  useCreateAdminMutation,
+
+  // Add this to the exported hooks
+  useVerifyAdminOTPMutation,
+
+  // Add this to the exported hooks
+  useDeleteAccountMutation,
+
+  // Add this to the exported hooks
+  useToggleAccountStatusMutation,
 } = dengueApi;
