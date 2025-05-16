@@ -5,9 +5,6 @@ import {
   useDeleteInterventionMutation,
 } from "../../api/dengueApi"; // Import the RTK Query hook for updating the intervention data
 import { toastSuccess, toastError, formatDateForInput } from "../../utils.jsx";
-import { X } from "phosphor-react";
-import { InterventionAnalysisChart } from "../../components";
-
 const InterventionDetailsModal = ({
   intervention,
   onClose,
@@ -116,54 +113,223 @@ const InterventionDetailsModal = ({
       .catch(console.error);
   }, []);
 
-  if (!intervention) return null;
-
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-6 w-11/12 max-w-4xl max-h-[90vh] overflow-y-auto">
-        <div className="flex justify-between items-start mb-4">
-          <h2 className="text-2xl font-bold text-gray-800">Intervention Details</h2>
-          <button
-            onClick={onClose}
-            className="text-gray-500 hover:text-gray-700"
-          >
-            <X size={24} />
-          </button>
-        </div>
+    <dialog
+      ref={modalRef}
+      className="modal transition-transform duration-300 ease-in-out"
+      onClick={(e) => e.target === e.currentTarget && onClose()}
+    >
+      <div className="modal-box bg-white rounded-4xl shadow-2xl w-11/12 max-w-3xl p-12 relative">
+        <button
+          className="absolute top-6 right-6 text-2xl font-semibold hover:text-gray-500 hover:cursor-pointer"
+          onClick={onClose}
+        >
+          ✕
+        </button>
 
-        {/* Basic Intervention Info */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-          <div className="bg-gray-50 p-4 rounded-lg">
-            <h3 className="font-semibold text-gray-700 mb-2">Intervention Information</h3>
-            <p><span className="font-medium">Type:</span> {intervention.type}</p>
-            <p><span className="font-medium">Date:</span> {new Date(intervention.date).toLocaleDateString()}</p>
-            <p><span className="font-medium">Barangay:</span> {intervention.barangay}</p>
-            <p><span className="font-medium">Personnel:</span> {intervention.personnel}</p>
-          </div>
-          <div className="bg-gray-50 p-4 rounded-lg">
-            <h3 className="font-semibold text-gray-700 mb-2">Status & Progress</h3>
-            <p><span className="font-medium">Status:</span> {intervention.status}</p>
-            <p><span className="font-medium">Progress:</span> {intervention.progress}%</p>
-            <p><span className="font-medium">Last Updated:</span> {new Date(intervention.lastUpdated).toLocaleDateString()}</p>
-          </div>
-        </div>
+        {/* Show delete confirmation only if it's set to true */}
+        {showDeleteConfirmation ? (
+          <>
+            <p className="text-3xl font-bold mb-6 text-center">
+              Are you sure you want to delete this intervention?
+            </p>
+            <div className="modal-action flex justify-center gap-6">
+              <button
+                type="button"
+                onClick={handleCancelDelete}
+                className="bg-gray-300 text-gray-700 font-semibold py-1 px-12 rounded-xl hover:bg-gray-400 transition-all"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmDelete}
+                className="bg-error text-white font-semibold py-1 px-12 rounded-xl hover:bg-error/80 transition-all"
+              >
+                {isLoading ? "Deleting..." : "Confirm Delete"}
+              </button>
+            </div>
+          </>
+        ) : (
+          <>
+            <p className="text-3xl font-bold mb-6 text-center">
+              {isEditing
+                ? "Edit Intervention Details"
+                : "View Intervention Details"}
+            </p>
 
-        {/* Intervention Analysis Chart */}
-        <div className="mb-6">
-          <h3 className="font-semibold text-gray-700 mb-4">Effectiveness Analysis</h3>
-          <InterventionAnalysisChart interventionId={intervention._id} />
-        </div>
+            {/* Display form to edit or view */}
+            <form
+              onSubmit={handleSave}
+              className="flex flex-col space-y-2 text-lg font-semibold"
+            >
+              {!isEditing ? (
+                <>
+                  <div className="flex gap-1">
+                    <p className="text-gray-500">Intervention ID: </p>
+                    <p className="font-semibold text-primary">
+                      {intervention._id}
+                    </p>
+                  </div>
+                  <div className="flex gap-1">
+                    <p className="text-gray-500">Barangay: </p>
+                    <p className="font-semibold text-primary">
+                      {intervention.barangay}
+                    </p>
+                  </div>
+                  {intervention.address && (
+                    <div className="flex gap-1">
+                      <p className="text-gray-500">Address: </p>
+                      <p className="font-semibold text-primary">
+                        {intervention.address}
+                      </p>
+                    </div>
+                  )}
+                  <div className="flex gap-1">
+                    <p className="text-gray-500">Date and Time: </p>
+                    <p className="font-semibold text-primary">
+                      {intervention.date}
+                    </p>
+                  </div>
+                  <div className="flex gap-1">
+                    <p className="text-gray-500">Type of Intervention: </p>
+                    <p className="font-semibold text-primary">
+                      {intervention.interventionType}
+                    </p>
+                  </div>
+                  <div className="flex gap-1">
+                    <p className="text-gray-500">Assigned Personnel: </p>
+                    <p className="font-semibold text-primary">
+                      {intervention.personnel}
+                    </p>
+                  </div>
+                </>
+              ) : (
+                <>
+                  {/* Editable Form */}
+                  <div className="flex flex-col gap-2">
+                    <label className="text-primary text-lg">Location</label>
+                    <select
+                      name="barangay"
+                      value={formData.barangay}
+                      onChange={handleChange}
+                      className="border-2 font-normal border-primary/60 p-3 rounded-lg w-full"
+                    >
+                      {barangayOptions.map((barangay, idx) => (
+                        <option key={idx} value={barangay}>
+                          {barangay}
+                        </option>
+                      ))}
+                    </select>
+                    <input
+                      name="address"
+                      value={formData.address}
+                      onChange={handleChange}
+                      className="border-2 font-normal border-primary/60 p-3 px-4 rounded-lg w-full"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <label className="text-primary text-lg">
+                      Date of Intervention
+                    </label>
+                    <input
+                      type="datetime-local"
+                      name="date"
+                      value={formatDateForInput(formData.date)}
+                      onChange={handleChange}
+                      className="border-2 font-normal border-primary/60 p-3 px-4 rounded-lg w-full"
+                      required
+                    />
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <label className="text-primary text-lg">
+                      Type of Intervention
+                    </label>
+                    <select
+                      name="interventionType"
+                      value={formData.interventionType}
+                      onChange={handleChange}
+                      className="border-2 font-normal border-primary/60 p-3 px-4 rounded-lg w-full"
+                      required
+                    >
+                      <option value="Fogging">Fogging</option>
+                      <option value="Larviciding">Larviciding</option>
+                      <option value="Clean-up Drive">Clean-up Drive</option>
+                      <option value="Education Campaign">
+                        Education Campaign
+                      </option>
+                    </select>
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <label className="text-primary text-lg">
+                      Assigned Personnel
+                    </label>
+                    <input
+                      name="personnel"
+                      value={formData.personnel}
+                      onChange={handleChange}
+                      className="border-2 font-normal border-primary/60 p-3 px-4 rounded-lg w-full"
+                      required
+                    />
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <label className="text-primary text-lg">Status</label>
+                    <select
+                      name="status"
+                      value={formData.status}
+                      onChange={handleChange}
+                      className="border-2 font-normal border-primary/60 p-3 rounded-lg w-full"
+                    >
+                      <option value="Complete">Complete</option>
+                      <option value="Scheduled">Scheduled</option>
+                      <option value="Ongoing">Ongoing</option>
+                    </select>
+                  </div>
+                </>
+              )}
 
-        {/* Additional Details */}
-        <div className="bg-gray-50 p-4 rounded-lg">
-          <h3 className="font-semibold text-gray-700 mb-2">Additional Details</h3>
-          <p><span className="font-medium">Description:</span> {intervention.description}</p>
-          {intervention.notes && (
-            <p><span className="font-medium">Notes:</span> {intervention.notes}</p>
-          )}
-        </div>
+              {/* Action Buttons */}
+              <div className="modal-action flex justify-center gap-6">
+                {isEditing ? (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => setIsEditing(false)}
+                      className="bg-gray-300 text-gray-700 font-semibold py-1 px-12 rounded-xl hover:bg-gray-400 transition-all hover:cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      className="bg-primary text-white font-semibold py-1 px-12 rounded-xl hover:bg-primary/80 transition-all hover:cursor-pointer"
+                    >
+                      {isLoading ? "Saving changes..." : "Save changes"}
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button
+                      type="button"
+                      onClick={handleEditClick}
+                      className="bg-primary text-white font-semibold py-1 px-12 rounded-xl hover:bg-primary/80 transition-all hover:cursor-pointer"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleDeleteClick}
+                      className="bg-error text-white font-semibold py-1 px-12 rounded-xl hover:bg-error/80 transition-all hover:cursor-pointer"
+                    >
+                      Delete
+                    </button>
+                  </>
+                )}
+              </div>
+            </form>
+          </>
+        )}
       </div>
-    </div>
+    </dialog>
   );
 };
 
