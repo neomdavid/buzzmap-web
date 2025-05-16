@@ -39,11 +39,11 @@ const Navbar = () => {
             `${
               isActive
                 ? currentRoute.startsWith("/mapping") ||
-                  /^\/prevention\/\w+/.test(currentRoute)
+                  /^\/buzzline\/\w+/.test(currentRoute)
                   ? "text-secondary"
                   : "text-accent"
                 : currentRoute.startsWith("/mapping") ||
-                  /^\/prevention\/\w+/.test(currentRoute)
+                  /^\/buzzline\/\w+/.test(currentRoute)
                 ? "text-white"
                 : "text-primary"
             } font-semibold text-lg`
@@ -115,7 +115,7 @@ const Navbar = () => {
   const baseClass =
     "z-50 fixed top-0 left-0 right-0 flex justify-between items-center px-6 py-4 lg:px-10";
 
-  if (currentRoute === "/mapping" || /^\/prevention\/\w+/.test(currentRoute)) {
+  if (currentRoute === "/mapping" || /^\/buzzline\/\w+/.test(currentRoute)) {
     return (
       <nav className={`${baseClass} bg-primary text-white`}>
         <LogoNamed theme="dark" />

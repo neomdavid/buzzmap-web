@@ -3,7 +3,7 @@ export const navLinks = [
   { name: "Home", to: "/home" },
   { name: "Mapping", to: "/mapping" },
   { name: "Community", to: "/community" },
-  { name: "Prevention", to: "/prevention" },
+  { name: "BuzzLine", to: "/buzzline" },
   { name: "About", to: "/about" },
 ];
 
@@ -296,6 +296,16 @@ export const formatDateForInput = (dateString) => {
   const minutes = String(date.getMinutes()).padStart(2, "0"); // Add leading 0 if minutes < 10
 
   return `${year}-${month}-${day}T${hours}:${minutes}`;
+};
+
+export const formatArticleDate = (dateString) => {
+  if (!dateString) return '';
+  const date = new Date(dateString);
+  return date.toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  });
 };
 
 // utils.js or utils.jsx

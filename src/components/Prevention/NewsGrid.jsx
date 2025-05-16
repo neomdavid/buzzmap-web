@@ -25,7 +25,7 @@ const NewsGrid = ({ articles = [] }) => {
 
   // Handle article click
   const handleArticleClick = (articleId) => {
-    navigate(`/prevention/${articleId}`);
+    navigate(`/buzzline/${articleId}`);
   };
 
   // Get the first two articles for the main section

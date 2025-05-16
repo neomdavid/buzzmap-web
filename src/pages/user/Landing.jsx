@@ -96,7 +96,7 @@ const Landing = () => {
       <div className="flex flex-col gap-4 sm:flex-row w-[80%] m-auto mt-2  gap-x-3 justify-center items-center">
         <SecondaryButton text={"Check Dengue Hotspots"} to="/mapping" className="w-md " />
         <SecondaryButton text={"Report a Breeding Site"} to="/community" className="w-md " />
-        <SecondaryButton text={"Get Prevention Tips"} to="/prevention" className="w-md " />
+        <SecondaryButton text={"Get Prevention Tips"} to="/buzzline" className="w-md " />
       </div>
 
       <img
@@ -195,7 +195,7 @@ const Landing = () => {
             title="Eliminate Mosquito Breeding Sites"
             category="Control and Sanitation"
             bgImg={tubImg}
-            to="/prevention/details"
+            to="/buzzline/details"
           />
           <AltPreventionCard
             title="Personal Protection Measures"
@@ -231,11 +231,11 @@ const Landing = () => {
             title="Community Efforts to Prevent Dengue"
             category="Community"
             bgImg={cleaningImg}
-            to="/prevention/details"
+            to="/buzzline/details"
           />
         </div>
         <Link
-          to="/prevention"
+          to="/buzzline"
           className="flex font-normal underline italic justify-center items-center gap-x-2 text-white mt-12"
         >
           <p>View more prevention and tips here</p>
