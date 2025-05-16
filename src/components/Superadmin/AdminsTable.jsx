@@ -192,23 +192,51 @@ function AdminsTable({ statusFilter, roleFilter, searchQuery }) {
 
     setIsSubmitting(true);
     try {
+      console.log('Starting status toggle process for account:', selectedAccount);
+      
       const isVerified = await verifySuperAdmin();
+      console.log('Super admin verification result:', isVerified);
+      
       if (!isVerified) {
         setIsSubmitting(false);
         return;
       }
 
-      await toggleStatus({
+      const newStatus = isDisabling ? "disabled" : "active";
+      console.log('Sending toggle status request:', {
         id: selectedAccount._id,
-        status: isDisabling ? "disabled" : "active"
+        status: newStatus
+      });
+
+      const response = await toggleStatus({
+        id: selectedAccount._id,
+        status: newStatus
       }).unwrap();
+
+      console.log('Toggle status API response:', response);
+
+      // Force immediate refetch
+      await refetch();
+      
+      // Update local state
+      const updatedAccounts = accounts?.map(account => 
+        account._id === selectedAccount._id 
+          ? { ...account, status: newStatus }
+          : account
+      );
 
       toastSuccess(`Account ${isDisabling ? 'disabled' : 'enabled'} successfully`);
       setShowStatusModal(false);
       setSuperAdminPassword("");
       setAuthError("");
-      await refetch();
+      
     } catch (error) {
+      console.error('Error in handleStatusConfirm:', {
+        error,
+        errorMessage: error?.data?.message,
+        errorStatus: error?.status,
+        errorData: error?.data
+      });
       toastError(error?.data?.message || `Failed to ${isDisabling ? 'disable' : 'enable'} account`);
     } finally {
       setIsSubmitting(false);
@@ -271,8 +299,8 @@ function AdminsTable({ statusFilter, roleFilter, searchQuery }) {
         
         // Then apply status filter if it exists
         const statusMatch = !statusFilter || 
-          (statusFilter === 'active' && account.verified && !account.disabled) ||
-          (statusFilter === 'disabled' && account.disabled) ||
+          (statusFilter === 'active' && account.status === 'active') ||
+          (statusFilter === 'disabled' && account.status === 'disabled') ||
           (statusFilter === 'unverified' && !account.verified);
         
         // Then apply role filter if it exists
@@ -290,8 +318,8 @@ function AdminsTable({ statusFilter, roleFilter, searchQuery }) {
         email: account.email,
         role: account.role.charAt(0).toUpperCase() + account.role.slice(1),
         joined: account.createdAt || account.updatedAt,
-        status: account.disabled ? "disabled" : 
-                (account.verified ? "active" : "unverified"),
+        status: account.status || (account.disabled ? "disabled" : 
+                (account.verified ? "active" : "unverified")),
         _id: account._id
       }));
   }, [accounts, statusFilter, roleFilter, searchQuery]);

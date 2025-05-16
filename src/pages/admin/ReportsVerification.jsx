@@ -43,6 +43,11 @@ const ReportsVerification = () => {
     }
   }, [posts]);
 
+  const handleVerificationSuccess = () => {
+    refetch();
+    setSelectedReport(null);
+  };
+
   if (isLoading) return <p>Loading...</p>;
   if (isError) return <p>Error loading posts</p>;
 
@@ -117,10 +122,7 @@ const ReportsVerification = () => {
           coordinates={selectedReport.specific_location?.coordinates}
           username={selectedReport.user?.username}
           onClose={() => setSelectedReport(null)}
-          onSuccess={() => {
-            setSelectedReport(null);
-            refetch();
-          }}
+          onSuccess={handleVerificationSuccess}
         />
       )}
     </main>

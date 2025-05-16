@@ -27,13 +27,13 @@ const VerifyReportModal = ({
   const handleConfirm = async () => {
     const status = actionType === "verify" ? "Validated" : "Rejected";
     const requestPayload = { id: reportId, status };
-    console.log("Verify/Reject request payload:", requestPayload);
     try {
-      const response = await validatePost(requestPayload).unwrap();
-      console.log("Verify/Reject response:", response);
+      await validatePost(requestPayload).unwrap();
       toast.success(`Report ${status === "Validated" ? "verified" : "rejected"} successfully!`);
+      if (typeof onSuccess === "function") {
+        onSuccess();
+      }
       onClose();
-      if (typeof onSuccess === "function") onSuccess();
     } catch (error) {
       console.error("Verify/Reject error:", error);
       toast.error("Failed to update report status.");

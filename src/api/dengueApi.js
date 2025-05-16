@@ -292,11 +292,14 @@ export const dengueApi = createApi({
 
     validatePost: builder.mutation({
       query: ({ id, status }) => ({
-        url: `reports/${id}`, // your backend URL is /api/v1/reports/:id
-        method: "PATCH",
-        body: { status }, // send the status inside the request body
+        url: `reports/${id}`,
+        method: 'PATCH',
+        body: { status },
       }),
-      invalidatesTags: [{ type: "Post", id: "LIST" }],
+      invalidatesTags: (result, error, { id }) => [
+        { type: 'Post', id },
+        { type: 'Post', id: 'LIST' }
+      ],
     }),
 
     likePost: builder.mutation({
@@ -556,7 +559,18 @@ export const dengueApi = createApi({
         method: 'PATCH',
         body: { status },
       }),
-      invalidatesTags: ['Accounts'],
+      invalidatesTags: (result, error, { id }) => [
+        { type: 'Accounts', id },
+        { type: 'Accounts', id: 'LIST' }
+      ],
+      // Add optimistic update
+      async onQueryStarted({ id, status }, { dispatch, queryFulfilled }) {
+        try {
+          await queryFulfilled;
+        } catch (error) {
+          console.error('Error updating account status:', error);
+        }
+      }
     }),
 
     // Add this to the endpoints object in dengueApi
