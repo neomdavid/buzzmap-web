@@ -22,6 +22,11 @@ import { LogoNamed } from "../../components";
 import { useSelector, useDispatch } from "react-redux";
 import { logout } from "../../features/authSlice.js";
 import { toastSuccess } from "../../utils.jsx";
+import annotationPlugin from 'chartjs-plugin-annotation';
+import ChartJS from 'chart.js/auto';
+
+ChartJS.register(annotationPlugin);
+
 const AdminLayout = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const currentRoute = useLocation().pathname;
@@ -35,7 +40,7 @@ const AdminLayout = () => {
     <div className="flex h-screen overflow-hidden">
       {/* Sidebar */}
       <aside
-        className={`z-100000 fixed shadow-md z-40 top-0 left-0 h-full w-80 bg-white  p-8 flex flex-col justify-between transition-transform duration-300 md:relative md:translate-x-0 ${
+        className={`z-100 fixed shadow-md z-40 top-0 left-0 h-full w-80 bg-white  p-8 flex flex-col justify-between transition-transform duration-300 md:relative md:translate-x-0 ${
           isSidebarOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >

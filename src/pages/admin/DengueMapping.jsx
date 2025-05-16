@@ -1,5 +1,5 @@
 import { DengueMapNoInfo } from "@/components";
-import { MapPinLine, Circle, CheckCircle, Hourglass, MagnifyingGlass } from "phosphor-react";
+import { MapPinLine, Circle, CheckCircle, Hourglass, MagnifyingGlass, Upload } from "phosphor-react";
 import { useState, useMemo, useRef, useEffect } from "react";
 import { useGetInterventionsInProgressQuery, useGetPostsQuery } from "@/api/dengueApi";
 import * as turf from '@turf/turf';
@@ -10,10 +10,14 @@ const DengueMapping = () => {
   const [selectedReport, setSelectedReport] = useState(null);
   const [showFullReport, setShowFullReport] = useState(false);
   const [selectedFullReport, setSelectedFullReport] = useState(null);
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [csvFile, setCsvFile] = useState(null);
+  const [importError, setImportError] = useState("");
   const mapRef = useRef(null);
   const modalRef = useRef(null);
   const streetViewModalRef = useRef(null);
   const mapContainerRef = useRef(null);
+  const importModalRef = useRef(null);
   const { data: posts } = useGetPostsQuery();
 
   const { data: interventions } = useGetInterventionsInProgressQuery(
@@ -199,13 +203,57 @@ const DengueMapping = () => {
     }
   };
 
+  const handleFileChange = (event) => {
+    const file = event.target.files[0];
+    if (file && file.type === "text/csv") {
+      setCsvFile(file);
+      setImportError("");
+    } else {
+      setImportError("Please select a valid CSV file");
+      setCsvFile(null);
+    }
+  };
+
+  const handleImport = async () => {
+    if (!csvFile) {
+      setImportError("Please select a CSV file first");
+      return;
+    }
+
+    try {
+      const formData = new FormData();
+      formData.append("file", csvFile);
+
+      // TODO: Replace with your actual API endpoint
+      const response = await fetch("/api/dengue/import", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to import CSV file");
+      }
+
+      // Close modal and reset state
+      setShowImportModal(false);
+      setCsvFile(null);
+      setImportError("");
+      
+      // Refresh data
+      // TODO: Add your data refresh logic here
+      
+    } catch (error) {
+      setImportError(error.message);
+    }
+  };
+
   return (
     <main className="flex flex-col w-full">
       <p className="flex justify-center text-5xl font-extrabold mb-12 text-center md:justify-start md:text-left md:w-[48%]">
         Dengue Mapping
       </p>
       
-      <div className="relative mb-4">
+      <div className="relative mb-4 flex justify-between items-center">
         <div className="relative">
           <input
             type="text"
@@ -219,6 +267,14 @@ const DengueMapping = () => {
             className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
           />
         </div>
+        
+        <button
+          onClick={() => setShowImportModal(true)}
+          className="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors"
+        >
+          <Upload size={20} />
+          Import CSV
+        </button>
       </div>
 
       <div className="flex h-[50vh] mb-4" ref={mapContainerRef}>
@@ -500,6 +556,55 @@ const DengueMapping = () => {
               id="street-view-container"
               className="w-full h-[400px] rounded-lg overflow-hidden shadow-lg"
             />
+          </div>
+        </div>
+      </dialog>
+
+      {/* Import Modal */}
+      <dialog ref={importModalRef} className="modal" open={showImportModal}>
+        <div className="modal-box bg-white rounded-3xl shadow-3xl w-9/12 max-w-2xl p-8">
+          <h3 className="text-2xl font-bold mb-4">Import Dengue Cases</h3>
+          
+          <div className="mb-4">
+            <p className="text-gray-600 mb-2">Upload a CSV file containing dengue case data.</p>
+            <p className="text-sm text-gray-500 mb-4">
+              The CSV should include the following columns:
+              <br />- Barangay
+              <br />- Date
+              <br />- Number of Cases
+              <br />- Location (optional)
+            </p>
+            
+            <input
+              type="file"
+              accept=".csv"
+              onChange={handleFileChange}
+              className="file-input file-input-bordered w-full"
+            />
+            
+            {importError && (
+              <p className="text-error mt-2">{importError}</p>
+            )}
+          </div>
+          
+          <div className="flex justify-end gap-2">
+            <button
+              onClick={() => {
+                setShowImportModal(false);
+                setCsvFile(null);
+                setImportError("");
+              }}
+              className="btn btn-ghost"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleImport}
+              className="btn btn-primary"
+              disabled={!csvFile}
+            >
+              Import
+            </button>
           </div>
         </div>
       </dialog>

@@ -61,6 +61,7 @@ export { default as EditInterventionModal } from "./Admin/EditInterventionModal.
 export { default as PieChart } from "./Admin/PieChart.jsx";
 export { default as AdminPostsTable } from "./Admin/AdminPostsTable.jsx";
 export { default as AlertsTable } from "./Admin/AlertsTable.jsx";
+export { default as InterventionAnalysisChart } from "./Admin/InterventionAnalysisChart.jsx";
 //SUPERADMIN
 export { default as UsersTable } from "./Superadmin/UsersTable.jsx";
 export { default as AdminsTable } from "./Superadmin/AdminsTable.jsx";

@@ -1,4 +1,4 @@
-import { Check } from "phosphor-react";
+import { Check, Upload } from "phosphor-react";
 import { alerts } from "../../utils";
 import {
   ActionPlanCard,
@@ -8,11 +8,13 @@ import {
   DengueTrendChart,
   DengueMap,
   PieChart,
-  DengueMapLegend
+  DengueMapLegend,
+  InterventionAnalysisChart
 } from "../../components";
 import PatternRecognitionResults from "@/components/Admin/PatternAlerts";
 import PatternAlerts from "@/components/Admin/PatternAlerts";
-import { useState } from "react";
+import { useState, useRef } from "react";
+import { useGetAnalyticsQuery, useGetPostsQuery, useGetAllInterventionsQuery } from '../../api/dengueApi';
 
 // import { IconCheck, IconHourglassEmpty, IconSearch } from "@tabler/icons-react";
 
@@ -28,7 +30,61 @@ const TABS = [
 
 const Analytics = () => {
   const [selectedBarangay, setSelectedBarangay] = useState('bahay toro');
-  const [selectedTab, setSelectedTab] = useState('selected'); // NEW
+  const [selectedTab, setSelectedTab] = useState('selected');
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [csvFile, setCsvFile] = useState(null);
+  const [importError, setImportError] = useState("");
+  const importModalRef = useRef(null);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [uploadedFileName, setUploadedFileName] = useState("");
+  const [uploadSuccessMessage, setUploadSuccessMessage] = useState("");
+  const { refetch: refetchAnalytics } = useGetAnalyticsQuery();
+  const { refetch: refetchPosts } = useGetPostsQuery();
+  const { refetch: refetchInterventions } = useGetAllInterventionsQuery();
+  const [dataVersion, setDataVersion] = useState(0);
+
+  const handleFileChange = (event) => {
+    const file = event.target.files[0];
+    if (file && file.type === "text/csv") {
+      setCsvFile(file);
+      setImportError("");
+    } else {
+      setImportError("Please select a valid CSV file");
+      setCsvFile(null);
+    }
+  };
+
+  const handleImport = async () => {
+    if (!csvFile) {
+      setImportError("Please select a CSV file first");
+      return;
+    }
+
+    try {
+      const formData = new FormData();
+      formData.append("file", csvFile);
+
+      const response = await fetch("http://localhost:4000/api/v1/analytics/submit-csv-file", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || "Failed to import CSV file");
+      }
+
+      const result = await response.json();
+      setShowImportModal(false);
+      setCsvFile(null);
+      setImportError("");
+      setUploadSuccessMessage(result.message || "CSV uploaded successfully!");
+      setUploadedFileName(result.data?.file_info?.original_filename || "");
+      setShowSuccessModal(true);
+    } catch (error) {
+      setImportError(error.message);
+    }
+  };
 
   return (
     <main className=" flex flex-col w-full ">
@@ -127,13 +183,24 @@ const Analytics = () => {
         </div> */}
         <div className="flex flex-col gap-6 gap-y-12 lg:grid lg:grid-cols-12 shadow-sm shadow-lg p-6 py-8 rounded-lg">
           <section className="flex flex-col lg:col-span-7">
-            <p className="mb-4 text-base-content text-4xl font-bold">
-              Trends and Patterns
-            </p>
+            <div className="flex justify-between items-center mb-4">
+              <p className="text-base-content text-4xl font-bold">
+                Trends and Patterns
+              </p>
+              <button
+                onClick={() => setShowImportModal(true)}
+                className="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors"
+              >
+                <Upload size={20} />
+                Import CSV
+              </button>
+            </div>
+         
             <div className="mt-[-14px] ml-[-12px]">
               <DengueTrendChart 
                 selectedBarangay={selectedBarangay}
                 onBarangayChange={setSelectedBarangay}
+                key={dataVersion}
               />
             </div>
           </section>
@@ -162,6 +229,7 @@ const Analytics = () => {
               <PatternAlerts 
                 selectedBarangay={selectedBarangay} 
                 selectedTab={selectedTab}
+                key={dataVersion}
               />
             </div>
           </section>
@@ -175,11 +243,67 @@ const Analytics = () => {
             <DengueMap 
               showLegends={true} 
               defaultTab="cases"
+              key={dataVersion}
             />
           </div>
         </div>
         <PieChart />
       </article>
+
+      {/* Import Modal */}
+      <dialog ref={importModalRef} className="modal" open={showImportModal}>
+        <div className="modal-box bg-white rounded-3xl shadow-3xl w-9/12 max-w-2xl p-8">
+          <h3 className="text-2xl font-bold mb-4">Import Dengue Cases</h3>
+          <div className="mb-4">
+            <input
+              type="file"
+              accept=".csv"
+              onChange={handleFileChange}
+              className="file-input file-input-bordered w-full"
+            />
+            {importError && (
+              <p className="text-error mt-2">{importError}</p>
+            )}
+          </div>
+          <div className="flex justify-end gap-2">
+            <button
+              onClick={() => {
+                setShowImportModal(false);
+                setCsvFile(null);
+                setImportError("");
+              }}
+              className="btn btn-ghost"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleImport}
+              className="btn btn-primary"
+              disabled={!csvFile}
+            >
+              Import
+            </button>
+          </div>
+        </div>
+      </dialog>
+      {/* Success Modal */}
+      <dialog open={showSuccessModal} className="modal">
+        <div className="modal-box bg-white rounded-3xl shadow-3xl w-9/12 max-w-md p-8 flex flex-col items-center">
+          <div className="text-green-600 mb-2">
+            <Check size={48} />
+          </div>
+          <h3 className="text-2xl font-bold mb-2">{uploadSuccessMessage}</h3>
+          {uploadedFileName && (
+            <p className="text-lg text-gray-700 mb-4">File: <span className="font-semibold">{uploadedFileName}</span></p>
+          )}
+          <button
+            className="btn btn-primary mt-2"
+            onClick={() => { setShowSuccessModal(false); window.location.reload(); }}
+          >
+            Close
+          </button>
+        </div>
+      </dialog>
     </main>
   );
 };

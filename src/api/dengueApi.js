@@ -581,6 +581,16 @@ export const dengueApi = createApi({
       }),
       providesTags: ['Accounts'],
     }),
+
+    // Add this to the endpoints object
+    analyzeInterventionEffectivity: builder.mutation({
+      query: (interventionId) => ({
+        url: 'analytics/analyze-intervention-effectivity',
+        method: 'POST',
+        body: { intervention_id: interventionId }
+      }),
+      providesTags: (result, error, id) => [{ type: 'Intervention', id }]
+    }),
   }),
 });
 
@@ -668,4 +678,7 @@ export const {
 
   // Add this to the exported hooks
   useGetUsersQuery,
+
+  // Add this to the exported hooks
+  useAnalyzeInterventionEffectivityMutation,
 } = dengueApi;

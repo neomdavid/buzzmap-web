@@ -30,6 +30,7 @@ import {
   Interventions,
   ReportsVerification,
   AllInterventions,
+  InterventionEffectivity,
 } from "./pages/admin";
 import {
   SuperadminLayout,
@@ -135,6 +136,7 @@ function App() {
         { path: "/admin/denguemapping", element: <DengueMapping /> },
         { path: "/admin/interventions", element: <Interventions /> },
         { path: "/admin/interventions/all", element: <AllInterventions /> },
+        { path: "/admin/interventions/e", element: <InterventionEffectivity /> },
         { path: "/admin/cea", element: <CEA /> },
       ],
     },
