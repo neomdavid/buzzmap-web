@@ -1,35 +1,140 @@
 import { Link } from "react-router-dom"; // Import Link for navigation
 import {
   InterventionsTable,
-  FormCoordinationRequest,
+  // FormCoordinationRequest, // Commented out as it's not used in the current visible layout
   ActionRecommendationCard,
 } from "../../components";
-import { useGetAllInterventionsQuery } from "../../api/dengueApi"; // Import the hook
+import { useGetAllInterventionsQuery, useGetPostsQuery } from "../../api/dengueApi";
+import { Bar, Pie } from 'react-chartjs-2'; // Pie and Bar will be removed from render
+import {
+  Chart as ChartJS,
+  ArcElement,
+  BarElement,
+  CategoryScale,
+  LinearScale,
+  Tooltip,
+  Legend
+} from 'chart.js';
+import { IconChecks, IconMapPins, IconTag, IconListDetails } from "@tabler/icons-react"; // Replaced IconFileDescription with IconListDetails
+import dayjs from 'dayjs'; // Import dayjs
+
+ChartJS.register(ArcElement, BarElement, CategoryScale, LinearScale, Tooltip, Legend);
 
 const Interventions = () => {
-  // Fetch interventions using the RTK Query hook
   const {
     data: interventions,
-    isLoading,
-    error,
+    isLoading: isLoadingInterventions,
+    error: errorInterventions,
   } = useGetAllInterventionsQuery();
+  const { 
+    data: posts, 
+    isLoading: isLoadingPosts, 
+    error: errorPosts 
+  } = useGetPostsQuery();
 
-  // Check if the data is still loading or there's an error
-  if (isLoading) {
+  const completedInterventions = interventions ? interventions.filter(i => {
+    const status = i.status?.toLowerCase();
+    return status === 'completed' || status === 'complete';
+  }) : [];
+
+  // Calculate completed interventions for the current month
+  const currentMonth = dayjs().month();
+  const currentYear = dayjs().year();
+  const completedThisMonthCount = completedInterventions.filter(i => {
+    const interventionDate = dayjs(i.date);
+    return interventionDate.month() === currentMonth && interventionDate.year() === currentYear;
+  }).length;
+
+  const barangaySet = new Set(completedInterventions.map(i => i.barangay));
+  const totalBarangays = barangaySet.size;
+  
+  const typeCounts = completedInterventions.reduce((acc, i) => {
+    acc[i.interventionType] = (acc[i.interventionType] || 0) + 1;
+    return acc;
+  }, {});
+  const mostCommonTypeEntry = Object.entries(typeCounts).sort((a, b) => b[1] - a[1])[0];
+  const mostCommonType = mostCommonTypeEntry ? mostCommonTypeEntry[0] : '-';
+  
+  const barangayCounts = completedInterventions.reduce((acc, i) => { // This will be unused if Bar chart is removed
+    acc[i.barangay] = (acc[i.barangay] || 0) + 1;
+    return acc;
+  }, {});
+  
+  const totalInterventionsAllStatuses = interventions ? interventions.length : 0;
+  
+  const recentInterventions = [...completedInterventions]
+    .sort((a, b) => new Date(b.date) - new Date(a.date))
+    .slice(0, 5);
+
+  // Pie chart data (by type) - Will be unused if Pie chart is removed
+  // const pieData = { 
+  //   labels: Object.keys(typeCounts),
+  //   datasets: [
+  //     {
+  //       data: Object.values(typeCounts),
+  //       backgroundColor: [
+  //         '#60a5fa', '#34d399', '#fbbf24', '#f87171', '#a78bfa', '#f472b6', '#facc15', '#4ade80', '#38bdf8', '#f472b6'
+  //       ],
+  //     },
+  //   ],
+  // };
+
+  // Bar chart data (by barangay) - Will be unused if Bar chart is removed
+  // const barData = {
+  //   labels: Object.keys(barangayCounts),
+  //   datasets: [
+  //     {
+  //       label: 'Interventions',
+  //       data: Object.values(barangayCounts),
+  //       backgroundColor: '#60a5fa',
+  //     },
+  //   ],
+  // };
+
+  if (isLoadingInterventions || isLoadingPosts) {
     return <div>Loading...</div>;
   }
 
-  if (error) {
-    return <div>Error loading interventions: {error.message}</div>;
+  if (errorInterventions || errorPosts) {
+    return <div>Error loading data: {errorInterventions?.message || errorPosts?.message}</div>;
   }
-
-  console.log(interventions);
 
   return (
     <main className="flex flex-col w-full ">
       <p className="flex justify-center text-5xl font-extrabold mb-12 text-center md:justify-start md:text-left md:w-[48%]">
         Interventions
       </p>
+
+      {/* DASHBOARD SECTION - CARDS ONLY */}
+      {/* <div className="max-w-6xl mx-auto w-full mb-12">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+          <div className="flex flex-col rounded-2xl shadow bg-green-50 border border-green-100 px-6 py-5 items-center">
+            <IconChecks size={28} className="text-green-600 mb-1" />
+            <span className="text-3xl font-bold text-green-600">{completedThisMonthCount}</span>
+            <span className="text-base font-medium text-green-700 mt-1 text-center">Completed (Current Month)</span>
+          </div>
+          <div className="flex flex-col rounded-2xl shadow bg-blue-50 border border-blue-100 px-6 py-5 items-center">
+            <IconMapPins size={28} className="text-blue-600 mb-1" />
+            <span className="text-3xl font-bold text-blue-600">{totalBarangays}</span>
+            <span className="text-base font-medium text-blue-700 mt-1 text-center">Barangays Covered</span>
+          </div>
+          <div className="flex flex-col rounded-2xl shadow bg-purple-50 border border-purple-100 px-6 py-5 items-center">
+            <IconTag size={28} className="text-purple-600 mb-1" />
+            <span className="text-2xl font-bold text-purple-700 text-center">{mostCommonType}</span>
+            <span className="text-base font-medium text-purple-700 mt-1 text-center">Most Common Type</span>
+          </div>
+          <div className="flex flex-col rounded-2xl shadow bg-orange-50 border border-orange-100 px-6 py-5 items-center">
+            <IconListDetails size={28} className="text-orange-600 mb-1" />
+            <span className="text-3xl font-bold text-orange-600">{totalInterventionsAllStatuses}</span>
+            <span className="text-base font-medium text-orange-700 mt-1 text-center">Total Interventions</span>
+          </div>
+        </div>
+        
+
+    
+      </div> */}
+      {/* END DASHBOARD SECTION */}
+
       <section className="flex flex-col gap-16">
         <div className="flex justify-between items-center mb-[-35px]">
           <p className="text-base-content text-4xl font-bold ">
@@ -47,10 +152,34 @@ const Interventions = () => {
           {/* Pass the interventions data to the table */}
           <InterventionsTable interventions={interventions} onlyRecent={true} />
         </div>
+
+        {/* New Intervention Effectivity Glimpse Section */}
+        <div className="mt-8">
+          <p className="text-base-content text-4xl font-bold mb-4">
+            Intervention Effectivity
+          </p>
+          <Link
+            to="/admin/interventions/e"
+            className="block p-6 bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow duration-200"
+          >
+            <h3 className="text-2xl font-semibold text-primary mb-2">
+              Analyze Intervention Impact
+            </h3>
+            <p className="text-gray-600 mb-3">
+              Review the effectiveness of past interventions. Click here to view detailed analysis and charts comparing dengue cases before and after specific interventions.
+            </p>
+            <div className="text-right">
+              <span className="text-primary font-semibold hover:underline">
+                View Full Analysis &rarr;
+              </span>
+            </div>
+          </Link>
+        </div>
+
         <div className="flex flex-col w-full gap-10 lg:flex-row">
-          <div className="lg:flex-21">
+          {/* <div className="lg:flex-21">
             <FormCoordinationRequest />
-          </div>
+          </div> */}
           <div className="flex flex-col lg:flex-23 gap-4">
             <p className="text-base-content text-4xl font-bold mb-1">
               Prescriptive Action Recommendations

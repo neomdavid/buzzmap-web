@@ -122,11 +122,6 @@ const InterventionEffectivity = () => {
             <div><span className="font-semibold">% Change:</span> <span className={typeof stats.percentChange === 'number' && stats.percentChange < 0 ? 'text-green-600' : stats.percentChange > 0 ? 'text-red-600' : 'text-gray-600'}>{stats.percentChange}%</span></div>
             <div><span className="font-semibold">Days Since Intervention:</span> {getDaysSince(selected.date)}</div>
           </div>
-          {/* Placeholder for future insights */}
-          <div className="bg-white rounded shadow p-4 flex flex-col gap-2 border items-center justify-center text-gray-400">
-            <span className="text-2xl">📊</span>
-            <span>More insights coming soon...</span>
-          </div>
         </div>
       )}
       <div className="mt-8">
