@@ -39,6 +39,28 @@ const RISK_LEVEL_COLORS = {
   high: "#e53e3e",      // red
 };
 
+// Helper function to normalize barangay names for comparison
+const normalizeBarangayName = (name) => {
+  if (!name) return '';
+  return name
+    .toLowerCase()
+    .replace(/\bsr\.?\b/g, '') // Remove sr. or sr
+    .replace(/\bjr\.?\b/g, '') // Remove jr. or jr
+    // Add more replacements if needed, e.g., for Roman numerals or other common variations
+    .replace(/[.\-']/g, '')    // Remove periods, hyphens, apostrophes
+    .replace(/\s+/g, ' ')      // Normalize multiple spaces to single space
+    .trim();
+};
+
+const PATTERN_COLORS = {
+  spike: "#e53e3e",        // red (error)
+  gradual_rise: "#dd6b20", // orange (warning)
+  decline: "#38a169",      // green (success)
+  stability: "#3182ce",    // blue (info)
+  none: "#718096",         // gray (default for no pattern)
+  default: "#718096",      // gray (fallback)
+};
+
 const Mapping = () => {
   const [currentPosition, setCurrentPosition] = useState(null);
   const [qcPolygonPaths, setQcPolygonPaths] = useState([]);
@@ -115,15 +137,20 @@ const Mapping = () => {
           const processedData = {
             ...barangayData,
             features: barangayData.features.map(feature => {
-              const barangayName = feature.properties.name;
-              console.log('Processing barangay:', barangayName); // Debug each barangay
+              const geoJsonBarangayName = feature.properties.name;
+              const normalizedGeoJsonName = normalizeBarangayName(geoJsonBarangayName);
+              console.log(`Processing GeoJSON barangay: '${geoJsonBarangayName}' (Normalized: '${normalizedGeoJsonName}')`);
               
               const patternInfo = patternData.data.find(item => {
-                console.log('Comparing with pattern item:', item); // Debug comparison
-                return item.name?.toLowerCase() === barangayName?.toLowerCase();
+                const patternItemName = item.name;
+                const normalizedPatternName = normalizeBarangayName(patternItemName);
+                // console.log(`Comparing with pattern item: '${patternItemName}' (Normalized: '${normalizedPatternName}')`); // Uncomment for deep debugging
+                return normalizedPatternName === normalizedGeoJsonName;
               });
 
-              console.log('Found pattern info:', patternInfo); // Debug found pattern info
+              if (!patternInfo) {
+                console.log(`No pattern found for barangay: '${geoJsonBarangayName}'`);
+              }
 
               return {
                 ...feature,
@@ -344,21 +371,26 @@ const Mapping = () => {
         </select>
       </div>
 
+      {/* Updated Legend for Pattern Types */}
       <div className="bg-white text-black rounded-md shadow px-4 py-3 w-full max-w-md mb-4">
-        <p className="font-semibold mb-2">Risk Levels</p>
-        <div className="flex items-center justify-between gap-4">
-          {Object.entries(RISK_LEVEL_COLORS)
-            .sort(([a], [b]) => {
-              const order = { low: 0, medium: 1, high: 2 };
-              return order[a] - order[b];
+        <p className="font-semibold mb-2">Pattern Types</p>
+        <div className="flex items-center justify-between gap-2 flex-wrap">
+          {Object.entries(PATTERN_COLORS)
+            .filter(([key]) => key !== 'default') // Exclude 'default' from legend
+            .sort(([aKey], [bKey]) => { 
+              // Updated order: None, Stability, Decline, Gradual Rise, Spike
+              const order = { none: 0, stability: 1, decline: 2, gradual_rise: 3, spike: 4 };
+              return order[aKey] - order[bKey];
             })
-            .map(([level, color]) => (
-              <div key={level} className="flex items-center gap-2">
+            .map(([pattern, color]) => (
+              <div key={pattern} className="flex items-center gap-1">
                 <span
                   style={{ backgroundColor: color }}
-                  className="w-4 h-4 inline-block rounded"
+                  className="w-3 h-3 inline-block rounded-full"
                 />
-                {level.charAt(0).toUpperCase() + level.slice(1)}
+                <span className="text-xs">
+                  {pattern.charAt(0).toUpperCase() + pattern.slice(1).replace('_', ' ')}
+                </span>
               </div>
             ))}
         </div>
@@ -463,18 +495,20 @@ const Mapping = () => {
                 lng,
               }));
               const isSelected = selectedBarangayId === `${index}-${i}`;
-              const riskColor = RISK_LEVEL_COLORS[feature.properties.riskLevel] || RISK_LEVEL_COLORS.low;
+              // Use patternType for color determination
+              const patternColor = PATTERN_COLORS[feature.properties.patternType?.toLowerCase()] || PATTERN_COLORS.default;
               
               return (
                 <Polygon
                   key={`${index}-${i}`}
                   paths={path}
                   options={{
-                    strokeColor: isSelected ? getDarkerColor(riskColor) : "#333",
+                    // Use patternColor for stroke and fill
+                    strokeColor: isSelected ? getDarkerColor(patternColor) : "#333",
                     strokeOpacity: isSelected ? 1 : 0.6,
                     strokeWeight: isSelected ? 3 : 1,
                     fillOpacity: 0.5,
-                    fillColor: riskColor,
+                    fillColor: patternColor, 
                     clickable: true,
                   }}
                   onClick={(e) => {
@@ -559,9 +593,8 @@ const Mapping = () => {
               <div
                 className="bg-white p-4 rounded-lg text-center"
                 style={{
-                  border: `3px solid ${
-                    RISK_LEVEL_COLORS[selectedBarangayInfo.riskLevel] || RISK_LEVEL_COLORS.low
-                  }`,
+                  // Use patternType for border color
+                  border: `3px solid ${PATTERN_COLORS[selectedBarangayInfo.patternType?.toLowerCase()] || PATTERN_COLORS.default}`,
                   width: "50vw",
                   maxWidth: 640,
                 }}
@@ -569,7 +602,8 @@ const Mapping = () => {
                 <p
                   className={`text-3xl font-bold`}
                   style={{
-                    color: RISK_LEVEL_COLORS[selectedBarangayInfo.riskLevel] || RISK_LEVEL_COLORS.low
+                    // Use patternType for title color
+                    color: PATTERN_COLORS[selectedBarangayInfo.patternType?.toLowerCase()] || PATTERN_COLORS.default
                   }}
                 >
                   Barangay {selectedBarangayInfo.name}
@@ -661,33 +695,6 @@ const Mapping = () => {
                               ? "No pattern detected" 
                               : selectedBarangayInfo.patternType.charAt(0).toUpperCase() + 
                                 selectedBarangayInfo.patternType.slice(1).replace('_', ' ')}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Risk Level Card */}
-                    <div className={`p-3 rounded-lg border-2 ${
-                      selectedBarangayInfo.riskLevel === "high"
-                        ? "border-error bg-error/5"
-                        : selectedBarangayInfo.riskLevel === "medium"
-                        ? "border-warning bg-warning/5"
-                        : "border-success bg-success/5"
-                    }`}>
-                      <div className="flex items-center gap-3">
-                        <div className={`${
-                          selectedBarangayInfo.riskLevel === "high"
-                            ? "text-error"
-                            : selectedBarangayInfo.riskLevel === "medium"
-                            ? "text-warning"
-                            : "text-success"
-                        }`}>
-                          <span className="inline-block w-4 h-4 rounded-full"></span>
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium text-gray-600">Risk Level</p>
-                          <p className="text-lg font-semibold">
-                            {selectedBarangayInfo.riskLevel?.toUpperCase() || "UNKNOWN"}
                           </p>
                         </div>
                       </div>

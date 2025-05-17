@@ -10,7 +10,7 @@ import {
   Tooltip,
   Legend
 } from 'chart.js';
-import { useGetBarangayWeeklyTrendsQuery } from '../api/dengueApi';
+import { useGetBarangayWeeklyTrendsQuery, useGetPatternRecognitionResultsQuery, useGetBarangaysQuery } from '../api/dengueApi';
 
 // Register ChartJS components
 ChartJS.register(
@@ -23,22 +23,57 @@ ChartJS.register(
   Legend
 );
 
+const PATTERN_COLORS = {
+  spike: 'rgb(239, 68, 68)',        // Red (Tailwind error)
+  gradual_rise: 'rgb(249, 115, 22)', // Orange (Tailwind warning)
+  decline: 'rgb(34, 197, 94)',      // Green (Tailwind success)
+  stability: 'rgb(59, 130, 246)',    // Blue (Tailwind info)
+  none: 'rgb(107, 114, 128)',         // Gray (Tailwind gray-500)
+  default: 'rgb(107, 114, 128)',      // Gray (Tailwind gray-500)
+};
+
 const DengueChartCard = () => {
   const [selectedBarangay, setSelectedBarangay] = useState('bahay toro');
   const [weeks, setWeeks] = useState(6);
 
-  const { data: trendsData, isLoading, error } = useGetBarangayWeeklyTrendsQuery({
+  // Fetch barangays for dropdown
+  const { data: barangaysData, isLoading: barangaysLoading } = useGetBarangaysQuery();
+  // Fetch pattern recognition results
+  const { data: patternResults, isLoading: patternsLoading } = useGetPatternRecognitionResultsQuery();
+
+  const { data: trendsData, isLoading: trendsLoading, error } = useGetBarangayWeeklyTrendsQuery({
     barangay_name: selectedBarangay,
     number_of_weeks: weeks
   });
 
+  // Set default selectedBarangay once barangaysData is loaded
+  useEffect(() => {
+    if (barangaysData && barangaysData.length > 0 && selectedBarangay === 'bahay toro') {
+      setSelectedBarangay(barangaysData[0].name); 
+    }
+  }, [barangaysData, selectedBarangay]);
+
+  // Determine pattern for the selected barangay
+  const selectedBarangayPattern = React.useMemo(() => {
+    if (!patternResults?.data || !selectedBarangay) return 'none';
+    const patternInfo = patternResults.data.find(
+      item => item.name?.toLowerCase() === selectedBarangay.toLowerCase()
+    );
+    return patternInfo?.triggered_pattern?.toLowerCase() || 'none';
+  }, [patternResults, selectedBarangay]);
+
+  const isLoading = barangaysLoading || patternsLoading || trendsLoading;
+
+  // Get the correct color for the line based on the pattern
+  const lineColor = PATTERN_COLORS[selectedBarangayPattern] || PATTERN_COLORS.default;
+
   const chartData = {
-    labels: trendsData?.weeks || [],
+    labels: trendsData?.data?.weekly_counts ? Object.keys(trendsData.data.weekly_counts) : [],
     datasets: [
       {
         label: 'Dengue Cases',
-        data: trendsData?.cases || [],
-        borderColor: 'rgb(75, 192, 192)',
+        data: trendsData?.data?.weekly_counts ? Object.values(trendsData.data.weekly_counts) : [],
+        borderColor: lineColor, // Use dynamic line color
         tension: 0.1,
         fill: false
       }
@@ -76,7 +111,7 @@ const DengueChartCard = () => {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-full">
-        <span className="loading loading-spinner loading-lg"></span>
+        <span className="loading loading-spinner loading-lg text-primary"></span>
       </div>
     );
   }
@@ -90,17 +125,24 @@ const DengueChartCard = () => {
   }
 
   return (
-    <div className="p-4">
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-xl font-bold">Dengue Cases Trend</h2>
+    <div className="p-4 bg-white rounded-lg shadow">
+      <div className="flex justify-between items-center mb-1">
+        <h2 className="text-xl font-bold text-gray-700">Dengue Cases Trend</h2>
         <div className="flex gap-4">
           <select
             value={selectedBarangay}
             onChange={(e) => setSelectedBarangay(e.target.value)}
-            className="select select-bordered w-full max-w-xs"
+            className="select select-bordered w-full max-w-xs bg-white text-gray-700"
           >
-            <option value="bahay toro">Bahay Toro</option>
-            {/* Add more barangay options here */}
+            {barangaysLoading ? (
+              <option>Loading...</option>
+            ) : (
+              barangaysData?.map(barangay => (
+                <option key={barangay._id || barangay.name} value={barangay.name}>
+                  {barangay.name}
+                </option>
+              ))
+            )}
           </select>
           <select
             value={weeks}
@@ -113,6 +155,16 @@ const DengueChartCard = () => {
             <option value={12}>12 Weeks</option>
           </select>
         </div>
+      </div>
+      <div className="mb-4 text-left">
+        <p className="text-sm text-gray-600">
+          Barangay: <span className="font-semibold">{selectedBarangay}</span>
+        </p>
+        <p className="text-sm text-gray-600">
+          Pattern: <span style={{ color: lineColor, fontWeight: '600' }}>
+            {selectedBarangayPattern.charAt(0).toUpperCase() + selectedBarangayPattern.slice(1).replace('_', ' ')}
+          </span>
+        </p>
       </div>
       <div className="h-[300px]">
         <Line data={chartData} options={options} />

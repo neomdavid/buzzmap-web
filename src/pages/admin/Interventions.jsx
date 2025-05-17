@@ -4,7 +4,7 @@ import {
   // FormCoordinationRequest, // Commented out as it's not used in the current visible layout
   ActionRecommendationCard,
 } from "../../components";
-import { useGetAllInterventionsQuery, useGetPostsQuery } from "../../api/dengueApi";
+import { useGetAllInterventionsQuery, useGetPostsQuery, useGetPatternRecognitionResultsQuery } from "../../api/dengueApi";
 import { Bar, Pie } from 'react-chartjs-2'; // Pie and Bar will be removed from render
 import {
   Chart as ChartJS,
@@ -31,6 +31,13 @@ const Interventions = () => {
     isLoading: isLoadingPosts, 
     error: errorPosts 
   } = useGetPostsQuery();
+
+  // Fetch pattern recognition results
+  const {
+    data: patternResultsData, // Renamed to avoid conflict if posts also had a patternData field
+    isLoading: isLoadingPatterns,
+    error: errorPatterns,
+  } = useGetPatternRecognitionResultsQuery();
 
   const completedInterventions = interventions ? interventions.filter(i => {
     const status = i.status?.toLowerCase();
@@ -91,13 +98,27 @@ const Interventions = () => {
   //   ],
   // };
 
-  if (isLoadingInterventions || isLoadingPosts) {
+  if (isLoadingInterventions || isLoadingPosts || isLoadingPatterns) {
     return <div>Loading...</div>;
   }
 
-  if (errorInterventions || errorPosts) {
-    return <div>Error loading data: {errorInterventions?.message || errorPosts?.message}</div>;
+  if (errorInterventions || errorPosts || errorPatterns) {
+    return <div>Error loading data: {errorInterventions?.message || errorPosts?.message || errorPatterns?.message}</div>;
   }
+
+  // Helper function to find recommendation for a specific barangay
+  const findRecommendationForBarangay = (barangayName) => {
+    if (!patternResultsData?.data) return null;
+    // Normalize names for robust matching
+    const normalizedTargetName = barangayName.toLowerCase().replace(/barangay /g, '').trim();
+    return patternResultsData.data.find(item => 
+      item.name?.toLowerCase().replace(/barangay /g, '').trim() === normalizedTargetName
+    );
+  };
+
+  const commonwealthData = findRecommendationForBarangay("Commonwealth");
+  const fairviewData = findRecommendationForBarangay("Fairview");
+  const holySpiritData = findRecommendationForBarangay("Holy Spirit");
 
   return (
     <main className="flex flex-col w-full ">
@@ -160,12 +181,12 @@ const Interventions = () => {
           </p>
           <Link
             to="/admin/interventions/e"
-            className="block p-6 bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow duration-200"
+            className="block p-6 bg-white rounded-2xl shadow-md hover:shadow-lg transition-shadow duration-200"
           >
-            <h3 className="text-2xl font-semibold text-primary mb-2">
+            <p className="text-2xl font-bold text-primary mb-2">
               Analyze Intervention Impact
-            </h3>
-            <p className="text-gray-600 mb-3">
+            </p>
+            <p className="text-gray-600 text-lg mb-3">
               Review the effectiveness of past interventions. Click here to view detailed analysis and charts comparing dengue cases before and after specific interventions.
             </p>
             <div className="text-right">
@@ -185,31 +206,38 @@ const Interventions = () => {
               Prescriptive Action Recommendations
             </p>
             {/* High Risk (red) */}
-            <ActionRecommendationCard
-              barangay="Barangay Commonwealth"
-              riskLevel="high"
-              issueDetected="Spike in Breeding Site & Infestation Reports"
-              suggestedAction="Fogging Operation, Breeding Site Elimination"
-              urgencyLevel="Immediate Action Required"
-            />
+            {commonwealthData && (
+              <ActionRecommendationCard
+                barangay={commonwealthData.name}
+                patternType={commonwealthData.triggered_pattern}
+                issueDetected={commonwealthData.alert?.replace(/^[^:]+:\s*/, '')}
+                suggestedAction={commonwealthData.current_recommendation?.full_recommendation}
+                // Urgency level might need to be derived or is part of the full_recommendation
+              />
+            )}
+            {!commonwealthData && <p className="text-gray-500 p-4">No specific recommendation data for Commonwealth.</p>}
 
             {/* Medium Risk (yellow) */}
-            <ActionRecommendationCard
-              barangay="Barangay Fairview"
-              riskLevel="medium"
-              issueDetected="Moderate breeding sites detected"
-              suggestedAction="Larviciding, Community Cleanup"
-              urgencyLevel="Action Required Soon"
-            />
+            {fairviewData && (
+              <ActionRecommendationCard
+                barangay={fairviewData.name}
+                patternType={fairviewData.triggered_pattern}
+                issueDetected={fairviewData.alert?.replace(/^[^:]+:\s*/, '')}
+                suggestedAction={fairviewData.current_recommendation?.full_recommendation}
+              />
+            )}
+            {!fairviewData && <p className="text-gray-500 p-4">No specific recommendation data for Fairview.</p>}
 
             {/* Low Risk (green) */}
-            <ActionRecommendationCard
-              barangay="Barangay Holy Spirit"
-              riskLevel="low"
-              issueDetected="Minimal reports"
-              suggestedAction="Regular monitoring"
-              urgencyLevel="Monitor Situation"
-            />
+            {holySpiritData && (
+              <ActionRecommendationCard
+                barangay={holySpiritData.name}
+                patternType={holySpiritData.triggered_pattern}
+                issueDetected={holySpiritData.alert?.replace(/^[^:]+:\s*/, '')}
+                suggestedAction={holySpiritData.current_recommendation?.full_recommendation}
+              />
+            )}
+            {!holySpiritData && <p className="text-gray-500 p-4">No specific recommendation data for Holy Spirit.</p>}
           </div>
         </div>
       </section>

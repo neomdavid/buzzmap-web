@@ -36,13 +36,15 @@ const PATTERN_COLORS = {
   default: "#718096", // gray
 };
 
-// Risk level color mapping
+// Risk level color mapping - To be removed if not used elsewhere
+/*
 const RISK_LEVEL_COLORS = {
   high: "#e53e3e",      // red
   medium: "#dd6b20",    // orange
   low: "#38a169",       // green
   unknown: "#718096",   // gray
 };
+*/
 
 // Breeding site type color mapping
 const BREEDING_SITE_TYPE_COLORS = {
@@ -179,7 +181,7 @@ const DengueMap = ({
 
         let patternType =
           patternInfo?.triggered_pattern?.toLowerCase() || "None";
-        let riskLevel = patternInfo?.risk_level.toLowerCase() || "unknown";
+        // let riskLevel = patternInfo?.risk_level?.toLowerCase() || "unknown"; // Remove riskLevel processing
         const color = PATTERN_COLORS[patternType] || PATTERN_COLORS.default;
 
         return {
@@ -188,7 +190,7 @@ const DengueMap = ({
             ...f.properties,
             displayName: barangayName, // Store the display name separately
             patternType,
-            riskLevel,
+            // riskLevel, // Do not add riskLevel to properties
             color,
             alert: patternInfo?.alert || "No recent data",
             lastAnalysisTime: patternInfo?.last_analysis_time,
@@ -285,7 +287,6 @@ const DengueMap = ({
 
   if (!isLoaded || patternsLoading) return <p>Loading map...</p>;
 
-  const riskLevel = (selectedBarangay?.properties?.riskLevel || "").toLowerCase().trim();
   const patternType = (selectedBarangay?.properties?.patternType || "").toLowerCase().trim();
 
   const infoWindowBorderClass =
@@ -299,12 +300,6 @@ const DengueMap = ({
       ? "border-success"
       : patternType === "stability"
       ? "border-info"
-      : (patternType === "none" && riskLevel === "high")
-      ? "border-error"
-      : (patternType === "none" && riskLevel === "medium")
-      ? "border-warning"
-      : (patternType === "none" && riskLevel === "low")
-      ? "border-success"
       : "border-gray-400";
 
   const infoWindowTitleClass =
@@ -318,12 +313,6 @@ const DengueMap = ({
       ? "text-success"
       : patternType === "stability"
       ? "text-info"
-      : patternType === "none" && riskLevel === "high"
-      ? "text-error"
-      : patternType === "none" && riskLevel === "medium"
-      ? "text-warning"
-      : patternType === "none" && riskLevel === "low"
-      ? "text-success"
       : "text-gray-400";
 
 
@@ -428,20 +417,24 @@ const DengueMap = ({
               className="rounded-xl shadow-lg bg-white px-5 py-4 min-w-[180px] border-2 text-center"
               style={{
                 maxWidth: 240,
-                borderColor:
-                  RISK_LEVEL_COLORS[
-                    (selectedBreedingSitesBarangay?.properties?.riskLevel || "unknown").toLowerCase()
-                  ] || RISK_LEVEL_COLORS.unknown,
+                //borderColor: // This section for breeding sites InfoWindow might still use RISK_LEVEL_COLORS or a similar logic
+                //  RISK_LEVEL_COLORS[
+                //    (selectedBreedingSitesBarangay?.properties?.riskLevel || "unknown").toLowerCase()
+                //  ] || RISK_LEVEL_COLORS.unknown,
+                // TEMP: Default border for breeding site InfoWindow until its logic is clarified or removed
+                borderColor: PATTERN_COLORS.default, 
               }}
             >
               <div className="flex flex-col items-center">
                 <div className="flex items-center gap-2 mb-2">
                   <span className="font-bold text-lg"
                     style={{
-                      color:
-                        RISK_LEVEL_COLORS[
-                          (selectedBreedingSitesBarangay?.properties?.riskLevel || "unknown").toLowerCase()
-                        ] || RISK_LEVEL_COLORS.unknown,
+                      // color: // This section for breeding sites InfoWindow might still use RISK_LEVEL_COLORS
+                      //  RISK_LEVEL_COLORS[
+                      //    (selectedBreedingSitesBarangay?.properties?.riskLevel || "unknown").toLowerCase()
+                      //  ] || RISK_LEVEL_COLORS.unknown,
+                      // TEMP: Default color for breeding site InfoWindow title
+                      color: PATTERN_COLORS.default,
                     }}
                   >
                     {selectedBreedingSitesBarangay.properties.displayName ||
@@ -587,33 +580,6 @@ const DengueMap = ({
                               ? "No pattern detected" 
                               : selectedBarangay.properties.patternType.charAt(0).toUpperCase() + 
                                 selectedBarangay.properties.patternType.slice(1).replace('_', ' ')}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Risk Level Card */}
-                    <div className={`p-3 rounded-lg border-2 ${
-                      selectedBarangay.properties.riskLevel === "high"
-                        ? "border-error bg-error/5"
-                        : selectedBarangay.properties.riskLevel === "medium"
-                        ? "border-warning bg-warning/5"
-                        : "border-success bg-success/5"
-                    }`}>
-                      <div className="flex items-center gap-3">
-                        <div className={`${
-                          selectedBarangay.properties.riskLevel === "high"
-                            ? "text-error"
-                            : selectedBarangay.properties.riskLevel === "medium"
-                            ? "text-warning"
-                            : "text-success"
-                        }`}>
-                          <span className="inline-block w-4 h-4 rounded-full"></span>
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium text-gray-600">Risk Level</p>
-                          <p className="text-lg font-semibold">
-                            {selectedBarangay.properties.riskLevel || "Unknown"}
                           </p>
                         </div>
                       </div>

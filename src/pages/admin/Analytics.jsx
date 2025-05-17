@@ -43,6 +43,14 @@ const Analytics = () => {
   const { refetch: refetchInterventions } = useGetAllInterventionsQuery();
   const [dataVersion, setDataVersion] = useState(0);
 
+  // Handler to change selected barangay from PatternAlerts
+  const handleAlertBarangaySelect = (barangayName) => {
+    setSelectedBarangay(barangayName);
+    setSelectedTab('selected'); // Switch tab to show the selected barangay's alert
+    // Optionally, scroll to the chart or highlight it
+    // e.g., document.getElementById('trends-chart-section')?.scrollIntoView({ behavior: 'smooth' });
+  };
+
   const handleFileChange = (event) => {
     const file = event.target.files[0];
     if (file && file.type === "text/csv") {
@@ -229,6 +237,7 @@ const Analytics = () => {
               <PatternAlerts 
                 selectedBarangay={selectedBarangay} 
                 selectedTab={selectedTab}
+                onAlertSelect={handleAlertBarangaySelect}
                 key={dataVersion}
               />
             </div>

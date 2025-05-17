@@ -18,6 +18,11 @@ const baseQueryWithErrorHandling = async (args, api, extraOptions) => {
   try {
     const result = await customBaseQuery(args, api, extraOptions);
     
+    // Log raw JSON response for the specific trends endpoint
+    if (args.url === 'analytics/get-barangay-weekly-trends' && !result.error && result.data) {
+      console.log('Raw JSON response from /analytics/get-barangay-weekly-trends:', JSON.stringify(result.data, null, 2));
+    }
+    
     if (result.error) {
       // If the error has a specific message from the backend, use that
       if (result.error.data?.message) {

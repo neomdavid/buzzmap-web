@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useGetPatternRecognitionResultsQuery } from "../../api/dengueApi";
 import { MagnifyingGlass } from "phosphor-react";
 
-export default function PatternAlerts({ selectedBarangay, selectedTab }) {
+export default function PatternAlerts({ selectedBarangay, selectedTab, onAlertSelect }) {
   const [searchTerm, setSearchTerm] = useState("");
   const { data: patternDataRaw, isLoading, error } = useGetPatternRecognitionResultsQuery();
   const patternData = patternDataRaw?.data || [];
@@ -31,12 +31,12 @@ export default function PatternAlerts({ selectedBarangay, selectedTab }) {
   } else if (selectedTab === "gradual") {
     filteredData = patternData.filter(item => {
       const patternType = item.triggered_pattern?.toLowerCase() || '';
-      return patternType === 'gradual';
+      return patternType === 'gradual_rise';
     });
   } else if (selectedTab === "stability") {
     filteredData = patternData.filter(item => {
       const patternType = item.triggered_pattern?.toLowerCase() || '';
-      return patternType === 'stable' || patternType === 'stability';
+      return patternType === 'stability';
     });
   } else if (selectedTab === "decline") {
     filteredData = patternData.filter(item => {
@@ -101,11 +101,10 @@ export default function PatternAlerts({ selectedBarangay, selectedTab }) {
             if (item.triggered_pattern?.toLowerCase() === 'spike') {
               borderColor = "border-error";
               bgColor = "bg-error";
-            } else if (item.triggered_pattern?.toLowerCase() === 'gradual') {
+            } else if (item.triggered_pattern?.toLowerCase() === 'gradual_rise') {
               borderColor = "border-warning";
               bgColor = "bg-warning";
-            } else if (item.triggered_pattern?.toLowerCase() === 'stable' || 
-                      item.triggered_pattern?.toLowerCase() === 'stability') {
+            } else if (item.triggered_pattern?.toLowerCase() === 'stability') {
               borderColor = "border-info";
               bgColor = "bg-info";
             } else if (item.triggered_pattern?.toLowerCase() === 'decline' || 
@@ -119,7 +118,6 @@ export default function PatternAlerts({ selectedBarangay, selectedTab }) {
 
             messages = [
               { label: "Pattern Type:", text: item.triggered_pattern },
-              { label: "Risk Level:", text: item.risk_level },
               { label: "Alert:", text: alertText }
             ];
           }
@@ -131,6 +129,8 @@ export default function PatternAlerts({ selectedBarangay, selectedTab }) {
               borderColor={borderColor}
               bgColor={bgColor}
               messages={messages}
+              barangayName={item.name}
+              onSelect={onAlertSelect}
             />
           );
         })
@@ -145,6 +145,8 @@ const AlertCard = ({
   messages = [],
   borderColor = "border-error",
   bgColor = "bg-error",
+  barangayName,
+  onSelect,
 }) => {
   return (
     <div
@@ -162,8 +164,11 @@ const AlertCard = ({
         </p>
       ))}
       <div className="flex justify-end mt-1">
-        <button className="text-xs text-nowrap bg-base-content text-white font-light px-4 py-2 rounded-full transition-all duration-200 hover:brightness-110 active:scale-95">
-          View Details
+        <button 
+          onClick={() => onSelect && onSelect(barangayName)}
+          className="text-xs text-nowrap bg-base-content text-white font-light px-4 hover:cursor-pointer py-2 rounded-full transition-all duration-200 hover:brightness-110 active:scale-95"
+        >
+          Select
         </button>
       </div>
     </div>

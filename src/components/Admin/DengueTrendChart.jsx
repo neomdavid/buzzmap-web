@@ -23,7 +23,7 @@ const getPatternColor = (patternType) => {
   if (patternTypeLower === 'spike') {
     return "#ef4444"; // Red
   }
-  if (patternTypeLower === 'gradual') {
+  if (patternTypeLower === 'gradual_rise') {
     return "#f97316"; // Orange
   }
   if (patternTypeLower === 'stable' || patternTypeLower === 'stability') {
@@ -67,6 +67,9 @@ export default function DengueTrendChart({ selectedBarangay, onBarangayChange })
     number_of_weeks: weeks
   });
 
+  // Log raw trendsData
+  console.log('Raw trendsData from API for:', selectedBarangay, '(', weeks, 'weeks):', JSON.stringify(trendsData, null, 2));
+
   // Transform the API data to match the chart format
   const chartData = trendsData?.data?.weekly_counts 
     ? Object.entries(trendsData.data.weekly_counts)
@@ -82,7 +85,8 @@ export default function DengueTrendChart({ selectedBarangay, onBarangayChange })
         })
     : [];
 
-  console.log('Transformed Chart Data with Pattern Types:', chartData);
+  // Log transformed chartData before rendering
+  console.log('Transformed chartData for rendering for:', selectedBarangay, '(', weeks, 'weeks):', JSON.stringify(chartData, null, 2));
 
   // Log the data being passed to the chart
   console.log('Data being rendered in chart:', {
@@ -102,9 +106,10 @@ export default function DengueTrendChart({ selectedBarangay, onBarangayChange })
   }
 
   if (error) {
+    console.error("Error details from useGetBarangayWeeklyTrendsQuery:", error); // Log the detailed error
     return (
       <div className="flex flex-col p-5 gap-4">
-        <p className="text-error">Error loading chart data</p>
+        <p className="text-error">Error loading chart data. Check console for details.</p>
       </div>
     );
   }

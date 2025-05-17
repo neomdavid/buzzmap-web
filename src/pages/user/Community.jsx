@@ -22,6 +22,7 @@ import {
   useGetPostsQuery,
   useCreatePostMutation,
   useCreatePostWithImageMutation,
+  useGetAllAdminPostsQuery,
 } from "../../api/dengueApi.js";
 import { useSelector } from "react-redux";
 import { toastInfo } from "../../utils.jsx";
@@ -51,6 +52,31 @@ const Community = () => {
     sortOrder: 'desc'
   });
   const navigate = useNavigate();
+
+  // Fetch admin posts
+  const { data: adminPosts, isLoading: isAdminPostsLoading, isError: isAdminPostsError, error: adminPostsErrorData } = useGetAllAdminPostsQuery();
+
+  // Find the latest announcement
+  const latestAnnouncement = React.useMemo(() => {
+    if (!adminPosts) return null;
+    const announcements = adminPosts.filter(post => post.category === "announcement");
+    if (announcements.length === 0) return null;
+    // Sort by publishDate in descending order
+    announcements.sort((a, b) => new Date(b.publishDate) - new Date(a.publishDate));
+    return announcements[0]; // Return the latest one
+  }, [adminPosts]);
+
+  React.useEffect(() => {
+    if (isAdminPostsLoading) {
+      console.log("Loading admin posts...");
+    }
+    if (isAdminPostsError) {
+      console.error("Error fetching admin posts:", adminPostsErrorData);
+    }
+    if (adminPosts) {
+      console.log("Admin Posts Data:", JSON.stringify(adminPosts, null, 2));
+    }
+  }, [adminPosts, isAdminPostsLoading, isAdminPostsError, adminPostsErrorData]);
 
   const getCurrentLocation = () => {
     if (navigator.geolocation) {
@@ -351,7 +377,7 @@ const Community = () => {
       showAside ? "translate-x-0" : "translate-x-full"
     } lg:translate-x-0`}
       >
-        <AnnouncementCard />
+        <AnnouncementCard announcement={latestAnnouncement} />
         <button
           onClick={() => setShowAside(false)}
           className="absolute top-4 right-4 lg:hidden bg-primary text-white p-2 rounded-full hover:cursor-pointer hover:bg-white hover:text-primary transition-all duration-200"

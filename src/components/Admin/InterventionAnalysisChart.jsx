@@ -186,7 +186,7 @@ const InterventionAnalysisChart = ({ interventionId, onStats, percentChange }) =
         pointBackgroundColor: 'rgb(107, 114, 128)'
       },
       {
-        label: 'Cases After Intervention',
+        label: ' DengCases After Intervention',
         data: afterDataset,
         borderColor: afterColor,
         backgroundColor: afterColor,
@@ -201,6 +201,7 @@ const InterventionAnalysisChart = ({ interventionId, onStats, percentChange }) =
 
   const options = {
     responsive: true,
+    maintainAspectRatio: false,
     plugins: {
       legend: {
         display: false // We'll use a custom legend below
@@ -209,7 +210,7 @@ const InterventionAnalysisChart = ({ interventionId, onStats, percentChange }) =
         display: true,
         text: `Dengue Cases Analysis - ${analysisData.intervention.barangay}`,
         font: {
-          size: 16,
+          size: 18,
           weight: 'bold'
         }
       },
@@ -228,14 +229,14 @@ const InterventionAnalysisChart = ({ interventionId, onStats, percentChange }) =
             type: 'line',
             xMin: beforeCount,
             xMax: beforeCount,
-            borderColor: 'rgb(239, 68, 68)',
+            borderColor: 'rgb(249, 115, 22)',
             borderWidth: 2,
             borderDash: [5, 5],
             label: {
               content: 'Intervention',
               enabled: true,
               position: 'top',
-              color: 'rgb(239, 68, 68)',
+              color: 'rgb(249, 115, 22)',
               font: {
                 weight: 'bold'
               }
@@ -265,37 +266,37 @@ const InterventionAnalysisChart = ({ interventionId, onStats, percentChange }) =
   };
 
   // Custom legend
-  const CustomLegend = () => (
+  const CustomLegend = ({ afterLineColor }) => (
     <div className="flex items-center gap-6 mb-2 ml-2">
       <div className="flex items-center gap-1">
-        <span className="inline-block w-6 h-1.5 rounded bg-blue-500 mr-1" />
-        <span className="text-xs text-gray-700">Cases Before Intervention</span>
+        <span className="inline-block w-6 h-1.5 rounded bg-gray-500 mr-1" />
+        <span className="text-md text-gray-700">Cases Before Intervention</span>
       </div>
       <div className="flex items-center gap-1">
-        <span className="inline-block w-6 h-1.5 rounded bg-green-500 mr-1" />
-        <span className="text-xs text-gray-700">Cases After Intervention</span>
+        <span className="inline-block w-6 h-1.5 rounded mr-1" style={{ backgroundColor: afterLineColor }} />
+        <span className="text-md text-gray-700">Cases After Intervention</span>
       </div>
       <div className="flex items-center gap-1">
-        <span className="inline-block w-3 h-3 rounded-full border-2 border-dashed border-red-500 mr-1" />
-        <span className="text-xs text-red-500 font-semibold">Intervention</span>
+        <span className="inline-block w-3 h-3 rounded-full border-2 border-dashed border-orange-500 mr-1" />
+        <span className="text-md text-orange-500 font-semibold">Intervention</span>
       </div>
     </div>
   );
 
   return (
-    <div className="w-full p-4 bg-white rounded-lg shadow-sm">
+    <div className="w-full p-6 bg-white rounded-lg shadow-sm">
       <div className="mb-4">
-        <h3 className="text-lg font-semibold text-gray-700">
+        <p className="text-3xl font-bold text-primary">
           Intervention Details
-        </h3>
-        <div className="mt-2 text-sm text-gray-600">
-          <p><span className="font-medium">Type:</span> {analysisData.intervention.type}</p>
-          <p><span className="font-medium">Date:</span> {new Date(analysisData.intervention.date).toLocaleDateString()}</p>
-          <p><span className="font-medium">Personnel:</span> {analysisData.intervention.personnel}</p>
+        </p>
+        <div className="mt-2 text-sm text-primary">
+          <p className='text-lg'><span className="font-bold">Type:</span> {analysisData.intervention.type}</p>
+          <p className='text-lg'><span className="font-bold">Date:</span> {new Date(analysisData.intervention.date).toLocaleDateString()}</p>
+          <p className='text-lg'><span className="font-bold">Personnel:</span> {analysisData.intervention.personnel}</p>
         </div>
       </div>
-      <CustomLegend />
-      <div className="h-[300px]">
+      <CustomLegend afterLineColor={afterColor} />
+      <div className="w-full h-[250px] sm:h-[300px] md:h-[350px] lg:h-[400px] xl:h-[450px]">
         <Line key={JSON.stringify(chartData)} data={chartData} options={options} />
       </div>
     </div>
