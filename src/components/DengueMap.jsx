@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef, useCallback } from "react";
 import {
   GoogleMap,
   Polygon,
@@ -96,12 +96,14 @@ const DengueMap = ({
   onMapLoad,
   activeInterventions,
   isLoadingInterventions,
+  initialFocusBarangayName,
 }) => {
   const [qcPolygonPaths, setQcPolygonPaths] = useState([]);
   const [barangayData, setBarangayData] = useState(null);
   const [selectedBarangay, setSelectedBarangay] = useState(null);
   const [highlightedBarangay, setHighlightedBarangay] = useState(null);
   const [infoWindowPosition, setInfoWindowPosition] = useState(null);
+  const [initialFocusApplied, setInitialFocusApplied] = useState(false);
   const mapRef = useRef(null);
   const { isLoaded } = useGoogleMaps();
 
@@ -134,116 +136,78 @@ const DengueMap = ({
   // State for selected intervention and its InfoWindow
   const [selectedIntervention, setSelectedIntervention] = useState(null);
 
-  // DEBUGGING: Log received props for interventions
+  // Log initialFocusBarangayName prop
   useEffect(() => {
-    console.log("[DengueMap DEBUG] Props update. activeInterventions:", activeInterventions, "isLoadingInterventions:", isLoadingInterventions);
-    if (activeInterventions) {
-      activeInterventions.forEach(intervention => {
-        if (!intervention.specific_location?.coordinates || intervention.specific_location.coordinates.length !== 2) {
-          console.log("[DengueMap DEBUG] Initial check: Intervention with missing/invalid coordinates:", intervention._id, intervention.interventionType, "Coords:", intervention.specific_location?.coordinates);
-        }
-      });
+    console.log("[DengueMap DEBUG] Received initialFocusBarangayName prop:", initialFocusBarangayName);
+  }, [initialFocusBarangayName]);
+
+  useEffect(() => {
+    console.log("[DengueMap DEBUG] Fetching GeoJSON and processing barangayData. patternsLoading:", patternsLoading);
+    if (!patternsLoading && patternData?.data) { // Only process if patternData is loaded
+      fetch("/quezon_barangays_boundaries.geojson")
+        .then((res) => res.json())
+        .then((geoJsonData) => { // Renamed to avoid confusion with 'data' from RTK
+          // const coords = geoJsonData.features[0].geometry.coordinates[0].map(
+          //   ([lng, lat]) => ({ lat, lng })
+          // );
+          // setQcPolygonPaths(coords); // qcPolygonPaths seems unused later for individual barangays
+          processBarangayData(geoJsonData, patternData.data);
+        })
+        .catch(err => console.error("Error fetching or processing GeoJSON:", err));
+    } else if (!patternsLoading && !patternData?.data) {
+      console.warn("[DengueMap DEBUG] Pattern data not available for processing GeoJSON yet, or no data.");
+      // Potentially fetch GeoJSON anyway and set barangayData without patterns if needed
+      // fetch("/quezon_barangays_boundaries.geojson").then(res => res.json()).then(geoJsonData => processBarangayData(geoJsonData, []));
     }
-  }, [activeInterventions, isLoadingInterventions]);
+  }, [patternData, patternsLoading]); // Depends on patternData and its loading state
 
-  useEffect(() => {
-    console.log(posts)
-    fetch("/quezon_barangays_boundaries.geojson")
-      .then((res) => res.json())
-      .then((data) => {
-        const coords = data.features[0].geometry.coordinates[0].map(
-          ([lng, lat]) => ({ lat, lng })
-        );
-        setQcPolygonPaths(coords);
-        return data;
-      })
-      .then((geoData) => {
-        if (patternData?.data) {
-          processBarangayData(geoData, patternData.data);
-        }
-      });
-  }, [patternData]);
-
-  useEffect(() => {
-    if (posts) {
-      const validatedSites = posts.filter(post => {
-        return post.status === "Validated" &&
-          post.specific_location &&
-          Array.isArray(post.specific_location.coordinates) &&
-          post.specific_location.coordinates.length === 2;
-      });
-      setBreedingSites(validatedSites);
-    }
-  }, [posts]);
-
-  const processBarangayData = (geoData, patternResults) => {
+  const processBarangayData = useCallback((geoData, patternResults) => { // Memoize this if it's stable
+    console.log("[DengueMap DEBUG] processBarangayData called");
     const colored = {
       ...geoData,
       features: geoData.features.map((f) => {
         const barangayName = getBarangayName(f);
-        // Find matching pattern data (case insensitive, remove special chars)
-        const normalizedBarangayName = barangayName
-          .toLowerCase()
-          .replace(/[^a-z0-9]/g, "");
-
-        const patternInfo = patternResults.find((item) => {
-          const normalizedItemName = item.name
-            ?.toLowerCase()
-            .replace(/[^a-z0-9]/g, "");
+        const normalizedBarangayName = barangayName.toLowerCase().replace(/[^a-z0-9]/g, "");
+        let foundPatternInfo = patternResults.find((item) => {
+          const normalizedItemName = item.name?.toLowerCase().replace(/[^a-z0-9]/g, "");
           return normalizedItemName === normalizedBarangayName;
         });
-        // Fallback: Try matching by removing "Barangay" prefixc
-        if (!patternInfo) {
-          const patternInfo = patternResults.find((item) => {
-            const normalizedItemName = item.name
-              ?.toLowerCase()
-              .replace("barangay", "")
-              .replace(/[^a-z0-9]/g, "")
-              .trim();
+        if (!foundPatternInfo) {
+         foundPatternInfo = patternResults.find((item) => { // Corrected variable name
+            const normalizedItemName = item.name?.toLowerCase().replace("barangay", "").replace(/[^a-z0-9]/g, "").trim();
             return normalizedItemName === normalizedBarangayName;
           });
         }
-
-        let patternType =
-          patternInfo?.triggered_pattern?.toLowerCase() || "None";
-        // let riskLevel = patternInfo?.risk_level?.toLowerCase() || "unknown"; // Remove riskLevel processing
+        let patternType = foundPatternInfo?.triggered_pattern?.toLowerCase() || "None";
         const color = PATTERN_COLORS[patternType] || PATTERN_COLORS.default;
-
         return {
           ...f,
           properties: {
             ...f.properties,
-            displayName: barangayName, // Store the display name separately
+            displayName: barangayName,
             patternType,
-            // riskLevel, // Do not add riskLevel to properties
             color,
-            alert: patternInfo?.alert || "No recent data",
-            lastAnalysisTime: patternInfo?.last_analysis_time,
+            alert: foundPatternInfo?.alert || "No recent data",
+            lastAnalysisTime: foundPatternInfo?.last_analysis_time,
           },
         };
       }),
     };
     setBarangayData(colored);
-  };
+  }, []); // Empty dependency array if getBarangayName and PATTERN_COLORS are stable and defined outside
 
-  // Default handlePolygonClick function
-  const defaultHandlePolygonClick = (feature) => {
+  const defaultHandlePolygonClick = useCallback((feature) => {
+    console.log("[DengueMap DEBUG] defaultHandlePolygonClick for:", feature?.properties?.displayName);
+    if (!mapRef.current) return;
     const center = turf.center(feature.geometry);
     const { coordinates } = center.geometry;
     const [lng, lat] = coordinates;
-
-    if (lat && lng && !isNaN(lat) && !isNaN(lng)) {
-      mapRef.current.panTo({ lat, lng });
-    }
-
+    if (lat && lng && !isNaN(lat) && !isNaN(lng)) mapRef.current.panTo({ lat, lng });
     setSelectedBarangay(feature);
     setInfoWindowPosition({ lat, lng });
-    setHighlightedBarangay(feature.properties.displayName);
-    
-    if (onBarangaySelect) {
-      onBarangaySelect(feature);
-    }
-  };
+    setHighlightedBarangay(feature?.properties?.displayName);
+    if (onBarangaySelect) onBarangaySelect(feature);
+  }, [onBarangaySelect]);
 
   // Use custom handler if provided, otherwise use default
   const handlePolygonClick = customHandlePolygonClick || defaultHandlePolygonClick;
@@ -296,6 +260,36 @@ const DengueMap = ({
     }
   }, [searchQuery, barangayData, onBarangaySelect]);
 
+  // Effect for initial focus
+  useEffect(() => {
+    if (initialFocusBarangayName && barangayData && !initialFocusApplied && mapRef.current) {
+      console.log("[DengueMap DEBUG] APPLYING INITIAL FOCUS:", initialFocusBarangayName);
+      const barangayNameToFind = initialFocusBarangayName.toLowerCase().replace(/[^a-z0-9]/g, "");
+      const matchingFeature = barangayData.features.find(feature => {
+        const displayNameNormalized = feature.properties.displayName?.toLowerCase().replace(/[^a-z0-9]/g, "");
+        const nameNormalized = feature.properties.name?.toLowerCase().replace(/[^a-z0-9]/g, "");
+        return displayNameNormalized === barangayNameToFind || nameNormalized === barangayNameToFind;
+      });
+
+      if (matchingFeature) {
+        defaultHandlePolygonClick(matchingFeature);
+      } else {
+        console.warn("[DengueMap DEBUG] Initial focus barangay NOT FOUND:", initialFocusBarangayName);
+      }
+      setInitialFocusApplied(true); // CRITICAL: Set this regardless of find, to run only once per name
+    } else {
+      // Log why it didn't apply
+      if (!initialFocusApplied) { // Only log if we haven't applied focus yet for this component instance
+         console.log("[DengueMap DEBUG] Conditions for initial focus NOT YET MET or ALREADY APPLIED.", {
+            initialFocusBarangayName: !!initialFocusBarangayName,
+            barangayData: !!barangayData,
+            initialFocusApplied,
+            mapRefCurrent: !!mapRef.current
+        });
+      }
+    }
+  }, [initialFocusBarangayName, barangayData, initialFocusApplied, defaultHandlePolygonClick]);
+
   // Add logging for selectedReport
   useEffect(() => {
     console.log('DengueMap received selectedMapItem:', selectedMapItem);
@@ -323,6 +317,9 @@ const DengueMap = ({
   };
 
   if (!isLoaded) return <p>Loading Google Maps API...</p>;
+  if (patternsLoading && !barangayData) { 
+    return <p>Loading map data...</p>;
+  }
 
   const patternType = (selectedBarangay?.properties?.patternType || "").toLowerCase().trim();
 

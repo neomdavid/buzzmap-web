@@ -56,14 +56,18 @@ export default function DengueTrendChart({ selectedBarangay, onBarangayChange })
   console.log('Pattern Recognition Data:', patternData);
 
   // Get pattern type for selected barangay
-  const selectedBarangayPattern = patternData?.data?.find(
-    barangay => barangay.name.toLowerCase() === selectedBarangay.toLowerCase()
-  )?.triggered_pattern || '';
+  const selectedBarangayPattern = selectedBarangay
+    ? patternData?.data?.find(
+        (barangay) => barangay.name.toLowerCase() === selectedBarangay.toLowerCase()
+      )?.triggered_pattern || ''
+    : ''; // Default to empty string if selectedBarangay is null
 
   console.log('Selected Barangay Pattern:', selectedBarangayPattern);
 
   const { data: trendsData, isLoading, error } = useGetBarangayWeeklyTrendsQuery({
-    barangay_name: selectedBarangay,
+    barangay_name: selectedBarangay, // This API call might also need to handle selectedBarangay being null
+                                    // depending on its requirements. For now, we assume it can handle null or 
+                                    // RTK Query's skip option is used elsewhere if selectedBarangay is a dependency for the query.
     number_of_weeks: weeks
   });
 

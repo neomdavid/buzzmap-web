@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useGetPatternRecognitionResultsQuery } from "../../api/dengueApi";
 import { MagnifyingGlass } from "phosphor-react";
 
@@ -18,9 +18,13 @@ export default function PatternAlerts({ selectedBarangay, selectedTab, onAlertSe
   
   // First apply tab filtering
   if (selectedTab === "selected") {
-    filteredData = patternData.filter(
-      item => item.name.toLowerCase() === selectedBarangay.toLowerCase()
-    );
+    if (selectedBarangay) {
+      filteredData = patternData.filter(
+        item => item.name.toLowerCase() === selectedBarangay.toLowerCase()
+      );
+    } else {
+      filteredData = [];
+    }
   } else if (selectedTab === "all") {
     filteredData = patternData;
   } else if (selectedTab === "spikes") {

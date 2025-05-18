@@ -13,8 +13,9 @@ import {
 } from "../../components";
 import PatternRecognitionResults from "@/components/Admin/PatternAlerts";
 import PatternAlerts from "@/components/Admin/PatternAlerts";
-import { useState, useRef } from "react";
-import { useGetAnalyticsQuery, useGetPostsQuery, useGetAllInterventionsQuery } from '../../api/dengueApi';
+import { useState, useRef, useEffect } from "react";
+import { useGetAnalyticsQuery, useGetPostsQuery, useGetAllInterventionsQuery, useGetPatternRecognitionResultsQuery } from '../../api/dengueApi';
+import ActionRecommendationCard from "../../components/Admin/ActionRecommendationCard";
 
 // import { IconCheck, IconHourglassEmpty, IconSearch } from "@tabler/icons-react";
 
@@ -29,7 +30,8 @@ const TABS = [
 ];
 
 const Analytics = () => {
-  const [selectedBarangay, setSelectedBarangay] = useState('bahay toro');
+  const [selectedBarangay, setSelectedBarangay] = useState(null);
+  const [initialBarangayNameForMap, setInitialBarangayNameForMap] = useState(null);
   const [selectedTab, setSelectedTab] = useState('selected');
   const [showImportModal, setShowImportModal] = useState(false);
   const [csvFile, setCsvFile] = useState(null);
@@ -43,6 +45,86 @@ const Analytics = () => {
   const { refetch: refetchInterventions } = useGetAllInterventionsQuery();
   const [dataVersion, setDataVersion] = useState(0);
   const [isImporting, setIsImporting] = useState(false);
+  const [spikeRecommendationDetails, setSpikeRecommendationDetails] = useState(null);
+
+  const { data: patternResultsData, isLoading: isLoadingPatterns } = useGetPatternRecognitionResultsQuery();
+
+  useEffect(() => {
+    console.log("[Analytics DEBUG] patternResultsData:", JSON.stringify(patternResultsData, null, 2));
+    console.log("[Analytics DEBUG] isLoadingPatterns:", isLoadingPatterns);
+    console.log("[Analytics DEBUG] initialBarangayNameForMap (before logic):", initialBarangayNameForMap);
+  }, [patternResultsData, isLoadingPatterns, initialBarangayNameForMap]);
+
+  // Effect to set initial selected barangay based on spike pattern
+  useEffect(() => {
+    console.log("[Analytics DEBUG] Entering initial barangay selection effect. patternResultsData exists:", !!patternResultsData?.data, "initialBarangayNameForMap:", initialBarangayNameForMap);
+    if (patternResultsData?.data && !initialBarangayNameForMap) { 
+      console.log("[Analytics DEBUG] Finding spike barangays from:", patternResultsData.data);
+      const spikeBarangays = patternResultsData.data.filter(
+        item => item.triggered_pattern?.toLowerCase() === 'spike'
+      );
+      console.log(`[Analytics DEBUG] Found ${spikeBarangays.length} spike barangay(s):`, JSON.stringify(spikeBarangays, null, 2));
+
+      let targetBarangay = null;
+      let recommendationDetails = null;
+
+      if (spikeBarangays.length > 0) {
+        // Sort spikes: most recent first, then alphabetically by name
+        spikeBarangays.sort((a, b) => {
+          const timeA = new Date(a.last_analysis_time || 0);
+          const timeB = new Date(b.last_analysis_time || 0);
+          if (timeB !== timeA) {
+            return timeB - timeA;
+          }
+          return a.name.localeCompare(b.name);
+        });
+        targetBarangay = spikeBarangays[0]; // Select the top one after sorting
+        setSelectedTab('spikes'); // Switch tab to show all spikes if any exist
+        console.log("[Analytics DEBUG] Selected 'spikes' tab due to existing spike patterns.");
+      } else {
+        // No spikes, fallback to default behavior (first barangay or hardcoded)
+        targetBarangay = patternResultsData.data?.[0];
+        if (!targetBarangay) {
+          targetBarangay = { name: 'bahay toro' }; // Ensure targetBarangay is an object for consistency
+        }
+         setSelectedTab('selected'); // Keep 'selected' or switch to 'all' if preferred
+      }
+      
+      if (targetBarangay) {
+        const targetBarangayName = targetBarangay.name;
+        // Fetch details for the chosen targetBarangay, even if it's not a spike (for fallback)
+        const fullDetailsForTarget = patternResultsData.data.find(p => p.name === targetBarangayName);
+
+        if (fullDetailsForTarget && fullDetailsForTarget.triggered_pattern) { // Check if pattern exists for recommendation
+            recommendationDetails = {
+                barangay: fullDetailsForTarget.name,
+                patternType: fullDetailsForTarget.triggered_pattern,
+                issueDetected: fullDetailsForTarget.alert?.replace(/^[^:]+:\s*/, ''),
+                suggestedAction: fullDetailsForTarget.current_recommendation?.full_recommendation,
+            };
+        } else {
+            // Handle case where even the fallback targetBarangay might not have full details or pattern
+            recommendationDetails = {
+                barangay: targetBarangayName,
+                patternType: 'none', // Default pattern type
+                issueDetected: 'N/A',
+                suggestedAction: 'No specific recommendation available.',
+            };
+             if (!fullDetailsForTarget) { // If targetBarangay was the hardcoded 'bahay toro'
+                console.log("[Analytics DEBUG] Fallback to hardcoded 'bahay toro', no detailed pattern data found for it.");
+             }
+        }
+        
+        console.log("[Analytics DEBUG] Target Barangay for map and chart:", targetBarangayName);
+        console.log("[Analytics DEBUG] Recommendation Details for display:", JSON.stringify(recommendationDetails, null, 2));
+
+        setSelectedBarangay(targetBarangayName); 
+        setInitialBarangayNameForMap(targetBarangayName);
+        setSpikeRecommendationDetails(recommendationDetails);
+        console.log("[Analytics DEBUG] States set - selectedBarangay:", targetBarangayName, "initialBarangayNameForMap:", targetBarangayName);
+      }
+    }
+  }, [patternResultsData, initialBarangayNameForMap]);
 
   // Handler to change selected barangay from PatternAlerts
   const handleAlertBarangaySelect = (barangayName) => {
@@ -254,10 +336,12 @@ const Analytics = () => {
             Barangay Dengue Risk and Case Density Map
           </p>
           <div className="rounded-xl shadow-sm h-140 overflow-hidden">
+            {console.log("[Analytics DEBUG] Rendering DengueMap with initialFocusBarangayName:", initialBarangayNameForMap)}
             <DengueMap 
               showLegends={true} 
               defaultTab="cases"
               key={dataVersion}
+              initialFocusBarangayName={initialBarangayNameForMap}
             />
           </div>
         </div>
@@ -325,6 +409,35 @@ const Analytics = () => {
           </button>
         </div>
       </dialog>
+
+      {/* Recommendation Section */}
+      {isLoadingPatterns && (
+        <div className="w-full shadow-sm shadow-lg p-6 py-8 rounded-lg mt-6">
+          <p className="text-base-content text-xl font-semibold">Loading recommendation...</p>
+        </div>
+      )}
+      {!isLoadingPatterns && spikeRecommendationDetails && (
+        <div className="w-full shadow-sm shadow-lg p-6 py-8 rounded-lg mt-6">
+          <p className="text-base-content text-3xl font-bold mb-4">
+            {spikeRecommendationDetails.patternType.toLowerCase() === 'spike' 
+              ? "Priority Action Recommendation (Spike Detected)"
+              : `Action Recommendation for ${spikeRecommendationDetails.barangay}`
+            }
+          </p>
+          {console.log("[Analytics DEBUG] Rendering ActionRecommendationCard with props:", JSON.stringify(spikeRecommendationDetails, null, 2))}
+          <ActionRecommendationCard
+            barangay={spikeRecommendationDetails.barangay}
+            patternType={spikeRecommendationDetails.patternType}
+            issueDetected={spikeRecommendationDetails.issueDetected}
+            suggestedAction={spikeRecommendationDetails.suggestedAction}
+          />
+        </div>
+      )}
+      {!isLoadingPatterns && !spikeRecommendationDetails && selectedBarangay && (
+        <div className="w-full shadow-sm shadow-lg p-6 py-8 rounded-lg mt-6">
+          <p className="text-base-content text-xl font-semibold">No spike recommendation available.</p>
+        </div>
+      )}
     </main>
   );
 };

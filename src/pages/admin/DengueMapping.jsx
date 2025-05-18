@@ -212,6 +212,22 @@ const DengueMapping = () => {
     }
   };
 
+  // Helper function to get background color based on pattern type
+  const getPatternBgColor = (patternType) => {
+    switch (patternType?.toLowerCase()) {
+      case 'spike':
+        return 'bg-error';
+      case 'gradual_rise':
+        return 'bg-warning';
+      case 'decline':
+        return 'bg-success';
+      case 'stability':
+        return 'bg-info';
+      default:
+        return 'bg-gray-400'; 
+    }
+  };
+
   const openStreetViewModal = () => {
     const streetViewElement = streetViewModalRef.current;
     if (streetViewElement && selectedFullReport?.specific_location?.coordinates?.length === 2) {
@@ -332,8 +348,13 @@ const DengueMapping = () => {
           <p className={`text-center font-bold ${getPatternTextColor(selectedBarangay?.properties?.patternType)} text-4xl mb-2`}>
             {selectedBarangay ? `Barangay ${selectedBarangay.properties.displayName}` : 'Select a Barangay'}
           </p>
-          <p className={`text-center font-semibold text-white text-lg uppercase mb-2 px-4 py-1 rounded-full inline-block mx-auto ${getRiskLevelBgColor(selectedBarangay?.properties?.riskLevel)}`}>
-            {selectedBarangay?.properties?.riskLevel?.toUpperCase() || 'NO BARANGAY SELECTED'} RISK AREA
+          <p className={`text-center font-semibold text-white text-lg uppercase mb-2 px-4 py-1 rounded-full inline-block mx-auto ${getPatternBgColor(selectedBarangay?.properties?.patternType)}`}>
+            {selectedBarangay
+              ? selectedBarangay.properties.patternType
+                ? (selectedBarangay.properties.patternType.charAt(0).toUpperCase() + selectedBarangay.properties.patternType.slice(1).replace('_', ' '))
+                : 'NO PATTERN DETECTED'
+              : 'NO BARANGAY SELECTED'
+            }
           </p>
           <div className="w-[90%] mx-auto flex flex-col text-black gap-2">
             <p className=""><span className="font-bold">Status: </span> 
