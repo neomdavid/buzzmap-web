@@ -198,7 +198,7 @@ const Dashboard = () => {
           <div className="flex-1 min-w-[150px] shadow-sm rounded-2xl h-70 overflow-hidden  ">
             <DengueMap />
           </div>
-          <div className="flex flex-col ">
+          {/* <div className="flex flex-col ">
             <p className="text-3xl font-extrabold text-primary mb-3">
               Key Insights
             </p>
@@ -217,7 +217,7 @@ const Dashboard = () => {
                 Seasonal pattern detected
               </p>
             </div>
-          </div>
+          </div> */}
         </div>
       </section>
     </main>

@@ -13,6 +13,7 @@ const DengueMapping = () => {
   const [showImportModal, setShowImportModal] = useState(false);
   const [csvFile, setCsvFile] = useState(null);
   const [importError, setImportError] = useState("");
+  const [isImporting, setIsImporting] = useState(false);
   const mapRef = useRef(null);
   const modalRef = useRef(null);
   const streetViewModalRef = useRef(null);
@@ -219,6 +220,8 @@ const DengueMapping = () => {
       setImportError("Please select a CSV file first");
       return;
     }
+    setIsImporting(true);
+    setImportError("");
 
     try {
       const formData = new FormData();
@@ -237,13 +240,14 @@ const DengueMapping = () => {
       // Close modal and reset state
       setShowImportModal(false);
       setCsvFile(null);
-      setImportError("");
       
       // Refresh data
       // TODO: Add your data refresh logic here
       
     } catch (error) {
       setImportError(error.message);
+    } finally {
+      setIsImporting(false);
     }
   };
 
@@ -601,9 +605,16 @@ const DengueMapping = () => {
             <button
               onClick={handleImport}
               className="btn btn-primary"
-              disabled={!csvFile}
+              disabled={!csvFile || isImporting}
             >
-              Import
+              {isImporting ? (
+                <>
+                  <span className="loading loading-spinner loading-xs"></span>
+                  Importing...
+                </>
+              ) : (
+                "Import"
+              )}
             </button>
           </div>
         </div>

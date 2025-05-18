@@ -5,6 +5,7 @@ import {
   Rectangle,
   InfoWindow,
   Marker,
+  MarkerClustererF,
 } from "@react-google-maps/api";
 import { useGoogleMaps } from "./GoogleMapsProvider";
 import * as turf from "@turf/turf";
@@ -615,36 +616,50 @@ const DengueMap = ({
         )}
 
         {/* Render breeding site pins and their InfoWindows ONLY in breeding sites tab */}
-        {activeTab === "breeding-sites" &&
-          breedingSites.map((site, index) => (
-            <Marker
-              key={index}
-              position={{
-                lat: site.specific_location.coordinates[1],
-                lng: site.specific_location.coordinates[0],
-              }}
-              icon={{
-                path: window.google.maps.SymbolPath.CIRCLE,
-                scale: 8,
-                fillColor: BREEDING_SITE_TYPE_COLORS[site.report_type] || "#2563eb",
-                fillOpacity: 1,
-                strokeWeight: 2,
-                strokeColor: "#fff",
-              }}
-              onClick={() => {
-                console.log("Breeding site details:", site);
-                setSelectedBreedingSite(site);
-                setSelectedBarangayMarker(null);
-                if (mapRef.current) {
-                  mapRef.current.panTo({
+        {activeTab === "breeding-sites" && (
+          <MarkerClustererF
+            options={{
+              imagePath: "https://developers.google.com/maps/documentation/javascript/examples/markerclusterer/m", // Default cluster icons
+              gridSize: 40,
+              minimumClusterSize: 2,
+            }}
+          >
+            {(clusterer) =>
+              breedingSites.map((site, index) => (
+                <Marker
+                  key={index}
+                  position={{
                     lat: site.specific_location.coordinates[1],
                     lng: site.specific_location.coordinates[0],
-                  });
-                  mapRef.current.setZoom(17);
-                }
-              }}
-            />
-          ))}
+                  }}
+                  clusterer={clusterer} // Pass clusterer to Marker
+                  icon={{
+                    path: window.google.maps.SymbolPath.CIRCLE,
+                    scale: 8,
+                    fillColor: BREEDING_SITE_TYPE_COLORS[site.report_type] || "#2563eb",
+                    fillOpacity: 1,
+                    strokeWeight: 2,
+                    strokeColor: "#fff",
+                  }}
+                  onClick={() => {
+                    console.log("Breeding site details:", site);
+                    setSelectedBreedingSite(site);
+                    setSelectedBarangayMarker(null);
+                    if (mapRef.current) {
+                      mapRef.current.panTo({
+                        lat: site.specific_location.coordinates[1],
+                        lng: site.specific_location.coordinates[0],
+                      });
+                      // Do not zoom in too much when clicking a clustered marker, 
+                      // let the clusterer handle zoom or user can zoom manually.
+                      // mapRef.current.setZoom(17); 
+                    }
+                  }}
+                />
+              ))
+            }
+          </MarkerClustererF>
+        )}
 
         {activeTab === "breeding-sites" && selectedBreedingSite && (
           <InfoWindow
@@ -803,7 +818,7 @@ const DengueMap = ({
       {showLegends && activeTab === "cases" && (
         <div className="absolute top-16 left-4 z-10">
           <div className="bg-white/90 backdrop-blur-sm p-4 rounded-lg shadow-lg">
-            <h3 className="text-lg font-semibold mb-3">Pattern Recognition</h3>
+            <p className="text-lg font-semibold mb-3">Pattern Recognition</p>
             <div className="space-y-3">
               <div className="flex items-center gap-2">
                 <span className="inline-block w-4 h-4 rounded-full bg-error"></span>
@@ -830,7 +845,7 @@ const DengueMap = ({
       {activeTab === "breeding-sites" && (
         <div className="absolute top-16 left-4 z-10">
           <div className="bg-white/90 backdrop-blur-sm p-4 rounded-lg shadow-lg">
-            <h3 className="text-lg font-semibold">Breeding Sites</h3>
+            <p className="text-lg font-semibold">Breeding Sites</p>
             <p className="text-gray-600">Total: {breedingSites.length}</p>
           </div>
         </div>
@@ -840,7 +855,7 @@ const DengueMap = ({
       {activeTab === "breeding-sites" && (
         <div className="absolute top-16 left-4 z-10">
           <div className="bg-white/90 backdrop-blur-sm p-4 rounded-lg shadow-lg">
-            <h3 className="text-lg font-semibold mb-3">Breeding Site Types</h3>
+            <p className="text-lg font-semibold mb-3">Breeding Site Types</p>
             <div className="space-y-2">
               {Object.entries(BREEDING_SITE_TYPE_COLORS).map(([type, color]) => (
                 <div key={type} className="flex items-center gap-2">

@@ -9,7 +9,6 @@ import {
   useCreatePostWithImageMutation,
 } from "../../api/dengueApi";
 import { useSelector } from "react-redux";
-import axios from "axios";
 import { IconUserCircle } from "@tabler/icons-react";
 
 // Define Quezon City boundaries

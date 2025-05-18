@@ -42,6 +42,7 @@ const Analytics = () => {
   const { refetch: refetchPosts } = useGetPostsQuery();
   const { refetch: refetchInterventions } = useGetAllInterventionsQuery();
   const [dataVersion, setDataVersion] = useState(0);
+  const [isImporting, setIsImporting] = useState(false);
 
   // Handler to change selected barangay from PatternAlerts
   const handleAlertBarangaySelect = (barangayName) => {
@@ -67,6 +68,8 @@ const Analytics = () => {
       setImportError("Please select a CSV file first");
       return;
     }
+    setIsImporting(true);
+    setImportError("");
 
     try {
       const formData = new FormData();
@@ -91,6 +94,8 @@ const Analytics = () => {
       setShowSuccessModal(true);
     } catch (error) {
       setImportError(error.message);
+    } finally {
+      setIsImporting(false);
     }
   };
 
@@ -288,9 +293,16 @@ const Analytics = () => {
             <button
               onClick={handleImport}
               className="btn btn-primary"
-              disabled={!csvFile}
+              disabled={!csvFile || isImporting}
             >
-              Import
+              {isImporting ? (
+                <>
+                  <span className="loading loading-spinner loading-xs"></span>
+                  Importing...
+                </>
+              ) : (
+                "Import"
+              )}
             </button>
           </div>
         </div>

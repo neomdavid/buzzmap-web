@@ -91,3 +91,9 @@
   width: 100%;
   height: 100%;
 }
+
+.pac-container {
+    position: fixed !important; /* Force it out of normal flow, relative to viewport */
+    z-index: 99999 !important; /* Ensure it's above modals and other high z-index elements */
+    /* Other potential properties if needed, like explicit width/background, but start with this */
+}

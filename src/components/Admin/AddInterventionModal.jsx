@@ -1,22 +1,41 @@
 import React, { useState, useEffect, useRef } from "react";
 import { IconX, IconCheck } from "@tabler/icons-react";
 import { useCreateInterventionMutation } from "../../api/dengueApi"; // Import RTK query hook for create intervention
+import InterventionLocationPicker from "./InterventionLocationPicker"; // Import the new component
+import * as turf from '@turf/turf'; // Import turf for calculations
+
+// Default map center (Quezon City Hall)
+const defaultCenter = {
+  lat: 14.6488,
+  lng: 121.0509,
+};
+
+const mapContainerStyle = {
+  width: "100%",
+  height: "300px", // Adjust as needed
+  borderRadius: "0.5rem",
+  marginBottom: "1rem",
+};
 
 const AddInterventionModal = ({ isOpen, onClose }) => {
   const modalRef = useRef(null);
   const [formData, setFormData] = useState({
     barangay: "",
-    addressLine: "",
+    address: "", // Changed from addressLine
     interventionType: "",
     personnel: "",
     date: "",
     status: "Scheduled",
+    specific_location: null, // Added for coordinates
   });
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
-  const [barangayData, setBarangayData] = useState(null);
   const [barangayOptions, setBarangayOptions] = useState([]);
+  const [submissionError, setSubmissionError] = useState(""); // For displaying submission errors
+  const [isLocationValid, setIsLocationValid] = useState(false); // Track location validity
+  const [barangayGeoJsonData, setBarangayGeoJsonData] = useState(null); // Store full GeoJSON
+  const [focusCommand, setFocusCommand] = useState(null); // To control picker focus (renamed from focusBarangayPicker)
 
   // Mock personnel options (replace with real data if needed)
   const personnelOptions = ["John Doe", "Jane Smith", "Carlos Rivera"];
@@ -30,39 +49,143 @@ const AddInterventionModal = ({ isOpen, onClose }) => {
       ...prev,
       [name]: value,
     }));
+    if (submissionError) setSubmissionError(""); // Clear error on form change
+
+    if (name === 'barangay') {
+      // When barangay changes via dropdown, clear specific pinned location, its validity, and any existing pin-related error.
+      setFormData(prev => ({ ...prev, specific_location: null }));
+      setIsLocationValid(false);
+      setSubmissionError(''); // Explicitly clear submission error here
+
+      if (value && barangayGeoJsonData && barangayGeoJsonData.features) {
+        const selectedFeature = barangayGeoJsonData.features.find(
+          (feature) => feature.properties.name === value
+        );
+        if (selectedFeature) {
+          try {
+            // Use turf.centerOfMass for a more robust center, fallback to centroid if error
+            let center;
+            if (selectedFeature.geometry) {
+                // turf.centerOfMass expects a Feature or FeatureCollection.
+                // If geometry is simple, turf.centroid can be more direct for simple polygons.
+                // However, centerOfMass is generally better for complex/multi-polygons.
+                center = turf.centerOfMass(selectedFeature);
+            }
+            
+            if (center && center.geometry && center.geometry.coordinates) {
+              const [lng, lat] = center.geometry.coordinates;
+              setFocusCommand({ // Renamed from setFocusBarangayPicker
+                type: 'barangay', // Explicitly set type
+                name: value,
+                center: { lat, lng },
+                zoomLevel: 15, // Standard zoom for a barangay
+              });
+              console.log(`[Modal] Focusing map on ${value}: Lat ${lat}, Lng ${lng}`);
+            } else {
+              console.warn('[Modal] Could not calculate center for barangay:', value);
+              setFocusCommand(null); // Renamed from setFocusBarangayPicker
+            }
+          } catch (err) {
+            console.error('[Modal] Error calculating center for barangay:', value, err);
+            setFocusCommand(null); // Renamed from setFocusBarangayPicker
+          }
+        } else {
+          setFocusCommand(null); // Renamed from setFocusBarangayPicker
+        }
+      } else {
+        setFocusCommand(null); // Renamed from setFocusBarangayPicker
+      }
+    }
+  };
+
+  const handlePinChange = (pinData) => {
+    console.log('[Modal DEBUG] handlePinChange received pinData:', pinData);
+
+    if (pinData && pinData.isWithinQC && pinData.coordinates && pinData.barangayName) {
+      console.log('[Modal DEBUG] Pin is considered valid. Formatted Address from pinData:', pinData.formattedAddress);
+      console.log('[Modal DEBUG] Current formData.address BEFORE update:', formData.address);
+
+      setFormData(prev => {
+        const newAddress = typeof pinData.formattedAddress === 'string' ? pinData.formattedAddress : prev.address;
+        console.log('[Modal DEBUG] Inside setFormData. New address to be set:', newAddress);
+        return {
+          ...prev,
+          specific_location: {
+            type: "Point",
+            coordinates: pinData.coordinates, // [lng, lat]
+          },
+          barangay: pinData.barangayName || prev.barangay,
+          address: newAddress,
+        };
+      });
+      setIsLocationValid(true);
+      setSubmissionError("");
+      // console.log('[Modal] Pin changed (valid):', pinData.barangayName, pinData.coordinates, "Address:", pinData.formattedAddress); // Covered by DEBUG logs
+    } else { 
+      console.log('[Modal DEBUG] Pin is considered invalid or null. PinData:', pinData);
+      console.log('[Modal DEBUG] Current formData.address BEFORE clearing specific_location:', formData.address);
+      setFormData(prev => ({
+        ...prev,
+        specific_location: null,
+      }));
+      setIsLocationValid(false);
+
+      if (pinData && !pinData.isWithinQC) {
+         setSubmissionError("Pinned location is outside Quezon City boundaries.");
+         console.log('[Modal DEBUG] Invalid pin: Outside Quezon City.');
+      } else if (pinData && (!pinData.coordinates || !pinData.barangayName)){
+         setSubmissionError("Invalid data received from map picker. Please try pinning again.");
+         console.log('[Modal DEBUG] Invalid pin: Incomplete data from picker.');
+      } else {
+        console.log('[Modal DEBUG] Pin cleared or picker reported no specific error state. isLocationValid is false.');
+      }
+    }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!formData.barangay) { // Ensure a barangay is selected (from dropdown or confirmed by pin)
+        setSubmissionError("Please select a barangay.");
+        return;
+    }
+    if (!formData.specific_location || !isLocationValid) {
+      setSubmissionError("Please pin a specific location on the map within the selected barangay.");
+      return;
+    }
+    setSubmissionError("");
     setShowConfirmation(true);
   };
 
   const confirmSubmit = async () => {
     setIsSubmitting(true);
+    setSubmissionError(""); 
     try {
-      // Submit intervention data via RTK Query
+      console.log("Submitting intervention data:", formData);
       await createIntervention(formData).unwrap();
-
       setIsSuccess(true);
-      // Reset form after successful submission
       setFormData({
         barangay: "",
-        addressLine: "",
+        address: "",
         interventionType: "",
         personnel: "",
         date: "",
         status: "Scheduled",
+        specific_location: null,
       });
+      setIsLocationValid(false); 
+      setFocusCommand(null); // Reset map focus
 
-      // Show success toast
-      // Close modal after showing success message
       setTimeout(() => {
-        onClose(); // Close the modal after successful submission
+        onClose(); 
         setShowConfirmation(false);
         setIsSuccess(false);
-      }, 2000); // Auto-close after 2 seconds
+      }, 2000); 
     } catch (error) {
       console.error("Error submitting intervention:", error);
+      const errMsg = error.data?.error || error.data?.message || "Failed to submit intervention. Please check the details and try again.";
+      setSubmissionError(errMsg);
+      setIsSuccess(false); 
+      setShowConfirmation(false); 
     } finally {
       setIsSubmitting(false);
     }
@@ -75,26 +198,59 @@ const AddInterventionModal = ({ isOpen, onClose }) => {
   useEffect(() => {
     if (isOpen && modalRef.current) {
       modalRef.current.showModal();
+      setSubmissionError(""); 
+      // If opening and formData.barangay has a value (e.g. from previous edit session not yet submitted)
+      // then try to focus the map on it, BUT only if no specific location is already pinned.
+      if(formData.barangay && barangayGeoJsonData) {
+        // Only set focus command to a barangay if there's NO valid pin.
+        // If there is a valid pin, the map should be focused on the pin via initialPin,
+        // not the entire barangay boundary from here.
+        if (!formData.specific_location) { 
+          const selectedFeature = barangayGeoJsonData.features.find(
+            (feature) => feature.properties.name === formData.barangay
+          );
+          if (selectedFeature && selectedFeature.geometry) {
+            try {
+              const center = turf.centerOfMass(selectedFeature);
+              if (center && center.geometry && center.geometry.coordinates) {
+                const [lng, lat] = center.geometry.coordinates;
+                setFocusCommand({ 
+                  type: 'barangay',
+                  name: formData.barangay,
+                  center: { lat, lng },
+                  zoomLevel: 15,
+                });
+              }
+            } catch (err) { console.error("Error recentering on initial load for barangay focus", err); }
+          }
+        } else {
+          // If a specific location IS set, ensure focusCommand is not redundantly a barangay focus.
+          // It could be null or a pin focus if needed in other scenarios, but for now, we prevent overriding pin focus.
+          // If focusCommand is already correctly set (e.g. to null or a pin focus by another logic path), leave it.
+          // If it was a barangay focus, and now we have a pin, it implies the pin should take precedence, so a barangay focus here is wrong.
+          // Consider if clearing focusCommand is right if specific_location exists.
+          // For now, the key is to NOT set a BARANGAY focus if a pin exists.
+        }
+      } else if (!formData.barangay) {
+        setFocusCommand(null); // Ensure no previous focus if barangay is cleared
+      }
     }
-  }, [isOpen]);
+  }, [isOpen, formData.barangay, barangayGeoJsonData, formData.specific_location]); // Added formData.specific_location
 
-  if (!isOpen) return null;
-
-  useEffect(() => {
-    // Fetch the barangay data (geojson file)
+   useEffect(() => {
     fetch("/quezon_barangays_boundaries.geojson")
       .then((res) => res.json())
       .then((data) => {
-        setBarangayData(data);
-
-        // Extract barangay names and set the options for the select
+        setBarangayGeoJsonData(data); // Store the full GeoJSON data
         const barangayNames = data.features.map(
           (feature) => feature.properties.name
-        );
+        ).sort(); 
         setBarangayOptions(barangayNames);
       })
       .catch(console.error);
   }, []);
+
+  if (!isOpen) return null;
 
   return (
     <>
@@ -104,7 +260,7 @@ const AddInterventionModal = ({ isOpen, onClose }) => {
         className="modal transition-transform duration-300 ease-in-out"
         onClick={(e) => e.target === e.currentTarget && onClose()}
       >
-        <div className="modal-box bg-white rounded-3xl shadow-3xl w-9/12 max-w-5xl p-12 relative">
+        <div className="modal-box bg-white rounded-3xl shadow-3xl w-11/12 max-w-5xl p-12 relative"> {/* Increased width */}
           <button
             className="absolute top-10 right-10 text-2xl font-semibold hover:text-gray-500 transition-colors duration-200 hover:cursor-pointer"
             onClick={onClose}
@@ -120,123 +276,151 @@ const AddInterventionModal = ({ isOpen, onClose }) => {
           <div className="space-y-6 text-lg">
             {!showConfirmation ? (
               <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                  {/* Location (Barangay & Address Line) */}
-                  <div className="form-control">
-                    <label className="label text-primary text-lg font-bold mb-1">
-                      Location
-                    </label>
-                    <div className="grid grid-cols-1 gap-4">
-                      <div>
-                        {/* Barangay Dropdown */}
-                        <select
-                          name="barangay"
-                          value={formData.barangay}
-                          onChange={handleChange}
-                          className="select rounded-lg bg-base-200 w-full border-0 text-lg py-2 cursor-pointer hover:bg-base-300 transition-all"
-                          required
-                        >
-                          <option value="">Select Barangay</option>
-                          {barangayOptions.map((barangay, index) => (
-                            <option key={index} value={barangay}>
-                              {barangay}
-                            </option>
-                          ))}
-                        </select>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-5"> {/* Adjusted gap */}
+                  {/* Left Column: Form Fields */}
+                  <div className="flex flex-col gap-5">
+                    {/* Location (Barangay & Address) */}
+                    <div className="form-control">
+                      <label className="label text-primary text-lg font-bold mb-1">
+                        Location Details
+                      </label>
+                      <div className="grid grid-cols-1 gap-4">
+                        <div>
+                          {/* Barangay Dropdown */}
+                          <select
+                            name="barangay"
+                            value={formData.barangay}
+                            onChange={handleChange}
+                            className="select rounded-lg bg-base-200 w-full border-0 text-lg py-2 cursor-pointer hover:bg-base-300 transition-all"
+                            required
+                          >
+                            <option value="">Select Barangay</option>
+                            {barangayOptions.map((bName, index) => (
+                              <option key={index} value={bName}>
+                                {bName}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        <div>
+                          {/* Address (changed from addressLine) */}
+                          <input
+                            type="text"
+                            name="address" // Changed from addressLine
+                            value={formData.address}
+                            onChange={handleChange}
+                            className="input border-0 w-full rounded-lg bg-base-200 text-lg py-2 cursor-pointer hover:bg-base-300 transition-all"
+                            placeholder="Street Address / Building Name (Optional)"
+                          />
+                        </div>
                       </div>
+                    </div>
 
-                      <div>
-                        {/* Address Line (Optional) */}
-                        <input
-                          type="text"
-                          name="addressLine"
-                          value={formData.addressLine}
-                          onChange={handleChange}
-                          className="input border-0 w-full rounded-lg bg-base-200 text-lg py-2 cursor-pointer hover:bg-base-300 transition-all"
-                          placeholder="Specific Address Line (Optional)"
-                        />
-                      </div>
+                    {/* Type of Intervention */}
+                    <div className="form-control">
+                      <label className="label text-primary text-lg font-bold mb-1">
+                        Type of Intervention
+                      </label>
+                      <select
+                        name="interventionType"
+                        value={formData.interventionType}
+                        onChange={handleChange}
+                        className="select border-0 rounded-lg w-full bg-base-200 text-lg py-2 cursor-pointer hover:bg-base-300 transition-all"
+                        required
+                      >
+                        <option value="">Select Type</option>
+                        <option value="Fogging">Fogging</option>
+                        <option value="Larviciding">Larviciding</option>
+                        <option value="Clean-up Drive">Clean-up Drive</option>
+                        <option value="Education Campaign">
+                          Education Campaign
+                        </option>
+                      </select>
+                    </div>
+
+                    {/* Assigned Personnel */}
+                    <div className="form-control">
+                      <label className="label text-primary text-lg font-bold mb-1">
+                        Assigned Personnel
+                      </label>
+                      <input
+                        type="text" // Changed from select to input for flexibility
+                        name="personnel"
+                        value={formData.personnel}
+                        onChange={handleChange}
+                        className="input border-0 w-full rounded-lg bg-base-200 text-lg py-2 cursor-pointer hover:bg-base-300 transition-all"
+                        placeholder="e.g., John Doe, Jane Smith"
+                        required
+                      />
+                    </div>
+
+                    {/* Date and Time */}
+                    <div className="form-control">
+                      <label className="label text-primary text-lg font-bold mb-1">
+                        Date and Time
+                      </label>
+                      <input
+                        type="datetime-local"
+                        name="date"
+                        value={formData.date}
+                        onChange={handleChange}
+                        className="input border-0 w-full rounded-lg bg-base-200 text-lg py-2 cursor-pointer hover:bg-base-300 transition-all"
+                        required
+                      />
+                    </div>
+
+                    {/* Status */}
+                    <div className="form-control">
+                      <label className="label text-primary text-lg font-bold mb-1">
+                        Status
+                      </label>
+                      <select
+                        name="status"
+                        value={formData.status}
+                        onChange={handleChange}
+                        className="select border-0 rounded-lg w-full bg-base-200 text-lg py-2 cursor-pointer hover:bg-base-300 transition-all"
+                        required
+                      >
+                        <option value="Scheduled">Scheduled</option>
+                        <option value="Ongoing">Ongoing</option>
+                        <option value="Completed">Completed</option> {/* Changed to Completed */}
+                      </select>
                     </div>
                   </div>
 
-                  {/* Type of Intervention */}
-                  <div className="form-control">
+                  {/* Right Column: Map and Coordinates */}
+                  <div className="flex flex-col">
                     <label className="label text-primary text-lg font-bold mb-1">
-                      Type of Intervention
+                      Pin Intervention Location on Map 
                     </label>
-                    <select
-                      name="interventionType"
-                      value={formData.interventionType}
-                      onChange={handleChange}
-                      className="select border-0 rounded-lg w-full bg-base-200 text-lg py-2 cursor-pointer hover:bg-base-300 transition-all"
-                      required
-                    >
-                      <option value="">Select Type</option>
-                      <option value="Fogging">Fogging</option>
-                      <option value="Larviciding">Larviciding</option>
-                      <option value="Clean-up Drive">Clean-up Drive</option>
-                      <option value="Education Campaign">
-                        Education Campaign
-                      </option>
-                    </select>
-                  </div>
-
-                  {/* Assigned Personnel */}
-                  {/* Assigned Personnel */}
-                  <div className="form-control">
-                    <label className="label text-primary text-lg font-bold mb-1">
-                      Assigned Personnel
-                    </label>
-                    <input
-                      name="personnel"
-                      value={formData.personnel}
-                      onChange={handleChange}
-                      className="border-2 font-normal border-primary/60 p-3 px-4 rounded-lg w-full bg-base-200 text-lg py-2 cursor-pointer hover:bg-base-300 transition-all"
-                      required
+                    <InterventionLocationPicker 
+                      onPinChange={handlePinChange} // Renamed from onLocationSelect
+                      initialPin={formData.specific_location ? { lat: formData.specific_location.coordinates[1], lng: formData.specific_location.coordinates[0] } : null} // Renamed from initialPosition
+                      focusCommand={focusCommand} // Renamed from focusBarangay
                     />
-                  </div>
-
-                  {/* Date and Time */}
-                  <div className="form-control">
-                    <label className="label text-primary text-lg font-bold mb-1">
-                      Date and Time
-                    </label>
-                    <input
-                      type="datetime-local"
-                      name="date"
-                      value={formData.date}
-                      onChange={handleChange}
-                      className="input border-0 w-full rounded-lg bg-base-200 text-lg py-2 cursor-pointer hover:bg-base-300 transition-all"
-                      required
-                    />
-                  </div>
-
-                  {/* Status */}
-                  <div className="form-control">
-                    <label className="label text-primary text-lg font-bold mb-1">
-                      Status
-                    </label>
-                    <select
-                      name="status"
-                      value={formData.status}
-                      onChange={handleChange}
-                      className="select border-0 rounded-lg w-full bg-base-200 text-lg py-2 cursor-pointer hover:bg-base-300 transition-all"
-                      required
-                    >
-                      <option value="Scheduled">Scheduled</option>
-                      <option value="Ongoing">Ongoing</option>
-                      <option value="Complete">Complete</option>
-                    </select>
+                    {/* Error for picker is handled by submissionError or picker's internal messages */}
                   </div>
                 </div>
+                
+                {/* Submission Error Message Display */}
+                {submissionError && (
+                  <div className="text-center text-error font-semibold p-2 bg-error/10 rounded-md mt-4">
+                    {submissionError}
+                  </div>
+                )}
 
                 {/* Action Buttons */}
-                <div className="modal-action w-full flex justify-center">
+                <div className="modal-action w-full flex justify-center mt-6">
                   <button
                     type="submit"
-                    className="bg-success text-white font-semibold py-2 px-8 rounded-xl hover:bg-success/80 transition-all hover:cursor-pointer"
+                    className="bg-success text-white font-semibold py-3 px-8 rounded-xl hover:bg-success/80 transition-all hover:cursor-pointer text-lg" // Increased padding and text size
+                    disabled={isSubmitting} // Only disable if submitting, validation happens in handleSubmit
                   >
-                    Submit Intervention
+                    {isSubmitting ? (
+                      <span className="loading loading-spinner"></span>
+                    ) : (
+                      "Submit Intervention"
+                    )}
                   </button>
                 </div>
               </form>
@@ -248,12 +432,25 @@ const AddInterventionModal = ({ isOpen, onClose }) => {
                       <p className="text-primary mb-2 text-2xl">
                         Are you sure you want to submit this intervention?
                       </p>
+                      {/* Display key details for confirmation */}
+                      <div className="text-left bg-base-200 p-4 rounded-lg w-full max-w-md mb-4 text-sm">
+                        <p><strong>Barangay:</strong> {formData.barangay}</p>
+                        <p><strong>Address:</strong> {formData.address}</p>
+                        <p><strong>Type:</strong> {formData.interventionType}</p>
+                        <p><strong>Date:</strong> {new Date(formData.date).toLocaleString()}</p>
+                        <p><strong>Personnel:</strong> {formData.personnel}</p>
+                        {formData.specific_location && (
+                          <p>
+                            <strong>Coordinates:</strong> Lng: {formData.specific_location.coordinates[0].toFixed(4)}, Lat: {formData.specific_location.coordinates[1].toFixed(4)}
+                          </p>
+                        )}
+                      </div>
                     </div>
 
                     <div className="flex justify-center gap-4">
                       <button
                         onClick={cancelSubmit}
-                        className="bg-gray-400/90 text-white font-semibold py-2 px-8 rounded-xl hover:bg-gray-200 transition-all hover:cursor-pointer"
+                        className="bg-gray-300 text-gray-800 font-semibold py-2 px-8 rounded-xl hover:bg-gray-400 transition-all hover:cursor-pointer" // Adjusted colors
                         disabled={isSubmitting}
                       >
                         Cancel
@@ -266,7 +463,7 @@ const AddInterventionModal = ({ isOpen, onClose }) => {
                         {isSubmitting ? (
                           <span className="loading loading-spinner"></span>
                         ) : (
-                          "Submit Intervention"
+                          "Confirm & Submit" // Changed text
                         )}
                       </button>
                     </div>

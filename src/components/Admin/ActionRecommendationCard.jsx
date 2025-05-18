@@ -45,6 +45,39 @@ const ActionRecommendationCard = ({
   const styles = PATTERN_STYLES[patternType?.toLowerCase()] || PATTERN_STYLES.none;
   const urgencyLevelToDisplay = styles.urgency;
 
+  // Parse suggestedAction
+  let primarySuggestion = "";
+  let actionListItems = [];
+  const rawAction = suggestedAction || "";
+
+  const marker = "Recommended actions:";
+  const markerIndex = rawAction.indexOf(marker);
+
+  if (markerIndex !== -1) {
+    primarySuggestion = rawAction.substring(0, markerIndex).trim();
+    let itemsString = rawAction.substring(markerIndex + marker.length).trim();
+    
+    // Clean up common prefixes for the items string like ": -", ":", "-"
+    if (itemsString.startsWith(":-")) {
+      itemsString = itemsString.substring(2).trim();
+    } else if (itemsString.startsWith(":")) {
+      itemsString = itemsString.substring(1).trim();
+    } else if (itemsString.startsWith("-")) {
+      itemsString = itemsString.substring(1).trim();
+    }
+    
+    actionListItems = itemsString.split(" - ").map(item => item.trim()).filter(Boolean);
+  } else {
+    // Marker not found, fall back to splitting the whole string
+    const parts = rawAction.split(" - ").map(item => item.trim()).filter(Boolean);
+    if (parts.length > 0) {
+      primarySuggestion = parts[0];
+      actionListItems = parts.slice(1);
+    } else { 
+      primarySuggestion = rawAction.trim(); 
+    }
+  }
+
   return (
     <div
       className={`flex flex-col gap-1 border-2 ${styles.border} rounded-3xl p-6 ${className}`}
@@ -75,14 +108,25 @@ const ActionRecommendationCard = ({
           {issueDetected}
         </p>
       </div>
-      <div className="flex items-center gap-3">
-        <div className="text-primary">
+      <div className="flex items-start gap-3">
+        <div className="text-primary pt-1">
           <Lightbulb weight="fill" size={16} />
         </div>
-        <p className="text-black">
+        <div className="text-black">
           <span className="font-semibold">Suggested Action: </span>
-          {suggestedAction}
-        </p>
+          {primarySuggestion && <span>{primarySuggestion}</span>}
+          {actionListItems.length > 0 && (
+            <ul className={`list-disc list-inside ml-4 ${primarySuggestion ? 'mt-1' : ''}`}>
+              {actionListItems.map((item, index) => (
+                <li key={index}>{item}</li>
+              ))}
+            </ul>
+          )}
+          {/* Fallback if suggestedAction had content but parsing yielded nothing */}
+          {!primarySuggestion && actionListItems.length === 0 && rawAction.trim() && (
+            <span>{rawAction.trim()}</span>
+          )}
+        </div>
       </div>
     </div>
   );

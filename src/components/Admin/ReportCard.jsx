@@ -9,13 +9,13 @@ const ReportCard = ({
   return (
     <article className="flex flex-col">
       <div
-        className={`flex flex-col shadow-sm ${topBg} text-white rounded-3xl py-6 pb-3 px-8 z-200`}
+        className={`flex flex-col shadow-sm ${topBg} text-white rounded-3xl py-6 pb-3 px-8 z-70`}
       >
         <p className="text-xl">{title}</p>
         <h1 className="text-8xl">{count}</h1>
       </div>
 
-      <div className="flex flex-col shadow-md bg-base-200 rounded-3xl gap-y-3 px-8 py-4 pt-15 mt-[-34px] z-[100]">
+      <div className="flex flex-col shadow-md bg-base-200 rounded-3xl gap-y-3 px-8 py-4 pt-15 mt-[-34px] z-50">
         {type === "status" &&
           items.map((item, i) => (
             <div className="flex items-center gap-x-3" key={i}>

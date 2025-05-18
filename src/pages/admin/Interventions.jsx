@@ -17,6 +17,8 @@ import {
 } from 'chart.js';
 import { IconChecks, IconMapPins, IconTag, IconListDetails } from "@tabler/icons-react"; // Replaced IconFileDescription with IconListDetails
 import dayjs from 'dayjs'; // Import dayjs
+import { useEffect, useState } from 'react'; // Import useState
+import React from 'react';
 
 ChartJS.register(ArcElement, BarElement, CategoryScale, LinearScale, Tooltip, Legend);
 
@@ -38,6 +40,13 @@ const Interventions = () => {
     isLoading: isLoadingPatterns,
     error: errorPatterns,
   } = useGetPatternRecognitionResultsQuery();
+
+  // Log the raw patternResultsData when it's available
+  useEffect(() => {
+    if (patternResultsData) {
+      console.log("Raw Pattern Recognition Results Data (for Prescriptive Actions):", JSON.stringify(patternResultsData, null, 2));
+    }
+  }, [patternResultsData]);
 
   const completedInterventions = interventions ? interventions.filter(i => {
     const status = i.status?.toLowerCase();
@@ -98,6 +107,39 @@ const Interventions = () => {
   //   ],
   // };
 
+  const [recommendationSearchQuery, setRecommendationSearchQuery] = useState("");
+  const [patternFilter, setPatternFilter] = useState(""); // Empty string for "All Patterns"
+
+  // Get unique pattern types for the filter dropdown
+  const uniquePatternTypes = React.useMemo(() => {
+    if (!patternResultsData?.data) return [];
+    const patterns = new Set(patternResultsData.data.map(item => item.triggered_pattern).filter(Boolean)); // filter(Boolean) to remove null/undefined
+    return Array.from(patterns).sort();
+  }, [patternResultsData]);
+
+  // Apply filters and search to recommendations
+  const filteredRecommendations = React.useMemo(() => {
+    if (!patternResultsData?.data) return [];
+    let recommendations = patternResultsData.data;
+
+    // Apply pattern filter
+    if (patternFilter) {
+      recommendations = recommendations.filter(item => item.triggered_pattern === patternFilter);
+    }
+
+    // Apply search query
+    if (recommendationSearchQuery) {
+      const searchQueryLower = recommendationSearchQuery.toLowerCase();
+      recommendations = recommendations.filter(item => 
+        item.name?.toLowerCase().includes(searchQueryLower) ||
+        item.alert?.toLowerCase().includes(searchQueryLower) ||
+        item.current_recommendation?.full_recommendation?.toLowerCase().includes(searchQueryLower) ||
+        item.triggered_pattern?.toLowerCase().includes(searchQueryLower)
+      );
+    }
+    return recommendations;
+  }, [patternResultsData, patternFilter, recommendationSearchQuery]);
+
   if (isLoadingInterventions || isLoadingPosts || isLoadingPatterns) {
     return <div>Loading...</div>;
   }
@@ -118,7 +160,7 @@ const Interventions = () => {
 
   const commonwealthData = findRecommendationForBarangay("Commonwealth");
   const fairviewData = findRecommendationForBarangay("Fairview");
-  const holySpiritData = findRecommendationForBarangay("Holy Spirit");
+  // const holySpiritData = findRecommendationForBarangay("Holy Spirit"); // Will be replaced by dynamic rendering
 
   return (
     <main className="flex flex-col w-full ">
@@ -205,39 +247,44 @@ const Interventions = () => {
             <p className="text-base-content text-4xl font-bold mb-1">
               Prescriptive Action Recommendations
             </p>
-            {/* High Risk (red) */}
-            {commonwealthData && (
-              <ActionRecommendationCard
-                barangay={commonwealthData.name}
-                patternType={commonwealthData.triggered_pattern}
-                issueDetected={commonwealthData.alert?.replace(/^[^:]+:\s*/, '')}
-                suggestedAction={commonwealthData.current_recommendation?.full_recommendation}
-                // Urgency level might need to be derived or is part of the full_recommendation
-              />
-            )}
-            {!commonwealthData && <p className="text-gray-500 p-4">No specific recommendation data for Commonwealth.</p>}
 
-            {/* Medium Risk (yellow) */}
-            {fairviewData && (
-              <ActionRecommendationCard
-                barangay={fairviewData.name}
-                patternType={fairviewData.triggered_pattern}
-                issueDetected={fairviewData.alert?.replace(/^[^:]+:\s*/, '')}
-                suggestedAction={fairviewData.current_recommendation?.full_recommendation}
+            {/* Search and Filter UI for Recommendations */}
+            <div className="flex flex-col sm:flex-row gap-4 mb-4 p-4 bg-base-200 rounded-lg">
+              <input 
+                type="text"
+                placeholder="Search recommendations (barangay, alert, pattern...)"
+                value={recommendationSearchQuery}
+                onChange={(e) => setRecommendationSearchQuery(e.target.value)}
+                className="input input-bordered w-full sm:flex-1 bg-white"
               />
-            )}
-            {!fairviewData && <p className="text-gray-500 p-4">No specific recommendation data for Fairview.</p>}
+              <select 
+                value={patternFilter}
+                onChange={(e) => setPatternFilter(e.target.value)}
+                className="select select-bordered w-full sm:w-auto bg-white"
+              >
+                <option value="">All Patterns</option>
+                {uniquePatternTypes.map(pattern => (
+                  <option key={pattern} value={pattern}>
+                    {pattern.charAt(0).toUpperCase() + pattern.slice(1).replace('_', ' ')}
+                  </option>
+                ))}
+              </select>
+            </div>
 
-            {/* Low Risk (green) */}
-            {holySpiritData && (
-              <ActionRecommendationCard
-                barangay={holySpiritData.name}
-                patternType={holySpiritData.triggered_pattern}
-                issueDetected={holySpiritData.alert?.replace(/^[^:]+:\s*/, '')}
-                suggestedAction={holySpiritData.current_recommendation?.full_recommendation}
-              />
+            {/* Dynamically render ActionRecommendationCards based on filteredRecommendations */}
+            {filteredRecommendations.length > 0 ? (
+              filteredRecommendations.map(item => (
+                <ActionRecommendationCard
+                  key={item.name + item.triggered_pattern} // Ensure unique key
+                  barangay={item.name}
+                  patternType={item.triggered_pattern}
+                  issueDetected={item.alert?.replace(/^[^:]+:\s*/, '')}
+                  suggestedAction={item.current_recommendation?.full_recommendation}
+                />
+              ))
+            ) : (
+              <p className="text-gray-500 p-4 text-center">No recommendations match your criteria.</p>
             )}
-            {!holySpiritData && <p className="text-gray-500 p-4">No specific recommendation data for Holy Spirit.</p>}
           </div>
         </div>
       </section>
