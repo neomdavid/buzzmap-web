@@ -37,6 +37,13 @@ const PATTERN_COLORS = {
   default: "#718096", // gray
 };
 
+// Intervention status color mapping
+const INTERVENTION_STATUS_COLORS = {
+  scheduled: "#8b5cf6", // Purple-500
+  ongoing: "#f59e0b",   // Amber-500
+  default: "#6b7280",  // Gray-500
+};
+
 // Risk level color mapping - To be removed if not used elsewhere
 /*
 const RISK_LEVEL_COLORS = {
@@ -85,8 +92,10 @@ const DengueMap = ({
   searchQuery = "",
   CustomInfoWindow,
   getPolygonOptions,
-  selectedReport,
+  selectedMapItem,
   onMapLoad,
+  activeInterventions,
+  isLoadingInterventions,
 }) => {
   const [qcPolygonPaths, setQcPolygonPaths] = useState([]);
   const [barangayData, setBarangayData] = useState(null);
@@ -99,7 +108,7 @@ const DengueMap = ({
   const { data: patternData, isLoading: patternsLoading } =
     useGetPatternRecognitionResultsQuery();
 
-  const { data: posts } = useGetPostsQuery();
+  const { data: posts, isLoading: isLoadingPosts } = useGetPostsQuery();
   
   const [activeTab, setActiveTab] = useState("cases");
   const [breedingSites, setBreedingSites] = useState([]);
@@ -121,6 +130,21 @@ const DengueMap = ({
 
   // State to track which barangay marker is selected
   const [selectedBarangayMarker, setSelectedBarangayMarker] = useState(null);
+
+  // State for selected intervention and its InfoWindow
+  const [selectedIntervention, setSelectedIntervention] = useState(null);
+
+  // DEBUGGING: Log received props for interventions
+  useEffect(() => {
+    console.log("[DengueMap DEBUG] Props update. activeInterventions:", activeInterventions, "isLoadingInterventions:", isLoadingInterventions);
+    if (activeInterventions) {
+      activeInterventions.forEach(intervention => {
+        if (!intervention.specific_location?.coordinates || intervention.specific_location.coordinates.length !== 2) {
+          console.log("[DengueMap DEBUG] Initial check: Intervention with missing/invalid coordinates:", intervention._id, intervention.interventionType, "Coords:", intervention.specific_location?.coordinates);
+        }
+      });
+    }
+  }, [activeInterventions, isLoadingInterventions]);
 
   useEffect(() => {
     console.log(posts)
@@ -274,8 +298,20 @@ const DengueMap = ({
 
   // Add logging for selectedReport
   useEffect(() => {
-    console.log('DengueMap received selectedReport:', selectedReport);
-  }, [selectedReport]);
+    console.log('DengueMap received selectedMapItem:', selectedMapItem);
+    if (selectedMapItem) {
+      const { type, item } = selectedMapItem;
+      if (type === 'report' && item?.specific_location?.coordinates) {
+        console.log("DengueMap: selectedMapItem is a report", item);
+      } else if (type === 'intervention' && item?.specific_location?.coordinates) {
+        setActiveTab('interventions');
+        setSelectedIntervention(item);
+        console.log("DengueMap: selectedMapItem is an intervention", item);
+      } else {
+        setSelectedIntervention(null);
+      }
+    }
+  }, [selectedMapItem]);
 
   // Update the handleMapLoad function
   const handleMapLoad = (map) => {
@@ -286,7 +322,7 @@ const DengueMap = ({
     }
   };
 
-  if (!isLoaded || patternsLoading) return <p>Loading map...</p>;
+  if (!isLoaded) return <p>Loading Google Maps API...</p>;
 
   const patternType = (selectedBarangay?.properties?.patternType || "").toLowerCase().trim();
 
@@ -316,11 +352,9 @@ const DengueMap = ({
       ? "text-info"
       : "text-gray-400";
 
-
-
   return (
     <div className="w-full relative" style={{ height: height }}>
-      {/* Tabs */}
+      {/* Tabs - Rendered regardless of patternsLoading */}
       <div className="absolute top-4 left-4 z-20 flex gap-2">
         <button
           onClick={() => setActiveTab("cases")}
@@ -342,207 +376,177 @@ const DengueMap = ({
         >
           Breeding Sites
         </button>
+        <button
+          onClick={() => setActiveTab("interventions")}
+          className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+            activeTab === "interventions"
+              ? "bg-primary text-white"
+              : "bg-white/90 text-gray-600 hover:bg-gray-50"
+          }`}
+        >
+          Interventions
+        </button>
       </div>
 
-      <GoogleMap
-        mapContainerStyle={containerStyle}
-        center={QC_CENTER}
-        zoom={zoom}
-        onLoad={handleMapLoad}
-        options={{
-          mapTypeControl: false,
-          mapTypeId: defaultView,
-        }}
-      >
-        {/* Rectangle (optional, can keep or remove) */}
-        <Rectangle
-          bounds={QC_BOUNDS}
+      {/* Conditional rendering for the map itself based on pattern data loading */}
+      {patternsLoading ? (
+        <div className="w-full h-full flex items-center justify-center bg-gray-100">
+          <p>Loading map data...</p>
+        </div>
+      ) : (
+        <GoogleMap
+          mapContainerStyle={containerStyle}
+          center={QC_CENTER}
+          zoom={zoom}
+          onLoad={handleMapLoad}
           options={{
-            fillOpacity: 0,
-            strokeWeight: 0,
-            clickable: false,
-            zIndex: 2,
+            mapTypeControl: false,
+            mapTypeId: defaultView,
           }}
-        />
+        >
+          {/* Rectangle (optional, can keep or remove) */}
+          <Rectangle
+            bounds={QC_BOUNDS}
+            options={{
+              fillOpacity: 0,
+              strokeWeight: 0,
+              clickable: false,
+              zIndex: 2,
+            }}
+          />
 
-        {/* Always render all barangay polygons with dengue cases coloring */}
-        {barangayData?.features.map((feature, index) => {
-          const geometry = feature.geometry;
-          const coordsArray =
-            geometry.type === "Polygon"
-              ? [geometry.coordinates]
-              : geometry.type === "MultiPolygon"
-              ? geometry.coordinates
-              : [];
+          {/* Always render all barangay polygons with dengue cases coloring */}
+          {barangayData?.features.map((feature, index) => {
+            const geometry = feature.geometry;
+            const coordsArray =
+              geometry.type === "Polygon"
+                ? [geometry.coordinates]
+                : geometry.type === "MultiPolygon"
+                ? geometry.coordinates
+                : [];
 
-          return coordsArray.map((polygonCoords, i) => {
-            const path = polygonCoords[0].map(([lng, lat]) => ({
-              lat,
-              lng,
-            }));
+            return coordsArray.map((polygonCoords, i) => {
+              const path = polygonCoords[0].map(([lng, lat]) => ({
+                lat,
+                lng,
+              }));
 
-            // Get the color based on pattern type
-            const patternType = (feature?.properties?.patternType || "none").toLowerCase();
-            const color = PATTERN_COLORS[patternType] || PATTERN_COLORS.default;
+              // Get the color based on pattern type
+              const patternType = (feature?.properties?.patternType || "none").toLowerCase();
+              const color = PATTERN_COLORS[patternType] || PATTERN_COLORS.default;
 
-            // Use custom polygon options if provided
-            const options = getPolygonOptions 
-              ? getPolygonOptions(feature)
-              : {
-                  strokeColor: color,
-                  strokeOpacity: 1,
-                  strokeWeight: 1,
-                  fillOpacity: 0.5,
-                  fillColor: color,
-                  zIndex: 5,
-                };
+              // Use custom polygon options if provided
+              const options = getPolygonOptions 
+                ? getPolygonOptions(feature)
+                : {
+                    strokeColor: color,
+                    strokeOpacity: 1,
+                    strokeWeight: 1,
+                    fillOpacity: 0.5,
+                    fillColor: color,
+                    zIndex: 5,
+                  };
 
-            return (
-              <Polygon
-                key={`${index}-${i}`}
-                paths={path}
-                options={options}
-                onClick={() => handlePolygonClick(feature)}
-              />
-            );
-          });
-        })}
+              return (
+                <Polygon
+                  key={`${index}-${i}`}
+                  paths={path}
+                  options={options}
+                  onClick={() => handlePolygonClick(feature)}
+                />
+              );
+            });
+          })}
 
-        {/* InfoWindow for selected barangay in breeding sites tab */}
-        {activeTab === "breeding-sites" && selectedBreedingSitesBarangay && breedingSitesInfoWindowPosition && (
-          <InfoWindow
-            position={breedingSitesInfoWindowPosition}
-            onCloseClick={() => setSelectedBreedingSitesBarangay(null)}
-          >
-            <div
-              className="rounded-xl shadow-lg bg-white px-5 py-4 min-w-[180px] border-2 text-center"
-              style={{
-                maxWidth: 240,
-                //borderColor: // This section for breeding sites InfoWindow might still use RISK_LEVEL_COLORS or a similar logic
-                //  RISK_LEVEL_COLORS[
-                //    (selectedBreedingSitesBarangay?.properties?.riskLevel || "unknown").toLowerCase()
-                //  ] || RISK_LEVEL_COLORS.unknown,
-                // TEMP: Default border for breeding site InfoWindow until its logic is clarified or removed
-                borderColor: PATTERN_COLORS.default, 
-              }}
+          {/* InfoWindow for selected barangay in breeding sites tab */}
+          {activeTab === "breeding-sites" && selectedBreedingSitesBarangay && breedingSitesInfoWindowPosition && (
+            <InfoWindow
+              position={breedingSitesInfoWindowPosition}
+              onCloseClick={() => setSelectedBreedingSitesBarangay(null)}
             >
-              <div className="flex flex-col items-center">
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="font-bold text-lg"
-                    style={{
-                      // color: // This section for breeding sites InfoWindow might still use RISK_LEVEL_COLORS
-                      //  RISK_LEVEL_COLORS[
-                      //    (selectedBreedingSitesBarangay?.properties?.riskLevel || "unknown").toLowerCase()
-                      //  ] || RISK_LEVEL_COLORS.unknown,
-                      // TEMP: Default color for breeding site InfoWindow title
-                      color: PATTERN_COLORS.default,
-                    }}
-                  >
-                    {selectedBreedingSitesBarangay.properties.displayName ||
-                      selectedBreedingSitesBarangay.properties.name}
-                  </span>
-                </div>
-                <div className="text-gray-700 text-base font-medium mb-1">
-                  {(() => {
-                    const barangayName =
-                      selectedBreedingSitesBarangay.properties.displayName ||
-                      selectedBreedingSitesBarangay.properties.name;
-                    const count = breedingSitesCountByBarangay[barangayName] || 0;
-                    return count > 0
-                      ? (
-                          <span>
-                            <span className="font-bold">{count}</span>
-                            {" "}
-                            reported breeding site{count !== 1 ? "s" : ""}
-                          </span>
-                        )
-                      : <span className="text-gray-400">No reported breeding sites</span>;
-                  })()}
-                </div>
-              </div>
-            </div>
-          </InfoWindow>
-        )}
-
-        {/* InfoWindow for selected barangay in cases tab (dengue info) */}
-        {activeTab === "cases" && selectedBarangay && infoWindowPosition && (
-          <InfoWindow
-            position={infoWindowPosition}
-            onCloseClick={() => setSelectedBarangay(null)}
-          >
-            {CustomInfoWindow ? (
-              <CustomInfoWindow
-                feature={selectedBarangay}
-                position={infoWindowPosition}
-                onClose={() => setSelectedBarangay(null)}
-              />
-            ) : (
               <div
-                className="bg-white p-4 rounded-lg text-center"
+                className="rounded-xl shadow-lg bg-white px-5 py-4 min-w-[180px] border-2 text-center"
                 style={{
-                  border: `3px solid ${
-                    PATTERN_COLORS[
-                      (selectedBarangay?.properties?.patternType || "none").toLowerCase()
-                    ] || PATTERN_COLORS.default
-                  }`,
-                  width: "50vw",
-                  maxWidth: 640,
+                  maxWidth: 240,
+                  //borderColor: // This section for breeding sites InfoWindow might still use RISK_LEVEL_COLORS or a similar logic
+                  //  RISK_LEVEL_COLORS[
+                  //    (selectedBreedingSitesBarangay?.properties?.riskLevel || "unknown").toLowerCase()
+                  //  ] || RISK_LEVEL_COLORS.unknown,
+                  // TEMP: Default border for breeding site InfoWindow until its logic is clarified or removed
+                  borderColor: PATTERN_COLORS.default, 
                 }}
               >
-                <p
-                  className={`${infoWindowTitleClass} text-3xl font-bold`}
-                >
-                  Barangay {selectedBarangay.properties.name}
-                </p>
-
-                <div className="mt-3 flex flex-col gap-3 text-black">
-                  {/* Status Card */}
-                  <div className={`p-3 rounded-lg border-2 ${
-                    selectedBarangay.properties.alert === "No recent data"
-                      ? "border-gray-400 bg-gray-100"
-                      : selectedBarangay.properties.patternType === "spike"
-                      ? "border-error bg-error/5"
-                      : selectedBarangay.properties.patternType === "gradual_rise"
-                      ? "border-warning bg-warning/5"
-                      : selectedBarangay.properties.patternType === "decline"
-                      ? "border-success bg-success/5"
-                      : selectedBarangay.properties.patternType === "stability"
-                      ? "border-info bg-info/5"
-                      : "border-gray-400 bg-gray-100"
-                  }`}>
-                    <div className="flex items-center gap-3">
-                      <div className={`${
-                        selectedBarangay.properties.alert === "No recent data"
-                          ? "text-gray-400"
-                        : selectedBarangay.properties.patternType === "spike"
-                        ? "text-error"
-                        : selectedBarangay.properties.patternType === "gradual_rise"
-                        ? "text-warning"
-                        : selectedBarangay.properties.patternType === "decline"
-                        ? "text-success"
-                        : selectedBarangay.properties.patternType === "stability"
-                        ? "text-info"
-                        : "text-gray-400"
-                      }`}>
-                        <span className="inline-block w-4 h-4 rounded-full"></span>
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-gray-600">Status</p>
-                        <p className="text-lg font-semibold">
-                          {selectedBarangay.properties.alert
-                            ? selectedBarangay.properties.alert.replace(
-                                new RegExp(`^${selectedBarangay.properties.name}:?\\s*`, "i"),
-                                ""
-                              )
-                            : "No recent data"}
-                        </p>
-                      </div>
-                    </div>
+                <div className="flex flex-col items-center">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="font-bold text-lg"
+                      style={{
+                        // color: // This section for breeding sites InfoWindow might still use RISK_LEVEL_COLORS
+                        //  RISK_LEVEL_COLORS[
+                        //    (selectedBreedingSitesBarangay?.properties?.riskLevel || "unknown").toLowerCase()
+                        //  ] || RISK_LEVEL_COLORS.unknown,
+                        // TEMP: Default color for breeding site InfoWindow title
+                        color: PATTERN_COLORS.default,
+                      }}
+                    >
+                      {selectedBreedingSitesBarangay.properties.displayName ||
+                        selectedBreedingSitesBarangay.properties.name}
+                    </span>
                   </div>
+                  <div className="text-gray-700 text-base font-medium mb-1">
+                    {(() => {
+                      const barangayName =
+                        selectedBreedingSitesBarangay.properties.displayName ||
+                        selectedBreedingSitesBarangay.properties.name;
+                      const count = breedingSitesCountByBarangay[barangayName] || 0;
+                      return count > 0
+                        ? (
+                            <span>
+                              <span className="font-bold">{count}</span>
+                              {" "}
+                              reported breeding site{count !== 1 ? "s" : ""}
+                            </span>
+                          )
+                        : <span className="text-gray-400">No reported breeding sites</span>;
+                    })()}
+                  </div>
+                </div>
+              </div>
+            </InfoWindow>
+          )}
 
-                  {/* Pattern and Risk Level Row */}
-                  <div className="grid grid-cols-2 gap-3">
-                    {/* Pattern Card */}
+          {/* InfoWindow for selected barangay in cases tab (dengue info) */}
+          {activeTab === "cases" && selectedBarangay && infoWindowPosition && (
+            <InfoWindow
+              position={infoWindowPosition}
+              onCloseClick={() => setSelectedBarangay(null)}
+            >
+              {CustomInfoWindow ? (
+                <CustomInfoWindow
+                  feature={selectedBarangay}
+                  position={infoWindowPosition}
+                  onClose={() => setSelectedBarangay(null)}
+                />
+              ) : (
+                <div
+                  className="bg-white p-4 rounded-lg text-center"
+                  style={{
+                    border: `3px solid ${
+                      PATTERN_COLORS[
+                        (selectedBarangay?.properties?.patternType || "none").toLowerCase()
+                      ] || PATTERN_COLORS.default
+                    }`,
+                    width: "50vw",
+                    maxWidth: 640,
+                  }}
+                >
+                  <p
+                    className={`${infoWindowTitleClass} text-3xl font-bold`}
+                  >
+                    Barangay {selectedBarangay.properties.name}
+                  </p>
+
+                  <div className="mt-3 flex flex-col gap-3 text-black">
+                    {/* Status Card */}
                     <div className={`p-3 rounded-lg border-2 ${
                       selectedBarangay.properties.alert === "No recent data"
                         ? "border-gray-400 bg-gray-100"
@@ -573,231 +577,211 @@ const DengueMap = ({
                           <span className="inline-block w-4 h-4 rounded-full"></span>
                         </div>
                         <div>
-                          <p className="text-sm font-medium text-gray-600">Pattern</p>
+                          <p className="text-sm font-medium text-gray-600">Status</p>
                           <p className="text-lg font-semibold">
-                            {selectedBarangay.properties.alert === "No recent data"
-                              ? "No recent data"
-                              : selectedBarangay.properties.patternType === "none" 
-                              ? "No pattern detected" 
-                              : selectedBarangay.properties.patternType.charAt(0).toUpperCase() + 
-                                selectedBarangay.properties.patternType.slice(1).replace('_', ' ')}
+                            {selectedBarangay.properties.alert
+                              ? selectedBarangay.properties.alert.replace(
+                                  new RegExp(`^${selectedBarangay.properties.name}:?\\s*`, "i"),
+                                  ""
+                                )
+                              : "No recent data"}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Pattern and Risk Level Row */}
+                    <div className="grid grid-cols-2 gap-3">
+                      {/* Pattern Card */}
+                      <div className={`p-3 rounded-lg border-2 ${
+                        selectedBarangay.properties.alert === "No recent data"
+                          ? "border-gray-400 bg-gray-100"
+                          : selectedBarangay.properties.patternType === "spike"
+                          ? "border-error bg-error/5"
+                          : selectedBarangay.properties.patternType === "gradual_rise"
+                          ? "border-warning bg-warning/5"
+                          : selectedBarangay.properties.patternType === "decline"
+                          ? "border-success bg-success/5"
+                          : selectedBarangay.properties.patternType === "stability"
+                          ? "border-info bg-info/5"
+                          : "border-gray-400 bg-gray-100"
+                      }`}>
+                        <div className="flex items-center gap-3">
+                          <div className={`${
+                            selectedBarangay.properties.alert === "No recent data"
+                              ? "text-gray-400"
+                            : selectedBarangay.properties.patternType === "spike"
+                            ? "text-error"
+                            : selectedBarangay.properties.patternType === "gradual_rise"
+                            ? "text-warning"
+                            : selectedBarangay.properties.patternType === "decline"
+                            ? "text-success"
+                            : selectedBarangay.properties.patternType === "stability"
+                            ? "text-info"
+                            : "text-gray-400"
+                          }`}>
+                            <span className="inline-block w-4 h-4 rounded-full"></span>
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-gray-600">Pattern</p>
+                            <p className="text-lg font-semibold">
+                              {selectedBarangay.properties.alert === "No recent data"
+                                ? "No recent data"
+                                : selectedBarangay.properties.patternType === "none" 
+                                ? "No pattern detected" 
+                                : selectedBarangay.properties.patternType.charAt(0).toUpperCase() + 
+                                  selectedBarangay.properties.patternType.slice(1).replace('_', ' ')}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Last Analyzed Card */}
+                    <div className="p-3 rounded-lg border-2 border-primary/20 bg-primary/5">
+                      <div className="flex items-center gap-3">
+                        <div className="text-primary">
+                          <span className="inline-block w-4 h-4 rounded-full"></span>
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-gray-600">Last Analyzed</p>
+                          <p className="text-lg font-semibold">
+                            {isNaN(
+                              new Date(
+                                selectedBarangay.properties.lastAnalysisTime
+                              ).getTime()
+                            )
+                              ? "N/A"
+                              : new Date(
+                                  selectedBarangay.properties.lastAnalysisTime
+                                ).toLocaleString()}
                           </p>
                         </div>
                       </div>
                     </div>
                   </div>
-
-                  {/* Last Analyzed Card */}
-                  <div className="p-3 rounded-lg border-2 border-primary/20 bg-primary/5">
-                    <div className="flex items-center gap-3">
-                      <div className="text-primary">
-                        <span className="inline-block w-4 h-4 rounded-full"></span>
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-gray-600">Last Analyzed</p>
-                        <p className="text-lg font-semibold">
-                          {isNaN(
-                            new Date(
-                              selectedBarangay.properties.lastAnalysisTime
-                            ).getTime()
-                          )
-                            ? "N/A"
-                            : new Date(
-                                selectedBarangay.properties.lastAnalysisTime
-                              ).toLocaleString()}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
                 </div>
-              </div>
-            )}
-          </InfoWindow>
-        )}
+              )}
+            </InfoWindow>
+          )}
 
-        {/* Render breeding site pins and their InfoWindows ONLY in breeding sites tab */}
-        {activeTab === "breeding-sites" && (
-          <MarkerClustererF
-            options={{
-              imagePath: "https://developers.google.com/maps/documentation/javascript/examples/markerclusterer/m", // Default cluster icons
-              gridSize: 40,
-              minimumClusterSize: 2,
-            }}
-          >
-            {(clusterer) =>
-              breedingSites.map((site, index) => (
-                <Marker
-                  key={index}
-                  position={{
-                    lat: site.specific_location.coordinates[1],
-                    lng: site.specific_location.coordinates[0],
-                  }}
-                  clusterer={clusterer} // Pass clusterer to Marker
-                  icon={{
-                    path: window.google.maps.SymbolPath.CIRCLE,
-                    scale: 8,
-                    fillColor: BREEDING_SITE_TYPE_COLORS[site.report_type] || "#2563eb",
-                    fillOpacity: 1,
-                    strokeWeight: 2,
-                    strokeColor: "#fff",
-                  }}
-                  onClick={() => {
-                    console.log("Breeding site details:", site);
-                    setSelectedBreedingSite(site);
-                    setSelectedBarangayMarker(null);
-                    if (mapRef.current) {
-                      mapRef.current.panTo({
+          {/* Render breeding site pins and their InfoWindows ONLY in breeding sites tab */}
+          {activeTab === "breeding-sites" && (
+            isLoadingPosts ? (
+              <p className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-30 bg-white p-2 rounded shadow">Loading breeding sites...</p>
+            ) : breedingSites.length > 0 ? (
+              <MarkerClustererF
+                styles={[{
+                  url: 'https://developers.google.com/maps/documentation/javascript/examples/markerclusterer/m3.png', // m3.png is a redder icon
+                  height: 66, // Default height for m3.png
+                  width: 66,  // Default width for m3.png
+                  textColor: 'white', // Assuming white text is desired, similar to default
+                  textSize: 12,      // Adjust as needed
+                }]}
+                options={{
+                  // imagePath: "https://developers.google.com/maps/documentation/javascript/examples/markerclusterer/m", // Removed as styles prop will take precedence
+                  gridSize: 40,
+                  minimumClusterSize: 2,
+                }}
+              >
+                {(clusterer) =>
+                  breedingSites.map((site, index) => (
+                    <Marker
+                      key={index}
+                      position={{
                         lat: site.specific_location.coordinates[1],
                         lng: site.specific_location.coordinates[0],
-                      });
-                      // Do not zoom in too much when clicking a clustered marker, 
-                      // let the clusterer handle zoom or user can zoom manually.
-                      // mapRef.current.setZoom(17); 
-                    }
-                  }}
-                />
-              ))
-            }
-          </MarkerClustererF>
-        )}
-
-        {activeTab === "breeding-sites" && selectedBreedingSite && (
-          <InfoWindow
-            position={{
-              lat: selectedBreedingSite.specific_location.coordinates[1],
-              lng: selectedBreedingSite.specific_location.coordinates[0],
-            }}
-            onCloseClick={() => setSelectedBreedingSite(null)}
-          >
-            <div
-              className="bg-white p-4 rounded-lg border-2 w-[300px] text-center"
-              style={{
-                borderColor: BREEDING_SITE_TYPE_COLORS[selectedBreedingSite.report_type] || "#2563eb",
-              }}
-            >
-              <p
-                className="font-bold text-lg mb-2"
-                style={{
-                  color: BREEDING_SITE_TYPE_COLORS[selectedBreedingSite.report_type] || "#2563eb",
-                }}
-              >
-                {selectedBreedingSite.report_type}
-              </p>
-              <div className="mt-2 space-y-2">
-                <p>
-                  <span className="font-medium">Barangay:</span>{" "}
-                  {selectedBreedingSite.barangay}
-                </p>
-                <p>
-                  <span className="font-medium">Reported by:</span>{" "}
-                  {selectedBreedingSite.user?.username || ""}
-                </p>
-                <p>
-                  <span className="font-medium">Date:</span>{" "}
-                  {selectedBreedingSite.date_and_time
-                    ? new Date(selectedBreedingSite.date_and_time).toLocaleDateString(
-                        "en-US",
-                        {
-                          year: "numeric",
-                          month: "long",
-                          day: "numeric",
-                          weekday: "long",
+                      }}
+                      clusterer={clusterer} // Pass clusterer to Marker
+                      icon={// Defensively construct the icon object
+                        isLoaded && window.google && window.google.maps && window.google.maps.SymbolPath && window.google.maps.Point
+                          ? {
+                              path: window.google.maps.SymbolPath.MAP_PIN, // Change to MAP_PIN
+                              fillColor: "#DC2626", // RED for breeding sites
+                              fillOpacity: 1,
+                              strokeWeight: 1.5,
+                              strokeColor: "#fff",
+                              scale: 1.3, // Adjust scale for pin size
+                              anchor: new window.google.maps.Point(12, 24), // Adjust anchor for pin shape
+                            }
+                          : undefined // Fallback to default icon
+                      }
+                      onClick={() => {
+                        console.log("Breeding site details:", site);
+                        setSelectedBreedingSite(site);
+                        setSelectedBarangayMarker(null);
+                        if (mapRef.current) {
+                          mapRef.current.panTo({
+                            lat: site.specific_location.coordinates[1],
+                            lng: site.specific_location.coordinates[0],
+                          });
+                          // Do not zoom in too much when clicking a clustered marker, 
+                          // let the clusterer handle zoom or user can zoom manually.
+                          // mapRef.current.setZoom(17); 
                         }
-                      )
-                    : "N/A"}
-                </p>
-                <p>
-                  <span className="font-medium">Description:</span>{" "}
-                  {selectedBreedingSite.description}
-                </p>
-                {/* Show images if available */}
-                {selectedBreedingSite.images && selectedBreedingSite.images.length > 0 && (
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    {selectedBreedingSite.images.map((img, idx) => (
-                      <img
-                        key={idx}
-                        src={img}
-                        alt={`evidence-${idx + 1}`}
-                        className="w-20 h-20 object-cover rounded border"
-                      />
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-          </InfoWindow>
-        )}
+                      }}
+                    />
+                  ))
+                }
+              </MarkerClustererF>
+            ) : (
+              <p className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-30 bg-white p-2 rounded shadow">No breeding sites to display.</p>
+            )
+          )}
 
-        {/* Show selected report marker */}
-        {selectedReport && (
-          <>
-            {console.log('Rendering selected report marker:', selectedReport)}
-            <Marker
-              position={{
-                lat: selectedReport.specific_location.coordinates[1],
-                lng: selectedReport.specific_location.coordinates[0]
-              }}
-              icon={{
-                path: window.google.maps.SymbolPath.CIRCLE,
-                scale: 10,
-                fillColor: selectedReport.report_type === "Breeding Site" ? "#2563eb" :
-                          selectedReport.report_type === "Standing Water" ? "#dd6b20" :
-                          "#e53e3e",
-                fillOpacity: 1,
-                strokeWeight: 2,
-                strokeColor: "#fff",
-              }}
-            />
+          {activeTab === "breeding-sites" && selectedBreedingSite && (
             <InfoWindow
               position={{
-                lat: selectedReport.specific_location.coordinates[1],
-                lng: selectedReport.specific_location.coordinates[0]
+                lat: selectedBreedingSite.specific_location.coordinates[1],
+                lng: selectedBreedingSite.specific_location.coordinates[0],
               }}
+              onCloseClick={() => setSelectedBreedingSite(null)}
             >
-              <div className="bg-white p-4 rounded-lg border-2 w-[300px] text-center"
+              <div
+                className="bg-white p-4 rounded-lg border-2 w-[300px] text-center"
                 style={{
-                  borderColor: selectedReport.report_type === "Breeding Site" ? "#2563eb" :
-                              selectedReport.report_type === "Standing Water" ? "#dd6b20" :
-                              "#e53e3e"
+                  borderColor: BREEDING_SITE_TYPE_COLORS[selectedBreedingSite.report_type] || "#2563eb",
                 }}
               >
-                <p className="font-bold text-lg mb-2"
+                <p
+                  className="font-bold text-lg mb-2"
                   style={{
-                    color: selectedReport.report_type === "Breeding Site" ? "#2563eb" :
-                           selectedReport.report_type === "Standing Water" ? "#dd6b20" :
-                           "#e53e3e"
+                    color: BREEDING_SITE_TYPE_COLORS[selectedBreedingSite.report_type] || "#2563eb",
                   }}
                 >
-                  {selectedReport.report_type}
+                  {selectedBreedingSite.report_type}
                 </p>
                 <div className="mt-2 space-y-2">
                   <p>
                     <span className="font-medium">Barangay:</span>{" "}
-                    {selectedReport.barangay}
+                    {selectedBreedingSite.barangay}
                   </p>
                   <p>
                     <span className="font-medium">Reported by:</span>{" "}
-                    {selectedReport.user?.username || ""}
+                    {selectedBreedingSite.user?.username || ""}
                   </p>
                   <p>
                     <span className="font-medium">Date:</span>{" "}
-                    {new Date(selectedReport.date_and_time).toLocaleDateString(
-                      "en-US",
-                      {
-                        year: "numeric",
-                        month: "long",
-                        day: "numeric",
-                        weekday: "long",
-                      }
-                    )}
+                    {selectedBreedingSite.date_and_time
+                      ? new Date(selectedBreedingSite.date_and_time).toLocaleDateString(
+                          "en-US",
+                          {
+                            year: "numeric",
+                            month: "long",
+                            day: "numeric",
+                            weekday: "long",
+                          }
+                        )
+                      : "N/A"}
                   </p>
                   <p>
                     <span className="font-medium">Description:</span>{" "}
-                    {selectedReport.description}
+                    {selectedBreedingSite.description}
                   </p>
-                  {selectedReport.images && selectedReport.images.length > 0 && (
+                  {/* Show images if available */}
+                  {selectedBreedingSite.images && selectedBreedingSite.images.length > 0 && (
                     <div className="mt-2 flex flex-wrap gap-2">
-                      {selectedReport.images.map((img, idx) => (
+                      {selectedBreedingSite.images.map((img, idx) => (
                         <img
                           key={idx}
                           src={img}
@@ -810,9 +794,98 @@ const DengueMap = ({
                 </div>
               </div>
             </InfoWindow>
-          </>
-        )}
-      </GoogleMap>
+          )}
+
+          {/* Show selected report marker - This might need adjustment based on selectedMapItem */}
+          {selectedMapItem && selectedMapItem.type === 'report' && (
+            <>
+              {console.log('Rendering selected report marker from selectedMapItem:', selectedMapItem.item)}
+              <Marker
+                position={{
+                  lat: selectedMapItem.item.specific_location.coordinates[1],
+                  lng: selectedMapItem.item.specific_location.coordinates[0]
+                }}
+                icon={{
+                  path: window.google.maps.SymbolPath.CIRCLE,
+                  scale: 10,
+                  fillColor: BREEDING_SITE_TYPE_COLORS[selectedMapItem.item.report_type] || "#e53e3e", // Adjusted fallback
+                  fillOpacity: 1,
+                  strokeWeight: 2,
+                  strokeColor: "#fff",
+                }}
+              />
+            </>
+          )}
+
+          {/* Render active intervention markers */} 
+          {activeTab === 'interventions' && (
+            isLoadingInterventions ? (
+              <p className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-30 bg-white p-2 rounded shadow">Loading interventions...</p>
+            ) : activeInterventions && activeInterventions.length > 0 ? (
+              activeInterventions.map((intervention) => {
+                if (!intervention.specific_location?.coordinates || intervention.specific_location.coordinates.length !== 2) {
+                  return null;
+                }
+                const statusKey = intervention.status?.toLowerCase() || 'default';
+                const markerColor = INTERVENTION_STATUS_COLORS[statusKey] || INTERVENTION_STATUS_COLORS.default;
+
+                return (
+                  <Marker
+                    key={intervention._id} // Ensure key is here
+                    position={{
+                      lat: intervention.specific_location.coordinates[1],
+                      lng: intervention.specific_location.coordinates[0],
+                    }}
+                    icon={{
+                      path: window.google.maps.SymbolPath.CIRCLE, 
+                      scale: 8,
+                      fillColor: markerColor,
+                      fillOpacity: 1,
+                      strokeWeight: 2,
+                      strokeColor: "#ffffff", 
+                    }}
+                    onClick={() => {
+                      console.log("[DengueMap DEBUG] Intervention marker clicked:", intervention);
+                      setSelectedIntervention(intervention);
+                      if (mapRef.current) {
+                        mapRef.current.panTo({
+                          lat: intervention.specific_location.coordinates[1],
+                          lng: intervention.specific_location.coordinates[0],
+                        });
+                      }
+                    }}
+                  />
+                );
+              })
+            ) : (
+              <p className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-30 bg-white p-2 rounded shadow">No active interventions to display.</p>
+            )
+          )}
+
+          {/* InfoWindow for SELECTED intervention */} 
+          {activeTab === 'interventions' && selectedIntervention && selectedIntervention.specific_location?.coordinates && (
+            <InfoWindow
+              position={{
+                lat: selectedIntervention.specific_location.coordinates[1],
+                lng: selectedIntervention.specific_location.coordinates[0],
+              }}
+              onCloseClick={() => {
+                console.log("[DengueMap DEBUG] Closing intervention InfoWindow");
+                setSelectedIntervention(null);
+              }}
+            >
+              <div className="p-3 bg-white rounded-md shadow-md w-64">
+                <p className="text-lg font-bold text-primary mb-1">{selectedIntervention.interventionType}</p>
+                <p className="text-sm"><span className="font-semibold">Status:</span> {selectedIntervention.status}</p>
+                <p className="text-sm"><span className="font-semibold">Barangay:</span> {selectedIntervention.barangay}</p>
+                {selectedIntervention.address && <p className="text-sm"><span className="font-semibold">Address:</span> {selectedIntervention.address}</p>}
+                <p className="text-sm"><span className="font-semibold">Date:</span> {new Date(selectedIntervention.date).toLocaleString('en-US', { year: 'numeric', month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true })}</p>
+                <p className="text-sm"><span className="font-semibold">Personnel:</span> {selectedIntervention.personnel}</p>
+              </div>
+            </InfoWindow>
+          )}
+        </GoogleMap>
+      )} {/* End of patternsLoading conditional rendering */}
 
       {/* Legends - only show when showLegends prop is true and we're on cases tab */}
       {showLegends && activeTab === "cases" && (
@@ -821,19 +894,19 @@ const DengueMap = ({
             <p className="text-lg font-semibold mb-3">Pattern Recognition</p>
             <div className="space-y-3">
               <div className="flex items-center gap-2">
-                <span className="inline-block w-4 h-4 rounded-full bg-error"></span>
+                <span style={{ backgroundColor: PATTERN_COLORS.spike, width: '12px', height: '12px' }} className="inline-block"></span>
                 <span>Spike</span>
               </div>
               <div className="flex items-center gap-2">
-                <span className="inline-block w-4 h-4 rounded-full bg-warning"></span>
+                <span style={{ backgroundColor: PATTERN_COLORS.gradual_rise, width: '12px', height: '12px' }} className="inline-block"></span>
                 <span>Gradual Rise</span>
               </div>
               <div className="flex items-center gap-2">
-                <span className="inline-block w-4 h-4 rounded-full bg-success"></span>
+                <span style={{ backgroundColor: PATTERN_COLORS.decline, width: '12px', height: '12px' }} className="inline-block"></span>
                 <span>Decline</span>
               </div>
               <div className="flex items-center gap-2">
-                <span className="inline-block w-4 h-4 rounded-full bg-info"></span>
+                <span style={{ backgroundColor: PATTERN_COLORS.stability, width: '12px', height: '12px' }} className="inline-block"></span>
                 <span>Stability</span>
               </div>
             </div>
@@ -863,6 +936,26 @@ const DengueMap = ({
                   <span>{type}</span>
                 </div>
               ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Intervention Legend (add this for interventions tab) */}
+      {showLegends && activeTab === "interventions" && (
+        <div className="absolute top-16 left-4 z-10">
+          <div className="bg-white/90 backdrop-blur-sm p-4 rounded-lg shadow-lg">
+            <p className="text-lg font-semibold mb-3">Intervention Status</p>
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <span className="inline-block w-4 h-4 rounded-full" style={{ backgroundColor: INTERVENTION_STATUS_COLORS.scheduled }}></span>
+                <span>Scheduled</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="inline-block w-4 h-4 rounded-full" style={{ backgroundColor: INTERVENTION_STATUS_COLORS.ongoing }}></span>
+                <span>Ongoing</span>
+              </div>
+              {/* Add other statuses if needed */}
             </div>
           </div>
         </div>

@@ -12,7 +12,7 @@ import * as turf from "@turf/turf";
 import { toastWarn } from "../../utils.jsx";
 import LoadingSpinner from "../../components/ui/LoadingSpinner";
 import ErrorMessage from "../../components/ui/ErrorMessage";
-import { useGetPatternRecognitionResultsQuery, useGetBarangaysQuery, useGetPostsQuery } from "../../api/dengueApi";
+import { useGetPatternRecognitionResultsQuery, useGetBarangaysQuery, useGetPostsQuery, useGetAllInterventionsQuery } from "../../api/dengueApi";
 import { MapPin } from "phosphor-react";
 import { useNavigate } from "react-router-dom";
 
@@ -61,6 +61,15 @@ const PATTERN_COLORS = {
   default: "#718096",      // gray (fallback)
 };
 
+// Intervention status color mapping (similar to DengueMap.jsx)
+const INTERVENTION_STATUS_COLORS = {
+  scheduled: "#8b5cf6", // Purple-500
+  ongoing: "#f59e0b",   // Amber-500
+  default: "#6b7280",  // Gray-500 (for other statuses like 'pending' or if status is missing)
+  // Add 'completed' if you ever decide to show them, though current logic filters them out
+  // completed: "#10b981", // Emerald-500 
+};
+
 const Mapping = () => {
   const [currentPosition, setCurrentPosition] = useState(null);
   const [qcPolygonPaths, setQcPolygonPaths] = useState([]);
@@ -79,6 +88,10 @@ const Mapping = () => {
   const [selectedBarangayId, setSelectedBarangayId] = useState(null);
   const navigate = useNavigate();
 
+  // State for interventions
+  const [showInterventions, setShowInterventions] = useState(false);
+  const [selectedIntervention, setSelectedIntervention] = useState(null);
+
   // Get pattern recognition data
   const { data: patternData } = useGetPatternRecognitionResultsQuery();
   
@@ -87,6 +100,21 @@ const Mapping = () => {
 
   // Get posts
   const { data: posts } = useGetPostsQuery();
+
+  // Get all interventions
+  const { data: allInterventionsData, isLoading: isLoadingAllInterventions } = useGetAllInterventionsQuery();
+
+  // Memoized list of active (not completed) interventions
+  const activeInterventions = React.useMemo(() => {
+    if (!allInterventionsData) return [];
+    const filtered = allInterventionsData.filter(intervention => {
+      const status = intervention.status?.toLowerCase();
+      return status !== 'completed' && status !== 'complete';
+    });
+    // Optional: Sort by date if needed, e.g., most recent first
+    // return filtered.sort((a, b) => new Date(b.date) - new Date(a.date));
+    return filtered;
+  }, [allInterventionsData]);
 
   console.log('Barangays List:', barangaysList); // Debug barangays list
   console.log('Pattern Data:', patternData); // Debug pattern data
@@ -343,7 +371,7 @@ const Mapping = () => {
         Stay Protected. Look out for Dengue Outbreaks.
       </p>
 
-      <div className="w-full max-w-md mb-4">
+      <div className="w-full max-w-md mb-4 flex gap-2"> {/* Use flex and gap for button layout */}
         <button
           onClick={() => setShowBreedingSites(!showBreedingSites)}
           className={`w-full px-4 py-2 rounded-md shadow transition-colors ${
@@ -353,6 +381,19 @@ const Mapping = () => {
           }`}
         >
           {showBreedingSites ? "Hide Breeding Sites" : "Show Breeding Sites"}
+        </button>
+        <button // New button for interventions
+          onClick={() => {
+            setShowInterventions(!showInterventions);
+            if (showInterventions) setSelectedIntervention(null); // Clear selection when hiding
+          }}
+          className={`w-full px-4 py-2 rounded-md shadow transition-colors ${
+            showInterventions
+              ? "bg-white text-primary"
+              : "bg-white/20 text-white hover:bg-white/30"
+          }`}
+        >
+          {showInterventions ? "Hide Interventions" : "Show Interventions"}
         </button>
       </div>
 
@@ -371,29 +412,54 @@ const Mapping = () => {
         </select>
       </div>
 
-      {/* Updated Legend for Pattern Types */}
-      <div className="bg-white text-black rounded-md shadow px-4 py-3 w-full max-w-md mb-4">
-        <p className="font-semibold mb-2">Pattern Types</p>
-        <div className="flex items-center justify-between gap-2 flex-wrap">
-          {Object.entries(PATTERN_COLORS)
-            .filter(([key]) => key !== 'default') // Exclude 'default' from legend
-            .sort(([aKey], [bKey]) => { 
-              // Updated order: None, Stability, Decline, Gradual Rise, Spike
-              const order = { none: 0, stability: 1, decline: 2, gradual_rise: 3, spike: 4 };
-              return order[aKey] - order[bKey];
-            })
-            .map(([pattern, color]) => (
-              <div key={pattern} className="flex items-center gap-1">
-                <span
-                  style={{ backgroundColor: color }}
-                  className="w-3 h-3 inline-block rounded-full"
-                />
-                <span className="text-xs">
-                  {pattern.charAt(0).toUpperCase() + pattern.slice(1).replace('_', ' ')}
-                </span>
-              </div>
-            ))}
+      {/* Container for Legends */}
+      <div className="w-full max-w-md mb-4 flex flex-col sm:flex-row gap-4">
+        {/* Updated Legend for Pattern Types */}
+        <div className="flex-1 bg-white text-black rounded-md shadow px-4 py-3">
+          <p className="font-semibold mb-2 text-center sm:text-left">Pattern Types</p>
+          <div className="flex items-center justify-between sm:justify-start gap-2 flex-wrap">
+            {Object.entries(PATTERN_COLORS)
+              .filter(([key]) => key !== 'default') // Exclude 'default' from legend
+              .sort(([aKey], [bKey]) => { 
+                // Updated order: None, Stability, Decline, Gradual Rise, Spike
+                const order = { none: 0, stability: 1, decline: 2, gradual_rise: 3, spike: 4 };
+                return order[aKey] - order[bKey];
+              })
+              .map(([pattern, color]) => (
+                <div key={pattern} className="flex items-center gap-1">
+                  <span
+                    style={{ backgroundColor: color, width: '12px', height: '12px' }}
+                    className="inline-block"
+                  />
+                  <span className="text-xs">
+                    {pattern.charAt(0).toUpperCase() + pattern.slice(1).replace('_', ' ')}
+                  </span>
+                </div>
+              ))}
+          </div>
         </div>
+
+        {/* Intervention Legend - Moved here */}
+        {showInterventions && (
+          <div className="flex-1 bg-white text-black rounded-md shadow px-4 py-3">
+            <p className="font-semibold mb-2 text-center sm:text-left">Intervention Status</p>
+            <div className="flex items-center justify-around sm:justify-start gap-2 flex-wrap">
+              {Object.entries(INTERVENTION_STATUS_COLORS)
+                .filter(([key]) => key !== 'default' && key !== 'completed') // Show relevant statuses
+                .map(([status, color]) => (
+                  <div key={status} className="flex items-center gap-1">
+                    <span
+                      style={{ backgroundColor: color }}
+                      className="w-3 h-3 inline-block rounded-full"
+                    />
+                    <span className="text-xs">
+                      {status.charAt(0).toUpperCase() + status.slice(1)}
+                    </span>
+                  </div>
+                ))}
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="w-full z-[10] h-[68vh] rounded-md shadow-md relative">
@@ -428,16 +494,6 @@ const Mapping = () => {
               },
               {
                 featureType: "poi.medical",
-                elementType: "all",
-                stylers: [{ visibility: "on" }]
-              },
-              {
-                featureType: "poi.health",
-                elementType: "all",
-                stylers: [{ visibility: "on" }]
-              },
-              {
-                featureType: "poi.hospital",
                 elementType: "all",
                 stylers: [{ visibility: "on" }]
               },
@@ -546,7 +602,19 @@ const Mapping = () => {
 
           {/* Show breeding site markers when enabled, now with clustering */}
           {showBreedingSites && (
-            <MarkerClusterer options={{ gridSize: 30 }}>
+            <MarkerClusterer
+              styles={[{
+                url: 'https://developers.google.com/maps/documentation/javascript/examples/markerclusterer/m3.png', // m3.png is a redder icon
+                height: 66,
+                width: 66,
+                textColor: 'white',
+                textSize: 12,
+              }]}
+              options={{
+                gridSize: 30,
+                // imagePath: 'https://developers.google.com/maps/documentation/javascript/examples/markerclusterer/m' // Ensure clusters can turn red
+              }}
+            >
               {(clusterer) =>
                 breedingSites.map((site, index) => (
                   <Marker
@@ -556,14 +624,19 @@ const Mapping = () => {
                       lng: site.specific_location.coordinates[0],
                     }}
                     clusterer={clusterer}
-                    icon={{
-                      path: window.google.maps.SymbolPath.CIRCLE,
-                      scale: 8,
-                      fillColor: "#2563eb",
-                      fillOpacity: 1,
-                      strokeWeight: 2,
-                      strokeColor: "#fff",
-                    }}
+                    icon={
+                      isLoaded && window.google && window.google.maps && window.google.maps.SymbolPath && window.google.maps.Point
+                        ? {
+                            path: window.google.maps.SymbolPath.MAP_PIN, 
+                            fillColor: "#DC2626", // RED for breeding sites
+                            fillOpacity: 1,
+                            strokeColor: "#ffffff", 
+                            strokeWeight: 1.5,
+                            scale: 1.3, 
+                            anchor: new window.google.maps.Point(12, 24), 
+                          }
+                        : undefined // Fallback to default icon if google.maps parts are not ready
+                    }
                     onClick={() => {
                       setSelectedBreedingSite(site);
                       if (mapRef.current) {
@@ -758,6 +831,77 @@ const Mapping = () => {
                 >
                   View Details
                 </button>
+              </div>
+            </InfoWindow>
+          )}
+
+          {/* Show intervention markers and InfoWindow when enabled */}
+          {showInterventions && activeInterventions && activeInterventions.map((intervention) => {
+            if (!intervention.specific_location?.coordinates || intervention.specific_location.coordinates.length !== 2) {
+              console.warn("Skipping intervention due to missing/invalid coordinates:", intervention);
+              return null;
+            }
+            const statusKey = intervention.status?.toLowerCase() || 'default';
+            const markerColor = INTERVENTION_STATUS_COLORS[statusKey] || INTERVENTION_STATUS_COLORS.default;
+
+            return (
+              <Marker
+                key={intervention._id}
+                position={{
+                  lat: intervention.specific_location.coordinates[1],
+                  lng: intervention.specific_location.coordinates[0],
+                }}
+                icon={{
+                  path: window.google.maps.SymbolPath.CIRCLE,
+                  scale: 8,
+                  fillColor: markerColor,
+                  fillOpacity: 1,
+                  strokeWeight: 2,
+                  strokeColor: "#fff",
+                }}
+                onClick={() => {
+                  setSelectedIntervention(intervention);
+                  // Optionally pan to the marker
+                  if (mapRef.current) {
+                    mapRef.current.panTo({
+                      lat: intervention.specific_location.coordinates[1],
+                      lng: intervention.specific_location.coordinates[0],
+                    });
+                  }
+                }}
+              />
+            );
+          })}
+
+          {showInterventions && selectedIntervention && selectedIntervention.specific_location?.coordinates && (
+            <InfoWindow
+              position={{
+                lat: selectedIntervention.specific_location.coordinates[1],
+                lng: selectedIntervention.specific_location.coordinates[0],
+              }}
+              onCloseClick={() => setSelectedIntervention(null)}
+              options={{
+                pixelOffset: new window.google.maps.Size(0, -30), // Adjust as needed
+                maxWidth: 320, // Adjust as needed
+              }}
+            >
+              <div className="p-3 bg-white rounded-md shadow-md w-64 text-black">
+                <p className="text-lg font-bold text-primary mb-1">{selectedIntervention.interventionType}</p>
+                <p className="text-sm"><span className="font-semibold">Status:</span> {selectedIntervention.status}</p>
+                <p className="text-sm"><span className="font-semibold">Barangay:</span> {selectedIntervention.barangay}</p>
+                {selectedIntervention.address && <p className="text-sm"><span className="font-semibold">Address:</span> {selectedIntervention.address}</p>}
+                <p className="text-sm">
+                  <span className="font-semibold">Date:</span>{' '}
+                  {new Date(selectedIntervention.date).toLocaleString('en-US', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                    hour: 'numeric',
+                    minute: '2-digit',
+                    hour12: true,
+                  })}
+                </p>
+                <p className="text-sm"><span className="font-semibold">Personnel:</span> {selectedIntervention.personnel}</p>
               </div>
             </InfoWindow>
           )}

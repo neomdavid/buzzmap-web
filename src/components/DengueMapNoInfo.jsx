@@ -1,31 +1,45 @@
-import React, { useState, forwardRef, useImperativeHandle } from 'react';
+import React, { useState, forwardRef, useImperativeHandle, useEffect } from 'react';
 import DengueMap from './DengueMap';
 import * as turf from '@turf/turf';
 
 const DengueMapNoInfo = forwardRef((props, ref) => {
   const [selectedBarangay, setSelectedBarangay] = useState(null);
   const [infoWindowPosition, setInfoWindowPosition] = useState(null);
-  const [mapRef, setMapRef] = useState(null);
+  const [mapRefState, setMapRefState] = useState(null);
+
+  // DEBUGGING: Log received props
+  useEffect(() => {
+    console.log("[DengueMapNoInfo DEBUG] Received props:", {
+      activeInterventions: props.activeInterventions,
+      isLoadingInterventions: props.isLoadingInterventions,
+      selectedMapItem: props.selectedMapItem
+      // Do not log props.onPropsDebug itself to avoid recursion if it contains complex objects
+    });
+    if (props.onPropsDebug) {
+      // This is a dummy prop used by parent for logging what it sends.
+      // console.log("[DengueMapNoInfo DEBUG] Parent logged props via onPropsDebug:", props.onPropsDebug);
+    }
+  }, [props.activeInterventions, props.isLoadingInterventions, props.selectedMapItem, props.onPropsDebug]);
 
   // Update useImperativeHandle to properly expose the map methods
   useImperativeHandle(ref, () => ({
     panTo: (position) => {
       console.log('DengueMapNoInfo panTo called with position:', position);
-      if (mapRef) {
-        mapRef.panTo(position);
+      if (mapRefState) {
+        mapRefState.panTo(position);
       } else {
-        console.error('Map reference is not available');
+        console.error('Map reference (mapRefState) is not available in DengueMapNoInfo');
       }
     },
     setZoom: (zoom) => {
       console.log('DengueMapNoInfo setZoom called with zoom:', zoom);
-      if (mapRef) {
-        mapRef.setZoom(zoom);
+      if (mapRefState) {
+        mapRefState.setZoom(zoom);
       } else {
-        console.error('Map reference is not available');
+        console.error('Map reference (mapRefState) is not available in DengueMapNoInfo');
       }
     }
-  }), [mapRef]); // Add mapRef as a dependency
+  }), [mapRefState]);
 
   // Override the handlePolygonClick to not show InfoWindow
   const handlePolygonClick = (feature) => {
@@ -33,8 +47,8 @@ const DengueMapNoInfo = forwardRef((props, ref) => {
     const { coordinates } = center.geometry;
     const [lng, lat] = coordinates;
 
-    if (lat && lng && !isNaN(lat) && !isNaN(lng)) {
-      props.mapRef?.current?.panTo({ lat, lng });
+    if (mapRefState && lat && lng && !isNaN(lat) && !isNaN(lng)) {
+      mapRefState.panTo({ lat, lng });
     }
 
     // Set selected barangay and InfoWindow position
@@ -107,23 +121,28 @@ const DengueMapNoInfo = forwardRef((props, ref) => {
 
   // Update handleMapLoad
   const handleMapLoad = (map) => {
-    console.log('Map loaded in DengueMapNoInfo');
-    setMapRef(map);
+    console.log('Map loaded in DengueMapNoInfo, setting mapRefState');
+    setMapRefState(map);
     if (props.onMapLoad) {
       props.onMapLoad(map);
     }
   };
 
+  // DEBUGGING: Log props being passed to DengueMap
+  const propsToDengueMap = {
+    ...props,
+    handlePolygonClick: handleBarangayClick,
+    CustomInfoWindow: CustomInfoWindow,
+    selectedBarangay: selectedBarangay,
+    infoWindowPosition: infoWindowPosition,
+    getPolygonOptions: getPolygonOptions,
+    onMapLoad: handleMapLoad,
+  };
+  // console.log("[DengueMapNoInfo DEBUG] Props being passed to DengueMap:", propsToDengueMap); // Can be too verbose
+
   return (
     <DengueMap
-      {...props}
-      handlePolygonClick={handleBarangayClick}
-      CustomInfoWindow={CustomInfoWindow}
-      selectedBarangay={selectedBarangay}
-      infoWindowPosition={infoWindowPosition}
-      getPolygonOptions={getPolygonOptions}
-      onMapLoad={handleMapLoad}
-      selectedReport={props.selectedReport}
+      {...propsToDengueMap}
     />
   );
 });

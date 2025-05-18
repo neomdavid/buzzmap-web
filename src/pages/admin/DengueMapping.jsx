@@ -1,13 +1,13 @@
 import { DengueMapNoInfo } from "@/components";
 import { MapPinLine, Circle, CheckCircle, Hourglass, MagnifyingGlass, Upload } from "phosphor-react";
 import { useState, useMemo, useRef, useEffect } from "react";
-import { useGetInterventionsInProgressQuery, useGetPostsQuery } from "@/api/dengueApi";
+import { useGetInterventionsInProgressQuery, useGetPostsQuery, useGetAllInterventionsQuery } from "@/api/dengueApi";
 import * as turf from '@turf/turf';
 
 const DengueMapping = () => {
   const [selectedBarangay, setSelectedBarangay] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedReport, setSelectedReport] = useState(null);
+  const [selectedMapItem, setSelectedMapItem] = useState(null);
   const [showFullReport, setShowFullReport] = useState(false);
   const [selectedFullReport, setSelectedFullReport] = useState(null);
   const [showImportModal, setShowImportModal] = useState(false);
@@ -20,8 +20,15 @@ const DengueMapping = () => {
   const mapContainerRef = useRef(null);
   const importModalRef = useRef(null);
   const { data: posts } = useGetPostsQuery();
+  const { data: allInterventionsData, isLoading: isLoadingAllInterventions } = useGetAllInterventionsQuery();
 
-  const { data: interventions } = useGetInterventionsInProgressQuery(
+  useEffect(() => {
+    if(allInterventionsData) {
+      console.log("[DengueMapping DEBUG] Raw allInterventionsData received:", JSON.stringify(allInterventionsData, null, 2));
+    }
+  }, [allInterventionsData]);
+
+  const { data: interventionsInProgress } = useGetInterventionsInProgressQuery(
     selectedBarangay?.properties?.displayName?.toLowerCase().replace(/\s+/g, '') || '',
     {
       skip: !selectedBarangay,
@@ -88,6 +95,19 @@ const DengueMapping = () => {
     return nearbyReportsWithDistance;
   }, [selectedBarangay, posts]);
 
+  // Memoized list of active (not completed) interventions
+  const activeInterventions = useMemo(() => {
+    if (!allInterventionsData) return [];
+    const filtered = allInterventionsData.filter(intervention => {
+      const status = intervention.status?.toLowerCase();
+      return status !== 'completed' && status !== 'complete';
+    });
+    console.log("[DengueMapping DEBUG] Filtered activeInterventions (before sort):", JSON.stringify(filtered, null, 2));
+    const sorted = filtered.sort((a, b) => new Date(b.date) - new Date(a.date));
+    console.log("[DengueMapping DEBUG] Sorted activeInterventions:", JSON.stringify(sorted, null, 2));
+    return sorted;
+  }, [allInterventionsData]);
+
   // Add this effect to handle modal
   useEffect(() => {
     if (showFullReport && selectedFullReport) {
@@ -109,27 +129,34 @@ const DengueMapping = () => {
     setSearchQuery("");
   };
 
-  const handleShowOnMap = (report) => {
-    console.log('handleShowOnMap called with report:', report);
+  const handleShowOnMap = (item, type) => {
+    console.log('handleShowOnMap called with item:', item, 'type:', type);
     console.log('Map ref current:', mapRef.current);
     
-    setSelectedReport(report);
-    if (mapRef.current) {
+    setSelectedMapItem({ type, item });
+
+    let coordinates;
+    if (type === 'report' && item.specific_location?.coordinates) {
+      coordinates = item.specific_location.coordinates;
+    } else if (type === 'intervention' && item.specific_location?.coordinates) {
+      coordinates = item.specific_location.coordinates;
+    }
+
+    if (mapRef.current && coordinates) {
       const position = {
-        lat: report.specific_location.coordinates[1],
-        lng: report.specific_location.coordinates[0]
+        lat: coordinates[1],
+        lng: coordinates[0]
       };
       console.log('Attempting to pan to position:', position);
       
       mapRef.current.panTo(position);
       mapRef.current.setZoom(17);
 
-      // Scroll to map container with center alignment
       if (mapContainerRef.current) {
         mapContainerRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
       }
     } else {
-      console.error('Map reference is not available');
+      console.error('Map reference is not available or coordinates missing');
     }
   };
 
@@ -287,7 +314,10 @@ const DengueMapping = () => {
           onBarangaySelect={handleBarangaySelect}
           searchQuery={searchQuery}
           onSearchClear={handleSearchClear}
-          selectedReport={selectedReport}
+          selectedMapItem={selectedMapItem}
+          activeInterventions={activeInterventions}
+          isLoadingInterventions={isLoadingAllInterventions}
+          onPropsDebug={{ activeInterventions, isLoadingAllInterventions, selectedMapItem }}
         />
       </div>
       <p className="text-left text-primary text-lg font-extrabold flex items-center gap-2 mb-8">
@@ -334,8 +364,8 @@ const DengueMapping = () => {
             </div>
             <p className=""><span className="text-primary font-bold">Interventions in Progress: </span>  </p>
             <div className="w-[80%] mx-auto mt-1">
-              {interventions && interventions.length > 0 ? (
-                interventions.map((intervention) => (
+              {interventionsInProgress && interventionsInProgress.length > 0 ? (
+                interventionsInProgress.map((intervention) => (
                   <div key={intervention._id} className="flex gap-2 items-start mb-2">
                     <div className="text-success mt-[2px]">
                       <CheckCircle size={16} />
@@ -414,7 +444,7 @@ const DengueMapping = () => {
                 </div>
                 <div className="flex justify-end w-full gap-2">
                   <button 
-                    onClick={() => handleShowOnMap(report)}
+                    onClick={() => handleShowOnMap(report, 'report')}
                     className="bg-info rounded-full text-white px-4 py-1 text-[11px] hover:bg-info/80 hover:scale-105 transition-all duration-200 active:scale-95 cursor-pointer"
                   >
                     Show on Map
@@ -512,7 +542,7 @@ const DengueMapping = () => {
                 </button>
                 <button 
                   onClick={() => {
-                    handleShowOnMap(selectedFullReport);
+                    handleShowOnMap(selectedFullReport, 'report');
                     setShowFullReport(false);
                   }}
                   className="bg-info text-white px-4 py-2 rounded-lg hover:bg-info/80 transition-colors"

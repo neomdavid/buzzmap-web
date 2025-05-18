@@ -274,7 +274,7 @@ const Interventions = () => {
             {/* Dynamically render ActionRecommendationCards based on filteredRecommendations */}
             {filteredRecommendations.length > 0 ? (
               filteredRecommendations.map(item => (
-                <ActionRecommendationCard
+            <ActionRecommendationCard
                   key={item.name + item.triggered_pattern} // Ensure unique key
                   barangay={item.name}
                   patternType={item.triggered_pattern}

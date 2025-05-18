@@ -50,14 +50,14 @@ const AnnouncementCard = ({ announcement }) => { // Accept announcement as a pro
           {contentParts.map((part, index) => (
             <p key={index} className={part.includes("Read more...") ? "italic underline font-semibold" : ""}>
               {part === "" ? <br /> : part}
-            </p>
+          </p>
           ))}
           {/* Use dynamic images */}
           {images.length > 0 && (
-            <div className="mt-4">
+          <div className="mt-4">
               {/* Assuming ImageGrid can handle an array of URLs */}
               <ImageGrid images={images} sourceType={announcement?.images ? "url" : "import"} />
-            </div>
+          </div>
           )}
         </div>
 
