@@ -137,7 +137,8 @@ const Community = () => {
     switch (filter) {
       case "popular":
         filtered = filtered.sort((a, b) => 
-          (b.likesCount || 0) - (a.likesCount || 0)
+          ((Array.isArray(b.upvotes) ? b.upvotes.length : 0) - (Array.isArray(b.downvotes) ? b.downvotes.length : 0)) -
+          ((Array.isArray(a.upvotes) ? a.upvotes.length : 0) - (Array.isArray(a.downvotes) ? a.downvotes.length : 0))
         );
         break;
       
@@ -359,10 +360,13 @@ const Community = () => {
                   dateTime={new Date(post.date_and_time).toLocaleString()}
                   reportType={post.report_type}
                   description={post.description}
-                  likes={post.likesCount || "0"}
-                  comments={post.commentsCount || "0"}
-                  shares={post.sharesCount || "0"}
                   images={post.images}
+                  postId={post._id}
+                  upvotes={Array.isArray(post.upvotes) ? post.upvotes.length : 0}
+                  downvotes={Array.isArray(post.downvotes) ? post.downvotes.length : 0}
+                  commentsCount={post.commentsCount || 0}
+                  upvotesArray={post.upvotes || []}
+                  downvotesArray={post.downvotes || []}
                 />
               ))}
             </>

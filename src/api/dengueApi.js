@@ -596,6 +596,39 @@ export const dengueApi = createApi({
       }),
       providesTags: (result, error, id) => [{ type: 'Intervention', id }]
     }),
+
+    upvoteReport: builder.mutation({
+      query: (reportId) => ({
+        url: `reports/${reportId}/upvote`,
+        method: "POST",
+      }),
+      invalidatesTags: [{ type: "Post", id: "LIST" }],
+    }),
+    downvoteReport: builder.mutation({
+      query: (reportId) => ({
+        url: `reports/${reportId}/downvote`,
+        method: "POST",
+      }),
+      invalidatesTags: [{ type: "Post", id: "LIST" }],
+    }),
+    removeVoteReport: builder.mutation({
+      query: (reportId) => ({
+        url: `reports/${reportId}/remove-vote`,
+        method: "POST",
+      }),
+      invalidatesTags: [{ type: "Post", id: "LIST" }],
+    }),
+    addComment: builder.mutation({
+      query: ({ reportId, comment }) => ({
+        url: `reports/${reportId}/comments`,
+        method: "POST",
+        body: { comment },
+      }),
+      invalidatesTags: [{ type: "Post", id: "LIST" }],
+    }),
+    getComments: builder.query({
+      query: (reportId) => `reports/${reportId}/comments`,
+    }),
   }),
 });
 
@@ -686,4 +719,10 @@ export const {
 
   // Add this to the exported hooks
   useAnalyzeInterventionEffectivityMutation,
+
+  useGetCommentsQuery,
+  useUpvoteReportMutation,
+  useDownvoteReportMutation,
+  useRemoveVoteReportMutation,
+  useAddCommentMutation,
 } = dengueApi;
