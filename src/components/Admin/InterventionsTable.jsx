@@ -80,6 +80,7 @@ function InterventionsTable({
   const gridRef = useRef(null);
 
   let rowData = interventions.map((intervention) => ({
+    _id: intervention._id,
     barangay: intervention.barangay,
     date: new Date(intervention.date).toLocaleString("en-US", {
       weekday: "short",
@@ -163,7 +164,7 @@ function InterventionsTable({
 
   const openDetailsModal = (selectedRow) => {
     const intervention = interventions.find(
-      (interv) => interv._id === selectedRow.id
+      (interv) => interv._id === selectedRow._id
     );
     setSelectedIntervention(intervention); // Find full intervention data
     setIsDetailsModalOpen(true);
