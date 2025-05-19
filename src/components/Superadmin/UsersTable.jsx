@@ -220,7 +220,6 @@ function UsersTable({ statusFilter, roleFilter, searchQuery }) {
           role: user.role,
           joined: user.createdAt || user.updatedAt,
           status: user.status, // Use the status directly from the API
-          _id: user._id
         };
         console.log('Transformed user data:', {
           original: user,

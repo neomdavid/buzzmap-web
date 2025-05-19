@@ -18,10 +18,6 @@ const columnHelper = createColumnHelper();
 
 const ReportTable = ({ rows, columns }) => {
   const baseColumns = [
-    columnHelper.accessor("id", {
-      header: () => "Report ID",
-      cell: (info) => info.getValue(),
-    }),
     columnHelper.accessor("location", {
       header: () => "Location",
       cell: (info) => info.getValue(),

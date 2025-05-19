@@ -97,6 +97,7 @@ const DengueMap = ({
   activeInterventions,
   isLoadingInterventions,
   initialFocusBarangayName,
+  hideTabs = false,
 }) => {
   const [qcPolygonPaths, setQcPolygonPaths] = useState([]);
   const [barangayData, setBarangayData] = useState(null);
@@ -380,39 +381,41 @@ const DengueMap = ({
 
   return (
     <div className="w-full relative" style={{ height: height }}>
-      {/* Tabs - Rendered regardless of patternsLoading */}
-      <div className="absolute top-4 left-4 z-20 flex gap-2">
-        <button
-          onClick={() => setActiveTab("cases")}
-          className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-            activeTab === "cases"
-              ? "bg-primary text-white"
-              : "bg-white/90 text-gray-600 hover:bg-gray-50"
-          }`}
-        >
-          Dengue Cases
-        </button>
-        <button
-          onClick={() => setActiveTab("breeding-sites")}
-          className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-            activeTab === "breeding-sites"
-              ? "bg-primary text-white"
-              : "bg-white/90 text-gray-600 hover:bg-gray-50"
-          }`}
-        >
-          Breeding Sites
-        </button>
-        <button
-          onClick={() => setActiveTab("interventions")}
-          className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-            activeTab === "interventions"
-              ? "bg-primary text-white"
-              : "bg-white/90 text-gray-600 hover:bg-gray-50"
-          }`}
-        >
-          Interventions
-        </button>
-      </div>
+      {/* Tabs - Only render if hideTabs is false */}
+      {!hideTabs && (
+        <div className="absolute top-4 left-4 z-20 flex gap-2">
+          <button
+            onClick={() => setActiveTab("cases")}
+            className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+              activeTab === "cases"
+                ? "bg-primary text-white"
+                : "bg-white/90 text-gray-600 hover:bg-gray-50"
+            }`}
+          >
+            Dengue Cases
+          </button>
+          <button
+            onClick={() => setActiveTab("breeding-sites")}
+            className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+              activeTab === "breeding-sites"
+                ? "bg-primary text-white"
+                : "bg-white/90 text-gray-600 hover:bg-gray-50"
+            }`}
+          >
+            Breeding Sites
+          </button>
+          <button
+            onClick={() => setActiveTab("interventions")}
+            className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+              activeTab === "interventions"
+                ? "bg-primary text-white"
+                : "bg-white/90 text-gray-600 hover:bg-gray-50"
+            }`}
+          >
+            Interventions
+          </button>
+        </div>
+      )}
 
       {/* Conditional rendering for the map itself based on pattern data loading */}
       {patternsLoading ? (

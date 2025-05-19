@@ -89,6 +89,9 @@ export default function DengueTrendChart({ selectedBarangay, onBarangayChange })
         })
     : [];
 
+  // Find the max cases for the current chartData (for consistent Y axis)
+  const maxCases = Math.max(5, ...chartData.map(d => d.cases || 0));
+
   // Log transformed chartData before rendering
   console.log('Transformed chartData for rendering for:', selectedBarangay, '(', weeks, 'weeks):', JSON.stringify(chartData, null, 2));
 
@@ -179,6 +182,7 @@ export default function DengueTrendChart({ selectedBarangay, onBarangayChange })
               axisLine={false}
               tickLine={false}
               tick={{ fontSize: 11, fontFamily: "Inter", fill: "#000000" }}
+              allowDecimals={false}
             />
             <Tooltip />
             <Legend 

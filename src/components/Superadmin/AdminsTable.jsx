@@ -320,7 +320,6 @@ function AdminsTable({ statusFilter, roleFilter, searchQuery }) {
         joined: account.createdAt || account.updatedAt,
         status: account.status || (account.disabled ? "disabled" : 
                 (account.verified ? "active" : "unverified")),
-        _id: account._id
       }));
   }, [accounts, statusFilter, roleFilter, searchQuery]);
 

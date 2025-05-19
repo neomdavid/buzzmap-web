@@ -200,7 +200,7 @@ const Analytics = () => {
       <p className="flex justify-center text-5xl font-extrabold mb-12  text-center md:justify-start md:text-left md:w-[48%] ">
         Analytics
       </p>
-      <article className="flex flex-col">
+      <article className="flex flex-col gap-10">
         {/* <div className="mb-6 flex flex-col lg:flex-row gap-7 gap-y-10 shadow-sm p-6 rounded-lg">
           <section className="flex flex-7 flex-col gap-y-3">
             <p className="text-base-content text-4xl font-bold mb-2">
@@ -290,6 +290,34 @@ const Analytics = () => {
             />
           </section>
         </div> */}
+              {/* Recommendation Section */}
+      {isLoadingPatterns && (
+        <div className="w-full shadow-sm shadow-lg p-6 py-8 rounded-lg mt-6">
+          <p className="text-base-content text-xl font-semibold">Loading recommendation...</p>
+        </div>
+      )}
+      {!isLoadingPatterns && spikeRecommendationDetails && (
+        <div className="w-full shadow-sm shadow-lg p-6 py-8 rounded-lg mt-6">
+          <p className="text-base-content text-3xl font-bold mb-4">
+            {spikeRecommendationDetails.patternType.toLowerCase() === 'spike' 
+              ? "Priority Action Recommendation (Spike Detected)"
+              : `Action Recommendation for ${spikeRecommendationDetails.barangay}`
+            }
+          </p>
+          {console.log("[Analytics DEBUG] Rendering ActionRecommendationCard with props:", JSON.stringify(spikeRecommendationDetails, null, 2))}
+          <ActionRecommendationCard
+            barangay={spikeRecommendationDetails.barangay}
+            patternType={spikeRecommendationDetails.patternType}
+            issueDetected={spikeRecommendationDetails.issueDetected}
+            suggestedAction={spikeRecommendationDetails.suggestedAction}
+          />
+        </div>
+      )}
+      {!isLoadingPatterns && !spikeRecommendationDetails && selectedBarangay && (
+        <div className="w-full shadow-sm shadow-lg p-6 py-8 rounded-lg mt-6">
+          <p className="text-base-content text-xl font-semibold">No spike recommendation available.</p>
+        </div>
+      )}
         <div className="flex flex-col gap-6 gap-y-12 lg:grid lg:grid-cols-12 shadow-sm shadow-lg p-6 py-8 rounded-lg">
           <section className="flex flex-col lg:col-span-7">
             <div className="flex justify-between items-center mb-4">
@@ -365,7 +393,6 @@ const Analytics = () => {
             />
           </div>
         </div>
-        <PieChart />
         {/* Selected Barangay Analytics Section */}
         <div className="w-full flex flex-col shadow-sm shadow-lg p-6 py-8 rounded-lg mt-6">
           <p className="mb-4 text-base-content text-3xl font-bold">Selected Barangay Analytics</p>
@@ -469,7 +496,7 @@ const Analytics = () => {
               };
 
               return (
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   {/* Reports Bar Chart */}
                   <div className="bg-white rounded-xl shadow p-5 flex flex-col gap-2 border border-primary/20">
                     <p className="font-bold text-lg text-primary mb-2">Reports</p>
@@ -493,7 +520,7 @@ const Analytics = () => {
                     </div>
                   </div>
                   {/* Pattern Recognition Card */}
-                  <div className="bg-white rounded-xl shadow p-5 flex flex-col gap-2 border border-primary/20">
+                  {/* <div className="bg-white rounded-xl shadow p-5 flex flex-col gap-2 border border-primary/20">
                     <p className="font-bold text-lg text-primary mb-2">Pattern Recognition</p>
                     {patternInfo ? (
                       <div className="flex flex-col gap-1">
@@ -504,7 +531,7 @@ const Analytics = () => {
                     ) : (
                       <span className="text-gray-500">No pattern data available.</span>
                     )}
-                  </div>
+                  </div> */}
                 </div>
               );
             })()
@@ -576,34 +603,7 @@ const Analytics = () => {
         </div>
       </dialog>
 
-      {/* Recommendation Section */}
-      {isLoadingPatterns && (
-        <div className="w-full shadow-sm shadow-lg p-6 py-8 rounded-lg mt-6">
-          <p className="text-base-content text-xl font-semibold">Loading recommendation...</p>
-        </div>
-      )}
-      {!isLoadingPatterns && spikeRecommendationDetails && (
-        <div className="w-full shadow-sm shadow-lg p-6 py-8 rounded-lg mt-6">
-          <p className="text-base-content text-3xl font-bold mb-4">
-            {spikeRecommendationDetails.patternType.toLowerCase() === 'spike' 
-              ? "Priority Action Recommendation (Spike Detected)"
-              : `Action Recommendation for ${spikeRecommendationDetails.barangay}`
-            }
-          </p>
-          {console.log("[Analytics DEBUG] Rendering ActionRecommendationCard with props:", JSON.stringify(spikeRecommendationDetails, null, 2))}
-          <ActionRecommendationCard
-            barangay={spikeRecommendationDetails.barangay}
-            patternType={spikeRecommendationDetails.patternType}
-            issueDetected={spikeRecommendationDetails.issueDetected}
-            suggestedAction={spikeRecommendationDetails.suggestedAction}
-          />
-        </div>
-      )}
-      {!isLoadingPatterns && !spikeRecommendationDetails && selectedBarangay && (
-        <div className="w-full shadow-sm shadow-lg p-6 py-8 rounded-lg mt-6">
-          <p className="text-base-content text-xl font-semibold">No spike recommendation available.</p>
-        </div>
-      )}
+
     </main>
   );
 };

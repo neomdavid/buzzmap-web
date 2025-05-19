@@ -143,7 +143,6 @@ function ReportTable2({ posts, isActionable = true, onlyRecent = false }) {
 
   const columnDefs = useMemo(() => {
     const baseCols = [
-      { field: "id", headerName: "ID", minWidth: 100 },
       { field: "username", headerName: "Username", minWidth: 150 },
       { field: "barangay", headerName: "Barangay", minWidth: 200 },
       { field: "date", headerName: "Date & Time", minWidth: 120 },

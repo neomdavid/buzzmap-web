@@ -34,6 +34,15 @@ const Dashboard = () => {
   // Fetching the alerts from the API
   const { data: alertsData, isLoading: alertsLoading, isError: alertsError } = useGetAllAlertsQuery();
 
+  // Get current date string in the format: Today is <weekday>, <day> <month> <year>
+  const today = new Date();
+  const formattedDate = today.toLocaleDateString('en-US', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  });
+
   // Handle loading and error states for both posts and interventions
   if (postsLoading || interventionsLoading) return <div>Loading...</div>;
   if (postsError || interventionsError)
@@ -83,13 +92,18 @@ const Dashboard = () => {
     value: (alert.messages && alert.messages.length > 0) ? alert.messages[0] : "No message"
   }));
 
+  // Handler to redirect to /admin/denguemapping when a barangay is clicked
+  const handleDashboardMapPolygonClick = () => {
+    navigate("/admin/denguemapping");
+  };
+
   return (
     <main className="flex flex-col w-full">
       <div className="bg-primary text-white flex flex-col p-6 rounded-2xl mb-4">
         <p className="text-5xl font-[Koulen] lowercase">
           Hello, {userFromStore.name}
         </p>
-        <p className="text-lg">Today is Friday, 7 March 2025</p>
+        <p className="text-lg">Today is {formattedDate}</p>
       </div>
 
       <section className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-12">
@@ -195,8 +209,8 @@ const Dashboard = () => {
           <DengueChartCard />
         </div>
         <div className="flex  md:flex-row  gap-6 lg:flex-3">
-          <div className="flex-1 min-w-[150px] shadow-sm rounded-2xl h-70 overflow-hidden  ">
-            <DengueMap />
+          <div className="flex-1 min-w-[150px] shadow-sm rounded-2xl h-auto overflow-hidden  ">
+            <DengueMap hideTabs={true} handlePolygonClick={handleDashboardMapPolygonClick} />
           </div>
           {/* <div className="flex flex-col ">
             <p className="text-3xl font-extrabold text-primary mb-3">

@@ -58,31 +58,26 @@ export default function DengueChartCard() {
   
   // Fetch pattern recognition results
   const { data: patternData } = useGetPatternRecognitionResultsQuery();
-  console.log('Pattern Recognition Data:', patternData);
-
-  // Get risk level for selected barangay
-  const selectedBarangayRisk = patternData?.data?.find(
+  // Get pattern for selected barangay
+  const selectedBarangayPattern = patternData?.data?.find(
     barangay => barangay.name.toLowerCase() === selectedBarangay.toLowerCase()
-  )?.risk_level || 'Low';
-
-  console.log('Selected Barangay Risk Level:', selectedBarangayRisk);
+  )?.triggered_pattern?.toLowerCase() || 'none';
 
   const { data: trendsData, isLoading, error } = useGetBarangayWeeklyTrendsQuery({
     barangay_name: selectedBarangay,
     number_of_weeks: weeks
   });
 
-  // Get color based on risk level
-  const getRiskColor = (riskLevel) => {
-    switch(riskLevel) {
-      case 'High': return "var(--color-error)";
-      case 'Medium': return "var(--color-warning)";
-      case 'Low': return "var(--color-success)";
-      default: return "var(--color-error)";
-    }
+  // Get color based on pattern
+  const PATTERN_COLORS = {
+    spike: "#ef4444",        // Red
+    gradual_rise: "#f97316", // Orange
+    decline: "#22c55e",      // Green
+    stability: "#3b82f6",    // Blue
+    none: "#6b7280",         // Gray
+    default: "#6b7280",      // Gray
   };
-
-  const lineColor = getRiskColor(selectedBarangayRisk);
+  const lineColor = PATTERN_COLORS[selectedBarangayPattern] || PATTERN_COLORS.default;
 
   // Transform the API data to match the chart format
   const chartData = trendsData?.data?.weekly_counts 
@@ -98,6 +93,9 @@ export default function DengueChartCard() {
           return weekA - weekB;
         })
     : [];
+
+  // Find the max cases for the current chartData (for consistent Y axis)
+  const maxCases = Math.max(5, ...chartData.map(d => d.cases || 0));
 
   console.log('Transformed Chart Data:', chartData);
 
@@ -125,11 +123,9 @@ export default function DengueChartCard() {
             Weekly Dengue Cases - {selectedBarangay}
           </p>
           <p className="text-sm text-white">
-            Risk Level: <span className={`font-semibold ${
-              selectedBarangayRisk === 'High' ? 'text-error' :
-              selectedBarangayRisk === 'Medium' ? 'text-warning' :
-              'text-success'
-            }`}>{selectedBarangayRisk}</span>
+            Pattern: <span className="font-semibold" style={{ color: lineColor }}>
+              {selectedBarangayPattern.charAt(0).toUpperCase() + selectedBarangayPattern.slice(1).replace('_', ' ')}
+            </span>
           </p>
         </div>
         <div className="flex gap-4">
@@ -179,13 +175,16 @@ export default function DengueChartCard() {
             tickLine={false}
             stroke="#fff"
             tick={{ fill: "#fff" }}
+            allowDecimals={false}
           />
           <Tooltip
             contentStyle={{
-              backgroundColor: "hsl(var(--popover))",
-              border: "1px solid hsl(var(--border))",
-              color: "hsl(var(--foreground))",
+              backgroundColor: "#fff",
+              border: "1px solid #e5e7eb",
+              color: "#222",
             }}
+            labelStyle={{ color: '#222' }}
+            itemStyle={{ color: '#222' }}
           />
           <Legend
             formatter={() => "Number of Cases"}

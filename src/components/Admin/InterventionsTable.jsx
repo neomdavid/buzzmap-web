@@ -80,7 +80,6 @@ function InterventionsTable({
   const gridRef = useRef(null);
 
   let rowData = interventions.map((intervention) => ({
-    id: intervention._id,
     barangay: intervention.barangay,
     date: new Date(intervention.date).toLocaleString("en-US", {
       weekday: "short",
@@ -101,8 +100,6 @@ function InterventionsTable({
   }
   const columnDefs = useMemo(() => {
     const baseCols = [
-      // Conditionally include the ID column if onlyRecent is false
-      ...(onlyRecent ? [] : [{ field: "id", headerName: "ID", minWidth: 100 }]),
       { field: "barangay", headerName: "Barangay", minWidth: 200 },
       { field: "date", headerName: "Date", minWidth: 140 },
       {
