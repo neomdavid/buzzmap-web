@@ -215,6 +215,7 @@ function UsersTable({ statusFilter, roleFilter, searchQuery }) {
       .map(user => {
         // Use the status directly from the API response
         const transformed = {
+          _id: user._id,
           username: user.username,
           email: user.email,
           role: user.role,

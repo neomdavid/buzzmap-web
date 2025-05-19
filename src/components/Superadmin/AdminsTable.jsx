@@ -314,6 +314,7 @@ function AdminsTable({ statusFilter, roleFilter, searchQuery }) {
         return roleMatch && statusMatch && roleTypeMatch && searchMatch;
       })
       .map(account => ({
+        _id: account._id,
         username: account.username,
         email: account.email,
         role: account.role.charAt(0).toUpperCase() + account.role.slice(1),

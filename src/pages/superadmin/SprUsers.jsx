@@ -92,8 +92,16 @@ function SprUsers() {
         </div>
       </div>
 
-      {/* Filters Section */}
-      <div className="bg-white p-4 rounded-xl shadow-sm mb-8">
+     
+
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8 gap-4 mt-6">
+        <p className="flex justify-center text-5xl font-extrabold mb-12 md:mb-0 text-center md:justify-start md:text-left md:w-[48%]">
+          User Management
+        </p>
+      </div>
+
+       {/* Filters Section */}
+       <div className="bg-white p-4 rounded-xl shadow-sm mb-8">
         <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
           <div className="flex flex-col md:flex-row gap-4 w-full">
             <div className="flex-1">
@@ -142,12 +150,6 @@ function SprUsers() {
             </button>
           </div>
         </div>
-      </div>
-
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8 gap-4">
-        <p className="flex justify-center text-5xl font-extrabold mb-12 text-center md:justify-start md:text-left md:w-[48%]">
-          User Management
-        </p>
       </div>
 
       <div className="bg-white rounded-xl shadow-sm p-4">

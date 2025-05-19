@@ -316,8 +316,24 @@ function SprAdmins() {
         </div>
       </div>
 
-      {/* Add Filters Section */}
-      <div className="bg-white p-4 rounded-xl shadow-sm mb-8">
+    
+
+      <div className="flex flex-col items-center md:flex-row md:items-center md:justify-between mb-8 gap-4 mt-6">
+        <p className="flex justify-center text-5xl font-extrabold mb-12 md:mb-0 text-center md:justify-start md:text-left md:w-[48%] ">
+          Admin Management
+        </p>
+        
+        <button
+          className="flex items-center justify-center gap-2 bg-primary text-white px-6 py-3 rounded-lg hover:bg-primary/90 transition-colors shadow-sm md:w-auto w-full hover:cursor-pointer"
+          onClick={() => setIsModalOpen(true)}
+        >
+          <IconPlus size={20} />
+          Create New Admin
+        </button>
+      </div>
+
+        {/* Add Filters Section */}
+        <div className="bg-white p-4 rounded-xl shadow-sm mb-8">
         <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
           <div className="flex flex-col md:flex-row gap-4 w-full">
             <div className="flex-1">
@@ -366,20 +382,6 @@ function SprAdmins() {
             </button>
           </div>
         </div>
-      </div>
-
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8 gap-4">
-        <p className="flex justify-center text-5xl font-extrabold mb-12  text-center md:justify-start md:text-left md:w-[48%] ">
-          Admin Management
-        </p>
-
-        <button
-          className="flex items-center justify-center gap-2 bg-primary text-white px-6 py-3 rounded-lg hover:bg-primary/90 transition-colors shadow-sm md:w-auto w-full hover:cursor-pointer"
-          onClick={() => setIsModalOpen(true)}
-        >
-          <IconPlus size={20} />
-          Create New Admin
-        </button>
       </div>
 
       <div className="bg-white rounded-xl shadow-sm p-4">

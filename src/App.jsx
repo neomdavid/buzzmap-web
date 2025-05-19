@@ -150,7 +150,8 @@ function App() {
         </PrivateRoute>
       ),
       children: [
-        { path: "/superadmin/dashboard", element: <SprDashboard /> },
+        // { path: "/superadmin/dashboard", element: <SprDashboard /> },
+        { index: true, element: <Navigate to="/superadmin/users" replace /> },
         { path: "/superadmin/users", element: <SprUsers /> },
         { path: "/superadmin/admins", element: <SprAdmins /> },
       ],

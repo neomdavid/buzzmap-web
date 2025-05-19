@@ -695,7 +695,7 @@ const Mapping = () => {
                       ? "border-info bg-info/5"
                       : "border-gray-400 bg-gray-100"
                   }`}>
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center justify-center gap-3">
                       {/* <div className={`${
                         selectedBarangayInfo.alert === "No recent data"
                           ? "text-gray-400"

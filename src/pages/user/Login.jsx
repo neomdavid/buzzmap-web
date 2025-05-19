@@ -36,7 +36,7 @@ const Login = () => {
           navigate("/admin/dashboard");
           break;
         case "superadmin":
-          navigate("/superadmin/dashboard");
+          navigate("/superadmin/users");
           break;
         default:
           navigate("/");
