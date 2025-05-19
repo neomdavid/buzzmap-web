@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef, useCallback } from "react";
+import React, { useState, useMemo, useRef, useCallback, useEffect } from "react";
 import {
   AllCommunityModule,
   ModuleRegistry,
@@ -7,6 +7,7 @@ import {
 import { AgGridReact } from "ag-grid-react";
 import { IconSearch, IconCheck, IconX } from "@tabler/icons-react";
 import { ReportDetailsModal, VerifyReportModal } from "../"; // Import the modal
+import { useValidatePostMutation } from "../../api/dengueApi";
 
 ModuleRegistry.registerModules([AllCommunityModule]);
 
@@ -51,12 +52,15 @@ const StatusCell = (p) => {
 };
 
 const ActionsCell = (p) => {
+  const { undoState, handleVerify, handleReject, handleUndo } = p.context;
   const status = p.data.status;
+  const id = p.data.id;
+  const isUndoing = !!undoState[id];
 
   const viewButton = (
     <button
       className="flex items-center gap-1 text-primary hover:bg-gray-200 p-1 rounded-md hover:cursor-pointer"
-      onClick={() => p.context.openModal(p.data, "view")} // Using context to access openModal
+      onClick={() => p.context.openModal(p.data, "view")}
     >
       <IconSearch size={13} stroke={2.5} />
       <p className="text-sm">view</p>
@@ -65,7 +69,7 @@ const ActionsCell = (p) => {
   const verifyButton = (
     <button
       className="flex items-center gap-1 text-success hover:bg-gray-200 p-1 rounded-md hover:cursor-pointer"
-      onClick={() => p.context.openModal(p.data, "verify")} // Using context to access openModal
+      onClick={() => handleVerify(p.data)}
     >
       <div className="rounded-full bg-success p-0.5">
         <IconCheck size={11} color="white" stroke={4} />
@@ -76,18 +80,30 @@ const ActionsCell = (p) => {
   const rejectButton = (
     <button
       className="flex items-center gap-1 text-error hover:bg-gray-200 p-1 rounded-md hover:cursor-pointer"
-      onClick={() => p.context.openModal(p.data, "reject")} // Using context to access openModal
+      onClick={() => handleReject(p.data)}
     >
       <IconX size={15} stroke={5} />
       <p className="text-sm">reject</p>
+    </button>
+  );
+  const undoButton = (
+    <button
+      className="flex items-center gap-1 text-warning hover:bg-gray-200 p-1 rounded-md hover:cursor-pointer"
+      onClick={() => handleUndo(p.data)}
+    >
+      <p className="text-sm">Undo</p>
     </button>
   );
 
   return (
     <div className="py-2 h-full w-full flex items-center gap-2">
       {viewButton}
-      {status === "Pending" && verifyButton}
-      {status === "Pending" && rejectButton}
+      {isUndoing ? undoButton : (
+        <>
+          {status === "Pending" && verifyButton}
+          {status === "Pending" && rejectButton}
+        </>
+      )}
     </div>
   );
 };
@@ -99,10 +115,37 @@ const ActionsCell = (p) => {
 //   // Your operations here
 // };
 
+const UNDO_STORAGE_KEY = 'reportUndoState';
+
+function loadUndoStateFromStorage() {
+  try {
+    const raw = localStorage.getItem(UNDO_STORAGE_KEY);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw);
+    // Remove expired (older than 1 hour)
+    const now = Date.now();
+    const valid = {};
+    Object.entries(parsed).forEach(([id, info]) => {
+      if (now - info.timestamp < 3600000) {
+        valid[id] = info;
+      }
+    });
+    return valid;
+  } catch {
+    return {};
+  }
+}
+
+function saveUndoStateToStorage(state) {
+  localStorage.setItem(UNDO_STORAGE_KEY, JSON.stringify(state));
+}
+
 function ReportTable2({ posts, isActionable = true, onlyRecent = false }) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedReport, setSelectedReport] = useState(null);
   const [selectedReportType, setSelectedReportType] = useState(null);
+  const [validatePost] = useValidatePostMutation();
+  const [undoState, setUndoState] = useState(() => loadUndoStateFromStorage()); // { [id]: { prevStatus, newStatus, timestamp } }
 
   const gridRef = useRef(null);
 
@@ -141,6 +184,50 @@ function ReportTable2({ posts, isActionable = true, onlyRecent = false }) {
     rowData = rowData.slice(0, 5); // Show only the top 5 recent reports
   }
 
+  // On mount, clean up expired undo states
+  useEffect(() => {
+    const valid = loadUndoStateFromStorage();
+    setUndoState(valid);
+    saveUndoStateToStorage(valid);
+  }, []);
+
+  // Keep localStorage in sync with undoState
+  useEffect(() => {
+    saveUndoStateToStorage(undoState);
+  }, [undoState]);
+
+  // Handler for verify
+  const handleVerify = async (row) => {
+    const timestamp = Date.now();
+    setUndoState((prev) => ({
+      ...prev,
+      [row.id]: { prevStatus: row.status, newStatus: "Validated", timestamp },
+    }));
+    await validatePost({ id: row.id, status: "Validated" });
+  };
+
+  // Handler for reject
+  const handleReject = async (row) => {
+    const timestamp = Date.now();
+    setUndoState((prev) => ({
+      ...prev,
+      [row.id]: { prevStatus: row.status, newStatus: "Rejected", timestamp },
+    }));
+    await validatePost({ id: row.id, status: "Rejected" });
+  };
+
+  // Handler for undo
+  const handleUndo = async (row) => {
+    const undoInfo = undoState[row.id];
+    if (!undoInfo) return;
+    await validatePost({ id: row.id, status: undoInfo.prevStatus });
+    setUndoState((prev) => {
+      const copy = { ...prev };
+      delete copy[row.id];
+      return copy;
+    });
+  };
+
   const columnDefs = useMemo(() => {
     const baseCols = [
       { field: "username", headerName: "Username", minWidth: 150 },
@@ -161,11 +248,17 @@ function ReportTable2({ posts, isActionable = true, onlyRecent = false }) {
         minWidth: 200,
         filter: false,
         cellRenderer: ActionsCell,
+        cellRendererParams: {
+          undoState,
+          handleVerify,
+          handleReject,
+          handleUndo,
+        },
       });
     }
 
     return baseCols;
-  }, [isActionable, onlyRecent]);
+  }, [isActionable, onlyRecent, undoState]);
 
   const theme = useMemo(() => customTheme, []);
 
@@ -227,7 +320,7 @@ function ReportTable2({ posts, isActionable = true, onlyRecent = false }) {
           paginationPageSize={10}
           onGridSizeChanged={onGridSizeChanged}
           onFirstDataRendered={onFirstDataRendered}
-          context={{ openModal }} // Pass openModal through context
+          context={{ openModal, undoState, handleVerify, handleReject, handleUndo }}
           // onGridReady={onGridReady} // Add this line
         />
       </div>

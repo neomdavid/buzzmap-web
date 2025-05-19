@@ -19,26 +19,66 @@ const VerifyReportModal = ({
   const modalRef = useRef(null);
   const streetViewRef = useRef(null);
   const [address, setAddress] = useState("");
-  const [showConfirmation, setShowConfirmation] = useState(false);
-  const [actionType, setActionType] = useState(null);
+  const [showConfirmation, setShowConfirmation] = useState(type === 'verify' || type === 'reject');
+  const [actionType, setActionType] = useState(type === 'verify' || type === 'reject' ? type : null);
   const { isLoaded } = useGoogleMaps();
   const [validatePost, { isLoading }] = useValidatePostMutation();
+  // Store the previous status for undo
+  const [undoTimeout, setUndoTimeout] = useState(null);
+  const [isUndoing, setIsUndoing] = useState(false);
+  const prevStatusRef = useRef(status);
 
   const handleConfirm = async () => {
-    const status = actionType === "verify" ? "Validated" : "Rejected";
-    const requestPayload = { id: reportId, status };
+    const newStatus = actionType === "verify" ? "Validated" : "Rejected";
+    const requestPayload = { id: reportId, status: newStatus };
     try {
       await validatePost(requestPayload).unwrap();
-      toast.success(`Report ${status === "Validated" ? "verified" : "rejected"} successfully!`);
-      if (typeof onSuccess === "function") {
-        onSuccess();
-      }
-      onClose();
+      let undoClicked = false;
+      // Show toast with Undo button
+      const toastId = toast(
+        ({ closeToast }) => (
+          <div>
+            Report {newStatus === "Validated" ? "verified" : "rejected"} successfully!
+            <button
+              style={{ marginLeft: 16, color: '#2563eb', fontWeight: 600 }}
+              onClick={async () => {
+                setIsUndoing(true);
+                await validatePost({ id: reportId, status: prevStatusRef.current }).unwrap();
+                toast.success("Undo successful!");
+                setIsUndoing(false);
+                closeToast();
+                if (typeof onSuccess === "function") onSuccess();
+                if (typeof onClose === "function") onClose();
+                undoClicked = true;
+              }}
+              disabled={isUndoing}
+            >
+              Undo
+            </button>
+          </div>
+        ),
+        { autoClose: 5000 }
+      );
+      // After 5 seconds, close modal and refresh if not undone
+      const timeout = setTimeout(() => {
+        if (!undoClicked) {
+          if (typeof onSuccess === "function") onSuccess();
+          if (typeof onClose === "function") onClose();
+        }
+      }, 5000);
+      setUndoTimeout(timeout);
     } catch (error) {
       console.error("Verify/Reject error:", error);
       toast.error("Failed to update report status.");
     }
   };
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (undoTimeout) clearTimeout(undoTimeout);
+    };
+  }, [undoTimeout]);
 
   useEffect(() => {
     if (isLoaded && coordinates?.length === 2) {
@@ -90,8 +130,6 @@ const VerifyReportModal = ({
         >
           ✕
         </button>
-
-   
 
         {!showConfirmation ? (
           <>
@@ -201,7 +239,7 @@ const VerifyReportModal = ({
               </div>
             </div>
           </>
-        ) : (
+        ) : showConfirmation ? (
           <div className="space-y-6">
             <p className="text-center text-3xl font-bold mb-6">
               <span
@@ -237,7 +275,7 @@ const VerifyReportModal = ({
               </div>
             </div>
           </div>
-        )}
+        ) : null}
       </div>
     </dialog>
   );
