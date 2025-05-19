@@ -898,7 +898,7 @@ const Mapping = () => {
                   </span>
                 </div>
                 <p className="text-lg text-center"><span className="font-bold">Barangay:</span> {selectedIntervention.barangay}</p>
-                {selectedIntervention.address && <p className="text-lg text-center font-bold"><span className="font-bold text-center">Address:</span> {selectedIntervention.address}</p>}
+                {selectedIntervention.address && <p className="text-lg text-center "><span className="font-bold text-center">Address:</span> {selectedIntervention.address}</p>}
                 <p className="text-lg">
                   <span className="font-bold">Date:</span>{' '}
                   {new Date(selectedIntervention.date).toLocaleString('en-US', {

@@ -830,55 +830,39 @@ const DengueMap = ({
                       activeTab,
                       isLoadingInterventions
                     })}
-                    <MarkerClustererF
-                      styles={[{
-                        url: 'https://developers.google.com/maps/documentation/javascript/examples/markerclusterer/m3.png',
-                        height: 66,
-                        width: 66,
-                        textColor: 'white',
-                        textSize: 12,
-                      }]}
-                      options={{
-                        gridSize: 40,
-                        minimumClusterSize: 2,
-                      }}
-                    >
-                      {(clusterer) =>
-                        filteredInterventions.map((intervention, index) => {
-                          if (!intervention.specific_location?.coordinates) {
-                            return null;
-                          }
-                          return (
-                            <Marker
-                              key={intervention._id || index}
-                              position={{
+                    {/* Render intervention markers directly, no clustering */}
+                    {filteredInterventions.map((intervention, index) => {
+                      if (!intervention.specific_location?.coordinates) {
+                        return null;
+                      }
+                      return (
+                        <Marker
+                          key={intervention._id || index}
+                          position={{
+                            lat: intervention.specific_location.coordinates[1],
+                            lng: intervention.specific_location.coordinates[0],
+                          }}
+                          icon={{
+                            path: window.google.maps.SymbolPath.CIRCLE,
+                            scale: 8,
+                            fillColor: INTERVENTION_STATUS_COLORS[intervention.status?.toLowerCase()] || INTERVENTION_STATUS_COLORS.default,
+                            fillOpacity: 1,
+                            strokeWeight: 2,
+                            strokeColor: "#ffffff",
+                          }}
+                          onClick={() => {
+                            setSelectedIntervention(intervention);
+                            setSelectedBarangayMarker(null);
+                            if (mapRef.current) {
+                              mapRef.current.panTo({
                                 lat: intervention.specific_location.coordinates[1],
                                 lng: intervention.specific_location.coordinates[0],
-                              }}
-                              clusterer={clusterer}
-                              icon={{
-                                path: window.google.maps.SymbolPath.CIRCLE,
-                                scale: 8,
-                                fillColor: INTERVENTION_STATUS_COLORS[intervention.status?.toLowerCase()] || INTERVENTION_STATUS_COLORS.default,
-                                fillOpacity: 1,
-                                strokeWeight: 2,
-                                strokeColor: "#ffffff",
-                              }}
-                              onClick={() => {
-                                setSelectedIntervention(intervention);
-                                setSelectedBarangayMarker(null);
-                                if (mapRef.current) {
-                                  mapRef.current.panTo({
-                                    lat: intervention.specific_location.coordinates[1],
-                                    lng: intervention.specific_location.coordinates[0],
-                                  });
-                                }
-                              }}
-                            />
-                          );
-                        })
-                      }
-                    </MarkerClustererF>
+                              });
+                            }
+                          }}
+                        />
+                      );
+                    })}
                   </>
                 ) : (
                   <p className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-30 bg-white p-2 rounded shadow">No active interventions to display.</p>
@@ -930,7 +914,7 @@ const DengueMap = ({
                     </span>
                   </div>
                   <p className="text-lg"><span className="font-bold">Barangay:</span> {selectedIntervention.barangay}</p>
-                  {selectedIntervention.address && <p className="text-lg"><span className="font-bold">Address:</span> {selectedIntervention.address}</p>}
+                  {selectedIntervention.address && <p className="text-lg text-center"><span className="font-bold">Address:</span> {selectedIntervention.address}</p>}
                   <p className="text-lg">
                     <span className="font-bold">Date:</span>{' '}
                     {new Date(selectedIntervention.date).toLocaleString('en-US', {

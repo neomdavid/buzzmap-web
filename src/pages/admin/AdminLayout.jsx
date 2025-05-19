@@ -141,7 +141,7 @@ const AdminLayout = () => {
             </button>
           </div>
 
-          <div className="flex items-center gap-x-4 ml-auto">
+          {/* <div className="flex items-center gap-x-4 ml-auto">
             <div className="relative flex items-center">
               <input
                 className="bg-gray-200 text-primary px-4 py-2 pr-10 rounded-2xl focus:outline-none"
@@ -152,14 +152,14 @@ const AdminLayout = () => {
             <Link>
               <Envelope size={25} />
             </Link>
-          </div>
+          </div> */}
         </div>
 
         <section
           className={` px-6 py-4 bg-neutral-content  ${
             currentRoute === "/admin/dashboard"
               ? "md:pt-[75px] md:mt-[-64px]"
-              : "md:pt-[18px] md:mt-[-64px]"
+              : " md:pt-[57px] md:mt-[-64px]"
           }  md:pl-6 lg:pl-8 text-primary`}
         >
           <Outlet />

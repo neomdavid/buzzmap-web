@@ -41,7 +41,7 @@ const CEA = () => {
 
   return (
     <main className="flex flex-col w-full  z-10000">
-      <p className="flex justify-center text-5xl font-extrabold mb-10 text-center md:justify-start md:text-left md:w-[48%] ">
+      <p className="flex justify-center text-5xl font-extrabold mb-10 text-center md:justify-start md:text-left md:w-[78%] ">
         Community Engagement and Awareness
       </p>
 

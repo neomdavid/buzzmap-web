@@ -311,7 +311,7 @@ const DengueMapping = () => {
 
   return (
     <main className="flex flex-col w-full">
-      <p className="flex justify-center text-5xl font-extrabold mb-12 text-center md:justify-start md:text-left md:w-[48%]">
+      <p className="flex justify-center text-5xl font-extrabold mb-12 text-center md:justify-start md:text-left md:w-[78%]">
         Dengue Mapping
       </p>
       
@@ -330,13 +330,13 @@ const DengueMapping = () => {
           />
         </div>
         
-        <button
+        {/* <button
           onClick={() => setShowImportModal(true)}
           className="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors"
         >
           <Upload size={20} />
           Import CSV
-        </button>
+        </button> */}
       </div>
 
       <div className="flex h-[50vh] mb-4" ref={mapContainerRef}>
