@@ -48,6 +48,7 @@ const Analytics = () => {
   const [spikeRecommendationDetails, setSpikeRecommendationDetails] = useState(null);
 
   const { data: patternResultsData, isLoading: isLoadingPatterns } = useGetPatternRecognitionResultsQuery();
+  const { data: allInterventionsData, isLoading: isLoadingAllInterventions } = useGetAllInterventionsQuery();
 
   useEffect(() => {
     console.log("[Analytics DEBUG] patternResultsData:", JSON.stringify(patternResultsData, null, 2));
@@ -342,6 +343,8 @@ const Analytics = () => {
               defaultTab="cases"
               key={dataVersion}
               initialFocusBarangayName={initialBarangayNameForMap}
+              activeInterventions={allInterventionsData}
+              isLoadingInterventions={isLoadingAllInterventions}
             />
           </div>
         </div>

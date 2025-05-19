@@ -137,8 +137,22 @@ const DengueMapNoInfo = forwardRef((props, ref) => {
     infoWindowPosition: infoWindowPosition,
     getPolygonOptions: getPolygonOptions,
     onMapLoad: handleMapLoad,
+    activeInterventions: props.activeInterventions,
+    isLoadingInterventions: props.isLoadingInterventions,
+    selectedMapItem: props.selectedMapItem,
+    onBarangaySelect: props.onBarangaySelect,
+    searchQuery: props.searchQuery,
+    onSearchClear: props.onSearchClear
   };
-  // console.log("[DengueMapNoInfo DEBUG] Props being passed to DengueMap:", propsToDengueMap); // Can be too verbose
+
+  // Add debug logging for props being passed to DengueMap
+  useEffect(() => {
+    console.log("[DengueMapNoInfo DEBUG] Props being passed to DengueMap:", {
+      activeInterventions: propsToDengueMap.activeInterventions,
+      isLoadingInterventions: propsToDengueMap.isLoadingInterventions,
+      selectedMapItem: propsToDengueMap.selectedMapItem
+    });
+  }, [propsToDengueMap.activeInterventions, propsToDengueMap.isLoadingInterventions, propsToDengueMap.selectedMapItem]);
 
   return (
     <DengueMap

@@ -112,6 +112,35 @@ const DengueMap = ({
 
   const { data: posts, isLoading: isLoadingPosts } = useGetPostsQuery();
   
+  // Add logging for posts data
+  useEffect(() => {
+    console.log("[DengueMap DEBUG] Posts data received:", posts);
+  }, [posts]);
+
+  // Add logging for activeInterventions prop
+  useEffect(() => {
+    console.log("[DengueMap DEBUG] activeInterventions prop received:", {
+      activeInterventions,
+      isLoadingInterventions,
+      type: typeof activeInterventions,
+      isArray: Array.isArray(activeInterventions),
+      length: activeInterventions?.length
+    });
+  }, [activeInterventions, isLoadingInterventions]);
+
+  // Initialize breeding sites from posts
+  useEffect(() => {
+    if (posts) {
+      const breedingSitesFromPosts = posts.filter(post => 
+        post.status === "Validated" && 
+        post.specific_location?.coordinates &&
+        (post.report_type === "Breeding Site" || post.report_type === "Standing Water" || post.report_type === "Infestation")
+      );
+      console.log("[DengueMap DEBUG] Filtered breeding sites:", breedingSitesFromPosts);
+      setBreedingSites(breedingSitesFromPosts);
+    }
+  }, [posts]);
+
   const [activeTab, setActiveTab] = useState("cases");
   const [breedingSites, setBreedingSites] = useState([]);
   const [selectedBreedingSite, setSelectedBreedingSite] = useState(null);
@@ -669,14 +698,13 @@ const DengueMap = ({
             ) : breedingSites.length > 0 ? (
               <MarkerClustererF
                 styles={[{
-                  url: 'https://developers.google.com/maps/documentation/javascript/examples/markerclusterer/m3.png', // m3.png is a redder icon
-                  height: 66, // Default height for m3.png
-                  width: 66,  // Default width for m3.png
-                  textColor: 'white', // Assuming white text is desired, similar to default
-                  textSize: 12,      // Adjust as needed
+                  url: 'https://developers.google.com/maps/documentation/javascript/examples/markerclusterer/m3.png',
+                  height: 66,
+                  width: 66,
+                  textColor: 'white',
+                  textSize: 12,
                 }]}
                 options={{
-                  // imagePath: "https://developers.google.com/maps/documentation/javascript/examples/markerclusterer/m", // Removed as styles prop will take precedence
                   gridSize: 40,
                   minimumClusterSize: 2,
                 }}
@@ -689,20 +717,15 @@ const DengueMap = ({
                         lat: site.specific_location.coordinates[1],
                         lng: site.specific_location.coordinates[0],
                       }}
-                      clusterer={clusterer} // Pass clusterer to Marker
-                      icon={// Defensively construct the icon object
-                        isLoaded && window.google && window.google.maps && window.google.maps.SymbolPath && window.google.maps.Point
-                          ? {
-                              path: window.google.maps.SymbolPath.MAP_PIN, // Change to MAP_PIN
-                              fillColor: "#DC2626", // RED for breeding sites
-                              fillOpacity: 1,
-                              strokeWeight: 1.5,
-                              strokeColor: "#fff",
-                              scale: 1.3, // Adjust scale for pin size
-                              anchor: new window.google.maps.Point(12, 24), // Adjust anchor for pin shape
-                            }
-                          : undefined // Fallback to default icon
-                      }
+                      clusterer={clusterer}
+                      icon={{
+                        path: window.google.maps.SymbolPath.CIRCLE,
+                        scale: 8,
+                        fillColor: BREEDING_SITE_TYPE_COLORS[site.report_type] || "#2563eb",
+                        fillOpacity: 1,
+                        strokeWeight: 2,
+                        strokeColor: "#ffffff",
+                      }}
                       onClick={() => {
                         console.log("Breeding site details:", site);
                         setSelectedBreedingSite(site);
@@ -712,9 +735,6 @@ const DengueMap = ({
                             lat: site.specific_location.coordinates[1],
                             lng: site.specific_location.coordinates[0],
                           });
-                          // Do not zoom in too much when clicking a clustered marker, 
-                          // let the clusterer handle zoom or user can zoom manually.
-                          // mapRef.current.setZoom(17); 
                         }
                       }}
                     />
@@ -818,44 +838,90 @@ const DengueMap = ({
           {activeTab === 'interventions' && (
             isLoadingInterventions ? (
               <p className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-30 bg-white p-2 rounded shadow">Loading interventions...</p>
-            ) : activeInterventions && activeInterventions.length > 0 ? (
-              activeInterventions.map((intervention) => {
-                if (!intervention.specific_location?.coordinates || intervention.specific_location.coordinates.length !== 2) {
-                  return null;
-                }
-                const statusKey = intervention.status?.toLowerCase() || 'default';
-                const markerColor = INTERVENTION_STATUS_COLORS[statusKey] || INTERVENTION_STATUS_COLORS.default;
-
-                return (
-                  <Marker
-                    key={intervention._id} // Ensure key is here
-                    position={{
-                      lat: intervention.specific_location.coordinates[1],
-                      lng: intervention.specific_location.coordinates[0],
-                    }}
-                    icon={{
-                      path: window.google.maps.SymbolPath.CIRCLE, 
-                      scale: 8,
-                      fillColor: markerColor,
-                      fillOpacity: 1,
-                      strokeWeight: 2,
-                      strokeColor: "#ffffff", 
-                    }}
-                    onClick={() => {
-                      console.log("[DengueMap DEBUG] Intervention marker clicked:", intervention);
-                      setSelectedIntervention(intervention);
-                      if (mapRef.current) {
-                        mapRef.current.panTo({
-                          lat: intervention.specific_location.coordinates[1],
-                          lng: intervention.specific_location.coordinates[0],
-                        });
+            ) : activeInterventions && Array.isArray(activeInterventions) && activeInterventions.length > 0 ? (
+              <>
+                {console.log("[DengueMap DEBUG] Active interventions data:", {
+                  data: activeInterventions,
+                  length: activeInterventions.length,
+                  firstItem: activeInterventions[0],
+                  hasCoordinates: activeInterventions[0]?.specific_location?.coordinates,
+                  activeTab,
+                  isLoadingInterventions
+                })}
+                <MarkerClustererF
+                  styles={[{
+                    url: 'https://developers.google.com/maps/documentation/javascript/examples/markerclusterer/m3.png',
+                    height: 66,
+                    width: 66,
+                    textColor: 'white',
+                    textSize: 12,
+                  }]}
+                  options={{
+                    gridSize: 40,
+                    minimumClusterSize: 2,
+                  }}
+                >
+                  {(clusterer) =>
+                    activeInterventions.map((intervention, index) => {
+                      console.log("[DengueMap DEBUG] Processing intervention:", {
+                        id: intervention._id,
+                        status: intervention.status,
+                        coordinates: intervention.specific_location?.coordinates,
+                        interventionType: intervention.interventionType,
+                        date: intervention.date
+                      });
+                      
+                      if (!intervention.specific_location?.coordinates) {
+                        console.log("[DengueMap DEBUG] Skipping intervention due to missing coordinates:", intervention);
+                        return null;
                       }
-                    }}
-                  />
-                );
-              })
+                      
+                      return (
+                        <Marker
+                          key={intervention._id || index}
+                          position={{
+                            lat: intervention.specific_location.coordinates[1],
+                            lng: intervention.specific_location.coordinates[0],
+                          }}
+                          clusterer={clusterer}
+                          icon={{
+                            path: window.google.maps.SymbolPath.CIRCLE,
+                            scale: 8,
+                            fillColor: INTERVENTION_STATUS_COLORS[intervention.status?.toLowerCase()] || INTERVENTION_STATUS_COLORS.default,
+                            fillOpacity: 1,
+                            strokeWeight: 2,
+                            strokeColor: "#ffffff",
+                          }}
+                          onClick={() => {
+                            console.log("[DengueMap DEBUG] Intervention clicked:", intervention);
+                            setSelectedIntervention(intervention);
+                            setSelectedBarangayMarker(null);
+                            if (mapRef.current) {
+                              mapRef.current.panTo({
+                                lat: intervention.specific_location.coordinates[1],
+                                lng: intervention.specific_location.coordinates[0],
+                              });
+                            }
+                          }}
+                        />
+                      );
+                    })
+                  }
+                </MarkerClustererF>
+              </>
             ) : (
-              <p className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-30 bg-white p-2 rounded shadow">No active interventions to display.</p>
+              <>
+                {console.log("[DengueMap DEBUG] No active interventions. Data received:", {
+                  activeInterventions,
+                  isLoadingInterventions,
+                  isArray: Array.isArray(activeInterventions),
+                  hasData: !!activeInterventions,
+                  length: activeInterventions?.length,
+                  activeTab,
+                  type: typeof activeInterventions
+                })}
+                <p className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-30 bg-white p-2 rounded shadow">No active interventions to display.</p>
+              </>
             )
           )}
 

@@ -98,10 +98,25 @@ const DengueMapping = () => {
   // Memoized list of active (not completed) interventions
   const activeInterventions = useMemo(() => {
     if (!allInterventionsData) return [];
+    
+    // Log all unique status values for debugging
+    const uniqueStatuses = new Set(allInterventionsData.map(i => i.status?.toLowerCase()));
+    console.log("[DengueMapping DEBUG] All unique status values:", Array.from(uniqueStatuses));
+    
     const filtered = allInterventionsData.filter(intervention => {
       const status = intervention.status?.toLowerCase();
-      return status !== 'completed' && status !== 'complete';
+      // Log each intervention's status for debugging
+      console.log("[DengueMapping DEBUG] Intervention status:", {
+        id: intervention._id,
+        status: status,
+        originalStatus: intervention.status
+      });
+      
+      // Consider an intervention active if it's not completed/complete
+      const isActive = status !== 'completed' && status !== 'complete';
+      return isActive;
     });
+    
     console.log("[DengueMapping DEBUG] Filtered activeInterventions (before sort):", JSON.stringify(filtered, null, 2));
     const sorted = filtered.sort((a, b) => new Date(b.date) - new Date(a.date));
     console.log("[DengueMapping DEBUG] Sorted activeInterventions:", JSON.stringify(sorted, null, 2));
