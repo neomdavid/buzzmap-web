@@ -383,7 +383,7 @@ const AddInterventionModal = ({ isOpen, onClose }) => {
                       >
                         <option value="Scheduled">Scheduled</option>
                         <option value="Ongoing">Ongoing</option>
-                        <option value="Completed">Completed</option> {/* Changed to Completed */}
+                        <option value="Complete">Complete</option>
                       </select>
                     </div>
                   </div>

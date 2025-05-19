@@ -18,10 +18,20 @@ const InterventionEffectivity = () => {
 
   const selected = interventions?.find(i => i._id === selectedId);
 
-  // Unique filter options
-  const barangayOptions = useMemo(() =>
-    interventions ? Array.from(new Set(interventions.map(i => i.barangay))).sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' })) : [],
+  const validInterventions = useMemo(() =>
+    interventions
+      ? interventions.filter(i => {
+          const status = i.status?.toLowerCase();
+          if (status !== 'completed' && status !== 'complete') return false;
+          return getDaysSince(i.date) >= 120;
+        })
+      : [],
     [interventions]
+  );
+
+  const barangayOptions = useMemo(() =>
+    Array.from(new Set(validInterventions.map(i => i.barangay))).sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' })),
+    [validInterventions]
   );
   const typeOptions = useMemo(() =>
     interventions ? Array.from(new Set(interventions.map(i => i.interventionType))).sort() : [],
@@ -41,6 +51,9 @@ const InterventionEffectivity = () => {
         .filter((i) => {
           const status = i.status?.toLowerCase();
           if (status !== 'completed' && status !== 'complete') return false;
+          // Only include interventions at least 4 months (about 120 days) old
+          const daysSince = getDaysSince(i.date);
+          if (daysSince < 120) return false;
           const s = search.toLowerCase();
           const matchesSearch =
             i.barangay?.toLowerCase().includes(s) ||
@@ -89,7 +102,9 @@ const InterventionEffectivity = () => {
       </div>
       <div className="max-h-48 overflow-y-auto border rounded bg-white mb-4">
         {isLoading && <div className="p-2 text-gray-500">Loading interventions...</div>}
-        {!isLoading && filtered.length === 0 && <div className="p-2 text-gray-500">No interventions found.</div>}
+        {!isLoading && filtered.length === 0 && (
+          <div className="p-2 text-gray-500">No valid interventions. An intervention must be at least 4 months old to analyze effectivity.</div>
+        )}
         {!isLoading && filtered.map(i => (
           <div
             key={i._id}
