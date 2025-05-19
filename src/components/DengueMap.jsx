@@ -557,23 +557,19 @@ const DengueMap = ({
                 />
               ) : (
                 <div
-                  className="bg-white p-4 rounded-lg text-center"
-                  style={{
-                    border: `3px solid ${
-                      PATTERN_COLORS[
-                        (selectedBarangay?.properties?.patternType || "none").toLowerCase()
-                      ] || PATTERN_COLORS.default
-                    }`,
-                    width: "50vw",
-                    maxWidth: 640,
-                  }}
-                >
+                className="bg-white p-4 rounded-lg text-center h-auto"
+                style={{
+                  // Use patternType for border color
+                  // border: `3px solid ${PATTERN_COLORS[selectedBarangayInfo.patternType?.toLowerCase()] || PATTERN_COLORS.default}`,
+                  width: "50vw",
+                }}
+              >
+                <div className="flex flex-col"> 
                   <p
-                    className={`${infoWindowTitleClass} text-3xl font-bold`}
+                    className={`${infoWindowTitleClass} text-4xl font-bold`}
                   >
                     Barangay {selectedBarangay.properties.name}
                   </p>
-
                   <div className="mt-3 flex flex-col gap-3 text-black">
                     {/* Status Card */}
                     <div className={`p-3 rounded-lg border-2 ${
@@ -590,23 +586,9 @@ const DengueMap = ({
                         : "border-gray-400 bg-gray-100"
                     }`}>
                       <div className="flex items-center gap-3">
-                        <div className={`${
-                          selectedBarangay.properties.alert === "No recent data"
-                            ? "text-gray-400"
-                          : selectedBarangay.properties.patternType === "spike"
-                          ? "text-error"
-                          : selectedBarangay.properties.patternType === "gradual_rise"
-                          ? "text-warning"
-                          : selectedBarangay.properties.patternType === "decline"
-                          ? "text-success"
-                          : selectedBarangay.properties.patternType === "stability"
-                          ? "text-info"
-                          : "text-gray-400"
-                        }`}>
-                          <span className="inline-block w-4 h-4 rounded-full"></span>
-                        </div>
+
                         <div>
-                          <p className="text-sm font-medium text-gray-600">Status</p>
+                          <p className="text-sm font-medium text-gray-600 uppercase">Status</p>
                           <p className="text-lg font-semibold">
                             {selectedBarangay.properties.alert
                               ? selectedBarangay.properties.alert.replace(
@@ -620,9 +602,7 @@ const DengueMap = ({
                     </div>
 
                     {/* Pattern and Risk Level Row */}
-                    <div className="grid grid-cols-2 gap-3">
-                      {/* Pattern Card */}
-                      <div className={`p-3 rounded-lg border-2 ${
+                    <div className={`flex flex-col rounded-lg items-center justify-center w-full border-2 ${
                         selectedBarangay.properties.alert === "No recent data"
                           ? "border-gray-400 bg-gray-100"
                           : selectedBarangay.properties.patternType === "spike"
@@ -634,23 +614,11 @@ const DengueMap = ({
                           : selectedBarangay.properties.patternType === "stability"
                           ? "border-info bg-info/5"
                           : "border-gray-400 bg-gray-100"
-                      }`}>
+                      } gap-3`}>
+                      {/* Pattern Card */}
+                      <div className={`p-3 rounded-lg `}>
                         <div className="flex items-center gap-3">
-                          <div className={`${
-                            selectedBarangay.properties.alert === "No recent data"
-                              ? "text-gray-400"
-                            : selectedBarangay.properties.patternType === "spike"
-                            ? "text-error"
-                            : selectedBarangay.properties.patternType === "gradual_rise"
-                            ? "text-warning"
-                            : selectedBarangay.properties.patternType === "decline"
-                            ? "text-success"
-                            : selectedBarangay.properties.patternType === "stability"
-                            ? "text-info"
-                            : "text-gray-400"
-                          }`}>
-                            <span className="inline-block w-4 h-4 rounded-full"></span>
-                          </div>
+                          
                           <div>
                             <p className="text-sm font-medium text-gray-600">Pattern</p>
                             <p className="text-lg font-semibold">
@@ -668,11 +636,7 @@ const DengueMap = ({
 
                     {/* Last Analyzed Card */}
                     <div className="p-3 rounded-lg border-2 border-primary/20 bg-primary/5">
-                      <div className="flex items-center gap-3">
-                        <div className="text-primary">
-                          <span className="inline-block w-4 h-4 rounded-full"></span>
-                        </div>
-                        <div>
+                      <div className="flex flex-col items-center ">
                           <p className="text-sm font-medium text-gray-600">Last Analyzed</p>
                           <p className="text-lg font-semibold">
                             {isNaN(
@@ -680,15 +644,17 @@ const DengueMap = ({
                                 selectedBarangay.properties.lastAnalysisTime
                               ).getTime()
                             )
-                              ? "N/A"
+                              ? (() => { console.log('Last Analyzed is N/A:', selectedBarangay.properties.lastAnalysisTime, new Date(selectedBarangay.properties.lastAnalysisTime)); return "N/A"; })()
                               : new Date(
                                   selectedBarangay.properties.lastAnalysisTime
                                 ).toLocaleString()}
                           </p>
-                        </div>
                       </div>
                     </div>
-                  </div>
+                  </div></div>
+                 
+
+                 
                 </div>
               )}
             </InfoWindow>
@@ -757,14 +723,17 @@ const DengueMap = ({
               }}
               onCloseClick={() => setSelectedBreedingSite(null)}
             >
-              <div
-                className="bg-white p-4 rounded-lg border-2 w-[300px] text-center"
+                   <div
+                className="bg-white p-4 rounded-lg text-center h-auto"
                 style={{
-                  borderColor: BREEDING_SITE_TYPE_COLORS[selectedBreedingSite.report_type] || "#2563eb",
+                  // Use patternType for border color
+                  // border: `3px solid ${PATTERN_COLORS[selectedBarangayInfo.patternType?.toLowerCase()] || PATTERN_COLORS.default}`,
+                  width: "50vw",
                 }}
               >
-                <p
-                  className="font-bold text-lg mb-2"
+                <div className="flex flex-col items-center font-lg font-normal"> 
+                  <p
+                  className="font-extrabold text-4xl mb-2"
                   style={{
                     color: BREEDING_SITE_TYPE_COLORS[selectedBreedingSite.report_type] || "#2563eb",
                   }}
@@ -773,15 +742,15 @@ const DengueMap = ({
                 </p>
                 <div className="mt-2 space-y-2">
                   <p>
-                    <span className="font-medium">Barangay:</span>{" "}
+                    <span className="font-bold">Barangay:</span>{" "}
                     {selectedBreedingSite.barangay}
                   </p>
                   <p>
-                    <span className="font-medium">Reported by:</span>{" "}
+                    <span className="font-bold">Reported by:</span>{" "}
                     {selectedBreedingSite.user?.username || ""}
                   </p>
                   <p>
-                    <span className="font-medium">Date:</span>{" "}
+                    <span className="font-bold">Date:</span>{" "}
                     {selectedBreedingSite.date_and_time
                       ? new Date(selectedBreedingSite.date_and_time).toLocaleDateString(
                           "en-US",
@@ -795,23 +764,26 @@ const DengueMap = ({
                       : "N/A"}
                   </p>
                   <p>
-                    <span className="font-medium">Description:</span>{" "}
+                    <span className="font-bold">Description:</span>{" "}
                     {selectedBreedingSite.description}
                   </p>
                   {/* Show images if available */}
                   {selectedBreedingSite.images && selectedBreedingSite.images.length > 0 && (
-                    <div className="mt-2 flex flex-wrap gap-2">
+                    <div className="flex justify-center gap-2">
                       {selectedBreedingSite.images.map((img, idx) => (
                         <img
                           key={idx}
                           src={img}
                           alt={`evidence-${idx + 1}`}
-                          className="w-20 h-20 object-cover rounded border"
+                          className="w-35 h-25 object-cover rounded "
                         />
                       ))}
                     </div>
                   )}
                 </div>
+                </div>
+               
+                
               </div>
             </InfoWindow>
           )}
@@ -842,76 +814,76 @@ const DengueMap = ({
             isLoadingInterventions ? (
               <p className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-30 bg-white p-2 rounded shadow">Loading interventions...</p>
             ) : activeInterventions && Array.isArray(activeInterventions) && activeInterventions.length > 0 ? (
-              <>
-                {console.log("[DengueMap DEBUG] Active interventions data:", {
-                  data: activeInterventions,
-                  length: activeInterventions.length,
-                  firstItem: activeInterventions[0],
-                  hasCoordinates: activeInterventions[0]?.specific_location?.coordinates,
-                  activeTab,
-                  isLoadingInterventions
-                })}
-                <MarkerClustererF
-                  styles={[{
-                    url: 'https://developers.google.com/maps/documentation/javascript/examples/markerclusterer/m3.png',
-                    height: 66,
-                    width: 66,
-                    textColor: 'white',
-                    textSize: 12,
-                  }]}
-                  options={{
-                    gridSize: 40,
-                    minimumClusterSize: 2,
-                  }}
-                >
-                  {(clusterer) =>
-                    activeInterventions.map((intervention, index) => {
-                      console.log("[DengueMap DEBUG] Processing intervention:", {
-                        id: intervention._id,
-                        status: intervention.status,
-                        coordinates: intervention.specific_location?.coordinates,
-                        interventionType: intervention.interventionType,
-                        date: intervention.date
-                      });
-                      
-                      if (!intervention.specific_location?.coordinates) {
-                        console.log("[DengueMap DEBUG] Skipping intervention due to missing coordinates:", intervention);
-                        return null;
-                      }
-                      
-                      return (
-                        <Marker
-                          key={intervention._id || index}
-                          position={{
-                            lat: intervention.specific_location.coordinates[1],
-                            lng: intervention.specific_location.coordinates[0],
-                          }}
-                          clusterer={clusterer}
-                          icon={{
-                            path: window.google.maps.SymbolPath.CIRCLE,
-                            scale: 8,
-                            fillColor: INTERVENTION_STATUS_COLORS[intervention.status?.toLowerCase()] || INTERVENTION_STATUS_COLORS.default,
-                            fillOpacity: 1,
-                            strokeWeight: 2,
-                            strokeColor: "#ffffff",
-                          }}
-                          onClick={() => {
-                            console.log("[DengueMap DEBUG] Intervention clicked:", intervention);
-                            setSelectedIntervention(intervention);
-                            setSelectedBarangayMarker(null);
-                            if (mapRef.current) {
-                              mapRef.current.panTo({
+              // Filter out completed interventions
+              (() => {
+                const filteredInterventions = activeInterventions.filter(intervention => {
+                  const status = (intervention.status || '').toLowerCase();
+                  return status !== 'completed' && status !== 'complete';
+                });
+                return filteredInterventions.length > 0 ? (
+                  <>
+                    {console.log("[DengueMap DEBUG] Filtered active interventions data:", {
+                      data: filteredInterventions,
+                      length: filteredInterventions.length,
+                      firstItem: filteredInterventions[0],
+                      hasCoordinates: filteredInterventions[0]?.specific_location?.coordinates,
+                      activeTab,
+                      isLoadingInterventions
+                    })}
+                    <MarkerClustererF
+                      styles={[{
+                        url: 'https://developers.google.com/maps/documentation/javascript/examples/markerclusterer/m3.png',
+                        height: 66,
+                        width: 66,
+                        textColor: 'white',
+                        textSize: 12,
+                      }]}
+                      options={{
+                        gridSize: 40,
+                        minimumClusterSize: 2,
+                      }}
+                    >
+                      {(clusterer) =>
+                        filteredInterventions.map((intervention, index) => {
+                          if (!intervention.specific_location?.coordinates) {
+                            return null;
+                          }
+                          return (
+                            <Marker
+                              key={intervention._id || index}
+                              position={{
                                 lat: intervention.specific_location.coordinates[1],
                                 lng: intervention.specific_location.coordinates[0],
-                              });
-                            }
-                          }}
-                        />
-                      );
-                    })
-                  }
-                </MarkerClustererF>
-              </>
+                              }}
+                              clusterer={clusterer}
+                              icon={{
+                                path: window.google.maps.SymbolPath.CIRCLE,
+                                scale: 8,
+                                fillColor: INTERVENTION_STATUS_COLORS[intervention.status?.toLowerCase()] || INTERVENTION_STATUS_COLORS.default,
+                                fillOpacity: 1,
+                                strokeWeight: 2,
+                                strokeColor: "#ffffff",
+                              }}
+                              onClick={() => {
+                                setSelectedIntervention(intervention);
+                                setSelectedBarangayMarker(null);
+                                if (mapRef.current) {
+                                  mapRef.current.panTo({
+                                    lat: intervention.specific_location.coordinates[1],
+                                    lng: intervention.specific_location.coordinates[0],
+                                  });
+                                }
+                              }}
+                            />
+                          );
+                        })
+                      }
+                    </MarkerClustererF>
+                  </>
+                ) : (
+                  <p className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-30 bg-white p-2 rounded shadow">No active interventions to display.</p>
+                );
+              })()
             ) : (
               <>
                 {console.log("[DengueMap DEBUG] No active interventions. Data received:", {
@@ -929,27 +901,52 @@ const DengueMap = ({
           )}
 
           {/* InfoWindow for SELECTED intervention */} 
-          {activeTab === 'interventions' && selectedIntervention && selectedIntervention.specific_location?.coordinates && (
-            <InfoWindow
-              position={{
-                lat: selectedIntervention.specific_location.coordinates[1],
-                lng: selectedIntervention.specific_location.coordinates[0],
-              }}
-              onCloseClick={() => {
-                console.log("[DengueMap DEBUG] Closing intervention InfoWindow");
-                setSelectedIntervention(null);
-              }}
-            >
-              <div className="p-3 bg-white rounded-md shadow-md w-64">
-                <p className="text-lg font-bold text-primary mb-1">{selectedIntervention.interventionType}</p>
-                <p className="text-sm"><span className="font-semibold">Status:</span> {selectedIntervention.status}</p>
-                <p className="text-sm"><span className="font-semibold">Barangay:</span> {selectedIntervention.barangay}</p>
-                {selectedIntervention.address && <p className="text-sm"><span className="font-semibold">Address:</span> {selectedIntervention.address}</p>}
-                <p className="text-sm"><span className="font-semibold">Date:</span> {new Date(selectedIntervention.date).toLocaleString('en-US', { year: 'numeric', month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true })}</p>
-                <p className="text-sm"><span className="font-semibold">Personnel:</span> {selectedIntervention.personnel}</p>
-              </div>
-            </InfoWindow>
-          )}
+          {activeTab === 'interventions' && selectedIntervention && selectedIntervention.specific_location?.coordinates && (() => {
+            const status = (selectedIntervention.status || '').toLowerCase();
+            if (status === 'completed' || status === 'complete') return null;
+            return (
+              <InfoWindow
+                position={{
+                  lat: selectedIntervention.specific_location.coordinates[1],
+                  lng: selectedIntervention.specific_location.coordinates[0],
+                }}
+                onCloseClick={() => {
+                  setSelectedIntervention(null);
+                }}
+              >
+                <div className="p-3 flex flex-col items-center gap-1 font-normal bg-white rounded-md shadow-md w-64 text-primary w-[50vw]">
+                  <p className="text-4xl font-extrabold text-primary mb-2">{selectedIntervention.interventionType}</p>
+                  <div className="text-lg flex items-center gap-2">
+                    <span className="font-bold">Status:</span>
+                    <span
+                      className="px-3 py-1 rounded-full text-white font-bold text-sm"
+                      style={{
+                        backgroundColor:
+                          INTERVENTION_STATUS_COLORS[(selectedIntervention.status || '').toLowerCase()] || INTERVENTION_STATUS_COLORS.default,
+                        boxShadow: '0 1px 4px rgba(0,0,0,0.08)',
+                      }}
+                    >
+                      {selectedIntervention.status}
+                    </span>
+                  </div>
+                  <p className="text-lg"><span className="font-bold">Barangay:</span> {selectedIntervention.barangay}</p>
+                  {selectedIntervention.address && <p className="text-lg"><span className="font-bold">Address:</span> {selectedIntervention.address}</p>}
+                  <p className="text-lg">
+                    <span className="font-bold">Date:</span>{' '}
+                    {new Date(selectedIntervention.date).toLocaleString('en-US', {
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric',
+                      hour: 'numeric',
+                      minute: '2-digit',
+                      hour12: true,
+                    })}
+                  </p>
+                  <p className="text-lg"><span className="font-bold">Personnel:</span> {selectedIntervention.personnel}</p>
+                </div>
+              </InfoWindow>
+            );
+          })()}
         </GoogleMap>
       )} {/* End of patternsLoading conditional rendering */}
 

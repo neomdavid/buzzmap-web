@@ -789,7 +789,7 @@ const Mapping = () => {
                 <p className="font-bold text-4xl font-extrabold mb-4 text-primary">
                   {selectedBreedingSite.report_type}
                 </p>
-                <div className="mt-2 space-y-1 font-normal">
+                <div className="flex flex-col items-center mt-2 space-y-1 font-normal text-center">
                   <p className="text-xl">
                     <span className="font-bold">Barangay:</span>{" "}
                     {selectedBreedingSite.barangay}
@@ -813,7 +813,7 @@ const Mapping = () => {
                           key={idx}
                           src={img}
                           alt={`evidence-${idx + 1}`}
-                          className="w-30 h-30 object-cover rounded border"
+                          className="w-35 h-25 object-cover rounded border"
                         />
                       ))}
                     </div>
@@ -897,8 +897,8 @@ const Mapping = () => {
                     {selectedIntervention.status}
                   </span>
                 </div>
-                <p className="text-lg"><span className="font-bold">Barangay:</span> {selectedIntervention.barangay}</p>
-                {selectedIntervention.address && <p className="text-lg"><span className="font-bold">Address:</span> {selectedIntervention.address}</p>}
+                <p className="text-lg text-center"><span className="font-bold">Barangay:</span> {selectedIntervention.barangay}</p>
+                {selectedIntervention.address && <p className="text-lg text-center font-bold"><span className="font-bold text-center">Address:</span> {selectedIntervention.address}</p>}
                 <p className="text-lg">
                   <span className="font-bold">Date:</span>{' '}
                   {new Date(selectedIntervention.date).toLocaleString('en-US', {
