@@ -659,21 +659,19 @@ const Mapping = () => {
               onCloseClick={() => setSelectedBarangayInfo(null)}
               options={{
                 pixelOffset: new window.google.maps.Size(0, -30),
-                maxWidth: 640,
                 disableAutoPan: false
               }}
             >
               <div
-                className="bg-white p-4 rounded-lg text-center"
+                className="bg-white p-4 rounded-lg text-center h-auto"
                 style={{
                   // Use patternType for border color
-                  border: `3px solid ${PATTERN_COLORS[selectedBarangayInfo.patternType?.toLowerCase()] || PATTERN_COLORS.default}`,
+                  // border: `3px solid ${PATTERN_COLORS[selectedBarangayInfo.patternType?.toLowerCase()] || PATTERN_COLORS.default}`,
                   width: "50vw",
-                  maxWidth: 640,
                 }}
               >
                 <p
-                  className={`text-3xl font-bold`}
+                  className={`text-4xl font-[900]`}
                   style={{
                     // Use patternType for title color
                     color: PATTERN_COLORS[selectedBarangayInfo.patternType?.toLowerCase()] || PATTERN_COLORS.default
@@ -698,7 +696,7 @@ const Mapping = () => {
                       : "border-gray-400 bg-gray-100"
                   }`}>
                     <div className="flex items-center gap-3">
-                      <div className={`${
+                      {/* <div className={`${
                         selectedBarangayInfo.alert === "No recent data"
                           ? "text-gray-400"
                         : selectedBarangayInfo.patternType === "spike"
@@ -712,9 +710,9 @@ const Mapping = () => {
                         : "text-gray-400"
                       }`}>
                         <span className="inline-block w-4 h-4 rounded-full"></span>
-                      </div>
+                      </div> */}
                       <div>
-                        <p className="text-sm font-medium text-gray-600">Status</p>
+                        <p className="text-sm font-medium text-gray-600 uppercase">Status</p>
                         <p className="text-lg font-semibold">
                           {selectedBarangayInfo.alert
                             ? selectedBarangayInfo.alert.replace(
@@ -728,9 +726,9 @@ const Mapping = () => {
                   </div>
 
                   {/* Pattern and Risk Level Row */}
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="w-full flex ">
                     {/* Pattern Card */}
-                    <div className={`p-3 rounded-lg border-2 ${
+                    <div className={`w-full flex justify-center text-center p-3 rounded-lg border-2 ${
                       selectedBarangayInfo.alert === "No recent data"
                         ? "border-gray-400 bg-gray-100"
                         : selectedBarangayInfo.patternType === "spike"
@@ -744,7 +742,7 @@ const Mapping = () => {
                         : "border-gray-400 bg-gray-100"
                     }`}>
                       <div className="flex items-center gap-3">
-                        <div className={`${
+                        {/* <div className={`${
                           selectedBarangayInfo.alert === "No recent data"
                             ? "text-gray-400"
                           : selectedBarangayInfo.patternType === "spike"
@@ -758,9 +756,9 @@ const Mapping = () => {
                           : "text-gray-400"
                         }`}>
                           <span className="inline-block w-4 h-4 rounded-full"></span>
-                        </div>
+                        </div> */}
                         <div>
-                          <p className="text-sm font-medium text-gray-600">Pattern</p>
+                          <p className="text-sm font-medium text-gray-600 uppercase">Pattern</p>
                           <p className="text-lg font-semibold">
                             {selectedBarangayInfo.alert === "No recent data"
                               ? "No recent data"
@@ -787,42 +785,42 @@ const Mapping = () => {
               }}
               onCloseClick={() => setSelectedBreedingSite(null)}
             >
-              <div className="bg-white p-4 rounded-lg border-2 w-[300px] text-center text-black">
-                <p className="font-bold text-lg mb-2 text-primary">
+              <div className="bg-white p-4 rounded-lg text-primary w-[50vw] text-center">
+                <p className="font-bold text-4xl font-extrabold mb-4 text-primary">
                   {selectedBreedingSite.report_type}
                 </p>
-                <div className="mt-2 space-y-2">
-                  <p>
-                    <span className="font-medium">Barangay:</span>{" "}
+                <div className="mt-2 space-y-1 font-normal">
+                  <p className="text-xl">
+                    <span className="font-bold">Barangay:</span>{" "}
                     {selectedBreedingSite.barangay}
                   </p>
-                  <p>
-                    <span className="font-medium">Reported by:</span>{" "}
+                  <p className="text-xl">
+                    <span className="font-bold">Reported by:</span>{" "}
                     {selectedBreedingSite.user?.username || ""}
                   </p>
-                  <p>
-                    <span className="font-medium">Date:</span>{" "}
+                  <p className="text-xl">
+                    <span className="font-bold">Date:</span>{" "}
                     {new Date(selectedBreedingSite.date_and_time).toLocaleDateString()}
                   </p>
-                  <p>
-                    <span className="font-medium">Description:</span>{" "}
+                  <p className="text-xl">
+                    <span className="font-bold">Description:</span>{" "}
                     {selectedBreedingSite.description}
                   </p>
                   {selectedBreedingSite.images && selectedBreedingSite.images.length > 0 && (
-                    <div className="mt-2 flex flex-wrap gap-2">
+                    <div className="mt-2 flex  justify-center gap-2">
                       {selectedBreedingSite.images.map((img, idx) => (
                         <img
                           key={idx}
                           src={img}
                           alt={`evidence-${idx + 1}`}
-                          className="w-20 h-20 object-cover rounded border"
+                          className="w-30 h-30 object-cover rounded border"
                         />
                       ))}
                     </div>
                   )}
                 </div>
                 <button
-                  className="mt-4 px-4 py-2 bg-primary text-white rounded shadow hover:bg-primary/80"
+                  className="mt-4 px-4 py-2 bg-primary w-[40%] text-white rounded-lg shadow hover:bg-primary/80 hover:cursor-pointer font-bold"
                   onClick={() => {
                     navigate(`/mapping/${selectedBreedingSite._id}`, {
                       state: { breedingSite: selectedBreedingSite }
@@ -882,16 +880,27 @@ const Mapping = () => {
               onCloseClick={() => setSelectedIntervention(null)}
               options={{
                 pixelOffset: new window.google.maps.Size(0, -30), // Adjust as needed
-                maxWidth: 320, // Adjust as needed
               }}
             >
-              <div className="p-3 bg-white rounded-md shadow-md w-64 text-black">
-                <p className="text-lg font-bold text-primary mb-1">{selectedIntervention.interventionType}</p>
-                <p className="text-sm"><span className="font-semibold">Status:</span> {selectedIntervention.status}</p>
-                <p className="text-sm"><span className="font-semibold">Barangay:</span> {selectedIntervention.barangay}</p>
-                {selectedIntervention.address && <p className="text-sm"><span className="font-semibold">Address:</span> {selectedIntervention.address}</p>}
-                <p className="text-sm">
-                  <span className="font-semibold">Date:</span>{' '}
+              <div className="p-3 flex flex-col items-center gap-1 font-normal bg-white rounded-md shadow-md w-64 text-primary w-[50vw]">
+                <p className="text-4xl font-extrabold text-primary mb-2">{selectedIntervention.interventionType}</p>
+                <div className="text-lg flex items-center gap-2">
+                  <span className="font-bold">Status:</span>
+                  <span
+                    className="px-3 py-1 rounded-full text-white font-bold text-sm"
+                    style={{
+                      backgroundColor:
+                        INTERVENTION_STATUS_COLORS[(selectedIntervention.status || '').toLowerCase()] || INTERVENTION_STATUS_COLORS.default,
+                      boxShadow: '0 1px 4px rgba(0,0,0,0.08)',
+                    }}
+                  >
+                    {selectedIntervention.status}
+                  </span>
+                </div>
+                <p className="text-lg"><span className="font-bold">Barangay:</span> {selectedIntervention.barangay}</p>
+                {selectedIntervention.address && <p className="text-lg"><span className="font-bold">Address:</span> {selectedIntervention.address}</p>}
+                <p className="text-lg">
+                  <span className="font-bold">Date:</span>{' '}
                   {new Date(selectedIntervention.date).toLocaleString('en-US', {
                     year: 'numeric',
                     month: 'long',
@@ -901,7 +910,7 @@ const Mapping = () => {
                     hour12: true,
                   })}
                 </p>
-                <p className="text-sm"><span className="font-semibold">Personnel:</span> {selectedIntervention.personnel}</p>
+                <p className="text-lg"><span className="font-bold">Personnel:</span> {selectedIntervention.personnel}</p>
               </div>
             </InfoWindow>
           )}

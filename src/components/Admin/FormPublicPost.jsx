@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { CalendarBlank, Clock, Image, Plus, X } from "phosphor-react";
-import { useCreateAdminPostMutation } from "../../api/dengueApi";
+import { useCreateAdminPostMutation, useGetAllAdminPostsQuery } from "../../api/dengueApi";
 import { useSelector } from "react-redux"; // To get the token
 
 const FormPublicPost = () => {
@@ -13,8 +13,10 @@ const FormPublicPost = () => {
   const [imagePreviews, setImagePreviews] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [imageError, setImageError] = useState("");
 
   const [createAdminPost] = useCreateAdminPostMutation();
+  const { refetch } = useGetAllAdminPostsQuery();
   const token = useSelector((state) => state.auth.token);
 
   const postTypes = [
@@ -25,6 +27,11 @@ const FormPublicPost = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setImageError("");
+    if (images.length === 0) {
+      setImageError("At least one image is required.");
+      return;
+    }
     setIsSubmitting(true);
 
     try {
@@ -49,6 +56,7 @@ const FormPublicPost = () => {
       setImages([]);
       setImagePreviews([]);
       setTimeout(() => setSuccess(false), 3000);
+      refetch(); // Refetch admin posts after successful post
     } catch (err) {
       alert("Failed to publish post.");
       console.error(err);
@@ -173,7 +181,7 @@ const FormPublicPost = () => {
 
         <div className="flex flex-col gap-2">
           <label className="font-medium text-primary font-semibold">
-            Upload Images (Max 8)
+            Upload Images (Max 8) <span className="text-error">*</span>
           </label>
           <div className="flex flex-col gap-3">
             <label className="flex items-center justify-center gap-2 p-4 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-primary transition-colors">
@@ -193,7 +201,9 @@ const FormPublicPost = () => {
               </span>
               <Plus size={20} className="text-gray-500" />
             </label>
-
+            {imageError && (
+              <div className="text-error text-sm font-semibold mt-1">{imageError}</div>
+            )}
             {imagePreviews.length > 0 && (
               <div className="grid grid-cols-4 gap-2 mt-2">
                 {imagePreviews.map((preview, index) => (

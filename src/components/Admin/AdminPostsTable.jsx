@@ -165,9 +165,11 @@ const AdminPostsTable = () => {
     setIsSubmitting(true);
     try {
       await deleteAdminPost(deletingPost.id || deletingPost._id).unwrap();
-      setDeletingPost(null);
-      deleteDialogRef.current?.close();
-      toastSuccess("Post deleted successfully!");
+      setTimeout(() => {
+        setDeletingPost(null);
+        deleteDialogRef.current?.close();
+        toastSuccess("Post deleted successfully!");
+      }, 0);
     } catch (error) {
       console.error('Error deleting post:', error);
       toastError("Failed to delete post");
@@ -181,6 +183,10 @@ const AdminPostsTable = () => {
       <p className="text-2xl font-bold mb-4">Recent Admin Posts</p>
       {isLoading ? (
         <p>Loading...</p>
+      ) : rows.length === 0 ? (
+        <div className="h-[500px] flex items-center justify-center text-gray-500">
+          No posts to display.
+        </div>
       ) : (
         <div className="ag-theme-quartz h-[500px] w-full">
           <AgGridReact

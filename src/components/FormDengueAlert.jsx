@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useGetBarangaysQuery, useSendDengueAlertMutation } from '../api/dengueApi';
+import { useGetBarangaysQuery, useSendDengueAlertMutation, useGetPatternRecognitionResultsQuery } from '../api/dengueApi';
 import { AlertCircle, Plus, X } from 'phosphor-react';
 
 const FormDengueAlert = () => {
@@ -10,6 +10,23 @@ const FormDengueAlert = () => {
 
   const { data: barangays, isLoading } = useGetBarangaysQuery();
   const [sendAlert] = useSendDengueAlertMutation();
+  const { data: patternResultsData } = useGetPatternRecognitionResultsQuery();
+  const patternResults = patternResultsData?.data || [];
+
+  // Helper to extract barangay name without risk level
+  const getCleanBarangayName = (name) => name.replace(/\s*\(.*?\)\s*$/, '').trim();
+
+  // Helper to get pattern for a barangay
+  const getPatternForBarangay = (barangayName) => {
+    if (!patternResults) return 'No pattern';
+    const cleanName = getCleanBarangayName(barangayName);
+    const match = patternResults.find(
+      (item) => item.name?.toLowerCase().replace(/barangay /g, '').trim() === cleanName.toLowerCase().replace(/barangay /g, '').trim()
+    );
+    return match?.triggered_pattern
+      ? match.triggered_pattern.charAt(0).toUpperCase() + match.triggered_pattern.slice(1).replace('_', ' ')
+      : 'No pattern';
+  };
 
   const handleBarangayChange = (e) => {
     const options = e.target.options;
@@ -81,15 +98,18 @@ const FormDengueAlert = () => {
               onChange={handleBarangayChange}
               className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent min-h-[120px]"
             >
-              {barangays?.map((barangay) => (
-                <option 
-                  key={barangay._id} 
-                  value={barangay._id}
-                  className="p-2 hover:bg-primary/10 cursor-pointer"
-                >
-                  {barangay.name} ({barangay.risk_level})
-                </option>
-              ))}
+              {barangays?.map((barangay) => {
+                const cleanName = getCleanBarangayName(barangay.name);
+                return (
+                  <option 
+                    key={barangay._id} 
+                    value={barangay._id}
+                    className="p-2 hover:bg-primary/10 cursor-pointer"
+                  >
+                    {cleanName}
+                  </option>
+                );
+              })}
             </select>
             <div className="mt-2 flex flex-wrap gap-2">
               {selectedBarangays.map((barangayId) => {
