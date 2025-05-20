@@ -33,11 +33,13 @@ const PATTERN_COLORS = {
 };
 
 const DengueChartCard = () => {
+  console.log('[DengueChartCard DEBUG] COMPONENT RENDER');
   const [selectedBarangay, setSelectedBarangay] = useState('bahay toro');
   const [weeks, setWeeks] = useState(6);
 
   // Fetch barangays for dropdown
   const { data: barangaysData, isLoading: barangaysLoading } = useGetBarangaysQuery();
+  console.log('[DengueChartCard DEBUG] barangaysData (from getAllBarangays):', barangaysData);
   // Fetch pattern recognition results
   const { data: patternResults, isLoading: patternsLoading } = useGetPatternRecognitionResultsQuery();
 
@@ -53,14 +55,20 @@ const DengueChartCard = () => {
     }
   }, [barangaysData, selectedBarangay]);
 
-  // Determine pattern for the selected barangay
+  // Determine pattern for the selected barangay (from barangaysData)
   const selectedBarangayPattern = React.useMemo(() => {
-    if (!patternResults?.data || !selectedBarangay) return 'none';
-    const patternInfo = patternResults.data.find(
+    if (!barangaysData || !selectedBarangay) return 'none';
+    const barangay = barangaysData.find(
       item => item.name?.toLowerCase() === selectedBarangay.toLowerCase()
     );
-    return patternInfo?.triggered_pattern?.toLowerCase() || 'none';
-  }, [patternResults, selectedBarangay]);
+    // Debug logs
+    console.log('[DengueChartCard DEBUG] selectedBarangay:', selectedBarangay);
+    console.log('[DengueChartCard DEBUG] found barangay (from getAllBarangays):', barangay);
+    let pattern = barangay?.status_and_recommendation?.pattern_based?.status?.toLowerCase();
+    if (!pattern || pattern === '') pattern = 'none';
+    console.log('[DengueChartCard DEBUG] selectedBarangayPattern (from getAllBarangays):', pattern);
+    return pattern;
+  }, [barangaysData, selectedBarangay]);
 
   const isLoading = barangaysLoading || patternsLoading || trendsLoading;
 

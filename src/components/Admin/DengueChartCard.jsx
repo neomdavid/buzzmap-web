@@ -55,13 +55,20 @@ export default function DengueChartCard() {
 
   // Fetch barangays
   const { data: barangaysData, isLoading: barangaysLoading } = useGetBarangaysQuery();
-  
-  // Fetch pattern recognition results
-  const { data: patternData } = useGetPatternRecognitionResultsQuery();
-  // Get pattern for selected barangay
-  const selectedBarangayPattern = patternData?.data?.find(
-    barangay => barangay.name.toLowerCase() === selectedBarangay.toLowerCase()
-  )?.triggered_pattern?.toLowerCase() || 'none';
+  // Get pattern for selected barangay (from barangaysData)
+  const selectedBarangayPattern = React.useMemo(() => {
+    if (!barangaysData || !selectedBarangay) return 'none';
+    const barangay = barangaysData.find(
+      b => b.name?.toLowerCase() === selectedBarangay.toLowerCase()
+    );
+    // Debug logs
+    console.log('[Admin DengueChartCard DEBUG] selectedBarangay:', selectedBarangay);
+    console.log('[Admin DengueChartCard DEBUG] found barangay:', barangay);
+    let pattern = barangay?.status_and_recommendation?.pattern_based?.status?.toLowerCase();
+    if (!pattern || pattern === '') pattern = 'none';
+    console.log('[Admin DengueChartCard DEBUG] selectedBarangayPattern:', pattern);
+    return pattern;
+  }, [barangaysData, selectedBarangay]);
 
   const { data: trendsData, isLoading, error } = useGetBarangayWeeklyTrendsQuery({
     barangay_name: selectedBarangay,
