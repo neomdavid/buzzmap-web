@@ -382,6 +382,7 @@ const Analytics = () => {
           </p>
           <div className="rounded-xl shadow-sm h-140 overflow-hidden">
             {console.log("[Analytics DEBUG] Rendering DengueMap with initialFocusBarangayName:", initialBarangayNameForMap)}
+            {console.log("[Analytics DEBUG] selectedBarangay before DengueMap:", selectedBarangay)}
             <DengueMap 
               showLegends={true} 
               defaultTab="cases"
@@ -390,30 +391,56 @@ const Analytics = () => {
               searchQuery={selectedBarangay}
               activeInterventions={allInterventionsData}
               isLoadingInterventions={isLoadingAllInterventions}
+              onBarangaySelect={(barangayFeature) => {
+                console.log('[Analytics DEBUG] onBarangaySelect called from DengueMap:', barangayFeature);
+                const name = barangayFeature?.properties?.displayName || barangayFeature?.properties?.name || barangayFeature?.name;
+                setSelectedBarangay(name);
+                setInitialBarangayNameForMap(name);
+              }}
             />
           </div>
         </div>
         {/* Selected Barangay Analytics Section */}
         <div className="w-full flex flex-col shadow-sm shadow-lg p-6 py-8 rounded-lg mt-6">
           <p className="mb-4 text-base-content text-3xl font-bold">Selected Barangay Analytics</p>
+          {console.log('[Analytics DEBUG] selectedBarangay:', selectedBarangay)}
+          {console.log('[Analytics DEBUG] posts:', posts)}
+          {console.log('[Analytics DEBUG] allInterventionsData:', allInterventionsData)}
+          {console.log('[Analytics DEBUG] patternResultsData:', patternResultsData)}
           {selectedBarangay ? (
             (() => {
               // Normalize barangay name for matching
               const normalize = (name) => (name || '').toLowerCase().replace(/[^a-z0-9]/g, '');
               const selectedNorm = normalize(selectedBarangay);
+              console.log('[Analytics DEBUG] selectedNorm:', selectedNorm);
 
               // Reports analytics
               const filteredPosts = Array.isArray(posts)
-                ? posts.filter(post => normalize(post.barangay) === selectedNorm)
+                ? posts.filter(post => {
+                    const norm = normalize(post.barangay);
+                    if (norm === selectedNorm) {
+                      console.log('[Analytics DEBUG] Post matched:', post);
+                    }
+                    return norm === selectedNorm;
+                  })
                 : [];
+              console.log('[Analytics DEBUG] filteredPosts:', filteredPosts);
+              console.log('[Analytics DEBUG] Statuses of filteredPosts:', filteredPosts.map(p => p.status));
               const validatedCount = filteredPosts.filter(p => p.status === 'Validated').length;
               const pendingCount = filteredPosts.filter(p => p.status === 'Pending').length;
               const rejectedCount = filteredPosts.filter(p => p.status === 'Rejected').length;
 
               // Interventions analytics
               const filteredInterventions = Array.isArray(allInterventionsData)
-                ? allInterventionsData.filter(i => normalize(i.barangay) === selectedNorm)
+                ? allInterventionsData.filter(i => {
+                    const norm = normalize(i.barangay);
+                    if (norm === selectedNorm) {
+                      console.log('[Analytics DEBUG] Intervention matched:', i);
+                    }
+                    return norm === selectedNorm;
+                  })
                 : [];
+              console.log('[Analytics DEBUG] filteredInterventions:', filteredInterventions);
               const totalInterventions = filteredInterventions.length;
               const scheduledInterventions = filteredInterventions.filter(i => (i.status || '').toLowerCase() === 'scheduled').length;
               const ongoingInterventions = filteredInterventions.filter(i => (i.status || '').toLowerCase() === 'ongoing').length;
@@ -423,6 +450,7 @@ const Analytics = () => {
               const patternInfo = patternResultsData?.data?.find(
                 item => normalize(item.name) === selectedNorm
               );
+              console.log('[Analytics DEBUG] patternInfo:', patternInfo);
 
               // Bar chart data for reports
               const reportsBarData = {
@@ -501,7 +529,7 @@ const Analytics = () => {
                   <div className="bg-white rounded-xl shadow p-5 flex flex-col gap-2 border border-primary/20">
                     <p className="font-bold text-lg text-primary mb-2">Reports</p>
                     <div className="h-48">
-                      {filteredPosts.length === 0 || (validatedCount === 0 && pendingCount === 0 && rejectedCount === 0) ? (
+                      {filteredPosts.length === 0 ? (
                         <div className="flex items-center justify-center h-full text-gray-400">No data available</div>
                       ) : (
                         <Bar data={reportsBarData} options={reportsBarOptions} />

@@ -75,7 +75,8 @@ const Mapping = () => {
   const [qcPolygonPaths, setQcPolygonPaths] = useState([]);
   const [barangayData, setBarangayData] = useState(null);
   const [isFullScreen, setIsFullScreen] = useState(false);
-  const [selectedBarangayInfo, setSelectedBarangayInfo] = useState(null);
+  const [selectedBarangayFeature, setSelectedBarangayFeature] = useState(null);
+  const [selectedBarangayCenter, setSelectedBarangayCenter] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -259,13 +260,8 @@ const Mapping = () => {
       if (lat && lng && !isNaN(lat) && !isNaN(lng)) {
         mapRef.current?.panTo({ lat, lng });
         mapRef.current?.setZoom(15);
-        setSelectedBarangayInfo({
-          name: matchingBarangay.properties.name,
-          position: { lat, lng },
-          riskLevel: matchingBarangay.properties.riskLevel,
-          patternType: matchingBarangay.properties.patternType,
-          alert: matchingBarangay.properties.alert
-        });
+        setSelectedBarangayFeature(matchingBarangay);
+        setSelectedBarangayCenter({ lat, lng });
       }
     }
   };
@@ -287,13 +283,8 @@ const Mapping = () => {
           if (x0 !== xn || y0 !== yn) ring.push(ring[0]);
           const poly = turf.polygon([ring]);
           if (turf.booleanPointInPolygon(pt, poly)) {
-            setSelectedBarangayInfo({
-              name: f.properties.name,
-              position: coords,
-              riskLevel: f.properties.riskLevel,
-              patternType: f.properties.patternType,
-              alert: f.properties.alert
-            });
+            setSelectedBarangayFeature(f);
+            setSelectedBarangayCenter({ lat: coords.lat, lng: coords.lng });
             return true;
           }
         }
@@ -474,7 +465,8 @@ const Mapping = () => {
           zoom={13}
           onLoad={(map) => (mapRef.current = map)}
           onClick={() => {
-            setSelectedBarangayInfo(null);
+            setSelectedBarangayFeature(null);
+            setSelectedBarangayCenter(null);
             setSelectedBarangayId(null);
           }}
           options={{
@@ -515,17 +507,6 @@ const Mapping = () => {
             ]
           }}
         >
-          <Polygon
-            paths={qcPolygonPaths}
-            options={{
-              strokeColor: "#FF0000",
-              strokeOpacity: 0.8,
-              strokeWeight: 2,
-              fillColor: "#FF0000",
-              fillOpacity: 0.05,
-            }}
-          />
-
           <Rectangle
             bounds={QC_BOUNDS}
             options={{
@@ -545,21 +526,18 @@ const Mapping = () => {
                 ? geometry.coordinates
                 : [];
 
+            const isSelected = selectedBarangayFeature && selectedBarangayFeature.properties?.name === feature.properties?.name;
             return coordsArray.map((polygonCoords, i) => {
               const path = polygonCoords[0].map(([lng, lat]) => ({
                 lat,
                 lng,
               }));
-              const isSelected = selectedBarangayId === `${index}-${i}`;
-              // Use patternType for color determination
               const patternColor = PATTERN_COLORS[feature.properties.patternType?.toLowerCase()] || PATTERN_COLORS.default;
-              
               return (
                 <Polygon
                   key={`${index}-${i}`}
                   paths={path}
                   options={{
-                    // Use patternColor for stroke and fill
                     strokeColor: isSelected ? getDarkerColor(patternColor) : "#333",
                     strokeOpacity: isSelected ? 1 : 0.6,
                     strokeWeight: isSelected ? 3 : 1,
@@ -568,30 +546,14 @@ const Mapping = () => {
                     clickable: true,
                   }}
                   onClick={(e) => {
-                    // Stop event propagation to prevent the map click handler from firing
                     e.stop();
-                    
+                    setSelectedBarangayFeature(feature);
                     const center = turf.center(feature.geometry);
                     const { coordinates } = center.geometry;
                     const [lng, lat] = coordinates;
-
-                    if (!lat || !lng || isNaN(lat) || isNaN(lng)) {
-                      console.error('Invalid coordinates:', { lat, lng });
-                      return;
-                    }
-
-                    // Set the selected barangay ID
+                    setSelectedBarangayCenter({ lat, lng });
                     setSelectedBarangayId(`${index}-${i}`);
-
-                    setSelectedBarangayInfo({
-                      name: feature.properties.name || 'Unknown Barangay',
-                      position: { lat, lng },
-                      riskLevel: feature.properties.riskLevel || 'low',
-                      patternType: feature.properties.patternType || 'none',
-                      alert: feature.properties.alert || 'No recent data'
-                    });
-
-                    if (mapRef.current) {
+                    if (mapRef.current && lat && lng && !isNaN(lat) && !isNaN(lng)) {
                       mapRef.current.panTo({ lat, lng });
                     }
                   }}
@@ -653,27 +615,19 @@ const Mapping = () => {
             </MarkerClusterer>
           )}
 
-          {selectedBarangayInfo && (
+          {/* Render InfoWindow for selected barangay feature (DengueMap style) */}
+          {selectedBarangayFeature && selectedBarangayCenter && (
             (() => {
-              // Merge barangay info from barangaysList only
-              const normalizedName = normalizeBarangayName(selectedBarangayInfo.name);
-              const canonicalBarangay = barangaysList?.find(
-                b => normalizeBarangayName(b.name) === normalizedName
-              );
-              // Use displayName or name from barangaysList for title
-              const displayName = canonicalBarangay?.displayName || canonicalBarangay?.name || selectedBarangayInfo.name;
-              // Use breeding site report count and alert from barangaysList report_based
-              const reportBased = canonicalBarangay?.status_and_recommendation?.report_based;
-              const breedingSiteCount = reportBased?.count ?? 0;
-              const alert = reportBased?.alert || 'No recent data';
-              // Use patternType from barangaysList
-              const patternType = canonicalBarangay?.triggered_pattern?.toLowerCase() || 'none';
-              // Log breeding site count for debugging
-              console.log('InfoWindow breeding site count:', { displayName, breedingSiteCount, alert, patternType, canonicalBarangay });
+              const feature = selectedBarangayFeature;
+              const patternType = feature.properties.patternType?.toLowerCase() || 'none';
+              const displayName = feature.properties.displayName || feature.properties.name || 'Unknown Barangay';
               return (
                 <InfoWindow
-                  position={selectedBarangayInfo.position}
-                  onCloseClick={() => setSelectedBarangayInfo(null)}
+                  position={selectedBarangayCenter}
+                  onCloseClick={() => {
+                    setSelectedBarangayFeature(null);
+                    setSelectedBarangayCenter(null);
+                  }}
                   options={{
                     pixelOffset: new window.google.maps.Size(0, -30),
                     disableAutoPan: false
@@ -684,41 +638,8 @@ const Mapping = () => {
                       Barangay {displayName}
                     </p>
                     <div className="mt-3 flex flex-col gap-3 text-black">
-                      {/* Pattern and Risk Level Row - now at the top */}
-                      <div className="w-full flex ">
-                        {/* Pattern Card */}
-                        <div className={`w-full flex justify-center text-center p-3 rounded-lg border-2 ${
-                          breedingSiteCount === 0 || alert === 'No recent data' || alert === 'None'
-                            ? 'border-gray-400 bg-gray-100'
-                            : patternType === 'spike'
-                            ? 'border-error bg-error/5'
-                            : patternType === 'gradual_rise'
-                            ? 'border-warning bg-warning/5'
-                            : patternType === 'decline'
-                            ? 'border-success bg-success/5'
-                            : patternType === 'stability'
-                            ? 'border-info bg-info/5'
-                            : 'border-gray-400 bg-gray-100'
-                        }`}>
-                          <div className="flex items-center gap-3">
-                            <div>
-                              <p className="text-sm font-medium text-gray-600 uppercase">Pattern</p>
-                              <p className="text-lg font-semibold">
-                                {breedingSiteCount === 0 || alert === 'No recent data' || alert === 'None'
-                                  ? 'No recent data'
-                                  : patternType === 'none'
-                                  ? 'No pattern detected'
-                                  : patternType.charAt(0).toUpperCase() + patternType.slice(1).replace('_', ' ')}
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                      {/* Breeding Site Reports Card - now below */}
                       <div className={`p-3 rounded-lg border-2 ${
-                        breedingSiteCount === 0 || alert === 'No recent data' || alert === 'None'
-                          ? 'border-gray-400 bg-gray-100'
-                          : patternType === 'spike'
+                        patternType === 'spike'
                           ? 'border-error bg-error/5'
                           : patternType === 'gradual_rise'
                           ? 'border-warning bg-warning/5'
@@ -728,15 +649,19 @@ const Mapping = () => {
                           ? 'border-info bg-info/5'
                           : 'border-gray-400 bg-gray-100'
                       }`}>
-                        <div className="flex items-center justify-center gap-3">
-                          <div>
-                            <p className="text-sm font-medium text-gray-600 uppercase">Breeding Site Reports</p>
-                            <p className="text-lg font-semibold">
-                              {breedingSiteCount === 0 || alert === 'No recent data' || alert === 'None'
-                                ? 'No breeding site reports.'
-                                : alert}
-                            </p>
-                          </div>
+                        <div>
+                          <p className="text-sm font-medium text-gray-600 uppercase">Pattern</p>
+                          <p className="text-lg font-semibold">
+                            {patternType === 'none'
+                              ? 'No pattern detected'
+                              : patternType.charAt(0).toUpperCase() + patternType.slice(1).replace('_', ' ')}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="p-3 rounded-lg border-2 border-primary/30 bg-primary/5">
+                        <div>
+                          <p className="text-sm font-medium text-gray-600 uppercase">Alert</p>
+                          <p className="text-lg font-semibold">{feature.properties.alert || 'No recent data'}</p>
                         </div>
                       </div>
                     </div>

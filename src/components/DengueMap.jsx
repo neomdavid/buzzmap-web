@@ -81,6 +81,18 @@ const getBarangayName = (feature) => {
   return feature.properties?.ref || feature.id || "Unknown";
 };
 
+// Normalization function to match barangay names, ignoring 'sr.', 'jr.', etc.
+const normalizeBarangayName = (name) => {
+  if (!name) return '';
+  return name
+    .toLowerCase()
+    .replace(/\bsr\.?\b/g, '') // Remove sr. or sr
+    .replace(/\bjr\.?\b/g, '') // Remove jr. or jr
+    .replace(/[.\-']/g, '')    // Remove periods, hyphens, apostrophes
+    .replace(/\s+/g, ' ')      // Normalize multiple spaces to single space
+    .trim();
+};
+
 const DengueMap = ({
   height = "100%",
   zoom = 12,
@@ -197,14 +209,14 @@ const DengueMap = ({
       ...geoData,
       features: geoData.features.map((f) => {
         const barangayName = getBarangayName(f);
-        const normalizedBarangayName = barangayName.toLowerCase().replace(/[^a-z0-9]/g, "");
+        const normalizedBarangayName = normalizeBarangayName(barangayName);
         let foundPatternInfo = patternResults.find((item) => {
-          const normalizedItemName = item.name?.toLowerCase().replace(/[^a-z0-9]/g, "");
+          const normalizedItemName = normalizeBarangayName(item.name);
           return normalizedItemName === normalizedBarangayName;
         });
         if (!foundPatternInfo) {
          foundPatternInfo = patternResults.find((item) => { // Corrected variable name
-            const normalizedItemName = item.name?.toLowerCase().replace("barangay", "").replace(/[^a-z0-9]/g, "").trim();
+            const normalizedItemName = normalizeBarangayName(item.name?.replace("barangay", ""));
             return normalizedItemName === normalizedBarangayName;
           });
         }
