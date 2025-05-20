@@ -86,6 +86,20 @@ export default function DengueChartCard() {
   };
   const lineColor = PATTERN_COLORS[selectedBarangayPattern] || PATTERN_COLORS.default;
 
+  // Helper to format date range
+  function formatDateRange(dateRange) {
+    if (!Array.isArray(dateRange) || dateRange.length !== 2) return '';
+    const [start, end] = dateRange;
+    const startDate = new Date(start);
+    const endDate = new Date(end);
+    // Format as 'MMM D - MMM D' or 'MMM D - D' if same month
+    const options = { month: 'short', day: 'numeric' };
+    if (startDate.getMonth() === endDate.getMonth()) {
+      return `${startDate.toLocaleDateString(undefined, options)} - ${endDate.getDate()}`;
+    }
+    return `${startDate.toLocaleDateString(undefined, options)} - ${endDate.toLocaleDateString(undefined, options)}`;
+  }
+
   // Transform the API data to match the chart format (new API structure)
   const chartData = useMemo(() => {
     if (!trendsData?.data?.weekly_counts) return [];
@@ -95,20 +109,21 @@ export default function DengueChartCard() {
     // Transform complete weeks
     const weekEntries = Object.entries(completeWeeks)
       .map(([week, info]) => ({
-        week,
+        week: formatDateRange(info.date_range),
         cases: info.count,
         dateRange: info.date_range,
       }))
       .sort((a, b) => {
-        const numA = parseInt(a.week.replace(/\D/g, ''));
-        const numB = parseInt(b.week.replace(/\D/g, ''));
-        return numA - numB;
+        // Sort by the start date of the range
+        const dateA = new Date(a.dateRange[0]);
+        const dateB = new Date(b.dateRange[0]);
+        return dateA - dateB;
       });
 
     // Optionally add current week
     if (currentWeek) {
       weekEntries.push({
-        week: 'Current Week',
+        week: formatDateRange(currentWeek.date_range),
         cases: currentWeek.count,
         dateRange: currentWeek.date_range,
       });
