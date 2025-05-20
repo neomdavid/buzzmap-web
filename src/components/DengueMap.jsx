@@ -61,6 +61,23 @@ const BREEDING_SITE_TYPE_COLORS = {
   "Infestation": "#e11d48",        // red
 };
 
+// Intervention type color mapping
+const INTERVENTION_TYPE_COLORS = {
+  "Fogging": "#8b5cf6", // purple
+  "Ovicidal-Larvicidal Trapping": "#f59e0b", // amber
+  "Clean-up Drive": "#22c55e", // green
+  "Education Campaign": "#3b82f6", // blue
+  "default": "#6b7280" // gray
+};
+
+// Add this constant near the top
+const ALL_INTERVENTION_TYPES = [
+  "Fogging",
+  "Ovicidal-Larvicidal Trapping",
+  "Clean-up Drive",
+  "Education Campaign"
+];
+
 // Helper function to extract barangay name from GeoJSON feature
 const getBarangayName = (feature) => {
   // Case 1: Direct name in properties
@@ -886,7 +903,18 @@ const DengueMap = ({
                 }}
               >
                 <div className="p-3 flex flex-col items-center gap-1 font-normal bg-white rounded-md shadow-md w-64 text-primary w-[50vw]">
-                  <p className="text-4xl font-extrabold text-primary mb-2">{selectedIntervention.interventionType}</p>
+                  <p className="text-4xl font-extrabold text-primary mb-2">
+                    {selectedIntervention.interventionType === 'All' ? (
+                      <span className="relative group cursor-pointer">
+                        All
+                        <span className="absolute left-1/2 -translate-x-1/2 mt-2 w-max bg-gray-800 text-white text-sm rounded px-2 py-1 opacity-0 group-hover:opacity-100 transition-opacity z-50 whitespace-nowrap">
+                          {ALL_INTERVENTION_TYPES.join(', ')}
+                        </span>
+                      </span>
+                    ) : (
+                      selectedIntervention.interventionType
+                    )}
+                  </p>
                   <div className="text-lg flex items-center gap-2">
                     <span className="font-bold">Status:</span>
                     <span

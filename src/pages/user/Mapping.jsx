@@ -77,6 +77,14 @@ const INTERVENTION_STATUS_COLORS = {
   // completed: "#10b981", // Emerald-500 
 };
 
+const INTERVENTION_TYPE_COLORS = {
+  "Fogging": "#8b5cf6", // purple
+  "Ovicidal-Larvicidal Trapping": "#f59e0b", // amber
+  "Clean-up Drive": "#22c55e", // green
+  "Education Campaign": "#3b82f6", // blue
+  "default": "#6b7280" // gray
+};
+
 const Mapping = () => {
   const [currentPosition, setCurrentPosition] = useState(null);
   const [qcPolygonPaths, setQcPolygonPaths] = useState([]);

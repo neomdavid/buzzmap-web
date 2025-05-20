@@ -3,6 +3,7 @@ import { IconX, IconCheck } from "@tabler/icons-react";
 import { useCreateInterventionMutation } from "../../api/dengueApi"; // Import RTK query hook for create intervention
 import InterventionLocationPicker from "./InterventionLocationPicker"; // Import the new component
 import * as turf from '@turf/turf'; // Import turf for calculations
+import dayjs from "dayjs";
 
 // Default map center (Quezon City Hall)
 const defaultCenter = {
@@ -42,6 +43,25 @@ const AddInterventionModal = ({ isOpen, onClose }) => {
 
   // RTK Query mutation hook for creating an intervention
   const [createIntervention] = useCreateInterventionMutation();
+
+  // Helper to get allowed statuses based on date
+  const getAllowedStatuses = (dateStr) => {
+    if (!dateStr) return ["Scheduled", "Ongoing", "Complete"];
+    const today = dayjs().startOf('day');
+    const selected = dayjs(dateStr).startOf('day');
+    if (selected.isBefore(today)) return ["Complete"];
+    if (selected.isSame(today)) return ["Ongoing", "Complete"];
+    return ["Scheduled"];
+  };
+  const allowedStatuses = getAllowedStatuses(formData.date);
+
+  // If the current status is not allowed, reset it
+  useEffect(() => {
+    if (!allowedStatuses.includes(formData.status)) {
+      setFormData((prev) => ({ ...prev, status: allowedStatuses[0] }));
+    }
+    // eslint-disable-next-line
+  }, [formData.date]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -329,12 +349,11 @@ const AddInterventionModal = ({ isOpen, onClose }) => {
                         required
                       >
                         <option value="">Select Type</option>
+                        <option value="All">All</option>
                         <option value="Fogging">Fogging</option>
-                        <option value="Larviciding">Larviciding</option>
+                        <option value="Ovicidal-Larvicidal Trapping">Ovicidal-Larvicidal Trapping</option>
                         <option value="Clean-up Drive">Clean-up Drive</option>
-                        <option value="Education Campaign">
-                          Education Campaign
-                        </option>
+                        <option value="Education Campaign">Education Campaign</option>
                       </select>
                     </div>
 
@@ -381,9 +400,9 @@ const AddInterventionModal = ({ isOpen, onClose }) => {
                         className="select border-0 rounded-lg w-full bg-base-200 text-lg py-2 cursor-pointer hover:bg-base-300 transition-all"
                         required
                       >
-                        <option value="Scheduled">Scheduled</option>
-                        <option value="Ongoing">Ongoing</option>
-                        <option value="Complete">Complete</option>
+                        {allowedStatuses.map((status) => (
+                          <option key={status} value={status}>{status}</option>
+                        ))}
                       </select>
                     </div>
                   </div>

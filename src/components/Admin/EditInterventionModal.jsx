@@ -45,8 +45,9 @@ const EditInterventionModal = ({ intervention, onClose, onSave }) => {
                 className="select select-bordered w-full"
                 required
               >
+                <option value="All">All</option>
                 <option value="Fogging">Fogging</option>
-                <option value="Larviciding">Larviciding</option>
+                <option value="Ovicidal-Larvicidal Trapping">Ovicidal-Larvicidal Trapping</option>
                 <option value="Clean-up Drive">Clean-up Drive</option>
                 <option value="Education Campaign">Education Campaign</option>
               </select>
