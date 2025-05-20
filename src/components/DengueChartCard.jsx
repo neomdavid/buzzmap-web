@@ -75,18 +75,41 @@ const DengueChartCard = () => {
   // Get the correct color for the line based on the pattern
   const lineColor = PATTERN_COLORS[selectedBarangayPattern] || PATTERN_COLORS.default;
 
-  const chartData = {
-    labels: trendsData?.data?.weekly_counts ? Object.keys(trendsData.data.weekly_counts) : [],
-    datasets: [
-      {
-        label: 'Dengue Cases',
-        data: trendsData?.data?.weekly_counts ? Object.values(trendsData.data.weekly_counts) : [],
-        borderColor: lineColor, // Use dynamic line color
-        tension: 0.1,
-        fill: false
-      }
-    ]
-  };
+  // Transform the API data to match the chart format (new API structure)
+  const chartData = React.useMemo(() => {
+    if (!trendsData?.data?.weekly_counts) return [];
+    const completeWeeks = trendsData.data.weekly_counts.complete_weeks || {};
+    const currentWeek = trendsData.data.weekly_counts.current_week;
+
+    // Transform complete weeks
+    const weekEntries = Object.entries(completeWeeks)
+      .map(([week, info]) => ({
+        week,
+        cases: info.count,
+        dateRange: info.date_range,
+      }))
+      .sort((a, b) => {
+        // Sort by week number
+        const numA = parseInt(a.week.replace(/\D/g, ''));
+        const numB = parseInt(b.week.replace(/\D/g, ''));
+        return numA - numB;
+      });
+
+    // Optionally add current week
+    if (currentWeek) {
+      weekEntries.push({
+        week: 'Current Week',
+        cases: currentWeek.count,
+        dateRange: currentWeek.date_range,
+      });
+    }
+
+    return weekEntries;
+  }, [trendsData]);
+
+  // Update chart labels and data
+  const chartLabels = chartData.map(d => d.week);
+  const chartCases = chartData.map(d => d.cases);
 
   const options = {
     responsive: true,
@@ -114,6 +137,19 @@ const DengueChartCard = () => {
         }
       }
     }
+  };
+
+  const chartJsData = {
+    labels: chartLabels,
+    datasets: [
+      {
+        label: 'Dengue Cases',
+        data: chartCases,
+        borderColor: lineColor, // Use dynamic line color
+        tension: 0.1,
+        fill: false
+      }
+    ]
   };
 
   if (isLoading) {
@@ -175,7 +211,7 @@ const DengueChartCard = () => {
         </p>
       </div>
       <div className="h-[300px]">
-        <Line data={chartData} options={options} />
+        <Line data={chartJsData} options={options} />
       </div>
     </div>
   );

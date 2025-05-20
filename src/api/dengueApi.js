@@ -16,9 +16,35 @@ const customBaseQuery = fetchBaseQuery({
 // Wrap the base query with error handling
 const baseQueryWithErrorHandling = async (args, api, extraOptions) => {
   try {
+    console.log('[DEBUG] API Request:', {
+      url: args.url,
+      method: args.method || 'GET',
+      body: args.body
+    });
+    
     const result = await customBaseQuery(args, api, extraOptions);
+    
+    console.log('[DEBUG] API Response:', {
+      status: result.status,
+      data: result.data,
+      error: result.error
+    });
+
+    if (result.error) {
+      console.error('[DEBUG] API Error:', {
+        status: result.error.status,
+        data: result.error.data,
+        originalError: result.error
+      });
+    }
+
     return result;
   } catch (error) {
+    console.error('[DEBUG] API Exception:', {
+      message: error.message,
+      stack: error.stack,
+      originalError: error
+    });
     return { error: { status: 'CUSTOM_ERROR', data: error.message } };
   }
 };
@@ -247,7 +273,10 @@ export const dengueApi = createApi({
 
     // Analytics Endpoints
     getAnalytics: builder.query({
-      query: () => "analytics/interventions",
+      query: () => {
+        console.log('[DEBUG] Fetching analytics data...');
+        return "analytics/interventions";
+      },
       providesTags: ["Analytics"],
     }),
 
@@ -425,14 +454,17 @@ export const dengueApi = createApi({
 
     // Add this to your endpoints object in dengueApi
     getBarangayWeeklyTrends: builder.query({
-      query: ({ barangay_name, number_of_weeks }) => ({
-        url: 'analytics/get-barangay-weekly-trends',
-        method: 'POST',
-        body: {
-          barangay_name,
-          number_of_weeks
-        }
-      }),
+      query: ({ barangay_name, number_of_weeks }) => {
+        console.log('[DEBUG] Fetching weekly trends for:', { barangay_name, number_of_weeks });
+        return {
+          url: 'analytics/get-barangay-weekly-trends',
+          method: 'POST',
+          body: {
+            barangay_name,
+            number_of_weeks
+          }
+        };
+      },
       providesTags: ['Analytics']
     }),
 
@@ -559,6 +591,14 @@ export const dengueApi = createApi({
     getComments: builder.query({
       query: (reportId) => `reports/${reportId}/comments`,
     }),
+
+    // Test endpoint to verify API connectivity
+    testApiConnection: builder.query({
+      query: () => ({
+        url: 'health',
+        method: 'GET',
+      }),
+    }),
   }),
 });
 
@@ -655,4 +695,7 @@ export const {
   useDownvoteReportMutation,
   useRemoveVoteReportMutation,
   useAddCommentMutation,
+
+  // Add the test endpoint hook
+  useTestApiConnectionQuery,
 } = dengueApi;

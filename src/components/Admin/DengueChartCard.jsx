@@ -1,4 +1,4 @@
-import React, { PureComponent, useState } from "react";
+import React, { PureComponent, useState, useMemo } from "react";
 import {
   LineChart,
   Line,
@@ -9,7 +9,7 @@ import {
   Legend,
   ResponsiveContainer,
 } from "recharts";
-import { useGetBarangayWeeklyTrendsQuery, useGetBarangaysQuery, useGetPatternRecognitionResultsQuery } from "../../api/dengueApi";
+import { useGetBarangayWeeklyTrendsQuery, useGetBarangaysQuery } from "../../api/dengueApi";
 
 class CustomizedLabel extends PureComponent {
   render() {
@@ -56,7 +56,7 @@ export default function DengueChartCard() {
   // Fetch barangays
   const { data: barangaysData, isLoading: barangaysLoading } = useGetBarangaysQuery();
   // Get pattern for selected barangay (from barangaysData)
-  const selectedBarangayPattern = React.useMemo(() => {
+  const selectedBarangayPattern = useMemo(() => {
     if (!barangaysData || !selectedBarangay) return 'none';
     const barangay = barangaysData.find(
       b => b.name?.toLowerCase() === selectedBarangay.toLowerCase()
@@ -86,23 +86,42 @@ export default function DengueChartCard() {
   };
   const lineColor = PATTERN_COLORS[selectedBarangayPattern] || PATTERN_COLORS.default;
 
-  // Transform the API data to match the chart format
-  const chartData = trendsData?.data?.weekly_counts 
-    ? Object.entries(trendsData.data.weekly_counts)
-        .map(([week, cases]) => ({
-          month: week,
-          cases: cases
-        }))
-        .sort((a, b) => {
-          // Sort by week number
-          const weekA = parseInt(a.month.split(' ')[1]);
-          const weekB = parseInt(b.month.split(' ')[1]);
-          return weekA - weekB;
-        })
-    : [];
+  // Transform the API data to match the chart format (new API structure)
+  const chartData = useMemo(() => {
+    if (!trendsData?.data?.weekly_counts) return [];
+    const completeWeeks = trendsData.data.weekly_counts.complete_weeks || {};
+    const currentWeek = trendsData.data.weekly_counts.current_week;
+
+    // Transform complete weeks
+    const weekEntries = Object.entries(completeWeeks)
+      .map(([week, info]) => ({
+        week,
+        cases: info.count,
+        dateRange: info.date_range,
+      }))
+      .sort((a, b) => {
+        const numA = parseInt(a.week.replace(/\D/g, ''));
+        const numB = parseInt(b.week.replace(/\D/g, ''));
+        return numA - numB;
+      });
+
+    // Optionally add current week
+    if (currentWeek) {
+      weekEntries.push({
+        week: 'Current Week',
+        cases: currentWeek.count,
+        dateRange: currentWeek.date_range,
+      });
+    }
+
+    return weekEntries;
+  }, [trendsData]);
+
+  const chartLabels = chartData.map(d => d.week);
+  const chartCases = chartData.map(d => d.cases);
 
   // Find the max cases for the current chartData (for consistent Y axis)
-  const maxCases = Math.max(5, ...chartData.map(d => d.cases || 0));
+  const maxCases = Math.max(5, ...chartCases);
 
   console.log('Transformed Chart Data:', chartData);
 
@@ -172,7 +191,7 @@ export default function DengueChartCard() {
         >
           <CartesianGrid strokeDasharray="0 0" vertical={false} />
           <XAxis
-            dataKey="month"
+            dataKey="week"
             height={60}
             tick={<CustomizedAxisTick />}
             stroke="#fff"
@@ -183,6 +202,7 @@ export default function DengueChartCard() {
             stroke="#fff"
             tick={{ fill: "#fff" }}
             allowDecimals={false}
+            domain={[0, maxCases]}
           />
           <Tooltip
             contentStyle={{

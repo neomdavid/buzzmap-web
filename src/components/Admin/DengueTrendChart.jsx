@@ -12,7 +12,7 @@ import {
 } from "recharts";
 import { ChartContainer } from "../ui/chart";
 import { useGetBarangayWeeklyTrendsQuery, useGetBarangaysQuery, useGetPatternRecognitionResultsQuery } from "../../api/dengueApi";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 
 const getPatternColor = (patternType) => {
   // Convert pattern type to lowercase for case-insensitive comparison
@@ -68,22 +68,59 @@ export default function DengueTrendChart({ selectedBarangay, onBarangayChange })
   });
 
   // Transform the API data to match the chart format
-  const chartData = trendsData?.data?.weekly_counts 
-    ? Object.entries(trendsData.data.weekly_counts)
-        .map(([week, cases]) => ({
-          week: week,
-          cases: cases,
+  const chartData = useMemo(() => {
+    try {
+      if (!trendsData?.data?.weekly_counts) {
+        console.log('[DEBUG] No weekly counts data available');
+        return [];
+      }
+
+      console.log('[DEBUG] Raw weekly counts data:', trendsData.data.weekly_counts);
+
+      const completeWeeks = trendsData.data.weekly_counts.complete_weeks || {};
+      const currentWeek = trendsData.data.weekly_counts.current_week;
+
+      // Transform complete weeks
+      const weekEntries = Object.entries(completeWeeks)
+        .map(([week, info]) => ({
+          week,
+          cases: info.count,
+          dateRange: info.date_range,
           patternType: selectedBarangayPattern
         }))
         .sort((a, b) => {
-          const weekA = parseInt(a.week.split(' ')[1]);
-          const weekB = parseInt(b.week.split(' ')[1]);
-          return weekA - weekB;
-        })
-    : [];
+          const numA = parseInt(a.week.replace(/\D/g, ''));
+          const numB = parseInt(b.week.replace(/\D/g, ''));
+          return numA - numB;
+        });
+
+      // Optionally add current week
+      if (currentWeek) {
+        weekEntries.push({
+          week: 'Current Week',
+          cases: currentWeek.count,
+          dateRange: currentWeek.date_range,
+          patternType: selectedBarangayPattern
+        });
+      }
+
+      console.log('[DEBUG] Transformed chart data:', weekEntries);
+      return weekEntries;
+    } catch (error) {
+      console.error('[DEBUG] Error transforming chart data:', error);
+      return [];
+    }
+  }, [trendsData, selectedBarangayPattern]);
 
   // Find the max cases for the current chartData (for consistent Y axis)
-  const maxCases = Math.max(5, ...chartData.map(d => d.cases || 0));
+  const maxCases = useMemo(() => {
+    try {
+      return Math.max(5, ...chartData.map(d => d.cases || 0));
+    } catch (error) {
+      console.error('[DEBUG] Error calculating max cases:', error);
+      return 5;
+    }
+  }, [chartData]);
 
   if (isLoading || barangaysLoading) {
     return (
@@ -94,9 +131,18 @@ export default function DengueTrendChart({ selectedBarangay, onBarangayChange })
   }
 
   if (error) {
+    console.error('[DEBUG] Chart error:', error);
     return (
       <div className="flex flex-col p-5 gap-4">
-        <p className="text-error">Error loading chart data. Please try again later.</p>
+        <p className="text-error">Error loading chart data: {error.message || 'Unknown error'}</p>
+      </div>
+    );
+  }
+
+  if (!chartData || chartData.length === 0) {
+    return (
+      <div className="flex flex-col p-5 gap-4">
+        <p className="text-warning">No data available for the selected period</p>
       </div>
     );
   }
@@ -148,7 +194,7 @@ export default function DengueTrendChart({ selectedBarangay, onBarangayChange })
         </div>
       </div>
       <ChartContainer className="h-full w-full flex flex-col gap-2">
-        <ResponsiveContainer width="100%" height="100%">
+        <ResponsiveContainer width="100%" height={400}>
           <LineChart
             data={chartData}
             margin={{ left: -38, top: 10, right: 4, bottom: 5 }}
@@ -163,6 +209,7 @@ export default function DengueTrendChart({ selectedBarangay, onBarangayChange })
               tickLine={false}
               tick={{ fontSize: 11, fontFamily: "Inter", fill: "#000000" }}
               allowDecimals={false}
+              domain={[0, maxCases]}
             />
             <Tooltip />
             <Legend 

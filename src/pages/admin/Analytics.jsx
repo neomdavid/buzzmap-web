@@ -359,17 +359,27 @@ const Analytics = () => {
             Barangay Dengue Risk and Case Density Map
           </p>
           <div className="rounded-xl shadow-sm h-140 overflow-hidden">
-            <DengueMap 
-              showLegends={true} 
-              defaultTab="cases"
-              key={dataVersion}
-              initialFocusBarangayName={initialBarangayNameForMap}
-              searchQuery={selectedBarangay}
-              activeInterventions={allInterventionsData}
-              isLoadingInterventions={isLoadingAllInterventions}
-              barangaysList={barangaysList}
-              onBarangaySelect={handleBarangaySelect}
-            />
+            {isLoadingBarangays ? (
+              <div className="flex items-center justify-center h-full">
+                <span className="loading loading-spinner loading-lg text-primary"></span>
+              </div>
+            ) : !barangaysList ? (
+              <div className="flex items-center justify-center h-full text-error">
+                Error loading barangay data
+              </div>
+            ) : (
+              <DengueMap 
+                showLegends={true} 
+                defaultTab="cases"
+                key={dataVersion}
+                initialFocusBarangayName={initialBarangayNameForMap}
+                searchQuery={selectedBarangay}
+                activeInterventions={allInterventionsData}
+                isLoadingInterventions={isLoadingAllInterventions}
+                barangaysList={barangaysList}
+                onBarangaySelect={handleBarangaySelect}
+              />
+            )}
           </div>
         </div>
         {/* Selected Barangay Analytics Section */}
