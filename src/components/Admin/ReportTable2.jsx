@@ -197,23 +197,28 @@ function ReportTable2({ posts, isActionable = true, onlyRecent = false }) {
   }, [undoState]);
 
   // Handler for verify
-  const handleVerify = async (row) => {
-    const timestamp = Date.now();
-    setUndoState((prev) => ({
-      ...prev,
-      [row.id]: { prevStatus: row.status, newStatus: "Validated", timestamp },
-    }));
-    await validatePost({ id: row.id, status: "Validated" });
+  const handleVerify = (row) => {
+    setSelectedReport(row);
+    setSelectedReportType("verify");
+    setIsModalOpen(true);
   };
 
   // Handler for reject
-  const handleReject = async (row) => {
+  const handleReject = (row) => {
+    setSelectedReport(row);
+    setSelectedReportType("reject");
+    setIsModalOpen(true);
+  };
+
+  // Handler to be called after confirmation in modal
+  const handleConfirmAction = async (row, actionType) => {
     const timestamp = Date.now();
+    const newStatus = actionType === "verify" ? "Validated" : "Rejected";
     setUndoState((prev) => ({
       ...prev,
-      [row.id]: { prevStatus: row.status, newStatus: "Rejected", timestamp },
+      [row.id]: { prevStatus: row.status, newStatus, timestamp },
     }));
-    await validatePost({ id: row.id, status: "Rejected" });
+    await validatePost({ id: row.id, status: newStatus });
   };
 
   // Handler for undo
@@ -365,6 +370,7 @@ function ReportTable2({ posts, isActionable = true, onlyRecent = false }) {
             coordinates={selectedReport.coordinates}
             type={selectedReportType}
             username={selectedReport.username}
+            onConfirmAction={actionType => handleConfirmAction(selectedReport, actionType)}
           />
         )}
     </>

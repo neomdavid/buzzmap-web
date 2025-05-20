@@ -15,6 +15,7 @@ const VerifyReportModal = ({
   type, // "verify" or "reject"
   username,
   onSuccess,
+  onConfirmAction,
 }) => {
   const modalRef = useRef(null);
   const streetViewRef = useRef(null);
@@ -29,47 +30,22 @@ const VerifyReportModal = ({
   const prevStatusRef = useRef(status);
 
   const handleConfirm = async () => {
-    const newStatus = actionType === "verify" ? "Validated" : "Rejected";
-    const requestPayload = { id: reportId, status: newStatus };
-    try {
-      await validatePost(requestPayload).unwrap();
-      let undoClicked = false;
-      // Show toast with Undo button
-      const toastId = toast(
-        ({ closeToast }) => (
-          <div>
-            Report {newStatus === "Validated" ? "verified" : "rejected"} successfully!
-            <button
-              style={{ marginLeft: 16, color: '#2563eb', fontWeight: 600 }}
-              onClick={async () => {
-                setIsUndoing(true);
-                await validatePost({ id: reportId, status: prevStatusRef.current }).unwrap();
-                toast.success("Undo successful!");
-                setIsUndoing(false);
-                closeToast();
-                if (typeof onSuccess === "function") onSuccess();
-                if (typeof onClose === "function") onClose();
-                undoClicked = true;
-              }}
-              disabled={isUndoing}
-            >
-              Undo
-            </button>
-          </div>
-        ),
-        { autoClose: 5000 }
-      );
-      // After 5 seconds, close modal and refresh if not undone
-      const timeout = setTimeout(() => {
-        if (!undoClicked) {
-          if (typeof onSuccess === "function") onSuccess();
-          if (typeof onClose === "function") onClose();
-        }
-      }, 5000);
-      setUndoTimeout(timeout);
-    } catch (error) {
-      console.error("Verify/Reject error:", error);
-      toast.error("Failed to update report status.");
+    if (typeof onConfirmAction === 'function') {
+      await onConfirmAction(actionType);
+      if (typeof onClose === "function") onClose();
+    } else {
+      // fallback: do the API call directly
+      const newStatus = actionType === "verify" ? "Validated" : "Rejected";
+      const requestPayload = { id: reportId, status: newStatus };
+      try {
+        await validatePost(requestPayload).unwrap();
+        toast.success(`Report ${newStatus === "Validated" ? "verified" : "rejected"} successfully!`);
+        if (typeof onSuccess === "function") onSuccess();
+        if (typeof onClose === "function") onClose();
+      } catch (error) {
+        console.error("Verify/Reject error:", error);
+        toast.error("Failed to update report status.");
+      }
     }
   };
 
@@ -247,7 +223,7 @@ const VerifyReportModal = ({
                   actionType === "verify" ? "text-success" : "text-error"
                 }
               >
-                Confirm {actionType}
+                Confirm {actionType === "verify" ? "Verification" : "Rejection"}
               </span>
             </p>
 
