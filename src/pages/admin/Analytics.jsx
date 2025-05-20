@@ -95,6 +95,7 @@ const Analytics = () => {
 
         setSelectedBarangay(targetBarangayName);
         setInitialBarangayNameForMap(targetBarangayName);
+        setSpikeRecommendationDetails(recommendationDetails);
       }
     }
   }, [patternResultsData, initialBarangayNameForMap]);
