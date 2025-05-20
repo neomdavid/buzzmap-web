@@ -186,7 +186,7 @@ const Mapping = () => {
                   ...feature.properties,
                   riskLevel: patternInfo?.risk_level?.toLowerCase() || 'unknown',
                   patternType: patternInfo?.triggered_pattern?.toLowerCase() || 'none',
-                  alert: patternInfo?.alert || 'No recent data',
+                  alert: patternInfo?.status_and_recommendation?.report_based?.alert || patternInfo?.alert || 'No recent data',
                   lastAnalysisTime: patternInfo?.last_analysis_time
                 }
               };
@@ -654,126 +654,96 @@ const Mapping = () => {
           )}
 
           {selectedBarangayInfo && (
-            <InfoWindow
-              position={selectedBarangayInfo.position}
-              onCloseClick={() => setSelectedBarangayInfo(null)}
-              options={{
-                pixelOffset: new window.google.maps.Size(0, -30),
-                disableAutoPan: false
-              }}
-            >
-              <div
-                className="bg-white p-4 rounded-lg text-center h-auto"
-                style={{
-                  // Use patternType for border color
-                  // border: `3px solid ${PATTERN_COLORS[selectedBarangayInfo.patternType?.toLowerCase()] || PATTERN_COLORS.default}`,
-                  width: "50vw",
-                }}
-              >
-                <p
-                  className={`text-4xl font-[900]`}
-                  style={{
-                    // Use patternType for title color
-                    color: PATTERN_COLORS[selectedBarangayInfo.patternType?.toLowerCase()] || PATTERN_COLORS.default
+            (() => {
+              // Merge barangay info from barangaysList only
+              const normalizedName = normalizeBarangayName(selectedBarangayInfo.name);
+              const canonicalBarangay = barangaysList?.find(
+                b => normalizeBarangayName(b.name) === normalizedName
+              );
+              // Use displayName or name from barangaysList for title
+              const displayName = canonicalBarangay?.displayName || canonicalBarangay?.name || selectedBarangayInfo.name;
+              // Use breeding site report count and alert from barangaysList report_based
+              const reportBased = canonicalBarangay?.status_and_recommendation?.report_based;
+              const breedingSiteCount = reportBased?.count ?? 0;
+              const alert = reportBased?.alert || 'No recent data';
+              // Use patternType from barangaysList
+              const patternType = canonicalBarangay?.triggered_pattern?.toLowerCase() || 'none';
+              // Log breeding site count for debugging
+              console.log('InfoWindow breeding site count:', { displayName, breedingSiteCount, alert, patternType, canonicalBarangay });
+              return (
+                <InfoWindow
+                  position={selectedBarangayInfo.position}
+                  onCloseClick={() => setSelectedBarangayInfo(null)}
+                  options={{
+                    pixelOffset: new window.google.maps.Size(0, -30),
+                    disableAutoPan: false
                   }}
                 >
-                  Barangay {selectedBarangayInfo.name}
-                </p>
-
-                <div className="mt-3 flex flex-col gap-3 text-black">
-                  {/* Status Card */}
-                  <div className={`p-3 rounded-lg border-2 ${
-                    selectedBarangayInfo.alert === "No recent data"
-                      ? "border-gray-400 bg-gray-100"
-                      : selectedBarangayInfo.patternType === "spike"
-                      ? "border-error bg-error/5"
-                      : selectedBarangayInfo.patternType === "gradual_rise"
-                      ? "border-warning bg-warning/5"
-                      : selectedBarangayInfo.patternType === "decline"
-                      ? "border-success bg-success/5"
-                      : selectedBarangayInfo.patternType === "stability"
-                      ? "border-info bg-info/5"
-                      : "border-gray-400 bg-gray-100"
-                  }`}>
-                    <div className="flex items-center justify-center gap-3">
-                      {/* <div className={`${
-                        selectedBarangayInfo.alert === "No recent data"
-                          ? "text-gray-400"
-                        : selectedBarangayInfo.patternType === "spike"
-                        ? "text-error"
-                        : selectedBarangayInfo.patternType === "gradual_rise"
-                        ? "text-warning"
-                        : selectedBarangayInfo.patternType === "decline"
-                        ? "text-success"
-                        : selectedBarangayInfo.patternType === "stability"
-                        ? "text-info"
-                        : "text-gray-400"
-                      }`}>
-                        <span className="inline-block w-4 h-4 rounded-full"></span>
-                      </div> */}
-                      <div>
-                        <p className="text-sm font-medium text-gray-600 uppercase">Status</p>
-                        <p className="text-lg font-semibold">
-                          {selectedBarangayInfo.alert
-                            ? selectedBarangayInfo.alert.replace(
-                                new RegExp(`^${selectedBarangayInfo.name}:?\\s*`, "i"),
-                                ""
-                              )
-                            : "No recent data"}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Pattern and Risk Level Row */}
-                  <div className="w-full flex ">
-                    {/* Pattern Card */}
-                    <div className={`w-full flex justify-center text-center p-3 rounded-lg border-2 ${
-                      selectedBarangayInfo.alert === "No recent data"
-                        ? "border-gray-400 bg-gray-100"
-                        : selectedBarangayInfo.patternType === "spike"
-                        ? "border-error bg-error/5"
-                        : selectedBarangayInfo.patternType === "gradual_rise"
-                        ? "border-warning bg-warning/5"
-                        : selectedBarangayInfo.patternType === "decline"
-                        ? "border-success bg-success/5"
-                        : selectedBarangayInfo.patternType === "stability"
-                        ? "border-info bg-info/5"
-                        : "border-gray-400 bg-gray-100"
-                    }`}>
-                      <div className="flex items-center gap-3">
-                        {/* <div className={`${
-                          selectedBarangayInfo.alert === "No recent data"
-                            ? "text-gray-400"
-                          : selectedBarangayInfo.patternType === "spike"
-                          ? "text-error"
-                          : selectedBarangayInfo.patternType === "gradual_rise"
-                          ? "text-warning"
-                          : selectedBarangayInfo.patternType === "decline"
-                          ? "text-success"
-                          : selectedBarangayInfo.patternType === "stability"
-                          ? "text-info"
-                          : "text-gray-400"
+                  <div className="bg-white p-4 rounded-lg text-center h-auto" style={{ width: "50vw" }}>
+                    <p className="text-4xl font-[900]" style={{ color: PATTERN_COLORS[patternType] || PATTERN_COLORS.default }}>
+                      Barangay {displayName}
+                    </p>
+                    <div className="mt-3 flex flex-col gap-3 text-black">
+                      {/* Pattern and Risk Level Row - now at the top */}
+                      <div className="w-full flex ">
+                        {/* Pattern Card */}
+                        <div className={`w-full flex justify-center text-center p-3 rounded-lg border-2 ${
+                          breedingSiteCount === 0 || alert === 'No recent data' || alert === 'None'
+                            ? 'border-gray-400 bg-gray-100'
+                            : patternType === 'spike'
+                            ? 'border-error bg-error/5'
+                            : patternType === 'gradual_rise'
+                            ? 'border-warning bg-warning/5'
+                            : patternType === 'decline'
+                            ? 'border-success bg-success/5'
+                            : patternType === 'stability'
+                            ? 'border-info bg-info/5'
+                            : 'border-gray-400 bg-gray-100'
                         }`}>
-                          <span className="inline-block w-4 h-4 rounded-full"></span>
-                        </div> */}
-                        <div>
-                          <p className="text-sm font-medium text-gray-600 uppercase">Pattern</p>
-                          <p className="text-lg font-semibold">
-                            {selectedBarangayInfo.alert === "No recent data"
-                              ? "No recent data"
-                              : selectedBarangayInfo.patternType === "none" 
-                              ? "No pattern detected" 
-                              : selectedBarangayInfo.patternType.charAt(0).toUpperCase() + 
-                                selectedBarangayInfo.patternType.slice(1).replace('_', ' ')}
-                          </p>
+                          <div className="flex items-center gap-3">
+                            <div>
+                              <p className="text-sm font-medium text-gray-600 uppercase">Pattern</p>
+                              <p className="text-lg font-semibold">
+                                {breedingSiteCount === 0 || alert === 'No recent data' || alert === 'None'
+                                  ? 'No recent data'
+                                  : patternType === 'none'
+                                  ? 'No pattern detected'
+                                  : patternType.charAt(0).toUpperCase() + patternType.slice(1).replace('_', ' ')}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      {/* Breeding Site Reports Card - now below */}
+                      <div className={`p-3 rounded-lg border-2 ${
+                        breedingSiteCount === 0 || alert === 'No recent data' || alert === 'None'
+                          ? 'border-gray-400 bg-gray-100'
+                          : patternType === 'spike'
+                          ? 'border-error bg-error/5'
+                          : patternType === 'gradual_rise'
+                          ? 'border-warning bg-warning/5'
+                          : patternType === 'decline'
+                          ? 'border-success bg-success/5'
+                          : patternType === 'stability'
+                          ? 'border-info bg-info/5'
+                          : 'border-gray-400 bg-gray-100'
+                      }`}>
+                        <div className="flex items-center justify-center gap-3">
+                          <div>
+                            <p className="text-sm font-medium text-gray-600 uppercase">Breeding Site Reports</p>
+                            <p className="text-lg font-semibold">
+                              {breedingSiteCount === 0 || alert === 'No recent data' || alert === 'None'
+                                ? 'No breeding site reports.'
+                                : alert}
+                            </p>
+                          </div>
                         </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              </div>
-            </InfoWindow>
+                </InfoWindow>
+              );
+            })()
           )}
 
           {/* Show breeding site InfoWindow when enabled */}
