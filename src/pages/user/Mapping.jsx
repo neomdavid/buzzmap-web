@@ -39,6 +39,13 @@ const RISK_LEVEL_COLORS = {
   high: "#e53e3e",      // red
 };
 
+const REPORT_STATUS_COLORS = {
+  low: "border-success bg-success/5",
+  medium: "border-warning bg-warning/5",
+  high: "border-error bg-error/5",
+  unknown: "border-gray-400 bg-gray-100"
+};
+
 // Helper function to normalize barangay names for comparison
 const normalizeBarangayName = (name) => {
   if (!name) return '';
@@ -161,25 +168,17 @@ const Mapping = () => {
 
         // Process barangay data with pattern recognition results
         if (patternData?.data) {
-          console.log('Processing with pattern data:', patternData.data); // Debug pattern data processing
-          
           const processedData = {
             ...barangayData,
             features: barangayData.features.map(feature => {
               const geoJsonBarangayName = feature.properties.name;
               const normalizedGeoJsonName = normalizeBarangayName(geoJsonBarangayName);
-              console.log(`Processing GeoJSON barangay: '${geoJsonBarangayName}' (Normalized: '${normalizedGeoJsonName}')`);
               
               const patternInfo = patternData.data.find(item => {
                 const patternItemName = item.name;
                 const normalizedPatternName = normalizeBarangayName(patternItemName);
-                // console.log(`Comparing with pattern item: '${patternItemName}' (Normalized: '${normalizedPatternName}')`); // Uncomment for deep debugging
                 return normalizedPatternName === normalizedGeoJsonName;
               });
-
-              if (!patternInfo) {
-                console.log(`No pattern found for barangay: '${geoJsonBarangayName}'`);
-              }
 
               return {
                 ...feature,
@@ -187,8 +186,11 @@ const Mapping = () => {
                   ...feature.properties,
                   riskLevel: patternInfo?.risk_level?.toLowerCase() || 'unknown',
                   patternType: patternInfo?.triggered_pattern?.toLowerCase() || 'none',
-                  alert: patternInfo?.status_and_recommendation?.report_based?.alert || patternInfo?.alert || 'No recent data',
-                  lastAnalysisTime: patternInfo?.last_analysis_time
+                  alert: patternInfo?.status_and_recommendation?.report_based?.alert ||
+                         patternInfo?.current_recommendation?.report_based?.alert ||
+                         patternInfo?.alert || 'No recent data',
+                  lastAnalysisTime: patternInfo?.last_analysis_time,
+                  status_and_recommendation: patternInfo?.status_and_recommendation || patternInfo?.current_recommendation
                 }
               };
             })
@@ -348,6 +350,24 @@ const Mapping = () => {
     
     // Convert back to hex
     return `#${darkerR.toString(16).padStart(2, '0')}${darkerG.toString(16).padStart(2, '0')}${darkerB.toString(16).padStart(2, '0')}`;
+  };
+
+  // Helper to count breeding site reports for a barangay
+  const getBreedingSiteCount = (barangayName) => {
+    if (!posts || !barangayName) return 0;
+    return posts.filter(
+      post =>
+        post.status === "Validated" &&
+        post.barangay &&
+        post.barangay.toLowerCase() === barangayName.toLowerCase()
+    ).length;
+  };
+
+  const getBarangayFromList = (name) => {
+    if (!barangaysList) return null;
+    return barangaysList.find(
+      b => normalizeBarangayName(b.name) === normalizeBarangayName(name)
+    );
   };
 
   if (!isLoaded) return <LoadingSpinner size={32} className="h-screen" />;
@@ -526,23 +546,27 @@ const Mapping = () => {
                 ? geometry.coordinates
                 : [];
 
+            const barangayObj = getBarangayFromList(feature.properties.name);
+            let patternType = (barangayObj?.status_and_recommendation?.pattern_based?.status || feature.properties.patternType || 'none').toLowerCase();
+            if (!patternType || patternType === '') patternType = 'none';
+            const patternColor = PATTERN_COLORS[patternType] || PATTERN_COLORS.default;
+
             const isSelected = selectedBarangayFeature && selectedBarangayFeature.properties?.name === feature.properties?.name;
             return coordsArray.map((polygonCoords, i) => {
               const path = polygonCoords[0].map(([lng, lat]) => ({
                 lat,
                 lng,
               }));
-              const patternColor = PATTERN_COLORS[feature.properties.patternType?.toLowerCase()] || PATTERN_COLORS.default;
               return (
                 <Polygon
                   key={`${index}-${i}`}
                   paths={path}
                   options={{
-                    strokeColor: isSelected ? getDarkerColor(patternColor) : "#333",
+                    strokeColor: isSelected ? getDarkerColor(patternColor) : '#333',
                     strokeOpacity: isSelected ? 1 : 0.6,
                     strokeWeight: isSelected ? 3 : 1,
                     fillOpacity: 0.5,
-                    fillColor: patternColor, 
+                    fillColor: patternColor,
                     clickable: true,
                   }}
                   onClick={(e) => {
@@ -619,8 +643,22 @@ const Mapping = () => {
           {selectedBarangayFeature && selectedBarangayCenter && (
             (() => {
               const feature = selectedBarangayFeature;
-              const patternType = feature.properties.patternType?.toLowerCase() || 'none';
               const displayName = feature.properties.displayName || feature.properties.name || 'Unknown Barangay';
+
+              // Get the barangay object from the barangaysList
+              const barangayObj = getBarangayFromList(feature.properties.name);
+              // Pattern-based
+              const patternBased = barangayObj?.status_and_recommendation?.pattern_based;
+              // Use status for pattern (e.g., stability, spike, etc.)
+              let patternType = (patternBased?.status || feature.properties.patternType || "none").toLowerCase();
+              if (!patternType || patternType === "") patternType = "none";
+              const patternCardColor = PATTERN_COLORS[patternType] || PATTERN_COLORS.default;
+              // Report-based
+              const reportBased = barangayObj?.status_and_recommendation?.report_based;
+              const reportAlert = reportBased?.alert;
+              const reportStatus = (reportBased?.status || "unknown").toLowerCase();
+              const reportCardColor = REPORT_STATUS_COLORS[reportStatus] || REPORT_STATUS_COLORS.unknown;
+
               return (
                 <InfoWindow
                   position={selectedBarangayCenter}
@@ -634,21 +672,12 @@ const Mapping = () => {
                   }}
                 >
                   <div className="bg-white p-4 rounded-lg text-center h-auto" style={{ width: "50vw" }}>
-                    <p className="text-4xl font-[900]" style={{ color: PATTERN_COLORS[patternType] || PATTERN_COLORS.default }}>
+                    <p className="text-4xl font-[900]" style={{ color: patternCardColor }}>
                       Barangay {displayName}
                     </p>
                     <div className="mt-3 flex flex-col gap-3 text-black">
-                      <div className={`p-3 rounded-lg border-2 ${
-                        patternType === 'spike'
-                          ? 'border-error bg-error/5'
-                          : patternType === 'gradual_rise'
-                          ? 'border-warning bg-warning/5'
-                          : patternType === 'decline'
-                          ? 'border-success bg-success/5'
-                          : patternType === 'stability'
-                          ? 'border-info bg-info/5'
-                          : 'border-gray-400 bg-gray-100'
-                      }`}>
+                      {/* Pattern card */}
+                      <div className="p-3 rounded-lg border-2" style={{ borderColor: patternCardColor }}>
                         <div>
                           <p className="text-sm font-medium text-gray-600 uppercase">Pattern</p>
                           <p className="text-lg font-semibold">
@@ -658,10 +687,15 @@ const Mapping = () => {
                           </p>
                         </div>
                       </div>
-                      <div className="p-3 rounded-lg border-2 border-primary/30 bg-primary/5">
+                      {/* Breeding site reports card */}
+                      <div className={`p-3 rounded-lg border-2 ${reportCardColor}`}>
                         <div>
-                          <p className="text-sm font-medium text-gray-600 uppercase">Alert</p>
-                          <p className="text-lg font-semibold">{feature.properties.alert || 'No recent data'}</p>
+                          <p className="text-sm font-medium text-gray-600 uppercase">Breeding Site Reports</p>
+                          <p className="text-lg font-semibold">
+                            {reportAlert && reportAlert.toLowerCase() !== "none"
+                              ? reportAlert
+                              : "No breeding site reported in this barangay."}
+                          </p>
                         </div>
                       </div>
                     </div>

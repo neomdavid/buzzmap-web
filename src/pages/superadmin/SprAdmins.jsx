@@ -155,16 +155,10 @@ function SprAdmins() {
         password: superAdminAuth.password,
         role: "superadmin"
       };
-      console.log('Super admin verification attempt:', { email: superAdminEmail, role: "superadmin" });
 
       const response = await login(loginData).unwrap();
       return true;
     } catch (error) {
-      console.error('Super admin verification failed:', {
-        status: error?.status,
-        message: error?.data?.message,
-        error: error
-      });
       setAuthError("Incorrect super admin password.");
       return false;
     }
@@ -189,20 +183,14 @@ function SprAdmins() {
         return;
       }
 
-      // Log the exact request body being sent
-      console.log('Sending request to /accounts:', JSON.stringify(requestData, null, 2));
-
       const response = await createAdmin(requestData).unwrap();
       
       toastSuccess("Admin account created successfully. Please check your email for verification.");
       setCurrentStep(3);
     } catch (error) {
-      // Now requestData is accessible here
       console.error('Admin creation failed:', {
-        requestBody: requestData,
         errorStatus: error?.status,
-        errorMessage: error?.data?.message,
-        fullError: error
+        errorMessage: error?.data?.message
       });
       toastError(error?.data?.message || "Failed to create admin");
     } finally {

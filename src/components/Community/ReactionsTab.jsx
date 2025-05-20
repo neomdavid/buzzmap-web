@@ -27,44 +27,36 @@ const ReactionsTab = ({
     if (hasUpvoted) {
       // Remove upvote
       try {
-        const response = await removeVoteReport(postId);
-        console.log('[ReactionsTab DEBUG] Removed upvote:', response);
+        await removeVoteReport(postId);
       } catch (error) {
-        console.error('[ReactionsTab DEBUG] Remove upvote error:', error);
+        console.error('Error removing upvote:', error);
       }
     } else {
       // Upvote
       try {
-        const response = await upvoteReport(postId);
-        console.log('[ReactionsTab DEBUG] Upvote response:', response);
+        await upvoteReport(postId);
       } catch (error) {
-        console.error('[ReactionsTab DEBUG] Upvote error:', error);
+        console.error('Error upvoting:', error);
       }
     }
-    // Debug state
-    console.log('[ReactionsTab DEBUG] upvotesArray:', upvotesArray, 'currentUserId:', currentUserId, 'hasUpvoted:', hasUpvoted);
   };
 
   const handleDownvote = async () => {
     if (hasDownvoted) {
       // Remove downvote
       try {
-        const response = await removeVoteReport(postId);
-        console.log('[ReactionsTab DEBUG] Removed downvote:', response);
+        await removeVoteReport(postId);
       } catch (error) {
-        console.error('[ReactionsTab DEBUG] Remove downvote error:', error);
+        console.error('Error removing downvote:', error);
       }
     } else {
       // Downvote
       try {
-        const response = await downvoteReport(postId);
-        console.log('[ReactionsTab DEBUG] Downvote response:', response);
+        await downvoteReport(postId);
       } catch (error) {
-        console.error('[ReactionsTab DEBUG] Downvote error:', error);
+        console.error('Error downvoting:', error);
       }
     }
-    // Debug state
-    console.log('[ReactionsTab DEBUG] downvotesArray:', downvotesArray, 'currentUserId:', currentUserId, 'hasDownvoted:', hasDownvoted);
   };
 
   return (

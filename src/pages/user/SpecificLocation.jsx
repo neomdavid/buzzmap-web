@@ -159,12 +159,6 @@ const SpecificLocation = () => {
       day: "numeric",
     });
 
-  {console.log("nearbyReports:", nearbyReports)}
-  {console.log("filteredNearbyReports:", filteredNearbyReports)}
-  {console.log("allDates:", allDates)}
-  {console.log("minDate:", minDate, "maxDate:", maxDate)}
-  {console.log("Render timeline?", Array.isArray(nearbyReports) && nearbyReports.length > 0)}
-
   return (
     <main className="text-2xl mt-[-69px]">
       <div className="w-full h-[100vh] relative">

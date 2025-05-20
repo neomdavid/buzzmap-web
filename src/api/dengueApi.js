@@ -17,79 +17,9 @@ const customBaseQuery = fetchBaseQuery({
 const baseQueryWithErrorHandling = async (args, api, extraOptions) => {
   try {
     const result = await customBaseQuery(args, api, extraOptions);
-    
-    // Log raw JSON response for the specific trends endpoint
-    if (args.url === 'analytics/get-barangay-weekly-trends' && !result.error && result.data) {
-      console.log('Raw JSON response from /analytics/get-barangay-weekly-trends:', JSON.stringify(result.data, null, 2));
-    }
-    
-    if (result.error) {
-      // If the error has a specific message from the backend, use that
-      if (result.error.data?.message) {
-        return {
-          error: {
-            status: result.error.status,
-            data: { message: result.error.data.message }
-          }
-        };
-      }
-      
-      // Helper to ensure a message is always present
-      const getErrorData = (defaultMsg) => {
-        // Check for nested error message in data
-        if (result.error.data?.message) {
-          return result.error.data;
-        }
-        // Check for error message in data.status
-        if (result.error.data?.status === 'error' && result.error.data?.message) {
-          return result.error.data;
-        }
-        return { message: defaultMsg };
-      };
-
-      // Handle different error status codes
-      switch (result.error.status) {
-        case 401:
-          return {
-            error: {
-              status: 401,
-              data: getErrorData('Please log in to continue')
-            }
-          };
-        case 403:
-          return {
-            error: {
-              status: 403,
-              data: getErrorData('You do not have permission to perform this action')
-            }
-          };
-        case 404:
-          return {
-            error: {
-              status: 404,
-              data: getErrorData('The requested resource was not found')
-            }
-          };
-        case 500:
-          return {
-            error: {
-              status: 500,
-              data: getErrorData('Server error occurred. Please try again later')
-            }
-          };
-        default:
-          // For 400 and other status codes, return the original error
-          return result;
-      }
-    }
     return result;
   } catch (error) {
-    return {
-      error: {
-        status: 'NETWORK_ERROR',
-        data: { message: 'Network error. Please check your connection and try again.' }
-      }
-    };
+    return { error: { status: 'CUSTOM_ERROR', data: error.message } };
   }
 };
 

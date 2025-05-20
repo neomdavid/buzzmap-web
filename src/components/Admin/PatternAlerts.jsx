@@ -1,71 +1,74 @@
 import { useState, useMemo } from "react";
-import { useGetPatternRecognitionResultsQuery } from "../../api/dengueApi";
+import { useGetBarangaysQuery } from "../../api/dengueApi";
 import { MagnifyingGlass } from "phosphor-react";
 
 export default function PatternAlerts({ selectedBarangay, selectedTab, onAlertSelect }) {
   const [searchTerm, setSearchTerm] = useState("");
-  const { data: patternDataRaw, isLoading, error } = useGetPatternRecognitionResultsQuery();
-  const patternData = patternDataRaw?.data || [];
+  const { data: barangaysData, isLoading, error } = useGetBarangaysQuery();
 
-  // Debug logs for initial data
-  console.log('=== DEBUG LOGS ===');
-  console.log('Selected Tab:', selectedTab);
-  console.log('Selected Barangay:', selectedBarangay);
-  console.log('Search Term:', searchTerm);
-  console.log('Raw Pattern Data:', patternData);
+  // Merge pattern data with barangay data (now only barangaysData)
+  const patternData = useMemo(() => {
+    if (!barangaysData) return [];
+    return barangaysData.map(barangay => {
+      const patternBased = barangay.status_and_recommendation?.pattern_based;
+      const reportBased = barangay.status_and_recommendation?.report_based;
+      const deathPriority = barangay.status_and_recommendation?.death_priority;
+      return {
+        _id: barangay._id,
+        name: barangay.name,
+        triggered_pattern: patternBased?.status || barangay.triggered_pattern || null,
+        alert: patternBased?.alert || barangay.alert || null,
+        status_and_recommendation: barangay.status_and_recommendation || null,
+        pattern_based: patternBased,
+        report_based: reportBased,
+        death_priority: deathPriority,
+        pattern_data: barangay.pattern_data,
+        last_analysis_time: barangay.last_analysis_time
+      };
+    });
+  }, [barangaysData]);
 
-  let filteredData = patternData;
-  
-  // First apply tab filtering
-  if (selectedTab === "selected") {
-    if (selectedBarangay) {
-      filteredData = patternData.filter(
-        item => item.name.toLowerCase() === selectedBarangay.toLowerCase()
-      );
-    } else {
-      filteredData = [];
-    }
-  } else if (selectedTab === "all") {
-    filteredData = patternData;
-  } else if (selectedTab === "spikes") {
-    filteredData = patternData.filter(item => {
-      const patternType = item.triggered_pattern?.toLowerCase() || '';
-      return patternType === 'spike';
-    });
-  } else if (selectedTab === "gradual") {
-    filteredData = patternData.filter(item => {
-      const patternType = item.triggered_pattern?.toLowerCase() || '';
-      return patternType === 'gradual_rise';
-    });
-  } else if (selectedTab === "stability") {
-    filteredData = patternData.filter(item => {
-      const patternType = item.triggered_pattern?.toLowerCase() || '';
-      return patternType === 'stability';
-    });
-  } else if (selectedTab === "decline") {
-    filteredData = patternData.filter(item => {
-      const patternType = item.triggered_pattern?.toLowerCase() || '';
-      return patternType === 'decline' || patternType === 'decreasing';
-    });
-  }
-
-  // Then apply search filtering
-  if (searchTerm) {
-    filteredData = filteredData.filter(item => {
+  // Filter data based on search term and selected tab
+  const filteredData = useMemo(() => {
+    if (!patternData) return [];
+    let filtered = patternData;
+    // Apply search filter if search term exists
+    if (searchTerm) {
       const searchLower = searchTerm.toLowerCase();
-      return item.name.toLowerCase().includes(searchLower);
-    });
-  }
-
-  // Final debug log
-  console.log('Final filtered data:', filteredData);
-  console.log('=== END DEBUG LOGS ===');
+      filtered = filtered.filter(item => 
+        item.name.toLowerCase().includes(searchLower)
+      );
+    }
+    // Apply tab filter
+    if (selectedTab === 'spikes') {
+      filtered = filtered.filter(item => 
+        item.triggered_pattern?.toLowerCase() === 'spike'
+      );
+    } else if (selectedTab === 'gradual') {
+      filtered = filtered.filter(item => 
+        item.triggered_pattern?.toLowerCase() === 'gradual_rise'
+      );
+    } else if (selectedTab === 'stability') {
+      filtered = filtered.filter(item => 
+        item.triggered_pattern?.toLowerCase() === 'stability' || item.triggered_pattern?.toLowerCase() === 'stable'
+      );
+    } else if (selectedTab === 'decline') {
+      filtered = filtered.filter(item => 
+        item.triggered_pattern?.toLowerCase() === 'decline' || item.triggered_pattern?.toLowerCase() === 'decreasing'
+      );
+    } else if (selectedTab === 'selected' && selectedBarangay) {
+      filtered = filtered.filter(item => 
+        item.name.toLowerCase() === selectedBarangay.toLowerCase()
+      );
+    }
+    return filtered;
+  }, [patternData, searchTerm, selectedTab, selectedBarangay]);
 
   if (isLoading) {
     return <div>Loading...</div>;
   }
   if (error) {
-    return <div>Error loading pattern alerts.</div>;
+    return <div>Error loading data.</div>;
   }
 
   return (
@@ -84,55 +87,46 @@ export default function PatternAlerts({ selectedBarangay, selectedTab, onAlertSe
           size={20}
         />
       </div>
-
       {filteredData.length === 0 ? (
         <div className="text-gray-500">No alerts found.</div>
       ) : (
         filteredData.map(item => {
-          // Determine colors based on pattern type
           let borderColor, bgColor;
-          let messages = [];
-          
-          if (!item.triggered_pattern) {
-            // No pattern data - use gray colors
+          let patternType = item.triggered_pattern || item.pattern_based?.status || '';
+          if (!patternType) {
             borderColor = "border-gray-300";
             bgColor = "bg-gray-300";
-            messages = [
-              { label: "Status:", text: "No pattern data recorded" }
-            ];
           } else {
-            // Has pattern data - use pattern-based colors
-            if (item.triggered_pattern?.toLowerCase() === 'spike') {
+            const patternTypeLower = patternType.toLowerCase();
+            if (patternTypeLower === 'spike') {
               borderColor = "border-error";
               bgColor = "bg-error";
-            } else if (item.triggered_pattern?.toLowerCase() === 'gradual_rise') {
+            } else if (patternTypeLower === 'gradual_rise') {
               borderColor = "border-warning";
               bgColor = "bg-warning";
-            } else if (item.triggered_pattern?.toLowerCase() === 'stability') {
+            } else if (patternTypeLower === 'stability' || patternTypeLower === 'stable') {
               borderColor = "border-info";
               bgColor = "bg-info";
-            } else if (item.triggered_pattern?.toLowerCase() === 'decline' || 
-                      item.triggered_pattern?.toLowerCase() === 'decreasing') {
+            } else if (patternTypeLower === 'decline' || patternTypeLower === 'decreasing') {
               borderColor = "border-success";
               bgColor = "bg-success";
+            } else {
+              borderColor = "border-gray-300";
+              bgColor = "bg-gray-300";
             }
-
-            // Remove barangay name from alert text
-            const alertText = item.alert?.replace(/^[^:]+:\s*/, '') || '';
-
-            messages = [
-              { label: "Pattern Type:", text: item.triggered_pattern },
-              { label: "Alert:", text: alertText }
-            ];
           }
-
           return (
             <AlertCard
               key={item._id}
               title={item.name}
               borderColor={borderColor}
               bgColor={bgColor}
-              messages={messages}
+              pattern_based={item.pattern_based}
+              report_based={item.report_based}
+              death_priority={item.death_priority}
+              pattern_data={item.pattern_data}
+              last_analysis_time={item.last_analysis_time}
+              triggered_pattern={item.triggered_pattern}
               barangayName={item.name}
               onSelect={onAlertSelect}
             />
@@ -143,30 +137,132 @@ export default function PatternAlerts({ selectedBarangay, selectedTab, onAlertSe
   );
 }
 
-// Your original AlertCard component (completely unchanged)
+// Pattern color mapping for both border and badge
+const PATTERN_COLORS = {
+  spike: { border: 'border-error', badge: 'bg-error' },
+  gradual_rise: { border: 'border-warning', badge: 'bg-warning' },
+  stability: { border: 'border-info', badge: 'bg-info' },
+  decline: { border: 'border-success', badge: 'bg-success' },
+  default: { border: 'border-gray-400', badge: 'bg-gray-400' }
+};
+
+const getPatternKey = (pattern) => {
+  if (!pattern) return 'default';
+  const p = pattern.trim().toLowerCase();
+  if (p === 'spike') return 'spike';
+  if (p === 'gradual_rise') return 'gradual_rise';
+  if (p === 'stability' || p === 'stable') return 'stability';
+  if (p === 'decline' || p === 'decreasing') return 'decline';
+  return 'default';
+};
+
+// Enhanced AlertCard to show all alert types if present
 const AlertCard = ({
   title,
-  messages = [],
-  borderColor = "border-error",
-  bgColor = "bg-error",
+  pattern_based,
+  report_based,
+  death_priority,
+  pattern_data,
+  last_analysis_time,
+  triggered_pattern,
   barangayName,
   onSelect,
 }) => {
+  // Helper to check if a section has meaningful content
+  const hasContent = (obj, extraCheck = null) => {
+    if (!obj) return false;
+    const fields = [obj.status, obj.alert, obj.recommendation];
+    const hasString = fields.some(
+      v => v && typeof v === 'string' && v.trim() !== '' && v.trim().toLowerCase() !== 'none'
+    );
+    if (extraCheck) return hasString || extraCheck(obj);
+    return hasString;
+  };
+  const hasReportBased = hasContent(report_based, (rb) => typeof rb.count === 'number' && rb.count > 0);
+  const hasDeathPriority = hasContent(death_priority);
+  // Only show pattern-based if status is non-empty, non-null, non-'none'
+  const showPatternBased = pattern_based && pattern_based.status && pattern_based.status.trim() !== '' && pattern_based.status.trim().toLowerCase() !== 'none';
+
+  const getPatternBadgeColor = (pattern) => {
+    if (!pattern) return '#a0aec0'; // gray
+    const p = pattern.trim().toLowerCase();
+    if (p === 'spike') return '#e53e3e'; // red
+    if (p === 'gradual_rise') return '#f59e42'; // orange
+    if (p === 'stability' || p === 'stable') return '#3b82f6'; // blue
+    if (p === 'decline' || p === 'decreasing') return '#22c55e'; // green
+    return '#a0aec0'; // gray
+  };
+
+  // Human-readable pattern label
+  const getPatternLabel = (pattern) => {
+    if (!pattern) return '';
+    const p = pattern.trim().toLowerCase();
+    if (p === 'spike') return 'Spike';
+    if (p === 'gradual_rise') return 'Gradual Rise';
+    if (p === 'stability' || p === 'stable') return 'Stability';
+    if (p === 'decline' || p === 'decreasing') return 'Decline';
+    return pattern.charAt(0).toUpperCase() + pattern.slice(1).replace(/_/g, ' ');
+  };
+
+  // Determine color based on triggered_pattern
+  const patternKey = getPatternKey(triggered_pattern);
+  const borderColor = PATTERN_COLORS[patternKey].border;
+  const badgeBgClass = PATTERN_COLORS[patternKey].badge;
+
   return (
     <div
       className={`relative border-[2px] ${borderColor} rounded-4xl p-4 pt-10 text-black`}
     >
       <p
-        className={`absolute text-lg left-[-2px] top-[-6px] text-nowrap ${bgColor} rounded-2xl font-semibold text-white p-1 px-4`}
+        className={`absolute text-lg left-[-2px] top-[-6px] text-nowrap ${borderColor.replace('border-', 'bg-')} rounded-2xl font-semibold text-white p-1 px-4`}
       >
         {title}
       </p>
-      {messages.map((msg, index) => (
-        <p key={index}>
-          {msg.label && <span className="font-bold">{msg.label}</span>}{" "}
-          {msg.text}
-        </p>
-      ))}
+      {/* Triggered Pattern at the top if present */}
+      {triggered_pattern && triggered_pattern.trim() !== '' && triggered_pattern.trim().toLowerCase() !== 'none' && (
+        <div className="mb-2 flex items-center gap-2">
+          <span className="font-bold mb-1 text-base-content text-lg">Pattern:</span>
+          <span
+            className={`px-3 py-1 rounded-full text-white text-sm font-semibold ${badgeBgClass}`}
+          >
+            {getPatternLabel(triggered_pattern)}
+          </span>
+        </div>
+      )}
+      {/* Pattern-based section (only if status is non-empty) */}
+      {showPatternBased && (
+        <div className="mb-2 pt-2 border-t border-gray-200">
+          <div className="font-bold mb-1 text-base-content text-lg">Pattern-Based</div>
+          {pattern_based.status && pattern_based.status.trim().toLowerCase() !== 'none' && <div><span className="font-bold">Status:</span> {pattern_based.status}</div>}
+          {pattern_based.alert && pattern_based.alert.trim().toLowerCase() !== 'none' && <div><span className="font-bold">Alert:</span> {pattern_based.alert}</div>}
+          {pattern_based.recommendation && pattern_based.recommendation.trim().toLowerCase() !== 'none' && <div><span className="font-bold">Recommendation:</span> {pattern_based.recommendation}</div>}
+        </div>
+      )}
+      {/* Report-based section */}
+      {report_based && hasReportBased && (
+        <div className="mb-2 pt-2 border-t border-gray-200">
+          <div className="font-bold mb-1 text-base-content text-lg">Report-Based</div>
+          {typeof report_based.count === 'number' && report_based.count > 0 && <div><span className="font-bold">Reports:</span> {report_based.count}</div>}
+          {report_based.status && report_based.status.trim().toLowerCase() !== 'none' && <div><span className="font-bold">Status:</span> {report_based.status}</div>}
+          {report_based.alert && report_based.alert.trim().toLowerCase() !== 'none' && <div><span className="font-bold">Alert:</span> {report_based.alert}</div>}
+          {report_based.recommendation && report_based.recommendation.trim().toLowerCase() !== 'none' && <div><span className="font-bold">Recommendation:</span> {report_based.recommendation}</div>}
+        </div>
+      )}
+      {/* Death-priority section */}
+      {death_priority && hasDeathPriority && (
+        <div className="mb-2 pt-2 border-t border-gray-200">
+          <div className="font-bold mb-1">Death Priority</div>
+          {death_priority.status && death_priority.status.trim().toLowerCase() !== 'none' && <div><span className="font-bold">Status:</span> {death_priority.status}</div>}
+          {death_priority.alert && death_priority.alert.trim().toLowerCase() !== 'none' && <div><span className="font-bold">Alert:</span> {death_priority.alert}</div>}
+          {death_priority.recommendation && death_priority.recommendation.trim().toLowerCase() !== 'none' && <div><span className="font-bold">Recommendation:</span> {death_priority.recommendation}</div>}
+        </div>
+      )}
+      {/* Last analysis time */}
+      {last_analysis_time && (
+        <div className="mb-2 pt-2 border-t border-gray-200">
+          <span className="font-bold mb-1 text-base-content text-lg">Last Analyzed:</span> {new Date(last_analysis_time).toLocaleString()}
+        </div>
+      )}
       <div className="flex justify-end mt-1">
         <button 
           onClick={() => onSelect && onSelect(barangayName)}

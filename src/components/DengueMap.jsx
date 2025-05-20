@@ -9,7 +9,7 @@ import {
 } from "@react-google-maps/api";
 import { useGoogleMaps } from "./GoogleMapsProvider";
 import * as turf from "@turf/turf";
-import { useGetPatternRecognitionResultsQuery, useGetPostsQuery } from "../api/dengueApi";
+import { useGetPostsQuery } from "../api/dengueApi";
 import DengueMapLegend from "./DengueMapLegend";
 
 const containerStyle = {
@@ -110,6 +110,7 @@ const DengueMap = ({
   isLoadingInterventions,
   initialFocusBarangayName,
   hideTabs = false,
+  barangaysList = null,
 }) => {
   const [qcPolygonPaths, setQcPolygonPaths] = useState([]);
   const [barangayData, setBarangayData] = useState(null);
@@ -120,25 +121,21 @@ const DengueMap = ({
   const mapRef = useRef(null);
   const { isLoaded } = useGoogleMaps();
 
-  const { data: patternData, isLoading: patternsLoading } =
-    useGetPatternRecognitionResultsQuery();
-
   const { data: posts, isLoading: isLoadingPosts } = useGetPostsQuery();
   
   // Add logging for posts data
   useEffect(() => {
-    console.log("[DengueMap DEBUG] Posts data received:", posts);
   }, [posts]);
 
   // Add logging for activeInterventions prop
   useEffect(() => {
-    console.log("[DengueMap DEBUG] activeInterventions prop received:", {
-      activeInterventions,
-      isLoadingInterventions,
-      type: typeof activeInterventions,
-      isArray: Array.isArray(activeInterventions),
-      length: activeInterventions?.length
-    });
+    // console.log("[DengueMap DEBUG] activeInterventions prop received:", {
+    //   activeInterventions,
+    //   isLoadingInterventions,
+    //   type: typeof activeInterventions,
+    //   isArray: Array.isArray(activeInterventions),
+    //   length: activeInterventions?.length
+    // });
   }, [activeInterventions, isLoadingInterventions]);
 
   // Initialize breeding sites from posts
@@ -149,7 +146,7 @@ const DengueMap = ({
         post.specific_location?.coordinates &&
         (post.report_type === "Breeding Site" || post.report_type === "Standing Water" || post.report_type === "Infestation")
       );
-      console.log("[DengueMap DEBUG] Filtered breeding sites:", breedingSitesFromPosts);
+      // console.log("[DengueMap DEBUG] Filtered breeding sites:", breedingSitesFromPosts);
       setBreedingSites(breedingSitesFromPosts);
     }
   }, [posts]);
@@ -180,48 +177,41 @@ const DengueMap = ({
 
   // Log initialFocusBarangayName prop
   useEffect(() => {
-    console.log("[DengueMap DEBUG] Received initialFocusBarangayName prop:", initialFocusBarangayName);
+    // console.log("[DengueMap DEBUG] Received initialFocusBarangayName prop:", initialFocusBarangayName);
   }, [initialFocusBarangayName]);
 
   useEffect(() => {
-    console.log("[DengueMap DEBUG] Fetching GeoJSON and processing barangayData. patternsLoading:", patternsLoading);
-    if (!patternsLoading && patternData?.data) { // Only process if patternData is loaded
-      fetch("/quezon_barangays_boundaries.geojson")
-        .then((res) => res.json())
-        .then((geoJsonData) => { // Renamed to avoid confusion with 'data' from RTK
-          // const coords = geoJsonData.features[0].geometry.coordinates[0].map(
-          //   ([lng, lat]) => ({ lat, lng })
-          // );
-          // setQcPolygonPaths(coords); // qcPolygonPaths seems unused later for individual barangays
-          processBarangayData(geoJsonData, patternData.data);
-        })
-        .catch(err => console.error("Error fetching or processing GeoJSON:", err));
-    } else if (!patternsLoading && !patternData?.data) {
-      console.warn("[DengueMap DEBUG] Pattern data not available for processing GeoJSON yet, or no data.");
-      // Potentially fetch GeoJSON anyway and set barangayData without patterns if needed
-      // fetch("/quezon_barangays_boundaries.geojson").then(res => res.json()).then(geoJsonData => processBarangayData(geoJsonData, []));
+    if (!barangaysList) {
+      console.warn('No barangaysList provided! The map will not have pattern/status info.');
+      return;
     }
-  }, [patternData, patternsLoading]); // Depends on patternData and its loading state
+    fetch("/quezon_barangays_boundaries.geojson")
+      .then((res) => res.json())
+      .then((geoJsonData) => {
+        processBarangayData(geoJsonData, barangaysList);
+      })
+      .catch(err => console.error("Error fetching or processing GeoJSON:", err));
+  }, [barangaysList]);
 
-  const processBarangayData = useCallback((geoData, patternResults) => { // Memoize this if it's stable
-    console.log("[DengueMap DEBUG] processBarangayData called");
+  const processBarangayData = useCallback((geoData, barangaysList) => {
     const colored = {
       ...geoData,
       features: geoData.features.map((f) => {
         const barangayName = getBarangayName(f);
         const normalizedBarangayName = normalizeBarangayName(barangayName);
-        let foundPatternInfo = patternResults.find((item) => {
-          const normalizedItemName = normalizeBarangayName(item.name);
-          return normalizedItemName === normalizedBarangayName;
-        });
-        if (!foundPatternInfo) {
-         foundPatternInfo = patternResults.find((item) => { // Corrected variable name
-            const normalizedItemName = normalizeBarangayName(item.name?.replace("barangay", ""));
-            return normalizedItemName === normalizedBarangayName;
-          });
-        }
-        let patternType = foundPatternInfo?.triggered_pattern?.toLowerCase() || "None";
+        const barangayListObj = barangaysList.find(
+          b => normalizeBarangayName(b.name) === normalizedBarangayName
+        );
+        
+        // Get pattern type from status_and_recommendation.pattern_based.status
+        let patternType = barangayListObj?.status_and_recommendation?.pattern_based?.status?.toLowerCase() || 
+                         barangayListObj?.triggered_pattern?.toLowerCase() || 
+                         "none";
+        
+        if (!patternType || patternType === "") patternType = "none";
+        
         const color = PATTERN_COLORS[patternType] || PATTERN_COLORS.default;
+        
         return {
           ...f,
           properties: {
@@ -229,17 +219,20 @@ const DengueMap = ({
             displayName: barangayName,
             patternType,
             color,
-            alert: foundPatternInfo?.alert || "No recent data",
-            lastAnalysisTime: foundPatternInfo?.last_analysis_time,
+            alert: barangayListObj?.status_and_recommendation?.pattern_based?.alert ||
+                   barangayListObj?.alert || "No recent data",
+            lastAnalysisTime: barangayListObj?.last_analysis_time,
+            status_and_recommendation: barangayListObj?.status_and_recommendation,
+            risk_level: barangayListObj?.risk_level,
+            pattern_data: barangayListObj?.pattern_data
           },
         };
       }),
     };
     setBarangayData(colored);
-  }, []); // Empty dependency array if getBarangayName and PATTERN_COLORS are stable and defined outside
+  }, []);
 
   const defaultHandlePolygonClick = useCallback((feature) => {
-    console.log("[DengueMap DEBUG] defaultHandlePolygonClick for:", feature?.properties?.displayName);
     if (!mapRef.current) return;
     const center = turf.center(feature.geometry);
     const { coordinates } = center.geometry;
@@ -305,32 +298,23 @@ const DengueMap = ({
   // Effect for initial focus
   useEffect(() => {
     if (initialFocusBarangayName && barangayData && !initialFocusApplied && mapRef.current) {
-      console.log("[DengueMap DEBUG] APPLYING INITIAL FOCUS:", initialFocusBarangayName);
-      const barangayNameToFind = initialFocusBarangayName.toLowerCase().replace(/[^a-z0-9]/g, "");
-      const matchingFeature = barangayData.features.find(feature => {
-        const displayNameNormalized = feature.properties.displayName?.toLowerCase().replace(/[^a-z0-9]/g, "");
-        const nameNormalized = feature.properties.name?.toLowerCase().replace(/[^a-z0-9]/g, "");
-        return displayNameNormalized === barangayNameToFind || nameNormalized === barangayNameToFind;
-      });
-
-      if (matchingFeature) {
-        defaultHandlePolygonClick(matchingFeature);
-      } else {
-        console.warn("[DengueMap DEBUG] Initial focus barangay NOT FOUND:", initialFocusBarangayName);
-      }
-      setInitialFocusApplied(true); // CRITICAL: Set this regardless of find, to run only once per name
-    } else {
-      // Log why it didn't apply
-      if (!initialFocusApplied) { // Only log if we haven't applied focus yet for this component instance
-         console.log("[DengueMap DEBUG] Conditions for initial focus NOT YET MET or ALREADY APPLIED.", {
-            initialFocusBarangayName: !!initialFocusBarangayName,
-            barangayData: !!barangayData,
-            initialFocusApplied,
-            mapRefCurrent: !!mapRef.current
-        });
+      const feature = barangayData.features.find(
+        f => normalizeBarangayName(f.properties.name) === normalizeBarangayName(initialFocusBarangayName)
+      );
+      
+      if (feature) {
+        const center = turf.center(feature.geometry);
+        const { coordinates } = center.geometry;
+        const [lng, lat] = coordinates;
+        
+        if (lat && lng && !isNaN(lat) && !isNaN(lng)) {
+          mapRef.current.panTo({ lat, lng });
+          mapRef.current.setZoom(15);
+          setInitialFocusApplied(true);
+        }
       }
     }
-  }, [initialFocusBarangayName, barangayData, initialFocusApplied, defaultHandlePolygonClick]);
+  }, [initialFocusBarangayName, barangayData, initialFocusApplied]);
 
   // Add logging for selectedReport
   useEffect(() => {
@@ -351,15 +335,35 @@ const DengueMap = ({
 
   // Update the handleMapLoad function
   const handleMapLoad = (map) => {
-    console.log('GoogleMap loaded in DengueMap');
     mapRef.current = map;
     if (onMapLoad) {
       onMapLoad(map);
     }
   };
 
+  // Handle selected map item
+  useEffect(() => {
+    if (selectedMapItem && mapRef.current) {
+      const { item, type } = selectedMapItem;
+      
+      if (type === 'report' && item.specific_location?.coordinates) {
+        const [lng, lat] = item.specific_location.coordinates;
+        if (lat && lng && !isNaN(lat) && !isNaN(lng)) {
+          mapRef.current.panTo({ lat, lng });
+          mapRef.current.setZoom(17);
+        }
+      } else if (type === 'intervention' && item.specific_location?.coordinates) {
+        const [lng, lat] = item.specific_location.coordinates;
+        if (lat && lng && !isNaN(lat) && !isNaN(lng)) {
+          mapRef.current.panTo({ lat, lng });
+          mapRef.current.setZoom(17);
+        }
+      }
+    }
+  }, [selectedMapItem]);
+
   if (!isLoaded) return <p>Loading Google Maps API...</p>;
-  if (patternsLoading && !barangayData) { 
+  if (!barangayData) { 
     return <p>Loading map data...</p>;
   }
 
@@ -430,11 +434,7 @@ const DengueMap = ({
       )}
 
       {/* Conditional rendering for the map itself based on pattern data loading */}
-      {patternsLoading ? (
-        <div className="w-full h-full flex items-center justify-center bg-gray-100">
-          <p>Loading map data...</p>
-        </div>
-      ) : (
+      {barangayData ? (
         <GoogleMap
           mapContainerStyle={containerStyle}
           center={QC_CENTER}
@@ -473,7 +473,7 @@ const DengueMap = ({
               }));
 
               // Get the color based on pattern type
-              const patternType = (feature?.properties?.patternType || "none").toLowerCase();
+              const patternType = (feature?.properties?.patternType || 'none').toLowerCase();
               const color = PATTERN_COLORS[patternType] || PATTERN_COLORS.default;
 
               // Use custom polygon options if provided
@@ -563,21 +563,15 @@ const DengueMap = ({
             >
               {(() => {
                 const props = selectedBarangay.properties;
-                // Log for debugging
                 console.log('DengueMap InfoWindow properties:', props);
                 const patternType = (props?.patternType || "none").toLowerCase();
                 const lastAnalysisTime = props?.lastAnalysisTime;
-                // Debug log for lastAnalysisTime
-                console.log('DengueMap InfoWindow lastAnalysisTime:', {
-                  lastAnalysisTime,
-                  type: typeof lastAnalysisTime,
-                  dateObj: new Date(lastAnalysisTime),
-                  isNaN: isNaN(new Date(lastAnalysisTime).getTime())
-                });
-                // Extract all status and recommendation types
                 const patternBased = props?.status_and_recommendation?.pattern_based || {};
                 const reportBased = props?.status_and_recommendation?.report_based || {};
                 const deathPriority = props?.status_and_recommendation?.death_priority || {};
+                const riskLevel = props?.risk_level || "unknown";
+                const patternData = props?.pattern_data || {};
+
                 return (
                   <div className="bg-white p-4 rounded-lg text-center h-auto" style={{ width: "50vw" }}>
                     <p className="text-4xl font-[900]" style={{ color: PATTERN_COLORS[patternType] || PATTERN_COLORS.default }}>
@@ -603,41 +597,74 @@ const DengueMap = ({
                               ? 'No pattern detected'
                               : patternType.charAt(0).toUpperCase() + patternType.slice(1).replace('_', ' ')}
                           </p>
-                        </div>
-                      </div>
-                      {/* Pattern-Based Card */}
-                      <div className="p-3 rounded-lg border-2 border-primary/30 bg-primary/5">
-                        <div>
-                          <p className="text-sm font-medium text-gray-600 uppercase">Pattern-Based Alert</p>
-                          <p className="text-lg font-semibold">{patternBased.alert || 'No alert.'}</p>
-                          {patternBased.recommendation && (
-                            <p className="text-base text-gray-700 mt-1">Recommendation: {patternBased.recommendation}</p>
+                          {patternData && (
+                            <p className="text-sm text-gray-600 mt-1">
+                              Cases: {patternData.current_cases} (Previous: {patternData.previous_cases})
+                            </p>
                           )}
                         </div>
                       </div>
-                      {/* Report-Based Card */}
-                      <div className="p-3 rounded-lg border-2 border-primary/30 bg-primary/5">
+
+                      {/* Risk Level Card */}
+                      <div className={`p-3 rounded-lg border-2 ${
+                        riskLevel === 'high'
+                          ? 'border-error bg-error/5'
+                          : riskLevel === 'medium'
+                          ? 'border-warning bg-warning/5'
+                          : riskLevel === 'low'
+                          ? 'border-success bg-success/5'
+                          : 'border-gray-400 bg-gray-100'
+                      }`}>
                         <div>
-                          <p className="text-sm font-medium text-gray-600 uppercase">Report-Based Alert</p>
-                          <p className="text-lg font-semibold">{reportBased.alert || 'No alert.'}</p>
-                          {reportBased.recommendation && (
-                            <p className="text-base text-gray-700 mt-1">Recommendation: {reportBased.recommendation}</p>
-                          )}
+                          <p className="text-sm font-medium text-gray-600 uppercase">Risk Level</p>
+                          <p className="text-lg font-semibold">
+                            {riskLevel.charAt(0).toUpperCase() + riskLevel.slice(1)}
+                          </p>
                         </div>
                       </div>
-                      {/* Death Priority Card */}
-                      <div className="p-3 rounded-lg border-2 border-primary/30 bg-primary/5">
-                        <div>
-                          <p className="text-sm font-medium text-gray-600 uppercase">Death Priority Alert</p>
-                          <p className="text-lg font-semibold">{deathPriority.alert || 'No alert.'}</p>
-                          {deathPriority.recommendation && (
-                            <p className="text-base text-gray-700 mt-1">Recommendation: {deathPriority.recommendation}</p>
-                          )}
+
+                      {/* Pattern-Based Alert Card */}
+                      {patternBased.alert && patternBased.alert !== "None" && (
+                        <div className="p-3 rounded-lg border-2 border-primary/30 bg-primary/5">
+                          <div>
+                            <p className="text-sm font-medium text-gray-600 uppercase">Pattern-Based Alert</p>
+                            <p className="text-lg font-semibold">{patternBased.alert}</p>
+                            {patternBased.recommendation && (
+                              <p className="text-base text-gray-700 mt-1">Recommendation: {patternBased.recommendation}</p>
+                            )}
+                          </div>
                         </div>
-                      </div>
+                      )}
+
+                      {/* Report-Based Alert Card */}
+                      {reportBased.alert && reportBased.alert !== "None" && (
+                        <div className="p-3 rounded-lg border-2 border-primary/30 bg-primary/5">
+                          <div>
+                            <p className="text-sm font-medium text-gray-600 uppercase">Report-Based Alert</p>
+                            <p className="text-lg font-semibold">{reportBased.alert}</p>
+                            {reportBased.recommendation && (
+                              <p className="text-base text-gray-700 mt-1">Recommendation: {reportBased.recommendation}</p>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Death Priority Alert Card */}
+                      {deathPriority.alert && deathPriority.alert !== "None" && (
+                        <div className="p-3 rounded-lg border-2 border-primary/30 bg-primary/5">
+                          <div>
+                            <p className="text-sm font-medium text-gray-600 uppercase">Death Priority Alert</p>
+                            <p className="text-lg font-semibold">{deathPriority.alert}</p>
+                            {deathPriority.recommendation && (
+                              <p className="text-base text-gray-700 mt-1">Recommendation: {deathPriority.recommendation}</p>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
                       {/* Last Analyzed Card */}
                       <div className="p-3 rounded-lg border-2 border-primary/20 bg-primary/5">
-                        <div className="flex flex-col items-center ">
+                        <div className="flex flex-col items-center">
                           <p className="text-sm font-medium text-gray-600">Last Analyzed</p>
                           <p className="text-lg font-semibold">
                             {lastAnalysisTime
@@ -809,7 +836,6 @@ const DengueMap = ({
             isLoadingInterventions ? (
               <p className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-30 bg-white p-2 rounded shadow">Loading interventions...</p>
             ) : activeInterventions && Array.isArray(activeInterventions) && activeInterventions.length > 0 ? (
-              // Filter out completed interventions
               (() => {
                 const filteredInterventions = activeInterventions.filter(intervention => {
                   const status = (intervention.status || '').toLowerCase();
@@ -817,15 +843,6 @@ const DengueMap = ({
                 });
                 return filteredInterventions.length > 0 ? (
                   <>
-                    {console.log("[DengueMap DEBUG] Filtered active interventions data:", {
-                      data: filteredInterventions,
-                      length: filteredInterventions.length,
-                      firstItem: filteredInterventions[0],
-                      hasCoordinates: filteredInterventions[0]?.specific_location?.coordinates,
-                      activeTab,
-                      isLoadingInterventions
-                    })}
-                    {/* Render intervention markers directly, no clustering */}
                     {filteredInterventions.map((intervention, index) => {
                       if (!intervention.specific_location?.coordinates) {
                         return null;
@@ -864,18 +881,7 @@ const DengueMap = ({
                 );
               })()
             ) : (
-              <>
-                {console.log("[DengueMap DEBUG] No active interventions. Data received:", {
-                  activeInterventions,
-                  isLoadingInterventions,
-                  isArray: Array.isArray(activeInterventions),
-                  hasData: !!activeInterventions,
-                  length: activeInterventions?.length,
-                  activeTab,
-                  type: typeof activeInterventions
-                })}
-                <p className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-30 bg-white p-2 rounded shadow">No active interventions to display.</p>
-              </>
+              <p className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-30 bg-white p-2 rounded shadow">No active interventions to display.</p>
             )
           )}
 
@@ -927,7 +933,11 @@ const DengueMap = ({
             );
           })()}
         </GoogleMap>
-      )} {/* End of patternsLoading conditional rendering */}
+      ) : (
+        <div className="w-full h-full flex items-center justify-center bg-gray-100">
+          <p>Loading map data...</p>
+        </div>
+      )}
 
       {/* Legends - only show when showLegends prop is true and we're on cases tab */}
       {showLegends && activeTab === "cases" && (

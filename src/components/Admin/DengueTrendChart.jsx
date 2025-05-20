@@ -15,8 +15,6 @@ import { useGetBarangayWeeklyTrendsQuery, useGetBarangaysQuery, useGetPatternRec
 import { useState } from "react";
 
 const getPatternColor = (patternType) => {
-  console.log('Getting color for pattern:', patternType); // Debug log
-  
   // Convert pattern type to lowercase for case-insensitive comparison
   const patternTypeLower = patternType?.toLowerCase();
   
@@ -53,26 +51,21 @@ export default function DengueTrendChart({ selectedBarangay, onBarangayChange })
   
   // Fetch pattern recognition results
   const { data: patternData } = useGetPatternRecognitionResultsQuery();
-  console.log('Pattern Recognition Data:', patternData);
 
-  // Get pattern type for selected barangay
+  // Get pattern type for selected barangay from pattern recognition results
   const selectedBarangayPattern = selectedBarangay
-    ? patternData?.data?.find(
-        (barangay) => barangay.name.toLowerCase() === selectedBarangay.toLowerCase()
-      )?.triggered_pattern || ''
-    : ''; // Default to empty string if selectedBarangay is null
-
-  console.log('Selected Barangay Pattern:', selectedBarangayPattern);
+    ? (() => {
+        const barangay = patternData?.data?.find(
+          (b) => b.name.toLowerCase() === selectedBarangay.toLowerCase()
+        );
+        return barangay?.pattern || '';
+      })()
+    : '';
 
   const { data: trendsData, isLoading, error } = useGetBarangayWeeklyTrendsQuery({
-    barangay_name: selectedBarangay, // This API call might also need to handle selectedBarangay being null
-                                    // depending on its requirements. For now, we assume it can handle null or 
-                                    // RTK Query's skip option is used elsewhere if selectedBarangay is a dependency for the query.
+    barangay_name: selectedBarangay,
     number_of_weeks: weeks
   });
-
-  // Log raw trendsData
-  console.log('Raw trendsData from API for:', selectedBarangay, '(', weeks, 'weeks):', JSON.stringify(trendsData, null, 2));
 
   // Transform the API data to match the chart format
   const chartData = trendsData?.data?.weekly_counts 
@@ -80,7 +73,7 @@ export default function DengueTrendChart({ selectedBarangay, onBarangayChange })
         .map(([week, cases]) => ({
           week: week,
           cases: cases,
-          patternType: selectedBarangayPattern // Add pattern type to each data point
+          patternType: selectedBarangayPattern
         }))
         .sort((a, b) => {
           const weekA = parseInt(a.week.split(' ')[1]);
@@ -92,18 +85,6 @@ export default function DengueTrendChart({ selectedBarangay, onBarangayChange })
   // Find the max cases for the current chartData (for consistent Y axis)
   const maxCases = Math.max(5, ...chartData.map(d => d.cases || 0));
 
-  // Log transformed chartData before rendering
-  console.log('Transformed chartData for rendering for:', selectedBarangay, '(', weeks, 'weeks):', JSON.stringify(chartData, null, 2));
-
-  // Log the data being passed to the chart
-  console.log('Data being rendered in chart:', {
-    selectedBarangay,
-    weeks,
-    chartData,
-    isLoading,
-    error
-  });
-
   if (isLoading || barangaysLoading) {
     return (
       <div className="flex flex-col p-5 gap-4">
@@ -113,10 +94,9 @@ export default function DengueTrendChart({ selectedBarangay, onBarangayChange })
   }
 
   if (error) {
-    console.error("Error details from useGetBarangayWeeklyTrendsQuery:", error); // Log the detailed error
     return (
       <div className="flex flex-col p-5 gap-4">
-        <p className="text-error">Error loading chart data. Check console for details.</p>
+        <p className="text-error">Error loading chart data. Please try again later.</p>
       </div>
     );
   }
@@ -133,7 +113,7 @@ export default function DengueTrendChart({ selectedBarangay, onBarangayChange })
               color: getPatternColor(selectedBarangayPattern),
               fontWeight: 'bold'
             }}>
-              {selectedBarangayPattern}
+              {selectedBarangayPattern || 'No pattern detected'}
             </span>
           </p>
         </div>

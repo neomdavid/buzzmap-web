@@ -64,41 +64,27 @@ const BuzzLine = () => {
   const newsArticles = adminPosts?.filter(post => post.category === 'news') || [];
   const tipArticles = adminPosts?.filter(post => post.category === 'tip') || [];
 
-  console.log('News Articles:', newsArticles);
-  console.log('Tip Articles:', tipArticles);
-
   // Filter and format news articles from admin posts
   const formattedArticles = useMemo(() => {
-    console.log('Raw admin posts:', adminPosts);
-    
     if (!adminPosts) {
-      console.log('No admin posts available');
       return [];
     }
     
     const filteredNews = adminPosts.filter(post => {
-      console.log('Checking post:', post);
       return post && post.category && post.category.toLowerCase() === 'news';
     });
-    
-    console.log('Filtered news:', filteredNews);
 
-    const formattedArticles = filteredNews.map(post => {
+    return filteredNews.map(post => {
       if (!post) return null;
       
-      const formatted = {
+      return {
         _id: post._id,
         images: post.images || [],
         date: post.publishDate ? new Date(post.publishDate).toLocaleDateString() : 'No date',
         title: post.title || 'Untitled',
         description: post.content || 'No content available',
       };
-      console.log('Formatted article:', formatted);
-      return formatted;
     }).filter(Boolean);
-
-    console.log('Final formatted articles:', formattedArticles);
-    return formattedArticles;
   }, [adminPosts]);
 
   const surveillanceUpdates = dummyUpdates;

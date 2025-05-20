@@ -24,7 +24,6 @@ const DengueMapNoInfo = forwardRef((props, ref) => {
   // Update useImperativeHandle to properly expose the map methods
   useImperativeHandle(ref, () => ({
     panTo: (position) => {
-      console.log('DengueMapNoInfo panTo called with position:', position);
       if (mapRefState) {
         mapRefState.panTo(position);
       } else {
@@ -32,7 +31,6 @@ const DengueMapNoInfo = forwardRef((props, ref) => {
       }
     },
     setZoom: (zoom) => {
-      console.log('DengueMapNoInfo setZoom called with zoom:', zoom);
       if (mapRefState) {
         mapRefState.setZoom(zoom);
       } else {

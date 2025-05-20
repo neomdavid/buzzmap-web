@@ -285,9 +285,6 @@ function AdminsTable({ statusFilter, roleFilter, searchQuery }) {
     );
   };
 
-  // Add this console.log to see the API response
-  console.log('Accounts API Response:', accounts);
-
   // Update the rowData transformation to remove date filtering
   const rowData = useMemo(() => {
     if (!accounts) return [];

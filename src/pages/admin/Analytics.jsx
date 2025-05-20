@@ -14,7 +14,7 @@ import {
 import PatternRecognitionResults from "@/components/Admin/PatternAlerts";
 import PatternAlerts from "@/components/Admin/PatternAlerts";
 import { useState, useRef, useEffect } from "react";
-import { useGetAnalyticsQuery, useGetPostsQuery, useGetAllInterventionsQuery, useGetPatternRecognitionResultsQuery } from '../../api/dengueApi';
+import { useGetAnalyticsQuery, useGetPostsQuery, useGetAllInterventionsQuery, useGetPatternRecognitionResultsQuery, useGetBarangaysQuery } from '../../api/dengueApi';
 import ActionRecommendationCard from "../../components/Admin/ActionRecommendationCard";
 import { Bar } from 'react-chartjs-2';
 import {
@@ -62,91 +62,66 @@ const Analytics = () => {
   const { data: patternResultsData, isLoading: isLoadingPatterns } = useGetPatternRecognitionResultsQuery();
   const { data: allInterventionsData, isLoading: isLoadingAllInterventions } = useGetAllInterventionsQuery();
   const { data: posts, isLoading: isLoadingPosts } = useGetPostsQuery();
+  const { data: barangaysList, isLoading: isLoadingBarangays } = useGetBarangaysQuery();
 
   useEffect(() => {
-    console.log("[Analytics DEBUG] patternResultsData:", JSON.stringify(patternResultsData, null, 2));
-    console.log("[Analytics DEBUG] isLoadingPatterns:", isLoadingPatterns);
-    console.log("[Analytics DEBUG] initialBarangayNameForMap (before logic):", initialBarangayNameForMap);
-  }, [patternResultsData, isLoadingPatterns, initialBarangayNameForMap]);
-
-  // Effect to set initial selected barangay based on spike pattern
-  useEffect(() => {
-    console.log("[Analytics DEBUG] Entering initial barangay selection effect. patternResultsData exists:", !!patternResultsData?.data, "initialBarangayNameForMap:", initialBarangayNameForMap);
-    if (patternResultsData?.data && !initialBarangayNameForMap) { 
-      console.log("[Analytics DEBUG] Finding spike barangays from:", patternResultsData.data);
-      const spikeBarangays = patternResultsData.data.filter(
-        item => item.triggered_pattern?.toLowerCase() === 'spike'
+    if (patternResultsData?.data && !initialBarangayNameForMap) {
+      // Find barangays with spike patterns
+      const spikeBarangays = patternResultsData.data.filter(item => 
+        item.pattern?.toLowerCase() === 'spike'
       );
-      console.log(`[Analytics DEBUG] Found ${spikeBarangays.length} spike barangay(s):`, JSON.stringify(spikeBarangays, null, 2));
 
-      let targetBarangay = null;
-      let recommendationDetails = null;
-
-      if (spikeBarangays.length > 0) {
-        // Sort spikes: most recent first, then alphabetically by name
-        spikeBarangays.sort((a, b) => {
-          const timeA = new Date(a.last_analysis_time || 0);
-          const timeB = new Date(b.last_analysis_time || 0);
-          if (timeB !== timeA) {
-            return timeB - timeA;
-          }
-          return a.name.localeCompare(b.name);
-        });
-        targetBarangay = spikeBarangays[0]; // Select the top one after sorting
-        setSelectedTab('spikes'); // Switch tab to show all spikes if any exist
-        console.log("[Analytics DEBUG] Selected 'spikes' tab due to existing spike patterns.");
-      } else {
-        // No spikes, fallback to default behavior (first barangay or hardcoded)
-        targetBarangay = patternResultsData.data?.[0];
-        if (!targetBarangay) {
-          targetBarangay = { name: 'bahay toro' }; // Ensure targetBarangay is an object for consistency
-        }
-         setSelectedTab('selected'); // Keep 'selected' or switch to 'all' if preferred
-      }
+      let targetBarangayName;
       
-      if (targetBarangay) {
-        const targetBarangayName = targetBarangay.name;
-        // Fetch details for the chosen targetBarangay, even if it's not a spike (for fallback)
-        const fullDetailsForTarget = patternResultsData.data.find(p => p.name === targetBarangayName);
+      if (spikeBarangays.length > 0) {
+        // If we have spike patterns, select the first one
+        targetBarangayName = spikeBarangays[0].name;
+      } else {
+        // Fallback to first barangay in the list
+        targetBarangayName = patternResultsData.data[0]?.name;
+      }
 
-        if (fullDetailsForTarget && fullDetailsForTarget.triggered_pattern) { // Check if pattern exists for recommendation
-            recommendationDetails = {
-                barangay: fullDetailsForTarget.name,
-                patternType: fullDetailsForTarget.triggered_pattern,
-                issueDetected: fullDetailsForTarget.alert?.replace(/^[^:]+:\s*/, ''),
-                suggestedAction: fullDetailsForTarget.current_recommendation?.full_recommendation,
-            };
-        } else {
-            // Handle case where even the fallback targetBarangay might not have full details or pattern
-            recommendationDetails = {
-                barangay: targetBarangayName,
-                patternType: 'none', // Default pattern type
-                issueDetected: 'N/A',
-                suggestedAction: 'No specific recommendation available.',
-            };
-             if (!fullDetailsForTarget) { // If targetBarangay was the hardcoded 'bahay toro'
-                console.log("[Analytics DEBUG] Fallback to hardcoded 'bahay toro', no detailed pattern data found for it.");
-             }
-        }
-        
-        console.log("[Analytics DEBUG] Target Barangay for map and chart:", targetBarangayName);
-        console.log("[Analytics DEBUG] Recommendation Details for display:", JSON.stringify(recommendationDetails, null, 2));
+      if (targetBarangayName) {
+        const patternInfo = patternResultsData.data.find(
+          item => item.name === targetBarangayName
+        );
 
-        setSelectedBarangay(targetBarangayName); 
+        const recommendationDetails = {
+          barangay: targetBarangayName,
+          patternType: patternInfo?.pattern || 'none',
+          issueDetected: patternInfo?.alert || 'N/A',
+          suggestedAction: patternInfo?.recommendation || 'No specific recommendation available.'
+        };
+
+        setSelectedBarangay(targetBarangayName);
         setInitialBarangayNameForMap(targetBarangayName);
-        setSpikeRecommendationDetails(recommendationDetails);
-        console.log("[Analytics DEBUG] States set - selectedBarangay:", targetBarangayName, "initialBarangayNameForMap:", targetBarangayName);
       }
     }
   }, [patternResultsData, initialBarangayNameForMap]);
 
-  // Handler to change selected barangay from PatternAlerts
-  const handleAlertBarangaySelect = (barangayName) => {
-    setSelectedBarangay(barangayName);
-    setSelectedTab('selected'); // Switch tab to show the selected barangay's alert
-    // Optionally, scroll to the chart or highlight it
-    // e.g., document.getElementById('trends-chart-section')?.scrollIntoView({ behavior: 'smooth' });
+  // Handle barangay selection from map
+  const handleBarangaySelect = (barangayFeature) => {
+    if (barangayFeature?.properties?.name) {
+      setSelectedBarangay(barangayFeature.properties.name);
+    }
   };
+
+  // Get filtered data for selected barangay
+  const selectedNorm = selectedBarangay?.toLowerCase().replace(/[^a-z0-9]/g, '');
+  
+  const filteredPosts = posts?.filter(post => {
+    const postBarangayNorm = post.barangay?.toLowerCase().replace(/[^a-z0-9]/g, '');
+    return postBarangayNorm === selectedNorm;
+  }) || [];
+
+  const filteredInterventions = allInterventionsData?.filter(intervention => {
+    const interventionBarangayNorm = intervention.barangay?.toLowerCase().replace(/[^a-z0-9]/g, '');
+    return interventionBarangayNorm === selectedNorm;
+  }) || [];
+
+  const patternInfo = patternResultsData?.data?.find(
+    item => item.name.toLowerCase() === selectedBarangay?.toLowerCase()
+  );
 
   const handleFileChange = (event) => {
     const file = event.target.files[0];
@@ -304,7 +279,7 @@ const Analytics = () => {
               : `Action Recommendation for ${spikeRecommendationDetails.barangay}`
             }
           </p>
-          {console.log("[Analytics DEBUG] Rendering ActionRecommendationCard with props:", JSON.stringify(spikeRecommendationDetails, null, 2))}
+          {/* {console.log("[Analytics DEBUG] Rendering ActionRecommendationCard with props:", JSON.stringify(spikeRecommendationDetails, null, 2))} */}
           <ActionRecommendationCard
             barangay={spikeRecommendationDetails.barangay}
             patternType={spikeRecommendationDetails.patternType}
@@ -369,7 +344,7 @@ const Analytics = () => {
               <PatternAlerts 
                 selectedBarangay={selectedBarangay} 
                 selectedTab={selectedTab}
-                onAlertSelect={handleAlertBarangaySelect}
+                onAlertSelect={handleBarangaySelect}
                 key={dataVersion}
               />
             </div>
@@ -381,8 +356,6 @@ const Analytics = () => {
             Barangay Dengue Risk and Case Density Map
           </p>
           <div className="rounded-xl shadow-sm h-140 overflow-hidden">
-            {console.log("[Analytics DEBUG] Rendering DengueMap with initialFocusBarangayName:", initialBarangayNameForMap)}
-            {console.log("[Analytics DEBUG] selectedBarangay before DengueMap:", selectedBarangay)}
             <DengueMap 
               showLegends={true} 
               defaultTab="cases"
@@ -391,66 +364,38 @@ const Analytics = () => {
               searchQuery={selectedBarangay}
               activeInterventions={allInterventionsData}
               isLoadingInterventions={isLoadingAllInterventions}
-              onBarangaySelect={(barangayFeature) => {
-                console.log('[Analytics DEBUG] onBarangaySelect called from DengueMap:', barangayFeature);
-                const name = barangayFeature?.properties?.displayName || barangayFeature?.properties?.name || barangayFeature?.name;
-                setSelectedBarangay(name);
-                setInitialBarangayNameForMap(name);
-              }}
+              barangaysList={barangaysList}
+              onBarangaySelect={handleBarangaySelect}
             />
           </div>
         </div>
         {/* Selected Barangay Analytics Section */}
         <div className="w-full flex flex-col shadow-sm shadow-lg p-6 py-8 rounded-lg mt-6">
           <p className="mb-4 text-base-content text-3xl font-bold">Selected Barangay Analytics</p>
-          {console.log('[Analytics DEBUG] selectedBarangay:', selectedBarangay)}
-          {console.log('[Analytics DEBUG] posts:', posts)}
-          {console.log('[Analytics DEBUG] allInterventionsData:', allInterventionsData)}
-          {console.log('[Analytics DEBUG] patternResultsData:', patternResultsData)}
           {selectedBarangay ? (
             (() => {
               // Normalize barangay name for matching
               const normalize = (name) => (name || '').toLowerCase().replace(/[^a-z0-9]/g, '');
               const selectedNorm = normalize(selectedBarangay);
-              console.log('[Analytics DEBUG] selectedNorm:', selectedNorm);
 
               // Reports analytics
               const filteredPosts = Array.isArray(posts)
-                ? posts.filter(post => {
-                    const norm = normalize(post.barangay);
-                    if (norm === selectedNorm) {
-                      console.log('[Analytics DEBUG] Post matched:', post);
-                    }
-                    return norm === selectedNorm;
-                  })
+                ? posts.filter(post => normalize(post.barangay) === selectedNorm)
                 : [];
-              console.log('[Analytics DEBUG] filteredPosts:', filteredPosts);
-              console.log('[Analytics DEBUG] Statuses of filteredPosts:', filteredPosts.map(p => p.status));
+
               const validatedCount = filteredPosts.filter(p => p.status === 'Validated').length;
               const pendingCount = filteredPosts.filter(p => p.status === 'Pending').length;
               const rejectedCount = filteredPosts.filter(p => p.status === 'Rejected').length;
 
               // Interventions analytics
               const filteredInterventions = Array.isArray(allInterventionsData)
-                ? allInterventionsData.filter(i => {
-                    const norm = normalize(i.barangay);
-                    if (norm === selectedNorm) {
-                      console.log('[Analytics DEBUG] Intervention matched:', i);
-                    }
-                    return norm === selectedNorm;
-                  })
+                ? allInterventionsData.filter(i => normalize(i.barangay) === selectedNorm)
                 : [];
-              console.log('[Analytics DEBUG] filteredInterventions:', filteredInterventions);
+
               const totalInterventions = filteredInterventions.length;
               const scheduledInterventions = filteredInterventions.filter(i => (i.status || '').toLowerCase() === 'scheduled').length;
               const ongoingInterventions = filteredInterventions.filter(i => (i.status || '').toLowerCase() === 'ongoing').length;
               const completedInterventions = filteredInterventions.filter(i => ['completed','complete'].includes((i.status || '').toLowerCase())).length;
-
-              // Pattern recognition info
-              const patternInfo = patternResultsData?.data?.find(
-                item => normalize(item.name) === selectedNorm
-              );
-              console.log('[Analytics DEBUG] patternInfo:', patternInfo);
 
               // Bar chart data for reports
               const reportsBarData = {

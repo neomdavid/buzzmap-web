@@ -15,7 +15,6 @@ const authSlice = createSlice({
       const { user } = action.payload;
       state.user = user;
       localStorage.setItem("user", JSON.stringify(user));
-      console.log(user);
     },
     login: (state, action) => {
       const { user, token } = action.payload;
@@ -24,8 +23,6 @@ const authSlice = createSlice({
       // Store the token as a plain string, not stringified
       localStorage.setItem("user", JSON.stringify(user));
       localStorage.setItem("token", token); // Remove JSON.stringify here
-      console.log(token);
-      console.log(user);
     },
     logout: (state) => {
       state.user = null;
