@@ -1,7 +1,7 @@
 import { DengueMapNoInfo } from "@/components";
 import { MapPinLine, Circle, CheckCircle, Hourglass, MagnifyingGlass, Upload } from "phosphor-react";
 import { useState, useMemo, useRef, useEffect } from "react";
-import { useGetInterventionsInProgressQuery, useGetPostsQuery, useGetAllInterventionsQuery } from "@/api/dengueApi";
+import { useGetInterventionsInProgressQuery, useGetPostsQuery, useGetAllInterventionsQuery, useGetBarangaysQuery } from "@/api/dengueApi";
 import * as turf from '@turf/turf';
 
 const DengueMapping = () => {
@@ -14,6 +14,7 @@ const DengueMapping = () => {
   const [csvFile, setCsvFile] = useState(null);
   const [importError, setImportError] = useState("");
   const [isImporting, setIsImporting] = useState(false);
+  const [recentReports, setRecentReports] = useState([]);
   const mapRef = useRef(null);
   const modalRef = useRef(null);
   const streetViewModalRef = useRef(null);
@@ -21,6 +22,7 @@ const DengueMapping = () => {
   const importModalRef = useRef(null);
   const { data: posts } = useGetPostsQuery();
   const { data: allInterventionsData, isLoading: isLoadingAllInterventions } = useGetAllInterventionsQuery();
+  const { data: barangaysList, isLoading: isLoadingBarangays } = useGetBarangaysQuery();
 
   useEffect(() => {
     if(allInterventionsData) {
@@ -131,6 +133,34 @@ const DengueMapping = () => {
       modalRef.current?.close();
     }
   }, [showFullReport, selectedFullReport]);
+
+  useEffect(() => {
+    async function fetchRecentReports() {
+      if (!selectedBarangay?.properties?.displayName) {
+        setRecentReports([]);
+        return;
+      }
+      try {
+        const barangayName = selectedBarangay.properties.displayName.trim();
+        const response = await fetch("http://localhost:4000/api/v1/barangays/get-recent-reports-for-barangay", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ barangay_name: barangayName })
+        });
+        if (!response.ok) throw new Error("Failed to fetch recent reports");
+        const data = await response.json();
+        console.log('[Recent Reports API Response]', data); // Debug log
+        const caseCounts = data?.reports?.case_counts || {};
+        const reportsArr = Object.entries(caseCounts).map(([date, count]) => ({ date, count }));
+        console.log('[Parsed Recent Reports]', reportsArr); // Debug log
+        setRecentReports(reportsArr);
+      } catch (err) {
+        console.error('[Recent Reports Fetch Error]', err); // Debug log
+        setRecentReports([]);
+      }
+    }
+    fetchRecentReports();
+  }, [selectedBarangay]);
 
   const handleBarangaySelect = (barangay) => {
     setSelectedBarangay(barangay);
@@ -348,6 +378,7 @@ const DengueMapping = () => {
           selectedMapItem={selectedMapItem}
           activeInterventions={activeInterventions}
           isLoadingInterventions={isLoadingAllInterventions}
+          barangaysList={barangaysList}
           onPropsDebug={{ activeInterventions, isLoadingAllInterventions, selectedMapItem }}
         />
       </div>
@@ -372,32 +403,105 @@ const DengueMapping = () => {
             }
           </p>
           <div className="w-[90%] mx-auto flex flex-col text-black gap-2">
-            <p className=""><span className="font-bold">Status: </span> 
-              {selectedBarangay?.properties?.alert 
-                ? selectedBarangay.properties.alert.replace(
-                    new RegExp(`^${selectedBarangay.properties.displayName}:?\\s*`, "i"),
-                    ""
+            {/* Pattern-Based */}
+            {selectedBarangay?.properties?.status_and_recommendation?.pattern_based &&
+              selectedBarangay.properties.status_and_recommendation.pattern_based.status &&
+              selectedBarangay.properties.status_and_recommendation.pattern_based.status.trim() !== "" && (
+                <>
+                  <p className="font-bold text-primary mb-1">Pattern-Based</p>
+                  {selectedBarangay.properties.status_and_recommendation.pattern_based.alert && (
+                    <p className=""><span className="font-bold">Alert: </span>
+                      {selectedBarangay.properties.status_and_recommendation.pattern_based.alert.replace(
+                        new RegExp(`^${selectedBarangay.properties.displayName}:?\\s*`, "i"),
+                        ""
+                      )}
+                    </p>
+                  )}
+                  {selectedBarangay.properties.status_and_recommendation.pattern_based.recommendation && (
+                    <p className=""><span className="font-bold">Recommendation: </span>
+                      {selectedBarangay.properties.status_and_recommendation.pattern_based.recommendation}
+                    </p>
+                  )}
+                  <hr className="border-t border-gray-200 my-2" />
+                </>
+            )}
+            {/* Report-Based */}
+            {selectedBarangay?.properties?.status_and_recommendation?.report_based &&
+              selectedBarangay.properties.status_and_recommendation.report_based.status &&
+              selectedBarangay.properties.status_and_recommendation.report_based.status.trim() !== "" && (
+                <>
+                  <p className="font-bold text-primary mb-1">Report-Based</p>
+                  {/* Status as badge with label */}
+                  <div className="mb-2 flex items-center gap-2">
+                    <span className="font-bold">Status:</span>
+                    <span className={`inline-block px-3 py-1 rounded-full text-white text-xs font-bold ${(() => {
+                      const status = selectedBarangay.properties.status_and_recommendation.report_based.status.toLowerCase();
+                      if (status === 'low') return 'bg-success';
+                      if (status === 'medium') return 'bg-warning';
+                      if (status === 'high') return 'bg-error';
+                      return 'bg-gray-400';
+                    })()}`}>{selectedBarangay.properties.status_and_recommendation.report_based.status.toUpperCase()}</span>
+                  </div>
+                  {selectedBarangay.properties.status_and_recommendation.report_based.alert && (
+                    <p className=""><span className="font-bold">Alert: </span>
+                      {selectedBarangay.properties.status_and_recommendation.report_based.alert}
+                    </p>
+                  )}
+                  {selectedBarangay.properties.status_and_recommendation.report_based.recommendation && (
+                    <p className=""><span className="font-bold">Recommendation: </span>
+                      {selectedBarangay.properties.status_and_recommendation.report_based.recommendation}
+                    </p>
+                  )}
+                  <hr className="border-t border-gray-200 my-2" />
+                </>
+            )}
+            {/* Death Priority */}
+            {selectedBarangay?.properties?.status_and_recommendation?.death_priority &&
+              selectedBarangay.properties.status_and_recommendation.death_priority.status &&
+              selectedBarangay.properties.status_and_recommendation.death_priority.status.trim() !== "" && (
+                <>
+                  <p className="font-bold text-primary mb-1">Death Priority</p>
+                  <p className=""><span className="font-bold">Status: </span>
+                    {selectedBarangay.properties.status_and_recommendation.death_priority.status}
+                  </p>
+                  {selectedBarangay.properties.status_and_recommendation.death_priority.alert && (
+                    <p className=""><span className="font-bold">Alert: </span>
+                      {selectedBarangay.properties.status_and_recommendation.death_priority.alert}
+                    </p>
+                  )}
+                  {selectedBarangay.properties.status_and_recommendation.death_priority.recommendation && (
+                    <p className=""><span className="font-bold">Recommendation: </span>
+                      {selectedBarangay.properties.status_and_recommendation.death_priority.recommendation}
+                    </p>
+                  )}
+                  <hr className="border-t border-gray-200 my-2" />
+                </>
+            )}
+            {/* Recent Reports */}
+            <div>
+              <p className="mt-1"><span className="font-bold">Recent Reports: </span></p>
+              <div className="w-[80%] mx-auto mt-1">
+                {recentReports.length > 0 ? (
+                  recentReports.map((r, idx) => (
+                    <div key={idx} className="flex gap-2 items-center">
+                      <div><Circle size={16} color="red" weight="fill" /></div>
+                      <p><span className="font-semibold">{r.date}: </span> {r.count} new case{r.count > 1 ? 's' : ''}</p>
+                    </div>
+                  ))
+                ) : (
+                  // Only show 'No recent reports' if there is no Report-Based section
+                  !(
+                    selectedBarangay?.properties?.status_and_recommendation?.report_based &&
+                    selectedBarangay.properties.status_and_recommendation.report_based.status &&
+                    selectedBarangay.properties.status_and_recommendation.report_based.status.trim() !== ""
+                  ) && (
+                    <p className="text-gray-500 italic">No recent reports</p>
                   )
-                : 'No data available'}
-            </p>
-            <p className=""><span className="font-bold">Pattern: </span>
-              {selectedBarangay?.properties?.patternType 
-                ? selectedBarangay.properties.patternType.charAt(0).toUpperCase() + 
-                  selectedBarangay.properties.patternType.slice(1).replace('_', ' ')
-                : 'No pattern detected'}
-            </p>
-            <p className=""><span className="font-bold">Total Cases (Month): </span>  20</p>
-            <p className=""><span className="font-bold">Recent Reports: </span>  </p>
-            <div className="w-[80%] mx-auto mt-1">
-              <div className="flex gap-2 items-center">
-                <div><Circle size={16} color="red" weight="fill" /></div>
-                <p><span className="font-semibold">March 3: </span> 2 new cases</p>
-              </div>
-              <div className="flex gap-2 items-center">
-                <div><Circle size={16} color="red" weight="fill" /></div>
-                <p><span className="font-semibold">March 3: </span> 1 new case</p>
+                )}
               </div>
             </div>
+            <hr className="border-t border-gray-200 my-2" />
+            {/* Interventions in Progress */}
             <p className=""><span className="text-primary font-bold">Interventions in Progress: </span>  </p>
             <div className="w-[80%] mx-auto mt-1">
               {interventionsInProgress && interventionsInProgress.length > 0 ? (
