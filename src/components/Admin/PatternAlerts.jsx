@@ -16,9 +16,6 @@ export default function PatternAlerts({ selectedBarangay, selectedTab, onAlertSe
       return {
         _id: barangay._id,
         name: barangay.name,
-        triggered_pattern: patternBased?.status || barangay.triggered_pattern || null,
-        alert: patternBased?.alert || barangay.alert || null,
-        status_and_recommendation: barangay.status_and_recommendation || null,
         pattern_based: patternBased,
         report_based: reportBased,
         death_priority: deathPriority,
@@ -39,22 +36,24 @@ export default function PatternAlerts({ selectedBarangay, selectedTab, onAlertSe
         item.name.toLowerCase().includes(searchLower)
       );
     }
-    // Apply tab filter
+    // Apply tab filter using pattern_based.status
     if (selectedTab === 'spikes') {
       filtered = filtered.filter(item => 
-        item.triggered_pattern?.toLowerCase() === 'spike'
+        item.pattern_based?.status?.toLowerCase() === 'spike'
       );
     } else if (selectedTab === 'gradual') {
       filtered = filtered.filter(item => 
-        item.triggered_pattern?.toLowerCase() === 'gradual_rise'
+        item.pattern_based?.status?.toLowerCase() === 'gradual_rise'
       );
     } else if (selectedTab === 'stability') {
       filtered = filtered.filter(item => 
-        item.triggered_pattern?.toLowerCase() === 'stability' || item.triggered_pattern?.toLowerCase() === 'stable'
+        item.pattern_based?.status?.toLowerCase() === 'stability' || 
+        item.pattern_based?.status?.toLowerCase() === 'stable'
       );
     } else if (selectedTab === 'decline') {
       filtered = filtered.filter(item => 
-        item.triggered_pattern?.toLowerCase() === 'decline' || item.triggered_pattern?.toLowerCase() === 'decreasing'
+        item.pattern_based?.status?.toLowerCase() === 'decline' || 
+        item.pattern_based?.status?.toLowerCase() === 'decreasing'
       );
     } else if (selectedTab === 'selected' && selectedBarangay) {
       filtered = filtered.filter(item => 
@@ -92,8 +91,8 @@ export default function PatternAlerts({ selectedBarangay, selectedTab, onAlertSe
       ) : (
         filteredData.map(item => {
           let borderColor, bgColor;
-          let patternType = item.triggered_pattern || item.pattern_based?.status || '';
-          if (!patternType) {
+          let patternType = item.pattern_based?.status || '';
+          if (!patternType || patternType.trim() === '') {
             borderColor = "border-gray-300";
             bgColor = "bg-gray-300";
           } else {
@@ -126,7 +125,6 @@ export default function PatternAlerts({ selectedBarangay, selectedTab, onAlertSe
               death_priority={item.death_priority}
               pattern_data={item.pattern_data}
               last_analysis_time={item.last_analysis_time}
-              triggered_pattern={item.triggered_pattern}
               barangayName={item.name}
               onSelect={onAlertSelect}
             />
@@ -164,7 +162,6 @@ const AlertCard = ({
   death_priority,
   pattern_data,
   last_analysis_time,
-  triggered_pattern,
   barangayName,
   onSelect,
 }) => {
@@ -204,8 +201,8 @@ const AlertCard = ({
     return pattern.charAt(0).toUpperCase() + pattern.slice(1).replace(/_/g, ' ');
   };
 
-  // Determine color based on triggered_pattern
-  const patternKey = getPatternKey(triggered_pattern);
+  // Get pattern from pattern_based.status
+  const patternKey = getPatternKey(pattern_based?.status);
   const borderColor = PATTERN_COLORS[patternKey].border;
   const badgeBgClass = PATTERN_COLORS[patternKey].badge;
 
@@ -218,14 +215,14 @@ const AlertCard = ({
       >
         {title}
       </p>
-      {/* Triggered Pattern at the top if present */}
-      {triggered_pattern && triggered_pattern.trim() !== '' && triggered_pattern.trim().toLowerCase() !== 'none' && (
+      {/* Pattern display using pattern_based.status */}
+      {pattern_based?.status && pattern_based.status.trim() !== '' && (
         <div className="mb-2 flex items-center gap-2">
           <span className="font-bold mb-1 text-base-content text-lg">Pattern:</span>
           <span
             className={`px-3 py-1 rounded-full text-white text-sm font-semibold ${badgeBgClass}`}
           >
-            {getPatternLabel(triggered_pattern)}
+            {getPatternLabel(pattern_based.status)}
           </span>
         </div>
       )}
