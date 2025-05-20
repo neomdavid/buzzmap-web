@@ -4,7 +4,7 @@ import {
   // FormCoordinationRequest, // Commented out as it's not used in the current visible layout
   ActionRecommendationCard,
 } from "../../components";
-import { useGetAllInterventionsQuery, useGetPostsQuery, useGetPatternRecognitionResultsQuery } from "../../api/dengueApi";
+import { useGetAllInterventionsQuery, useGetPostsQuery, useGetPatternRecognitionResultsQuery, useGetBarangaysQuery } from "../../api/dengueApi";
 import { Bar, Pie } from 'react-chartjs-2'; // Pie and Bar will be removed from render
 import {
   Chart as ChartJS,
@@ -36,17 +36,17 @@ const Interventions = () => {
 
   // Fetch pattern recognition results
   const {
-    data: patternResultsData, // Renamed to avoid conflict if posts also had a patternData field
-    isLoading: isLoadingPatterns,
-    error: errorPatterns,
-  } = useGetPatternRecognitionResultsQuery();
+    data: barangaysList,
+    isLoading: isLoadingBarangays,
+    error: errorBarangays,
+  } = useGetBarangaysQuery();
 
   // Log the raw patternResultsData when it's available
   useEffect(() => {
-    if (patternResultsData) {
-      console.log("Raw Pattern Recognition Results Data (for Prescriptive Actions):", JSON.stringify(patternResultsData, null, 2));
+    if (barangaysList) {
+      console.log("Raw Barangays List Data:", JSON.stringify(barangaysList, null, 2));
     }
-  }, [patternResultsData]);
+  }, [barangaysList]);
 
   const completedInterventions = interventions ? interventions.filter(i => {
     const status = i.status?.toLowerCase();
@@ -110,50 +110,71 @@ const Interventions = () => {
   const [recommendationSearchQuery, setRecommendationSearchQuery] = useState("");
   const [patternFilter, setPatternFilter] = useState(""); // Empty string for "All Patterns"
 
-  // Get unique pattern types for the filter dropdown
+  // Get unique pattern types for the filter dropdown (from barangaysList)
   const uniquePatternTypes = React.useMemo(() => {
-    if (!patternResultsData?.data) return [];
-    const patterns = new Set(patternResultsData.data.map(item => item.triggered_pattern).filter(Boolean)); // filter(Boolean) to remove null/undefined
+    if (!barangaysList) return [];
+    const patterns = new Set(
+      barangaysList
+        .map(b => b.status_and_recommendation?.pattern_based?.status)
+        .filter(Boolean)
+        .map(s => s.toLowerCase())
+    );
     return Array.from(patterns).sort();
-  }, [patternResultsData]);
+  }, [barangaysList]);
 
-  // Apply filters and search to recommendations
+  // Apply filters and search to recommendations (from barangaysList)
   const filteredRecommendations = React.useMemo(() => {
-    if (!patternResultsData?.data) return [];
-    let recommendations = patternResultsData.data;
+    if (!barangaysList) return [];
+    let recommendations = barangaysList
+      .map(b => {
+        const patternBased = b.status_and_recommendation?.pattern_based || {};
+        // Get patternType ONLY from pattern_based.status
+        let patternType = patternBased.status?.toLowerCase();
+        if (!patternType || patternType === "") patternType = "none";
+        return {
+          name: b.name,
+          patternType,
+          issueDetected: patternBased.alert || '',
+          suggestedAction: patternBased.recommendation || '',
+        };
+      })
+      .filter(item => (item.issueDetected && item.issueDetected.toLowerCase() !== 'none') || (item.suggestedAction && item.suggestedAction.trim() !== ''));
 
     // Apply pattern filter
     if (patternFilter) {
-      recommendations = recommendations.filter(item => item.triggered_pattern === patternFilter);
+      recommendations = recommendations.filter(item => item.patternType === patternFilter.toLowerCase());
     }
 
     // Apply search query
     if (recommendationSearchQuery) {
       const searchQueryLower = recommendationSearchQuery.toLowerCase();
-      recommendations = recommendations.filter(item => 
+      recommendations = recommendations.filter(item =>
         item.name?.toLowerCase().includes(searchQueryLower) ||
-        item.alert?.toLowerCase().includes(searchQueryLower) ||
-        item.current_recommendation?.full_recommendation?.toLowerCase().includes(searchQueryLower) ||
-        item.triggered_pattern?.toLowerCase().includes(searchQueryLower)
+        item.issueDetected?.toLowerCase().includes(searchQueryLower) ||
+        item.suggestedAction?.toLowerCase().includes(searchQueryLower) ||
+        item.patternType?.toLowerCase().includes(searchQueryLower)
       );
     }
     return recommendations;
-  }, [patternResultsData, patternFilter, recommendationSearchQuery]);
+  }, [barangaysList, patternFilter, recommendationSearchQuery]);
 
-  if (isLoadingInterventions || isLoadingPosts || isLoadingPatterns) {
+  // Log what is being rendered in ActionRecommendationCard for debugging
+  console.log('ActionRecommendationCard data:', filteredRecommendations);
+
+  if (isLoadingInterventions || isLoadingPosts || isLoadingBarangays) {
     return <div>Loading...</div>;
   }
 
-  if (errorInterventions || errorPosts || errorPatterns) {
-    return <div>Error loading data: {errorInterventions?.message || errorPosts?.message || errorPatterns?.message}</div>;
+  if (errorInterventions || errorPosts || errorBarangays) {
+    return <div>Error loading data: {errorInterventions?.message || errorPosts?.message || errorBarangays?.message}</div>;
   }
 
   // Helper function to find recommendation for a specific barangay
   const findRecommendationForBarangay = (barangayName) => {
-    if (!patternResultsData?.data) return null;
+    if (!barangaysList) return null;
     // Normalize names for robust matching
     const normalizedTargetName = barangayName.toLowerCase().replace(/barangay /g, '').trim();
-    return patternResultsData.data.find(item => 
+    return barangaysList.find(item => 
       item.name?.toLowerCase().replace(/barangay /g, '').trim() === normalizedTargetName
     );
   };
@@ -274,12 +295,12 @@ const Interventions = () => {
             {/* Dynamically render ActionRecommendationCards based on filteredRecommendations */}
             {filteredRecommendations.length > 0 ? (
               filteredRecommendations.map(item => (
-            <ActionRecommendationCard
-                  key={item.name + item.triggered_pattern} // Ensure unique key
+                <ActionRecommendationCard
+                  key={item.name + item.patternType}
                   barangay={item.name}
-                  patternType={item.triggered_pattern}
-                  issueDetected={item.alert?.replace(/^[^:]+:\s*/, '')}
-                  suggestedAction={item.current_recommendation?.full_recommendation}
+                  patternType={item.patternType}
+                  issueDetected={item.issueDetected}
+                  suggestedAction={item.suggestedAction}
                 />
               ))
             ) : (

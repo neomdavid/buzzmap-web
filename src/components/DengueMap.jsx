@@ -219,16 +219,10 @@ const DengueMap = ({
         const barangayListObj = barangaysList.find(
           b => normalizeBarangayName(b.name) === normalizedBarangayName
         );
-        
-        // Get pattern type from status_and_recommendation.pattern_based.status
-        let patternType = barangayListObj?.status_and_recommendation?.pattern_based?.status?.toLowerCase() || 
-                         barangayListObj?.triggered_pattern?.toLowerCase() || 
-                         "none";
-        
+        // Get pattern type ONLY from status_and_recommendation.pattern_based.status
+        let patternType = barangayListObj?.status_and_recommendation?.pattern_based?.status?.toLowerCase();
         if (!patternType || patternType === "") patternType = "none";
-        
         const color = PATTERN_COLORS[patternType] || PATTERN_COLORS.default;
-        
         return {
           ...f,
           properties: {
