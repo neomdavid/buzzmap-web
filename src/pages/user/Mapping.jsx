@@ -170,45 +170,45 @@ const Mapping = () => {
         // Fetch barangay data
         const barangayResponse = await fetch("/quezon_barangays_boundaries.geojson");
         if (!barangayResponse.ok) throw new Error('Failed to load barangay data');
-        const barangayData = await barangayResponse.json();
+        const barangayGeoJson = await barangayResponse.json();
 
-        console.log('Raw Barangay Data:', barangayData); // Debug raw barangay data
-
-        // Process barangay data with pattern recognition results
-        if (patternData?.data) {
-          const processedData = {
-            ...barangayData,
-            features: barangayData.features.map(feature => {
-              const geoJsonBarangayName = feature.properties.name;
+        // --- BEGIN: Copy logic from DengueMap.jsx for integrating barangaysList ---
+        let processedBarangayData = barangayGeoJson;
+        if (barangaysList) {
+          processedBarangayData = {
+            ...barangayGeoJson,
+            features: barangayGeoJson.features.map((f) => {
+              const geoJsonBarangayName = f.properties.name;
               const normalizedGeoJsonName = normalizeBarangayName(geoJsonBarangayName);
-              
-              const patternInfo = patternData.data.find(item => {
-                const patternItemName = item.name;
-                const normalizedPatternName = normalizeBarangayName(patternItemName);
-                return normalizedPatternName === normalizedGeoJsonName;
-              });
-
+              const barangayListObj = barangaysList.find(
+                b => normalizeBarangayName(b.name) === normalizedGeoJsonName
+              );
+              // Get pattern type from status_and_recommendation.pattern_based.status
+              let patternType = barangayListObj?.status_and_recommendation?.pattern_based?.status?.toLowerCase() || 
+                                barangayListObj?.triggered_pattern?.toLowerCase() || 
+                                "none";
+              if (!patternType || patternType === "") patternType = "none";
+              const color = PATTERN_COLORS[patternType] || PATTERN_COLORS.default;
               return {
-                ...feature,
+                ...f,
                 properties: {
-                  ...feature.properties,
-                  riskLevel: patternInfo?.risk_level?.toLowerCase() || 'unknown',
-                  patternType: patternInfo?.triggered_pattern?.toLowerCase() || 'none',
-                  alert: patternInfo?.status_and_recommendation?.report_based?.alert ||
-                         patternInfo?.current_recommendation?.report_based?.alert ||
-                         patternInfo?.alert || 'No recent data',
-                  lastAnalysisTime: patternInfo?.last_analysis_time,
-                  status_and_recommendation: patternInfo?.status_and_recommendation || patternInfo?.current_recommendation
-                }
+                  ...f.properties,
+                  displayName: geoJsonBarangayName,
+                  patternType,
+                  color,
+                  alert: barangayListObj?.status_and_recommendation?.pattern_based?.alert ||
+                         barangayListObj?.alert || "No recent data",
+                  lastAnalysisTime: barangayListObj?.last_analysis_time,
+                  status_and_recommendation: barangayListObj?.status_and_recommendation,
+                  risk_level: barangayListObj?.risk_level,
+                  pattern_data: barangayListObj?.pattern_data
+                },
               };
             })
           };
-          console.log('Processed Data:', processedData); // Debug final processed data
-          setBarangayData(processedData);
-        } else {
-          console.log('No pattern data available, using raw barangay data'); // Debug no pattern data case
-          setBarangayData(barangayData);
         }
+        setBarangayData(processedBarangayData);
+        // --- END: Copy logic from DengueMap.jsx ---
 
         // Get user location - only once
         navigator.geolocation.getCurrentPosition(
@@ -245,7 +245,7 @@ const Mapping = () => {
     };
 
     fetchData();
-  }, [patternData, posts]);
+  }, [barangaysList, posts]);
 
   // Handle barangay selection
   const handleBarangaySelect = (e) => {
