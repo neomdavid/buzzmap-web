@@ -394,7 +394,7 @@ const DengueMapping = () => {
           <p className={`text-center font-bold ${getPatternTextColor(selectedBarangay?.properties?.patternType)} text-4xl mb-2`}>
             {selectedBarangay ? `Barangay ${selectedBarangay.properties.displayName}` : 'Select a Barangay'}
           </p>
-          <p className={`text-center font-semibold text-white text-lg uppercase mb-2 px-4 py-1 rounded-full inline-block mx-auto ${getPatternBgColor(selectedBarangay?.properties?.patternType)}`}>
+          <p className={`text-center font-semibold text-white text-lg uppercase mb-4 px-4 py-1 rounded-full inline-block mx-auto ${getPatternBgColor(selectedBarangay?.properties?.patternType)}`}>
             {selectedBarangay
               ? selectedBarangay.properties.patternType
                 ? (selectedBarangay.properties.patternType.charAt(0).toUpperCase() + selectedBarangay.properties.patternType.slice(1).replace('_', ' '))
@@ -408,7 +408,7 @@ const DengueMapping = () => {
               selectedBarangay.properties.status_and_recommendation.pattern_based.status &&
               selectedBarangay.properties.status_and_recommendation.pattern_based.status.trim() !== "" && (
                 <>
-                  <p className="font-bold text-primary mb-1">Pattern-Based</p>
+                  <p className="font-bold text-lg text-primary mb-1">Pattern-Based</p>
                   {selectedBarangay.properties.status_and_recommendation.pattern_based.alert && (
                     <p className=""><span className="font-bold">Alert: </span>
                       {selectedBarangay.properties.status_and_recommendation.pattern_based.alert.replace(
@@ -430,17 +430,17 @@ const DengueMapping = () => {
               selectedBarangay.properties.status_and_recommendation.report_based.status &&
               selectedBarangay.properties.status_and_recommendation.report_based.status.trim() !== "" && (
                 <>
-                  <p className="font-bold text-primary mb-1">Report-Based</p>
+                  <p className="font-bold text-lg text-primary mb-1">Report-Based</p>
                   {/* Status as badge with label */}
                   <div className="mb-2 flex items-center gap-2">
                     <span className="font-bold">Status:</span>
-                    <span className={`inline-block px-3 py-1 rounded-full text-white text-xs font-bold ${(() => {
+                    <span className={`inline-block px-3 py-1 rounded-full text-white text-md font-bold capitalize ${(() => {
                       const status = selectedBarangay.properties.status_and_recommendation.report_based.status.toLowerCase();
                       if (status === 'low') return 'bg-success';
                       if (status === 'medium') return 'bg-warning';
                       if (status === 'high') return 'bg-error';
                       return 'bg-gray-400';
-                    })()}`}>{selectedBarangay.properties.status_and_recommendation.report_based.status.toUpperCase()}</span>
+                    })()}`}>{selectedBarangay.properties.status_and_recommendation.report_based.status}</span>
                   </div>
                   {selectedBarangay.properties.status_and_recommendation.report_based.alert && (
                     <p className=""><span className="font-bold">Alert: </span>
@@ -460,7 +460,7 @@ const DengueMapping = () => {
               selectedBarangay.properties.status_and_recommendation.death_priority.status &&
               selectedBarangay.properties.status_and_recommendation.death_priority.status.trim() !== "" && (
                 <>
-                  <p className="font-bold text-primary mb-1">Death Priority</p>
+                  <p className="font-bold text-primary mb-1 text-lg">Death Priority</p>
                   <p className=""><span className="font-bold">Status: </span>
                     {selectedBarangay.properties.status_and_recommendation.death_priority.status}
                   </p>
@@ -502,7 +502,7 @@ const DengueMapping = () => {
             </div>
             <hr className="border-t border-gray-200 my-2" />
             {/* Interventions in Progress */}
-            <p className=""><span className="text-primary font-bold">Interventions in Progress: </span>  </p>
+            <p className=""><span className="text-primary font-bold text-lg">Interventions in Progress: </span>  </p>
             <div className="w-[80%] mx-auto mt-1">
               {interventionsInProgress && interventionsInProgress.length > 0 ? (
                 interventionsInProgress.map((intervention) => (
@@ -527,14 +527,14 @@ const DengueMapping = () => {
                   </div>
                 ))
               ) : (
-                <p className="text-gray-500 italic">No interventions in progress</p>
+                <p className="text-gray-500 italic text-lg">No interventions in progress</p>
               )}
             </div>
           </div>
           <div className="flex justify-end">
-            <button className="bg-primary rounded-full text-white px-4 py-1 text-[11px] hover:bg-primary/80 hover:scale-105 transition-all duration-200 active:scale-95 cursor-pointer">
+            {/* <button className="bg-primary rounded-full text-white px-4 py-1 text-[11px] hover:bg-primary/80 hover:scale-105 transition-all duration-200 active:scale-95 cursor-pointer">
               View Full Report
-            </button>
+            </button> */}
           </div>
         </div>
         <div className="col-span-6 flex flex-col gap-2">
