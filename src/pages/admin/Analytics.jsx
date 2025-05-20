@@ -344,7 +344,10 @@ const Analytics = () => {
               <PatternAlerts 
                 selectedBarangay={selectedBarangay} 
                 selectedTab={selectedTab}
-                onAlertSelect={handleBarangaySelect}
+                onAlertSelect={(barangayName) => {
+                  setSelectedBarangay(barangayName);
+                  setInitialBarangayNameForMap(barangayName);
+                }}
                 key={dataVersion}
               />
             </div>

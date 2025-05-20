@@ -563,14 +563,23 @@ const DengueMap = ({
             >
               {(() => {
                 const props = selectedBarangay.properties;
-                console.log('DengueMap InfoWindow properties:', props);
                 const patternType = (props?.patternType || "none").toLowerCase();
                 const lastAnalysisTime = props?.lastAnalysisTime;
                 const patternBased = props?.status_and_recommendation?.pattern_based || {};
                 const reportBased = props?.status_and_recommendation?.report_based || {};
                 const deathPriority = props?.status_and_recommendation?.death_priority || {};
-                const riskLevel = props?.risk_level || "unknown";
-                const patternData = props?.pattern_data || {};
+                // const riskLevel = props?.risk_level || "unknown";
+                // const patternData = props?.pattern_data || {};
+
+                // Color for report-based alert
+                const reportStatus = (reportBased.status || "unknown").toLowerCase();
+                const REPORT_STATUS_COLORS = {
+                  low: "border-success bg-success/5",
+                  medium: "border-warning bg-warning/5",
+                  high: "border-error bg-error/5",
+                  unknown: "border-gray-400 bg-gray-100"
+                };
+                const reportCardColor = REPORT_STATUS_COLORS[reportStatus] || REPORT_STATUS_COLORS.unknown;
 
                 return (
                   <div className="bg-white p-4 rounded-lg text-center h-auto" style={{ width: "50vw" }}>
@@ -597,29 +606,6 @@ const DengueMap = ({
                               ? 'No pattern detected'
                               : patternType.charAt(0).toUpperCase() + patternType.slice(1).replace('_', ' ')}
                           </p>
-                          {patternData && (
-                            <p className="text-sm text-gray-600 mt-1">
-                              Cases: {patternData.current_cases} (Previous: {patternData.previous_cases})
-                            </p>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Risk Level Card */}
-                      <div className={`p-3 rounded-lg border-2 ${
-                        riskLevel === 'high'
-                          ? 'border-error bg-error/5'
-                          : riskLevel === 'medium'
-                          ? 'border-warning bg-warning/5'
-                          : riskLevel === 'low'
-                          ? 'border-success bg-success/5'
-                          : 'border-gray-400 bg-gray-100'
-                      }`}>
-                        <div>
-                          <p className="text-sm font-medium text-gray-600 uppercase">Risk Level</p>
-                          <p className="text-lg font-semibold">
-                            {riskLevel.charAt(0).toUpperCase() + riskLevel.slice(1)}
-                          </p>
                         </div>
                       </div>
 
@@ -636,9 +622,9 @@ const DengueMap = ({
                         </div>
                       )}
 
-                      {/* Report-Based Alert Card */}
+                      {/* Report-Based Alert Card (with dynamic color) */}
                       {reportBased.alert && reportBased.alert !== "None" && (
-                        <div className="p-3 rounded-lg border-2 border-primary/30 bg-primary/5">
+                        <div className={`p-3 rounded-lg border-2 ${reportCardColor}`}>
                           <div>
                             <p className="text-sm font-medium text-gray-600 uppercase">Report-Based Alert</p>
                             <p className="text-lg font-semibold">{reportBased.alert}</p>
