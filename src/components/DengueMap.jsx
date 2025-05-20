@@ -549,114 +549,97 @@ const DengueMap = ({
               position={infoWindowPosition}
               onCloseClick={() => setSelectedBarangay(null)}
             >
-              {CustomInfoWindow ? (
-                <CustomInfoWindow
-                  feature={selectedBarangay}
-                  position={infoWindowPosition}
-                  onClose={() => setSelectedBarangay(null)}
-                />
-              ) : (
-                <div
-                className="bg-white p-4 rounded-lg text-center h-auto"
-                style={{
-                  // Use patternType for border color
-                  // border: `3px solid ${PATTERN_COLORS[selectedBarangayInfo.patternType?.toLowerCase()] || PATTERN_COLORS.default}`,
-                  width: "50vw",
-                }}
-              >
-                <div className="flex flex-col"> 
-                  <p
-                    className={`${infoWindowTitleClass} text-4xl font-bold`}
-                  >
-                    Barangay {selectedBarangay.properties.name}
-                  </p>
-                  <div className="mt-3 flex flex-col gap-3 text-black">
-                    {/* Status Card */}
-                    <div className={`p-3 rounded-lg border-2 ${
-                      selectedBarangay.properties.alert === "No recent data"
-                        ? "border-gray-400 bg-gray-100"
-                        : selectedBarangay.properties.patternType === "spike"
-                        ? "border-error bg-error/5"
-                        : selectedBarangay.properties.patternType === "gradual_rise"
-                        ? "border-warning bg-warning/5"
-                        : selectedBarangay.properties.patternType === "decline"
-                        ? "border-success bg-success/5"
-                        : selectedBarangay.properties.patternType === "stability"
-                        ? "border-info bg-info/5"
-                        : "border-gray-400 bg-gray-100"
-                    }`}>
-                      <div className="flex items-center gap-3">
-
+              {(() => {
+                const props = selectedBarangay.properties;
+                // Log for debugging
+                console.log('DengueMap InfoWindow properties:', props);
+                const patternType = (props?.patternType || "none").toLowerCase();
+                const lastAnalysisTime = props?.lastAnalysisTime;
+                // Debug log for lastAnalysisTime
+                console.log('DengueMap InfoWindow lastAnalysisTime:', {
+                  lastAnalysisTime,
+                  type: typeof lastAnalysisTime,
+                  dateObj: new Date(lastAnalysisTime),
+                  isNaN: isNaN(new Date(lastAnalysisTime).getTime())
+                });
+                // Extract all status and recommendation types
+                const patternBased = props?.status_and_recommendation?.pattern_based || {};
+                const reportBased = props?.status_and_recommendation?.report_based || {};
+                const deathPriority = props?.status_and_recommendation?.death_priority || {};
+                return (
+                  <div className="bg-white p-4 rounded-lg text-center h-auto" style={{ width: "50vw" }}>
+                    <p className="text-4xl font-[900]" style={{ color: PATTERN_COLORS[patternType] || PATTERN_COLORS.default }}>
+                      Barangay {props.displayName || props.name}
+                    </p>
+                    <div className="mt-3 flex flex-col gap-3 text-black">
+                      {/* Pattern Card */}
+                      <div className={`p-3 rounded-lg border-2 ${
+                        patternType === 'spike'
+                          ? 'border-error bg-error/5'
+                          : patternType === 'gradual_rise'
+                          ? 'border-warning bg-warning/5'
+                          : patternType === 'decline'
+                          ? 'border-success bg-success/5'
+                          : patternType === 'stability'
+                          ? 'border-info bg-info/5'
+                          : 'border-gray-400 bg-gray-100'
+                      }`}>
                         <div>
-                          <p className="text-sm font-medium text-gray-600 uppercase">Status</p>
+                          <p className="text-sm font-medium text-gray-600 uppercase">Pattern</p>
                           <p className="text-lg font-semibold">
-                            {selectedBarangay.properties.alert
-                              ? selectedBarangay.properties.alert.replace(
-                                  new RegExp(`^${selectedBarangay.properties.name}:?\\s*`, "i"),
-                                  ""
-                                )
-                              : "No recent data"}
+                            {patternType === 'none'
+                              ? 'No pattern detected'
+                              : patternType.charAt(0).toUpperCase() + patternType.slice(1).replace('_', ' ')}
                           </p>
                         </div>
                       </div>
-                    </div>
-
-                    {/* Pattern and Risk Level Row */}
-                    <div className={`flex flex-col rounded-lg items-center justify-center w-full border-2 ${
-                        selectedBarangay.properties.alert === "No recent data"
-                          ? "border-gray-400 bg-gray-100"
-                          : selectedBarangay.properties.patternType === "spike"
-                          ? "border-error bg-error/5"
-                          : selectedBarangay.properties.patternType === "gradual_rise"
-                          ? "border-warning bg-warning/5"
-                          : selectedBarangay.properties.patternType === "decline"
-                          ? "border-success bg-success/5"
-                          : selectedBarangay.properties.patternType === "stability"
-                          ? "border-info bg-info/5"
-                          : "border-gray-400 bg-gray-100"
-                      } gap-3`}>
-                      {/* Pattern Card */}
-                      <div className={`p-3 rounded-lg `}>
-                        <div className="flex items-center gap-3">
-                          
-                          <div>
-                            <p className="text-sm font-medium text-gray-600">Pattern</p>
-                            <p className="text-lg font-semibold">
-                              {selectedBarangay.properties.alert === "No recent data"
-                                ? "No recent data"
-                                : selectedBarangay.properties.patternType === "none" 
-                                ? "No pattern detected" 
-                                : selectedBarangay.properties.patternType.charAt(0).toUpperCase() + 
-                                  selectedBarangay.properties.patternType.slice(1).replace('_', ' ')}
-                            </p>
-                          </div>
+                      {/* Pattern-Based Card */}
+                      <div className="p-3 rounded-lg border-2 border-primary/30 bg-primary/5">
+                        <div>
+                          <p className="text-sm font-medium text-gray-600 uppercase">Pattern-Based Alert</p>
+                          <p className="text-lg font-semibold">{patternBased.alert || 'No alert.'}</p>
+                          {patternBased.recommendation && (
+                            <p className="text-base text-gray-700 mt-1">Recommendation: {patternBased.recommendation}</p>
+                          )}
                         </div>
                       </div>
-                    </div>
-
-                    {/* Last Analyzed Card */}
-                    <div className="p-3 rounded-lg border-2 border-primary/20 bg-primary/5">
-                      <div className="flex flex-col items-center ">
+                      {/* Report-Based Card */}
+                      <div className="p-3 rounded-lg border-2 border-primary/30 bg-primary/5">
+                        <div>
+                          <p className="text-sm font-medium text-gray-600 uppercase">Report-Based Alert</p>
+                          <p className="text-lg font-semibold">{reportBased.alert || 'No alert.'}</p>
+                          {reportBased.recommendation && (
+                            <p className="text-base text-gray-700 mt-1">Recommendation: {reportBased.recommendation}</p>
+                          )}
+                        </div>
+                      </div>
+                      {/* Death Priority Card */}
+                      <div className="p-3 rounded-lg border-2 border-primary/30 bg-primary/5">
+                        <div>
+                          <p className="text-sm font-medium text-gray-600 uppercase">Death Priority Alert</p>
+                          <p className="text-lg font-semibold">{deathPriority.alert || 'No alert.'}</p>
+                          {deathPriority.recommendation && (
+                            <p className="text-base text-gray-700 mt-1">Recommendation: {deathPriority.recommendation}</p>
+                          )}
+                        </div>
+                      </div>
+                      {/* Last Analyzed Card */}
+                      <div className="p-3 rounded-lg border-2 border-primary/20 bg-primary/5">
+                        <div className="flex flex-col items-center ">
                           <p className="text-sm font-medium text-gray-600">Last Analyzed</p>
                           <p className="text-lg font-semibold">
-                            {isNaN(
-                              new Date(
-                                selectedBarangay.properties.lastAnalysisTime
-                              ).getTime()
-                            )
-                              ? (() => { console.log('Last Analyzed is N/A:', selectedBarangay.properties.lastAnalysisTime, new Date(selectedBarangay.properties.lastAnalysisTime)); return "N/A"; })()
-                              : new Date(
-                                  selectedBarangay.properties.lastAnalysisTime
-                                ).toLocaleString()}
+                            {lastAnalysisTime
+                              ? (isNaN(new Date(lastAnalysisTime).getTime())
+                                  ? 'Invalid date'
+                                  : new Date(lastAnalysisTime).toLocaleString())
+                              : 'No recent analysis'}
                           </p>
+                        </div>
                       </div>
                     </div>
-                  </div></div>
-                 
-
-                 
-                </div>
-              )}
+                  </div>
+                );
+              })()}
             </InfoWindow>
           )}
 
