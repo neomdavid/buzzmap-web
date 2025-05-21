@@ -38,7 +38,7 @@ import { toastInfo } from "../../utils";
 const Landing = () => {
   const modalRef = useRef(null);
   const navigate = useNavigate();
-  
+
   // Get user from Redux store (same as Navbar)
   const userFromStore = useSelector((state) => state.auth?.user);
   let user;
@@ -67,7 +67,7 @@ const Landing = () => {
   return (
     <main className="flex flex-col overflow-hidden mt-12">
       {/* <StreetViewMap /> */}
-      <div className="text-primary font-[Koulen] uppercase flex flex-col text-7xl  px-10 mb-10 lg:max-w-[80vw] lg:items-center lg:self-center text-center">
+      <div className="text-primary font-[Koulen] uppercase flex flex-col text-7xl  px-10 mb-14 lg:max-w-[80vw] lg:items-center lg:self-center text-center">
         <Heading
           className="text-[46px] text-left sm:text-7xl md:text-8xl md:leading-24 lg:-translate-x-50 xl:-translate-x-50 xl:text-9xl xl:leading-40"
           text="Buzzing /with awareness/"
@@ -78,8 +78,8 @@ const Landing = () => {
         />
       </div>
 
-      <div className="text-primary text-center font-semibold mb-8">
-        <h3 className="text-xl italic uppercase font-bold mb-2 font-[Inter]">
+      <div className="text-primary text-center text-xl font-semibold mb-8">
+        <h3 className="text-2xl italic uppercase font-bold mb-10 font-[Inter]">
           Stay protected from dengue.
         </h3>
         <p className="px-10">
@@ -93,7 +93,7 @@ const Landing = () => {
           </span>
         </p>
       </div>
-      <div className="flex flex-col gap-4 sm:flex-row w-[80%] m-auto mt-2  gap-x-3 justify-center items-center">
+      <div className="flex flex-col gap-4 sm:flex-row w-[80%] m-auto mt-2 gap-x-3 justify-center items-center">
         <SecondaryButton text={"Check Dengue Hotspots"} to="/mapping" className="w-md " />
         <SecondaryButton text={"Report a Breeding Site"} to="/community" className="w-md " />
         <SecondaryButton text={"Get Prevention Tips"} to="/buzzline" className="w-md " />
@@ -126,7 +126,7 @@ const Landing = () => {
             the fight against dengue.
           </p>
           <br />
-          <p className="text-primary text-md mb-6">
+          <p className="text-primary text-lg mb-6">
             BuzzMap's dengue mapping feature uses real-time crowdsourced data to
             track and visualize dengue outbreaks in your area. Users report
             dengue cases and mosquito breeding sites, which are then plotted on
@@ -160,37 +160,37 @@ const Landing = () => {
             />
           </div>
         </div>
-   
+
       </section>
-      <div className="flex flex-col text-center items-center mx-14  p-10 py-16 bg-gradient-to-r from-[#245261] to-[#4AA8C7] text-white rounded-2xl">
-          <h1 className="text-5xl sm:text-7xl mb-2">YOUR COMMUNITY SPEAKS</h1>
-          <p className="font-bold italic mb-8 text-md">Spread Awareness. Check the Latest Dengue Updates! </p>
-          <div 
-            className="flex items-center justify-center sm:w-[60%] max-w-[600px] px-10 py-5 bg-white rounded-2xl gap-3 mb-8 cursor-pointer hover:bg-gray-50 transition-colors"
-            onClick={handleReportClick}
-          >
-            <img src={profile1} className="h-12 w-12 rounded-full" />
-            <input 
-              type="text" 
-              placeholder={user.name === "Guest" ? "Login to share your report..." : "Share your report here..."}
-              className="flex-1 input rounded-2xl input-primary placeholder:text-primary placeholder:italic"
-              readOnly
-            />
-            <div className="text-primary ml-[-3px]">
-              <ArrowFatLineRight size={25} weight="fill" />
-            </div>
+      <div className="flex flex-col text-center items-center mx-14  p-10 py-16 bg-gradient-to-r from-[#245261] to-[#4AA8C7] text-white rounded-2xl my-10">
+        <h1 className="text-5xl sm:text-7xl mb-2">YOUR COMMUNITY SPEAKS</h1>
+        <p className="font-bold italic mb-8 text-lg">Spread Awareness. Check the Latest Dengue Updates! </p>
+        <div
+          className="flex items-center justify-center sm:w-[60%] max-w-[600px] px-10 py-5 bg-white rounded-2xl gap-3 mb-8 cursor-pointer hover:bg-gray-50 transition-colors"
+          onClick={handleReportClick}
+        >
+          <img src={profile1} className="h-12 w-12 rounded-full" />
+          <input
+            type="text"
+            placeholder={user.name === "Guest" ? "Login to share your report..." : "Share your report here..."}
+            className="flex-1 input input-lg my-1 text-lg rounded-2xl input-primary placeholder:text-primary placeholder:italic"
+            readOnly
+          />
+          <div className="text-primary ml-[-3px]">
+            <ArrowFatLineRight size={25} weight="fill" />
           </div>
-          <Link to="/community" className="bg-gradient-to-b from-[#FADD37] to-[#F8A900] italic text-primary font-semibold px-6 py-3 rounded-xl hover:scale-105 transition-transform duration-300 active:opacity-70 hover:cursor-pointer">Read more dengue reports <span className="font-extrabold">here</span>.</Link>
+        </div>
+        <Link to="/community" className="bg-gradient-to-b from-[#FADD37] to-[#F8A900] italic text-primary font-semibold px-6 py-3 rounded-xl hover:scale-105 transition-transform duration-300 active:opacity-70 hover:cursor-pointer text-lg">Read more dengue reports <span className="font-extrabold">here</span>.</Link>
       </div>
       <article className="bg-primary mt-8 flex flex-col items-center py-20">
-        <h1 className="uppercase text-5xl sm:text-6xl text-white">
-          DON'T WAIT FOR AN
+        <h1 className="uppercase text-5xl sm:text-9xl text-white">
+          WHAT'S THE BUZZ?
         </h1>
-        <ScrambledText text="outbreak!" />
-        <p className="italic text-white mt-8 mb-8">
-          Take Action with These Prevention Tips
+        {/* <ScrambledText text="outbreak!" /> */}
+        <p className="italic text-lg text-white mt-4 mb-8">
+          Stay updated and take action with these prevention tips from Quezon City Epidemiology and Surveillance Division.
         </p>
-        <div className="grid grid-cols-2 md:flex justify-center flex-wrap gap-6 px-4">
+        {/* <div className="grid grid-cols-2 md:flex justify-center flex-wrap gap-6 px-4">
           <PreventionCard
             title="Eliminate Mosquito Breeding Sites"
             category="Control and Sanitation"
@@ -233,20 +233,20 @@ const Landing = () => {
             bgImg={cleaningImg}
             to="/buzzline/details"
           />
-        </div>
-        <Link
+        </div> */}
+        {/* <Link
           to="/buzzline"
           className="flex font-normal underline italic justify-center items-center gap-x-2 text-white mt-12"
         >
           <p>View more prevention and tips here</p>
           <ArrowRight />
-        </Link>
+        </Link> */}
       </article>
       <article
         style={{
           clipPath: "polygon(0 0, 100% 0, 100% 100%, 0 75%)",
         }}
-        className="z-20 bg-primary mt-[-5px] pt-22 pb-50 w-full flex justify-center text-7xl md:text-8xl items-center flex-col text-white"
+        className="z-20 bg-primary mt-[-5px] pt-22 pb-65 w-full flex justify-center text-7xl md:text-8xl items-center flex-col text-white"
       >
         <p className=" relative">
           Speak up, stay
@@ -273,7 +273,7 @@ const Landing = () => {
             <img src={logoSurveillance} className="w-28 sm:w-33  h-auto" />
           </div>
 
-          <div className="flex flex-col gap-y-6 text-sm ">
+          <div className="flex flex-col gap-y-6 text-md ">
             <div className="flex flex-col">
               <p>
                 <span className="font-bold">Address: </span>National University
@@ -291,7 +291,7 @@ const Landing = () => {
           </div>
         </div>
 
-        <div className="font-bold self-end text-sm">©2025</div>
+        <div className="font-bold self-end text-md">©2025</div>
       </footer>
       <NewPostModal ref={modalRef} />
     </main>
