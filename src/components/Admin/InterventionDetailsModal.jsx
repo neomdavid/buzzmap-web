@@ -157,6 +157,9 @@ const InterventionDetailsModal = ({
                 ? "Edit Intervention Details"
                 : "View Intervention Details"}
             </p>
+            <div className="flex justify-center mb-6">
+              <p className={`${intervention.status === "Complete" ? "bg-success" : intervention.status === "Scheduled" ? "bg-warning" : intervention.status === "Ongoing" ? "bg-info" : "bg-gray-300"} w-[40%] text-center rounded-xl py-1.5 text-white font-extrabold text-xl`}>{intervention.status}</p>
+            </div>
 
             {/* Display form to edit or view */}
             <form
