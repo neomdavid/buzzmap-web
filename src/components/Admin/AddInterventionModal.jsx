@@ -4,6 +4,7 @@ import { useCreateInterventionMutation } from "../../api/dengueApi"; // Import R
 import InterventionLocationPicker from "./InterventionLocationPicker"; // Import the new component
 import * as turf from '@turf/turf'; // Import turf for calculations
 import dayjs from "dayjs";
+import { showCustomToast } from "../../utils"; // Import the custom toast function
 
 // Default map center (Quezon City Hall)
 const defaultCenter = {
@@ -23,7 +24,7 @@ const AddInterventionModal = ({ isOpen, onClose }) => {
   const [formData, setFormData] = useState({
     barangay: "",
     address: "", // Changed from addressLine
-    interventionType: "",
+    interventionType: "All", // Set default value to "All"
     personnel: "",
     date: "",
     status: "Scheduled",
@@ -37,6 +38,7 @@ const AddInterventionModal = ({ isOpen, onClose }) => {
   const [isLocationValid, setIsLocationValid] = useState(false); // Track location validity
   const [barangayGeoJsonData, setBarangayGeoJsonData] = useState(null); // Store full GeoJSON
   const [focusCommand, setFocusCommand] = useState(null); // To control picker focus (renamed from focusBarangayPicker)
+  const [isBoundaryDataLoaded, setIsBoundaryDataLoaded] = useState(false);
 
   // Mock personnel options (replace with real data if needed)
   const personnelOptions = ["John Doe", "Jane Smith", "Carlos Rivera"];
@@ -62,6 +64,26 @@ const AddInterventionModal = ({ isOpen, onClose }) => {
     }
     // eslint-disable-next-line
   }, [formData.date]);
+
+  // Add loading state for boundary data
+  useEffect(() => {
+    console.log('[Modal DEBUG] Fetching boundary data...');
+    fetch("/quezon_barangays_boundaries.geojson")
+      .then((res) => res.json())
+      .then((data) => {
+        console.log('[Modal DEBUG] Boundary data loaded successfully');
+        setBarangayGeoJsonData(data);
+        setIsBoundaryDataLoaded(true);
+        const barangayNames = data.features
+          .map((feature) => feature.properties.name)
+          .sort();
+        setBarangayOptions(barangayNames);
+      })
+      .catch((error) => {
+        console.error('[Modal DEBUG] Error loading boundary data:', error);
+        setSubmissionError("Failed to load boundary data. Please refresh the page.");
+      });
+  }, []);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -121,18 +143,26 @@ const AddInterventionModal = ({ isOpen, onClose }) => {
   const handlePinChange = (pinData) => {
     console.log('[Modal DEBUG] handlePinChange received pinData:', pinData);
 
+    if (!isBoundaryDataLoaded) {
+      console.log('[Modal DEBUG] Boundary data not yet loaded, cannot validate pin');
+      setSubmissionError("Please wait for the map to load completely before placing a pin.");
+      return;
+    }
+
     if (pinData && pinData.isWithinQC && pinData.coordinates && pinData.barangayName) {
-      console.log('[Modal DEBUG] Pin is considered valid. Formatted Address from pinData:', pinData.formattedAddress);
-      console.log('[Modal DEBUG] Current formData.address BEFORE update:', formData.address);
+      console.log('[Modal DEBUG] Pin is valid. Setting location data:', {
+        coordinates: pinData.coordinates,
+        barangay: pinData.barangayName,
+        address: pinData.formattedAddress
+      });
 
       setFormData(prev => {
         const newAddress = typeof pinData.formattedAddress === 'string' ? pinData.formattedAddress : prev.address;
-        console.log('[Modal DEBUG] Inside setFormData. New address to be set:', newAddress);
         return {
           ...prev,
           specific_location: {
             type: "Point",
-            coordinates: pinData.coordinates, // [lng, lat]
+            coordinates: pinData.coordinates,
           },
           barangay: pinData.barangayName || prev.barangay,
           address: newAddress,
@@ -140,36 +170,62 @@ const AddInterventionModal = ({ isOpen, onClose }) => {
       });
       setIsLocationValid(true);
       setSubmissionError("");
-      // console.log('[Modal] Pin changed (valid):', pinData.barangayName, pinData.coordinates, "Address:", pinData.formattedAddress); // Covered by DEBUG logs
     } else { 
-      console.log('[Modal DEBUG] Pin is considered invalid or null. PinData:', pinData);
-      console.log('[Modal DEBUG] Current formData.address BEFORE clearing specific_location:', formData.address);
+      console.log('[Modal DEBUG] Pin validation failed:', {
+        isWithinQC: pinData?.isWithinQC,
+        hasCoordinates: !!pinData?.coordinates,
+        hasBarangayName: !!pinData?.barangayName,
+        error: pinData?.error,
+        boundaryDataLoaded: isBoundaryDataLoaded
+      });
+
       setFormData(prev => ({
         ...prev,
         specific_location: null,
       }));
       setIsLocationValid(false);
 
-      if (pinData && !pinData.isWithinQC) {
-         setSubmissionError("Pinned location is outside Quezon City boundaries.");
-         console.log('[Modal DEBUG] Invalid pin: Outside Quezon City.');
-      } else if (pinData && (!pinData.coordinates || !pinData.barangayName)){
-         setSubmissionError("Invalid data received from map picker. Please try pinning again.");
-         console.log('[Modal DEBUG] Invalid pin: Incomplete data from picker.');
-      } else {
-        console.log('[Modal DEBUG] Pin cleared or picker reported no specific error state. isLocationValid is false.');
+      if (pinData) {
+        if (!pinData.isWithinQC) {
+          setSubmissionError("Pinned location is outside Quezon City boundaries.");
+        } else if (!pinData.coordinates || !pinData.barangayName) {
+          setSubmissionError("Unable to determine barangay for this location. Please try pinning again.");
+        } else if (pinData.error) {
+          setSubmissionError(pinData.error);
+        }
+      } else if (!isBoundaryDataLoaded) {
+        setSubmissionError("Please wait for the map to load completely before placing a pin.");
       }
     }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!formData.barangay) { // Ensure a barangay is selected (from dropdown or confirmed by pin)
-        setSubmissionError("Please select a barangay.");
-        return;
+    console.log('[Modal DEBUG] Form submission attempt:', {
+      hasBarangay: !!formData.barangay,
+      hasSpecificLocation: !!formData.specific_location,
+      isLocationValid,
+      isBoundaryDataLoaded,
+      formData
+    });
+
+    if (!isBoundaryDataLoaded) {
+      const errorMsg = "Please wait for the map to load completely before submitting.";
+      showCustomToast(errorMsg, "error");
+      setSubmissionError(errorMsg);
+      return;
+    }
+
+    if (!formData.barangay) {
+      const errorMsg = "Please select a barangay.";
+      showCustomToast(errorMsg, "error");
+      setSubmissionError(errorMsg);
+      return;
     }
     if (!formData.specific_location || !isLocationValid) {
-      setSubmissionError("Please pin a specific location on the map within the selected barangay.");
+      const errorMsg = "Please pin a specific location on the map within the selected barangay.";
+      showCustomToast(errorMsg, "error");
+      setSubmissionError(errorMsg);
       return;
     }
     setSubmissionError("");
@@ -180,20 +236,46 @@ const AddInterventionModal = ({ isOpen, onClose }) => {
     setIsSubmitting(true);
     setSubmissionError(""); 
     try {
-      console.log("Submitting intervention data:", formData);
-      await createIntervention(formData).unwrap();
+      // Format the date to ISO string
+      const formattedDate = formData.date ? new Date(formData.date).toISOString() : null;
+
+      // Ensure coordinates are in the correct format [longitude, latitude]
+      const formattedLocation = formData.specific_location ? {
+        type: "Point",
+        coordinates: [
+          parseFloat(formData.specific_location.coordinates[0]),
+          parseFloat(formData.specific_location.coordinates[1])
+        ]
+      } : null;
+
+      // Prepare the submission data
+      const submissionData = {
+        barangay: formData.barangay,
+        address: formData.address || "",
+        interventionType: formData.interventionType,
+        personnel: formData.personnel,
+        date: formattedDate,
+        status: formData.status,
+        specific_location: formattedLocation
+      };
+
+      console.log("[DEBUG] Starting intervention submission with data:", JSON.stringify(submissionData, null, 2));
+      
+      const response = await createIntervention(submissionData).unwrap();
+      console.log("[DEBUG] API Response:", JSON.stringify(response, null, 2));
+      
       setIsSuccess(true);
       setFormData({
         barangay: "",
         address: "",
-        interventionType: "",
+        interventionType: "All",
         personnel: "",
         date: "",
         status: "Scheduled",
         specific_location: null,
       });
       setIsLocationValid(false); 
-      setFocusCommand(null); // Reset map focus
+      setFocusCommand(null);
 
       setTimeout(() => {
         onClose(); 
@@ -201,11 +283,58 @@ const AddInterventionModal = ({ isOpen, onClose }) => {
         setIsSuccess(false);
       }, 2000); 
     } catch (error) {
-      console.error("Error submitting intervention:", error);
-      const errMsg = error.data?.error || error.data?.message || "Failed to submit intervention. Please check the details and try again.";
-      setSubmissionError(errMsg);
-      setIsSuccess(false); 
-      setShowConfirmation(false); 
+      // Enhanced error logging
+      console.error("[DEBUG] Error submitting intervention:", {
+        error: error,
+        errorData: error.data,
+        errorMessage: error.data?.error || error.data?.message,
+        fullError: JSON.stringify(error, null, 2),
+        status: error.status,
+        originalError: error.originalError,
+        stack: error.stack
+      });
+
+      // Extract error message from different possible locations in the error object
+      let errorMessage = "Failed to submit intervention. Please try again.";
+      
+      if (error.data) {
+        if (typeof error.data === 'string') {
+          errorMessage = error.data;
+        } else if (error.data.error) {
+          errorMessage = error.data.error;
+        } else if (error.data.message) {
+          // Clean up MongoDB validation error messages
+          if (error.data.message.includes('validation failed')) {
+            const validationError = error.data.message.split(': ')[1];
+            errorMessage = `Validation Error: ${validationError}`;
+          } else {
+            errorMessage = error.data.message;
+          }
+        } else if (error.data.details) {
+          errorMessage = error.data.details;
+        }
+      } else if (error.error) {
+        errorMessage = error.error;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+
+      // If we have a network error or server error, add more context
+      if (error.status === 'FETCH_ERROR') {
+        errorMessage = "Network error: Unable to connect to the server. Please check your internet connection.";
+      } else if (error.status === 'PARSING_ERROR') {
+        errorMessage = "Server response error: Unable to parse server response.";
+      } else if (error.status === 'CUSTOM_ERROR') {
+        errorMessage = `Server error: ${errorMessage}`;
+      }
+
+      // Show error using custom toast - ensure it's called after error message is set
+      console.log("[DEBUG] Showing error toast with message:", errorMessage);
+      showCustomToast(errorMessage, "error");
+      
+      setSubmissionError(errorMessage);
+      setIsSuccess(false);
+      setShowConfirmation(false);
     } finally {
       setIsSubmitting(false);
     }
@@ -256,19 +385,6 @@ const AddInterventionModal = ({ isOpen, onClose }) => {
       }
     }
   }, [isOpen, formData.barangay, barangayGeoJsonData, formData.specific_location]); // Added formData.specific_location
-
-   useEffect(() => {
-    fetch("/quezon_barangays_boundaries.geojson")
-      .then((res) => res.json())
-      .then((data) => {
-        setBarangayGeoJsonData(data); // Store the full GeoJSON data
-        const barangayNames = data.features.map(
-          (feature) => feature.properties.name
-        ).sort(); 
-        setBarangayOptions(barangayNames);
-      })
-      .catch(console.error);
-  }, []);
 
   if (!isOpen) return null;
 
@@ -348,7 +464,6 @@ const AddInterventionModal = ({ isOpen, onClose }) => {
                         className="select border-0 rounded-lg w-full bg-base-200 text-lg py-2 cursor-pointer hover:bg-base-300 transition-all"
                         required
                       >
-                        <option value="">Select Type</option>
                         <option value="All">All</option>
                         <option value="Fogging">Fogging</option>
                         <option value="Ovicidal-Larvicidal Trapping">Ovicidal-Larvicidal Trapping</option>
@@ -421,10 +536,17 @@ const AddInterventionModal = ({ isOpen, onClose }) => {
                   </div>
                 </div>
                 
-                {/* Submission Error Message Display */}
+                {/* Updated error message display */}
                 {submissionError && (
-                  <div className="text-center text-error font-semibold p-2 bg-error/10 rounded-md mt-4">
-                    {submissionError}
+                  <div className="text-center p-4 bg-error/10 rounded-lg border border-error/20 mb-4">
+                    <p className="text-error font-semibold mb-2">Error</p>
+                    <p className="text-error/90 whitespace-pre-line">{submissionError}</p>
+                    <button 
+                      onClick={() => setSubmissionError("")}
+                      className="mt-2 text-error/70 hover:text-error text-sm underline"
+                    >
+                      Dismiss
+                    </button>
                   </div>
                 )}
 
@@ -432,8 +554,8 @@ const AddInterventionModal = ({ isOpen, onClose }) => {
                 <div className="modal-action w-full flex justify-center mt-6">
                   <button
                     type="submit"
-                    className="bg-success text-white font-semibold py-3 px-8 rounded-xl hover:bg-success/80 transition-all hover:cursor-pointer text-lg" // Increased padding and text size
-                    disabled={isSubmitting} // Only disable if submitting, validation happens in handleSubmit
+                    className="bg-success text-white font-semibold py-3 px-8 rounded-xl hover:bg-success/80 transition-all hover:cursor-pointer text-lg"
+                    disabled={isSubmitting}
                   >
                     {isSubmitting ? (
                       <span className="loading loading-spinner"></span>
@@ -466,10 +588,18 @@ const AddInterventionModal = ({ isOpen, onClose }) => {
                       </div>
                     </div>
 
+                    {/* Error Message in Confirmation View */}
+                    {submissionError && (
+                      <div className="text-center p-4 bg-error/10 rounded-lg border border-error/20">
+                        <p className="text-error font-semibold mb-1">Error</p>
+                        <p className="text-error/90">{submissionError}</p>
+                      </div>
+                    )}
+
                     <div className="flex justify-center gap-4">
                       <button
                         onClick={cancelSubmit}
-                        className="bg-gray-300 text-gray-800 font-semibold py-2 px-8 rounded-xl hover:bg-gray-400 transition-all hover:cursor-pointer" // Adjusted colors
+                        className="bg-gray-300 text-gray-800 font-semibold py-2 px-8 rounded-xl hover:bg-gray-400 transition-all hover:cursor-pointer"
                         disabled={isSubmitting}
                       >
                         Cancel
@@ -482,7 +612,7 @@ const AddInterventionModal = ({ isOpen, onClose }) => {
                         {isSubmitting ? (
                           <span className="loading loading-spinner"></span>
                         ) : (
-                          "Confirm & Submit" // Changed text
+                          "Confirm & Submit"
                         )}
                       </button>
                     </div>

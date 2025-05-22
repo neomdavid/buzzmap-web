@@ -29,6 +29,7 @@ const InterventionLocationPicker = ({ onPinChange, initialPin, focusCommand }) =
   const [errorMessage, setErrorMessage] = useState('');
   const [highlightedBarangayName, setHighlightedBarangayName] = useState('');
   const geocoderRef = useRef(null); // Ref for the geocoder instance
+  const [isBoundaryDataLoaded, setIsBoundaryDataLoaded] = useState(false);
 
   const onPinChangeRef = useRef(onPinChange);
   useEffect(() => {
@@ -40,6 +41,7 @@ const InterventionLocationPicker = ({ onPinChange, initialPin, focusCommand }) =
   }, [isLoaded, loadError]);
 
   useEffect(() => {
+    console.log('[InterventionLocationPicker] Fetching boundary data...');
     fetch('/quezon_barangays_boundaries.geojson')
       .then((res) => res.json())
       .then((data) => {
@@ -47,45 +49,50 @@ const InterventionLocationPicker = ({ onPinChange, initialPin, focusCommand }) =
           (feature) => feature.properties.name !== "Laging Handa"
         );
         setQcBoundaryFeatures(filteredFeatures);
+        setIsBoundaryDataLoaded(true);
         console.log('[InterventionLocationPicker] QC Boundary data loaded. Features:', filteredFeatures.length);
       })
-      .catch(console.error);
+      .catch((error) => {
+        console.error('[InterventionLocationPicker] Error loading boundary data:', error);
+        setIsBoundaryDataLoaded(false);
+      });
   }, []);
 
   // Effect 1: Synchronize initialPin prop to internal currentMarker state
   useEffect(() => {
-    // This effect should run when initialPin prop changes.
+    if (!isBoundaryDataLoaded) {
+      console.log('[Picker - initialPin Sync] Boundary data not loaded yet, skipping initialPin sync');
+      return;
+    }
+
     if (initialPin) {
-      // If initialPin is provided, and it's different from currentMarker, update currentMarker.
-      // Or if currentMarker is currently null and initialPin is provided, set it.
       if (currentMarker === null || 
           (currentMarker && (initialPin.lat !== currentMarker.lat || initialPin.lng !== currentMarker.lng))) {
-        console.log(`[Picker - initialPin Sync] initialPin prop changed. Setting currentMarker. InitialPin:`, initialPin, "Current currentMarker before set:", currentMarker);
-        setCurrentMarker({ lat: initialPin.lat, lng: initialPin.lng }); // Use new object from initialPin data
+        console.log(`[Picker - initialPin Sync] Setting currentMarker from initialPin:`, initialPin);
+        setCurrentMarker({ lat: initialPin.lat, lng: initialPin.lng });
         if (mapRef.current) {
           mapRef.current.panTo({ lat: initialPin.lat, lng: initialPin.lng });
           mapRef.current.setZoom(18);
         }
-      } else {
-        console.log(`[Picker - initialPin Sync] initialPin prop received, but currentMarker is already identical. No action. InitialPin:`, initialPin, "Current currentMarker:", currentMarker);
       }
-    } else { // initialPin prop is null
-      if (currentMarker !== null) {
-        console.log(`[Picker - initialPin Sync] initialPin prop is null. Clearing currentMarker. Current currentMarker before clear:`, currentMarker);
-        setCurrentMarker(null);
-      } else {
-        console.log(`[Picker - initialPin Sync] initialPin prop is null, and currentMarker is already null. No action.`);
-      }
+    } else if (currentMarker !== null) {
+      console.log(`[Picker - initialPin Sync] Clearing currentMarker as initialPin is null`);
+      setCurrentMarker(null);
     }
-  }, [initialPin]); // Dependency ONLY on initialPin prop.
+  }, [initialPin, isBoundaryDataLoaded]);
 
   const validateCoordinates = useCallback((latLng) => {
-    if (!qcBoundaryFeatures.length) {
+    if (!isBoundaryDataLoaded || !qcBoundaryFeatures.length) {
+      console.log('[Picker DEBUG] Boundary data not loaded yet, cannot validate coordinates');
       return { barangayName: null, isValid: false, error: 'Boundary data not loaded' };
     }
+
+    console.log('[Picker DEBUG] Validating coordinates:', latLng, 'against', qcBoundaryFeatures.length, 'boundary features');
+    
     const point = turf.point([latLng.lng, latLng.lat]);
     let foundBarangayName = null;
     let isWithinAnyBarangay = false;
+
     for (const feature of qcBoundaryFeatures) {
       if (feature.geometry) {
         try {
@@ -94,103 +101,106 @@ const InterventionLocationPicker = ({ onPinChange, initialPin, focusCommand }) =
             isInside = turf.booleanPointInPolygon(point, feature);
           } else if (feature.geometry.type === 'MultiPolygon') {
             for (const polygonCoords of feature.geometry.coordinates) {
-                const polygonFeature = turf.polygon(polygonCoords);
-                if (turf.booleanPointInPolygon(point, polygonFeature)) {
-                    isInside = true;
-                    break;
-                }
+              const polygonFeature = turf.polygon(polygonCoords);
+              if (turf.booleanPointInPolygon(point, polygonFeature)) {
+                isInside = true;
+                break;
+              }
             }
           }
+          
           if (isInside) {
             foundBarangayName = feature.properties.name || 'Unknown Barangay';
             isWithinAnyBarangay = true;
+            console.log('[Picker DEBUG] Point is inside barangay:', foundBarangayName);
             break;
           }
-        } catch (e) { /* GeoJSON errors will be caught by !isWithinAnyBarangay */ }
+        } catch (e) {
+          console.error('[Picker DEBUG] Error checking point in polygon:', e);
+        }
       }
     }
+
     if (!isWithinAnyBarangay) {
+      console.log('[Picker DEBUG] Point is not within any barangay');
       return { barangayName: null, isValid: false, error: 'Pinned location is outside Quezon City boundaries.' };
     }
+
+    console.log('[Picker DEBUG] Validation successful for barangay:', foundBarangayName);
     return { barangayName: foundBarangayName, isValid: true, error: '' };
-  }, [qcBoundaryFeatures]);
+  }, [qcBoundaryFeatures, isBoundaryDataLoaded]);
 
   // Effect 2: Validate currentMarker and report to parent via onPinChange
   useEffect(() => {
+    if (!isBoundaryDataLoaded) {
+      console.log('[Picker DEBUG] Boundary data not loaded yet, skipping validation');
+      return;
+    }
+
     console.log(`[Picker DEBUG] Geocoding effect running. currentMarker:`, currentMarker, `isLoaded:`, isLoaded, `geocoderRef.current:`, geocoderRef.current);
+    
     if (!isLoaded || !currentMarker) {
-      // If API not loaded yet, or no marker, don't proceed with geocoding attempt or emitting.
-      // However, if there's NO marker, we should still inform parent by emitting null.
       if (!currentMarker) {
-          console.log('[Picker DEBUG] No currentMarker in geocoding effect. Emitting null via onPinChange.');
-          onPinChangeRef.current(null);
-          setCurrentPinDetail({ barangayName: '', isValid: false }); // Reset pin detail
-          setErrorMessage(''); // Clear error message
+        console.log('[Picker DEBUG] No currentMarker in geocoding effect. Emitting null via onPinChange.');
+        onPinChangeRef.current(null);
+        setCurrentPinDetail({ barangayName: '', isValid: false });
+        setErrorMessage('');
       }
       return;
     }
 
     const validation = validateCoordinates(currentMarker);
+    console.log('[Picker DEBUG] Validation result:', validation);
+    
     setCurrentPinDetail({ barangayName: validation.barangayName || '', isValid: validation.isValid });
     setErrorMessage(validation.error || '');
-    console.log('[Picker DEBUG] Validating marker, pre-geocoding. CurrentMarker:', currentMarker, 'Validation result:', validation);
 
     if (validation.isValid && validation.barangayName) {
       if (geocoderRef.current) {
         console.log('[Picker DEBUG] Geocoder is available. Attempting geocode for:', currentMarker);
         geocoderRef.current.geocode({ location: currentMarker }, (results, status) => {
           console.log('[Picker DEBUG] Geocode callback. Status:', status, 'Results:', results);
-          if (status === 'OK') {
-            if (results && results[0]) {
-              const formattedAddress = results[0].formatted_address;
-              console.log('[Picker DEBUG] Geocoding successful. Formatted Address:', formattedAddress);
-              const pinDataToEmit = {
-                coordinates: [currentMarker.lng, currentMarker.lat],
-                barangayName: validation.barangayName,
-                isWithinQC: true,
-                formattedAddress: formattedAddress,
-              };
-              console.log('[Picker DEBUG] Emitting pinData via onPinChange:', pinDataToEmit);
-              onPinChangeRef.current(pinDataToEmit);
-            } else {
-              console.warn('[Picker DEBUG] Geocoding OK, but no results found.');
-              const pinDataToEmit = {
-                coordinates: [currentMarker.lng, currentMarker.lat],
-                barangayName: validation.barangayName,
-                isWithinQC: true,
-                formattedAddress: null, // No address found
-              };
-              console.log('[Picker DEBUG] Emitting pinData via onPinChange (no geocode results):', pinDataToEmit);
-              onPinChangeRef.current(pinDataToEmit);
-            }
-          } else {
-            console.error('[Picker DEBUG] Geocoding failed. Status:', status);
+          
+          if (status === 'OK' && results && results[0]) {
+            const formattedAddress = results[0].formatted_address;
+            console.log('[Picker DEBUG] Geocoding successful. Formatted Address:', formattedAddress);
+            
             const pinDataToEmit = {
               coordinates: [currentMarker.lng, currentMarker.lat],
               barangayName: validation.barangayName,
               isWithinQC: true,
-              formattedAddress: null, // Geocoding failed
+              formattedAddress: formattedAddress,
             };
-            console.log('[Picker DEBUG] Emitting pinData via onPinChange (geocode failed):', pinDataToEmit);
+            console.log('[Picker DEBUG] Emitting valid pinData:', pinDataToEmit);
+            onPinChangeRef.current(pinDataToEmit);
+          } else {
+            console.warn('[Picker DEBUG] Geocoding failed or no results. Status:', status);
+            const pinDataToEmit = {
+              coordinates: [currentMarker.lng, currentMarker.lat],
+              barangayName: validation.barangayName,
+              isWithinQC: true,
+              formattedAddress: null,
+            };
+            console.log('[Picker DEBUG] Emitting pinData without address:', pinDataToEmit);
             onPinChangeRef.current(pinDataToEmit);
           }
         });
       } else {
-        console.warn('[Picker DEBUG] Geocoder not initialized. Cannot fetch address. Emitting pinData without address.');
+        console.warn('[Picker DEBUG] Geocoder not initialized. Emitting pinData without address.');
         const pinDataToEmit = {
           coordinates: [currentMarker.lng, currentMarker.lat],
           barangayName: validation.barangayName,
           isWithinQC: true,
-          formattedAddress: null, // Geocoder not ready
+          formattedAddress: null,
         };
-        console.log('[Picker DEBUG] Emitting pinData via onPinChange (geocoder not ready):', pinDataToEmit);
+        console.log('[Picker DEBUG] Emitting pinData without geocoding:', pinDataToEmit);
         onPinChangeRef.current(pinDataToEmit);
       }
-    } else { // Not valid or no barangayName
-      console.log('[Picker DEBUG] Pin validation failed or no barangayName. Emitting null via onPinChange. Validation:', validation);
-      onPinChangeRef.current(null); // Report null if validation failed
+    } else {
+      console.log('[Picker DEBUG] Pin validation failed. Emitting null. Validation:', validation);
+      onPinChangeRef.current(null);
     }
-  }, [currentMarker, validateCoordinates, isLoaded]); // Added isLoaded to dependencies
+  }, [currentMarker, validateCoordinates, isLoaded, isBoundaryDataLoaded]);
 
   const onMapLoad = useCallback((map) => {
     mapRef.current = map;
