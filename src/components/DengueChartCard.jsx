@@ -50,15 +50,15 @@ const DengueChartCard = () => {
 
   // Set default selectedBarangay once barangaysData is loaded
   useEffect(() => {
-    if (barangaysData && barangaysData.length > 0 && selectedBarangay === 'bahay toro') {
-      setSelectedBarangay(barangaysData[0].name); 
+    if (barangaysData?.data && barangaysData.data.length > 0 && selectedBarangay === 'bahay toro') {
+      setSelectedBarangay(barangaysData.data[0].name); 
     }
   }, [barangaysData, selectedBarangay]);
 
   // Determine pattern for the selected barangay (from barangaysData)
   const selectedBarangayPattern = React.useMemo(() => {
-    if (!barangaysData || !selectedBarangay) return 'none';
-    const barangay = barangaysData.find(
+    if (!barangaysData?.data || !selectedBarangay) return 'none';
+    const barangay = barangaysData.data.find(
       item => item.name?.toLowerCase() === selectedBarangay.toLowerCase()
     );
     // Debug logs
@@ -181,7 +181,7 @@ const DengueChartCard = () => {
             {barangaysLoading ? (
               <option>Loading...</option>
             ) : (
-              barangaysData?.map(barangay => (
+              barangaysData?.data?.map(barangay => (
                 <option key={barangay._id || barangay.name} value={barangay.name}>
                   {barangay.name}
                 </option>
