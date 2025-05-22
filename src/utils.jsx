@@ -308,6 +308,30 @@ export const formatArticleDate = (dateString) => {
   });
 };
 
+export const formatDateWithRelativeTime = (dateString) => {
+  if (!dateString) return '';
+  
+  const date = new Date(dateString);
+  const now = new Date();
+  const diffTime = Math.abs(now - date);
+  const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+  const diffMonths = Math.floor(diffDays / 30);
+  const diffWeeks = Math.floor(diffDays / 7);
+
+  let relativeTime = '';
+  if (diffMonths > 0) {
+    relativeTime = `${diffMonths} ${diffMonths === 1 ? 'month' : 'months'} ago`;
+  } else if (diffWeeks > 0) {
+    relativeTime = `${diffWeeks} ${diffWeeks === 1 ? 'week' : 'weeks'} ago`;
+  } else if (diffDays > 0) {
+    relativeTime = `${diffDays} ${diffDays === 1 ? 'day' : 'days'} ago`;
+  } else {
+    relativeTime = 'today';
+  }
+
+  return `${formatArticleDate(dateString)} (${relativeTime})`;
+};
+
 // utils.js or utils.jsx
 
 export const getBarangayNames = (barangayData) => {

@@ -12,6 +12,7 @@ import {
 import annotationPlugin from 'chartjs-plugin-annotation';
 import { Line } from 'react-chartjs-2';
 import { useAnalyzeInterventionEffectivityMutation } from '../../api/dengueApi';
+import { formatDateWithRelativeTime } from '../../utils';
 
 // Helper to format week range label
 function formatWeekRange(startDate) {
@@ -41,9 +42,9 @@ const InterventionAnalysisChart = ({ interventionId, onStats, percentChange }) =
 
   // Calculate summary stats
   let totalBefore = 0, totalAfter = 0, computedPercentChange = '-';
-  if (analysisData) {
-    const beforeData = Object.values(analysisData.analysis.before);
-    const afterData = Object.values(analysisData.analysis.after);
+  if (analysisData?.analysis?.before_intervention && analysisData?.analysis?.after_intervention) {
+    const beforeData = Object.values(analysisData.analysis.before_intervention);
+    const afterData = Object.values(analysisData.analysis.after_intervention);
     totalBefore = beforeData.reduce((a, b) => a + b, 0);
     totalAfter = afterData.reduce((a, b) => a + b, 0);
     computedPercentChange = totalBefore === 0 ? (totalAfter === 0 ? 0 : 100) : (((totalAfter - totalBefore) / totalBefore) * 100).toFixed(1);
@@ -62,14 +63,38 @@ const InterventionAnalysisChart = ({ interventionId, onStats, percentChange }) =
       analyzeEffectivity(interventionId)
         .unwrap()
         .then((response) => {
-          console.log('Raw API Response:', JSON.stringify(response, null, 2));
-          console.log('Intervention Details:', response.intervention);
-          console.log('Analysis Data:', response.analysis);
-          console.log('Case Counts Before:', response.analysis.before);
-          console.log('Case Counts After:', response.analysis.after);
+          console.log('=== API Response Debug ===');
+          console.log('Full Response:', response);
+          console.log('Response Type:', typeof response);
+          console.log('Has Intervention:', !!response?.intervention);
+          console.log('Has Analysis:', !!response?.analysis);
+          if (response?.intervention) {
+            console.log('Intervention Details:', {
+              id: response.intervention.id,
+              type: response.intervention.type,
+              date: response.intervention.date,
+              barangay: response.intervention.barangay
+            });
+          }
+          if (response?.analysis) {
+            console.log('Analysis Structure:', {
+              hasBefore: !!response.analysis.before_intervention,
+              hasAfter: !!response.analysis.after_intervention,
+              beforeKeys: response.analysis.before_intervention ? Object.keys(response.analysis.before_intervention) : [],
+              afterKeys: response.analysis.after_intervention ? Object.keys(response.analysis.after_intervention) : []
+            });
+            console.log('Before Data:', response.analysis.before_intervention);
+            console.log('After Data:', response.analysis.after_intervention);
+          }
+          console.log('=== End API Response Debug ===');
         })
         .catch((error) => {
-          console.error('Error fetching analysis:', error);
+          console.error('=== API Error Debug ===');
+          console.error('Error Object:', error);
+          console.error('Error Status:', error.status);
+          console.error('Error Data:', error.data);
+          console.error('Error Message:', error.message);
+          console.error('=== End API Error Debug ===');
         });
     }
   }, [interventionId, analyzeEffectivity]);
@@ -102,24 +127,31 @@ const InterventionAnalysisChart = ({ interventionId, onStats, percentChange }) =
     );
   }
 
-  if (!analysisData) {
+  if (!analysisData?.analysis?.before_intervention || !analysisData?.analysis?.after_intervention) {
     console.log('No analysis data available');
-    return null;
+    return (
+      <div className="flex items-center justify-center h-[300px]">
+        <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 rounded w-full max-w-md text-center">
+          <p className="font-semibold">Analysis Data Not Available</p>
+          <p className="mt-2">The analysis data for this intervention is not available or incomplete.</p>
+        </div>
+      </div>
+    );
   }
 
   // Log the complete data structure
   console.log('Complete Analysis Data Structure:', {
     intervention: analysisData.intervention,
     analysis: analysisData.analysis,
-    beforeData: analysisData.analysis.before,
-    afterData: analysisData.analysis.after,
-    beforeWeeks: Object.keys(analysisData.analysis.before),
-    afterWeeks: Object.keys(analysisData.analysis.after)
+    beforeData: analysisData.analysis.before_intervention,
+    afterData: analysisData.analysis.after_intervention,
+    beforeWeeks: Object.keys(analysisData.analysis.before_intervention),
+    afterWeeks: Object.keys(analysisData.analysis.after_intervention)
   });
 
   // Prepare before and after data
-  const beforeData = Object.values(analysisData.analysis.before);
-  const afterData = Object.values(analysisData.analysis.after);
+  const beforeData = Object.values(analysisData.analysis.before_intervention);
+  const afterData = Object.values(analysisData.analysis.after_intervention);
   const beforeCount = beforeData.length;
   const afterCount = afterData.length;
 
@@ -291,7 +323,7 @@ const InterventionAnalysisChart = ({ interventionId, onStats, percentChange }) =
         </p>
         <div className="mt-2 text-sm text-primary">
           <p className='text-lg'><span className="font-bold">Type:</span> {analysisData.intervention.type}</p>
-          <p className='text-lg'><span className="font-bold">Date:</span> {new Date(analysisData.intervention.date).toLocaleDateString()}</p>
+          <p className='text-lg'><span className="font-bold">Date:</span> {formatDateWithRelativeTime(analysisData.intervention.date)}</p>
           <p className='text-lg'><span className="font-bold">Personnel:</span> {analysisData.intervention.personnel}</p>
         </div>
       </div>
