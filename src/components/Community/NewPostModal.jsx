@@ -33,6 +33,7 @@ const NewPostModal = forwardRef(({ onSubmit, initialCoordinates = "", initialBar
   const token = useSelector((state) => state.auth.token);
   const [toast, setToast] = useState(null); // For storing the toast message
   const [isAnonymous, setIsAnonymous] = useState(false);
+  const modalRef = useRef(null);
 
   // RTK Query mutations
   const [createPost] = useCreatePostMutation();
@@ -163,8 +164,9 @@ const NewPostModal = forwardRef(({ onSubmit, initialCoordinates = "", initialBar
       }
       
       // Close the modal using the proper DaisyUI method
-      if (ref.current) {
-        ref.current.close();
+      const modal = document.getElementById("my_modal_4");
+      if (modal) {
+        modal.close();
       }
     } catch (error) {
       // If backend error occurs, display the custom toast with error message
@@ -223,7 +225,7 @@ const NewPostModal = forwardRef(({ onSubmit, initialCoordinates = "", initialBar
   return (
     <dialog
       id="my_modal_4"
-      ref={ref}
+      ref={modalRef}
       className="modal text-xl text-primary"
     >
       <div className="modal-box w-10/12 max-w-5xl">

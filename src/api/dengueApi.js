@@ -564,13 +564,20 @@ export const dengueApi = createApi({
         url: `reports/${reportId}/upvote`,
         method: "POST",
       }),
-      invalidatesTags: (result, error, id) => [
-        { type: "Post", id },
-        { type: "Post", id: "LIST" }
-      ],
-      async onQueryStarted(reportId, { dispatch, queryFulfilled }) {
+      async onQueryStarted(reportId, { dispatch, queryFulfilled, getState }) {
         try {
-          await queryFulfilled;
+          const { data: updatedPost } = await queryFulfilled;
+          
+          // Update the cache for both the list and individual post
+          dispatch(
+            dengueApi.util.updateQueryData('getPosts', undefined, (draft) => {
+              const post = draft.find(p => p._id === reportId);
+              if (post) {
+                post.upvotes = updatedPost.upvotes;
+                post.downvotes = updatedPost.downvotes;
+              }
+            })
+          );
         } catch (error) {
           console.error('Error upvoting:', error);
         }
@@ -582,13 +589,20 @@ export const dengueApi = createApi({
         url: `reports/${reportId}/downvote`,
         method: "POST",
       }),
-      invalidatesTags: (result, error, id) => [
-        { type: "Post", id },
-        { type: "Post", id: "LIST" }
-      ],
-      async onQueryStarted(reportId, { dispatch, queryFulfilled }) {
+      async onQueryStarted(reportId, { dispatch, queryFulfilled, getState }) {
         try {
-          await queryFulfilled;
+          const { data: updatedPost } = await queryFulfilled;
+          
+          // Update the cache for both the list and individual post
+          dispatch(
+            dengueApi.util.updateQueryData('getPosts', undefined, (draft) => {
+              const post = draft.find(p => p._id === reportId);
+              if (post) {
+                post.upvotes = updatedPost.upvotes;
+                post.downvotes = updatedPost.downvotes;
+              }
+            })
+          );
         } catch (error) {
           console.error('Error downvoting:', error);
         }
@@ -600,13 +614,20 @@ export const dengueApi = createApi({
         url: `reports/${reportId}/remove-vote`,
         method: "POST",
       }),
-      invalidatesTags: (result, error, id) => [
-        { type: "Post", id },
-        { type: "Post", id: "LIST" }
-      ],
-      async onQueryStarted(reportId, { dispatch, queryFulfilled }) {
+      async onQueryStarted(reportId, { dispatch, queryFulfilled, getState }) {
         try {
-          await queryFulfilled;
+          const { data: updatedPost } = await queryFulfilled;
+          
+          // Update the cache for both the list and individual post
+          dispatch(
+            dengueApi.util.updateQueryData('getPosts', undefined, (draft) => {
+              const post = draft.find(p => p._id === reportId);
+              if (post) {
+                post.upvotes = updatedPost.upvotes;
+                post.downvotes = updatedPost.downvotes;
+              }
+            })
+          );
         } catch (error) {
           console.error('Error removing vote:', error);
         }

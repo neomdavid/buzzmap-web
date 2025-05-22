@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { ArrowFatUp, ArrowFatDown, ChatCircleDots } from "phosphor-react";
 import { useUpvoteReportMutation, useDownvoteReportMutation, useRemoveVoteReportMutation } from "../../api/dengueApi";
 
@@ -18,10 +18,14 @@ const ReactionsTab = ({
   const [downvoteReport] = useDownvoteReportMutation();
   const [removeVoteReport] = useRemoveVoteReportMutation();
 
-  const hasUpvoted = currentUserId && upvotesArray.includes(currentUserId);
-  const hasDownvoted = currentUserId && downvotesArray.includes(currentUserId);
+  // Local state for optimistic updates
+  const [localUpvotes, setLocalUpvotes] = useState(upvotesArray);
+  const [localDownvotes, setLocalDownvotes] = useState(downvotesArray);
 
-  const netVotes = upvotes - downvotes;
+  const hasUpvoted = currentUserId && localUpvotes.includes(currentUserId);
+  const hasDownvoted = currentUserId && localDownvotes.includes(currentUserId);
+
+  const netVotes = localUpvotes.length - localDownvotes.length;
 
   const handleUpvote = async () => {
     if (!currentUserId) {
@@ -31,17 +35,24 @@ const ReactionsTab = ({
 
     try {
       if (hasUpvoted) {
-        // Remove upvote
+        // Optimistically remove upvote
+        setLocalUpvotes(prev => prev.filter(id => id !== currentUserId));
         await removeVoteReport(postId).unwrap();
       } else if (hasDownvoted) {
-        // Remove downvote and add upvote
+        // Optimistically remove downvote and add upvote
+        setLocalDownvotes(prev => prev.filter(id => id !== currentUserId));
+        setLocalUpvotes(prev => [...prev, currentUserId]);
         await removeVoteReport(postId).unwrap();
         await upvoteReport(postId).unwrap();
       } else {
-        // Add upvote
+        // Optimistically add upvote
+        setLocalUpvotes(prev => [...prev, currentUserId]);
         await upvoteReport(postId).unwrap();
       }
     } catch (error) {
+      // Revert optimistic updates on error
+      setLocalUpvotes(upvotesArray);
+      setLocalDownvotes(downvotesArray);
       console.error('Error handling upvote:', error);
     }
   };
@@ -54,17 +65,24 @@ const ReactionsTab = ({
 
     try {
       if (hasDownvoted) {
-        // Remove downvote
+        // Optimistically remove downvote
+        setLocalDownvotes(prev => prev.filter(id => id !== currentUserId));
         await removeVoteReport(postId).unwrap();
       } else if (hasUpvoted) {
-        // Remove upvote and add downvote
+        // Optimistically remove upvote and add downvote
+        setLocalUpvotes(prev => prev.filter(id => id !== currentUserId));
+        setLocalDownvotes(prev => [...prev, currentUserId]);
         await removeVoteReport(postId).unwrap();
         await downvoteReport(postId).unwrap();
       } else {
-        // Add downvote
+        // Optimistically add downvote
+        setLocalDownvotes(prev => [...prev, currentUserId]);
         await downvoteReport(postId).unwrap();
       }
     } catch (error) {
+      // Revert optimistic updates on error
+      setLocalUpvotes(upvotesArray);
+      setLocalDownvotes(downvotesArray);
       console.error('Error handling downvote:', error);
     }
   };
