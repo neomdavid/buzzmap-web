@@ -40,21 +40,21 @@ const AdminPostsTable = () => {
 
   const columns = useMemo(
     () => [
-      { 
-        headerName: "Title", 
-        field: "title", 
+      {
+        headerName: "Title",
+        field: "title",
         flex: 1,
         filter: 'agTextColumnFilter',
       },
-      { 
-        headerName: "Category", 
-        field: "category", 
+      {
+        headerName: "Category",
+        field: "category",
         flex: 1,
         filter: 'agSetColumnFilter',
       },
-      { 
-        headerName: "Publish Date", 
-        field: "publishDate", 
+      {
+        headerName: "Publish Date",
+        field: "publishDate",
         flex: 1,
         filter: 'agDateColumnFilter',
       },
@@ -125,8 +125,8 @@ const AdminPostsTable = () => {
   const handleImageUpload = (e) => {
     const file = e.target.files[0];
     if (file) {
-      setEditingPost({ 
-        ...editingPost, 
+      setEditingPost({
+        ...editingPost,
         images: [file] // Store the file object directly
       });
     }
@@ -147,7 +147,7 @@ const AdminPostsTable = () => {
         id: editingPost.id || editingPost._id,
         formData: formData
       }).unwrap();
-      
+
       setEditingPost(null);
       editDialogRef.current?.close();
       toastSuccess("Post updated successfully!");
@@ -204,6 +204,9 @@ const AdminPostsTable = () => {
               filter: true,
               resizable: true,
             }}
+            style={{
+              height: '100%',
+            }}
           />
         </div>
       )}
@@ -224,7 +227,7 @@ const AdminPostsTable = () => {
           {editingPost && (
             <form onSubmit={handleSave} className="space-y-4">
               <p className="text-3xl font-extrabold mb-4">Edit Admin Post</p>
-              
+
               <div className="form-control">
                 <label className="label text-primary text-lg font-bold mb-1">
                   Title
@@ -281,8 +284,8 @@ const AdminPostsTable = () => {
               </div>
 
               <div className="modal-action">
-                <button 
-                  type="submit" 
+                <button
+                  type="submit"
                   className="btn btn-primary text-white rounded-lg"
                   disabled={isSubmitting}
                 >
@@ -312,8 +315,8 @@ const AdminPostsTable = () => {
           </button>
 
           <div className="text-center">
-          <p className="text-3xl font-extrabold mb-4">Delete Admin Post</p>
-          <p className="mb-6">Are you sure you want to delete this post?</p>
+            <p className="text-3xl font-extrabold mb-4">Delete Admin Post</p>
+            <p className="mb-6">Are you sure you want to delete this post?</p>
             <div className="flex justify-center gap-4">
               <button
                 className="btn btn-error"

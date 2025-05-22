@@ -26,30 +26,30 @@ const AlertsTable = () => {
 
   const columns = useMemo(
     () => [
-      { 
-        headerName: "Barangays", 
-        field: "barangays", 
+      {
+        headerName: "Barangays",
+        field: "barangays",
         flex: 1,
         filter: 'agTextColumnFilter',
       },
-      { 
-        headerName: "Severity", 
-        field: "severity", 
+      {
+        headerName: "Severity",
+        field: "severity",
         flex: 1,
         filter: 'agSetColumnFilter',
         filterParams: {
           values: ['Low', 'Medium', 'High']
         }
       },
-      { 
-        headerName: "Messages", 
-        field: "messages", 
+      {
+        headerName: "Messages",
+        field: "messages",
         flex: 2,
         filter: 'agTextColumnFilter',
       },
-      { 
-        headerName: "Date", 
-        field: "date", 
+      {
+        headerName: "Date",
+        field: "date",
         flex: 1,
         filter: 'agDateColumnFilter',
       },
@@ -109,6 +109,9 @@ const AlertsTable = () => {
               filter: true,
               resizable: true,
             }}
+            style={{
+              height: '100%',
+            }}
           />
         </div>
       )}
@@ -129,7 +132,7 @@ const AlertsTable = () => {
           {selectedAlert && (
             <div className="space-y-6">
               <p className="text-3xl font-extrabold mb-4">Alert Details</p>
-              
+
               <div className="grid grid-cols-2 gap-4">
                 <div className="form-control">
                   <label className="label text-primary text-lg font-bold mb-1">
@@ -163,7 +166,7 @@ const AlertsTable = () => {
                     Messages
                   </label>
                   <div className="p-3 bg-base-200 rounded-lg whitespace-pre-wrap">
-                    {Array.isArray(selectedAlert.messages) 
+                    {Array.isArray(selectedAlert.messages)
                       ? selectedAlert.messages.join('\n')
                       : selectedAlert.messages}
                   </div>

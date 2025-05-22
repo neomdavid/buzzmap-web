@@ -42,8 +42,8 @@ const InterventionAnalysisChart = ({ interventionId, onStats, percentChange }) =
   // Calculate summary stats
   let totalBefore = 0, totalAfter = 0, computedPercentChange = '-';
   if (analysisData) {
-    const beforeData = Object.values(analysisData.analysis.case_counts.before);
-    const afterData = Object.values(analysisData.analysis.case_counts.after);
+    const beforeData = Object.values(analysisData.analysis.before);
+    const afterData = Object.values(analysisData.analysis.after);
     totalBefore = beforeData.reduce((a, b) => a + b, 0);
     totalAfter = afterData.reduce((a, b) => a + b, 0);
     computedPercentChange = totalBefore === 0 ? (totalAfter === 0 ? 0 : 100) : (((totalAfter - totalBefore) / totalBefore) * 100).toFixed(1);
@@ -65,8 +65,8 @@ const InterventionAnalysisChart = ({ interventionId, onStats, percentChange }) =
           console.log('Raw API Response:', JSON.stringify(response, null, 2));
           console.log('Intervention Details:', response.intervention);
           console.log('Analysis Data:', response.analysis);
-          console.log('Case Counts Before:', response.analysis.case_counts.before);
-          console.log('Case Counts After:', response.analysis.case_counts.after);
+          console.log('Case Counts Before:', response.analysis.before);
+          console.log('Case Counts After:', response.analysis.after);
         })
         .catch((error) => {
           console.error('Error fetching analysis:', error);
@@ -111,15 +111,15 @@ const InterventionAnalysisChart = ({ interventionId, onStats, percentChange }) =
   console.log('Complete Analysis Data Structure:', {
     intervention: analysisData.intervention,
     analysis: analysisData.analysis,
-    beforeData: analysisData.analysis.case_counts.before,
-    afterData: analysisData.analysis.case_counts.after,
-    beforeWeeks: Object.keys(analysisData.analysis.case_counts.before),
-    afterWeeks: Object.keys(analysisData.analysis.case_counts.after)
+    beforeData: analysisData.analysis.before,
+    afterData: analysisData.analysis.after,
+    beforeWeeks: Object.keys(analysisData.analysis.before),
+    afterWeeks: Object.keys(analysisData.analysis.after)
   });
 
   // Prepare before and after data
-  const beforeData = Object.values(analysisData.analysis.case_counts.before);
-  const afterData = Object.values(analysisData.analysis.case_counts.after);
+  const beforeData = Object.values(analysisData.analysis.before);
+  const afterData = Object.values(analysisData.analysis.after);
   const beforeCount = beforeData.length;
   const afterCount = afterData.length;
 

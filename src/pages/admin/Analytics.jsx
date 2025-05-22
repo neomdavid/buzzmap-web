@@ -67,12 +67,12 @@ const Analytics = () => {
   useEffect(() => {
     if (patternResultsData?.data && !initialBarangayNameForMap) {
       // Find barangays with spike patterns
-      const spikeBarangays = patternResultsData.data.filter(item => 
+      const spikeBarangays = patternResultsData.data.filter(item =>
         item.pattern?.toLowerCase() === 'spike'
       );
 
       let targetBarangayName;
-      
+
       if (spikeBarangays.length > 0) {
         // If we have spike patterns, select the first one
         targetBarangayName = spikeBarangays[0].name;
@@ -109,7 +109,7 @@ const Analytics = () => {
 
   // Get filtered data for selected barangay
   const selectedNorm = selectedBarangay?.toLowerCase().replace(/[^a-z0-9]/g, '');
-  
+
   const filteredPosts = posts?.filter(post => {
     const postBarangayNorm = post.barangay?.toLowerCase().replace(/[^a-z0-9]/g, '');
     return postBarangayNorm === selectedNorm;
@@ -266,34 +266,34 @@ const Analytics = () => {
             />
           </section>
         </div> */}
-              {/* Recommendation Section */}
-      {isLoadingPatterns && (
-        <div className="w-full shadow-sm shadow-lg p-6 py-8 rounded-lg mt-6">
-          <p className="text-base-content text-xl font-semibold">Loading recommendation...</p>
-        </div>
-      )}
-      {!isLoadingPatterns && spikeRecommendationDetails && (
-        <div className="w-full shadow-sm shadow-lg p-6 py-8 rounded-lg mt-6">
-          <p className="text-base-content text-3xl font-bold mb-4">
-            {spikeRecommendationDetails.patternType.toLowerCase() === 'spike' 
-              ? "Priority Action Recommendation (Spike Detected)"
-              : `Action Recommendation for ${spikeRecommendationDetails.barangay}`
-            }
-          </p>
-          {/* {console.log("[Analytics DEBUG] Rendering ActionRecommendationCard with props:", JSON.stringify(spikeRecommendationDetails, null, 2))} */}
-          <ActionRecommendationCard
-            barangay={spikeRecommendationDetails.barangay}
-            patternType={spikeRecommendationDetails.patternType}
-            issueDetected={spikeRecommendationDetails.issueDetected}
-            suggestedAction={spikeRecommendationDetails.suggestedAction}
-          />
-        </div>
-      )}
-      {!isLoadingPatterns && !spikeRecommendationDetails && selectedBarangay && (
-        <div className="w-full shadow-sm shadow-lg p-6 py-8 rounded-lg mt-6">
-          <p className="text-base-content text-xl font-semibold">No spike recommendation available.</p>
-        </div>
-      )}
+        {/* Recommendation Section */}
+        {isLoadingPatterns && (
+          <div className="w-full shadow-sm shadow-lg p-6 py-8 rounded-lg mt-6">
+            <p className="text-base-content text-xl font-semibold">Loading recommendation...</p>
+          </div>
+        )}
+        {!isLoadingPatterns && spikeRecommendationDetails && (
+          <div className="w-full shadow-sm shadow-lg p-6 py-8 rounded-lg mt-6">
+            <p className="text-base-content text-3xl font-bold mb-4">
+              {spikeRecommendationDetails.patternType.toLowerCase() === 'spike'
+                ? "Priority Action Recommendation (Spike Detected)"
+                : `Action Recommendation for ${spikeRecommendationDetails.barangay}`
+              }
+            </p>
+            {/* {console.log("[Analytics DEBUG] Rendering ActionRecommendationCard with props:", JSON.stringify(spikeRecommendationDetails, null, 2))} */}
+            <ActionRecommendationCard
+              barangay={spikeRecommendationDetails.barangay}
+              patternType={spikeRecommendationDetails.patternType}
+              issueDetected={spikeRecommendationDetails.issueDetected}
+              suggestedAction={spikeRecommendationDetails.suggestedAction}
+            />
+          </div>
+        )}
+        {!isLoadingPatterns && !spikeRecommendationDetails && selectedBarangay && (
+          <div className="w-full shadow-sm shadow-lg p-6 py-8 rounded-lg mt-6">
+            <p className="text-base-content text-xl font-semibold">No spike recommendation available.</p>
+          </div>
+        )}
         <div className="flex flex-col gap-6 gap-y-12 lg:grid lg:grid-cols-12 shadow-sm shadow-lg p-6 py-8 rounded-lg">
           <section className="flex flex-col lg:col-span-7">
             <div className="flex justify-between items-center mb-4">
@@ -308,9 +308,9 @@ const Analytics = () => {
                 Import CSV
               </button>
             </div>
-         
+
             <div className="mt-[-14px] ml-[-12px]">
-              <DengueTrendChart 
+              <DengueTrendChart
                 selectedBarangay={selectedBarangay}
                 onBarangayChange={(barangayName) => {
                   setSelectedBarangay(barangayName);
@@ -330,11 +330,10 @@ const Analytics = () => {
               {TABS.map(tab => (
                 <button
                   key={tab.value}
-                  className={`px-3 py-1 rounded-full ${
-                    selectedTab === tab.value 
-                      ? 'bg-primary text-white' 
+                  className={`px-3 py-1 rounded-full ${selectedTab === tab.value
+                      ? 'bg-primary text-white'
                       : 'bg-gray-200 text-black'
-                  }`}
+                    }`}
                   onClick={() => setSelectedTab(tab.value)}
                 >
                   {tab.label}
@@ -342,8 +341,8 @@ const Analytics = () => {
               ))}
             </div>
             <div className="flex flex-col gap-y-5 h-95 xl:h-120 2xl:h-125 mt-[-10px] py-3 overflow-y-scroll">
-              <PatternAlerts 
-                selectedBarangay={selectedBarangay} 
+              <PatternAlerts
+                selectedBarangay={selectedBarangay}
                 selectedTab={selectedTab}
                 onAlertSelect={(barangayName) => {
                   setSelectedBarangay(barangayName);
@@ -369,8 +368,8 @@ const Analytics = () => {
                 Error loading barangay data
               </div>
             ) : (
-              <DengueMap 
-                showLegends={true} 
+              <DengueMap
+                showLegends={true}
                 defaultTab="cases"
                 key={dataVersion}
                 initialFocusBarangayName={initialBarangayNameForMap}
@@ -409,7 +408,7 @@ const Analytics = () => {
               const totalInterventions = filteredInterventions.length;
               const scheduledInterventions = filteredInterventions.filter(i => (i.status || '').toLowerCase() === 'scheduled').length;
               const ongoingInterventions = filteredInterventions.filter(i => (i.status || '').toLowerCase() === 'ongoing').length;
-              const completedInterventions = filteredInterventions.filter(i => ['completed','complete'].includes((i.status || '').toLowerCase())).length;
+              const completedInterventions = filteredInterventions.filter(i => ['completed', 'complete'].includes((i.status || '').toLowerCase())).length;
 
               // Bar chart data for reports
               const reportsBarData = {
@@ -438,7 +437,7 @@ const Analytics = () => {
                     precision: 0,
                     ticks: {
                       stepSize: 1,
-                      callback: function(value) {
+                      callback: function (value) {
                         return Number.isInteger(value) ? value : null;
                       }
                     }
@@ -474,7 +473,7 @@ const Analytics = () => {
                     precision: 0,
                     ticks: {
                       stepSize: 1,
-                      callback: function(value) {
+                      callback: function (value) {
                         return Number.isInteger(value) ? value : null;
                       }
                     }

@@ -1,7 +1,7 @@
 import {
   FormPublicPost,
   FormDengueAlert,
-  FormCoordinationRequest,AdminPostsTable,AlertsTable
+  FormCoordinationRequest, AdminPostsTable, AlertsTable
 } from "../../components";
 import { useGetAllAdminPostsQuery, useGetAllAlertsQuery } from "../../api/dengueApi";
 import { useSelector } from "react-redux";
@@ -37,7 +37,7 @@ const CEA = () => {
   });
   const { data: alerts, isLoading: loadingAlerts } = useGetAllAlertsQuery();
   console.log("alerts", alerts, "loadingAlerts", loadingAlerts);
-  
+
 
   return (
     <main className="flex flex-col w-full  z-10000">
@@ -56,18 +56,18 @@ const CEA = () => {
         </div> */}
       </section>
       <section className="flex flex-col gap-36">
-      <div className="mt-12 h-135">
-        <AdminPostsTable />
-      </div>
+        <div className="mt-12 h-135">
+          <AdminPostsTable />
+        </div>
 
-      {/* Alerts Table */}
-      <div className="mt-12 h-150">
-        <AlertsTable />
-      </div>
+        {/* Alerts Table */}
+        <div className="mt-12 h-150">
+          <AlertsTable />
+        </div>
       </section>
 
       {/* Admin Posts Table */}
-   
+
     </main>
   );
 };
