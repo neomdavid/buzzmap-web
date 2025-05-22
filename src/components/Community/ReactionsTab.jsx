@@ -24,38 +24,48 @@ const ReactionsTab = ({
   const netVotes = upvotes - downvotes;
 
   const handleUpvote = async () => {
-    if (hasUpvoted) {
-      // Remove upvote
-      try {
-        await removeVoteReport(postId);
-      } catch (error) {
-        console.error('Error removing upvote:', error);
+    if (!currentUserId) {
+      console.log("User must be logged in to vote");
+      return;
+    }
+
+    try {
+      if (hasUpvoted) {
+        // Remove upvote
+        await removeVoteReport(postId).unwrap();
+      } else if (hasDownvoted) {
+        // Remove downvote and add upvote
+        await removeVoteReport(postId).unwrap();
+        await upvoteReport(postId).unwrap();
+      } else {
+        // Add upvote
+        await upvoteReport(postId).unwrap();
       }
-    } else {
-      // Upvote
-      try {
-        await upvoteReport(postId);
-      } catch (error) {
-        console.error('Error upvoting:', error);
-      }
+    } catch (error) {
+      console.error('Error handling upvote:', error);
     }
   };
 
   const handleDownvote = async () => {
-    if (hasDownvoted) {
-      // Remove downvote
-      try {
-        await removeVoteReport(postId);
-      } catch (error) {
-        console.error('Error removing downvote:', error);
+    if (!currentUserId) {
+      console.log("User must be logged in to vote");
+      return;
+    }
+
+    try {
+      if (hasDownvoted) {
+        // Remove downvote
+        await removeVoteReport(postId).unwrap();
+      } else if (hasUpvoted) {
+        // Remove upvote and add downvote
+        await removeVoteReport(postId).unwrap();
+        await downvoteReport(postId).unwrap();
+      } else {
+        // Add downvote
+        await downvoteReport(postId).unwrap();
       }
-    } else {
-      // Downvote
-      try {
-        await downvoteReport(postId);
-      } catch (error) {
-        console.error('Error downvoting:', error);
-      }
+    } catch (error) {
+      console.error('Error handling downvote:', error);
     }
   };
 

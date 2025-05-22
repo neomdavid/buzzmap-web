@@ -160,9 +160,11 @@ const NewPostModal = forwardRef(({ onSubmit, initialCoordinates = "", initialBar
 
       if (onSubmit) {
         onSubmit();
-        // Close the modal dialog (for Community page)
-        const dlg = document.getElementById("my_modal_4");
-        if (dlg) dlg.close();
+      }
+      
+      // Close the modal using the proper DaisyUI method
+      if (ref.current) {
+        ref.current.close();
       }
     } catch (error) {
       // If backend error occurs, display the custom toast with error message

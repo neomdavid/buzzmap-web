@@ -564,22 +564,55 @@ export const dengueApi = createApi({
         url: `reports/${reportId}/upvote`,
         method: "POST",
       }),
-      invalidatesTags: [{ type: "Post", id: "LIST" }],
+      invalidatesTags: (result, error, id) => [
+        { type: "Post", id },
+        { type: "Post", id: "LIST" }
+      ],
+      async onQueryStarted(reportId, { dispatch, queryFulfilled }) {
+        try {
+          await queryFulfilled;
+        } catch (error) {
+          console.error('Error upvoting:', error);
+        }
+      }
     }),
+
     downvoteReport: builder.mutation({
       query: (reportId) => ({
         url: `reports/${reportId}/downvote`,
         method: "POST",
       }),
-      invalidatesTags: [{ type: "Post", id: "LIST" }],
+      invalidatesTags: (result, error, id) => [
+        { type: "Post", id },
+        { type: "Post", id: "LIST" }
+      ],
+      async onQueryStarted(reportId, { dispatch, queryFulfilled }) {
+        try {
+          await queryFulfilled;
+        } catch (error) {
+          console.error('Error downvoting:', error);
+        }
+      }
     }),
+
     removeVoteReport: builder.mutation({
       query: (reportId) => ({
         url: `reports/${reportId}/remove-vote`,
         method: "POST",
       }),
-      invalidatesTags: [{ type: "Post", id: "LIST" }],
+      invalidatesTags: (result, error, id) => [
+        { type: "Post", id },
+        { type: "Post", id: "LIST" }
+      ],
+      async onQueryStarted(reportId, { dispatch, queryFulfilled }) {
+        try {
+          await queryFulfilled;
+        } catch (error) {
+          console.error('Error removing vote:', error);
+        }
+      }
     }),
+
     addComment: builder.mutation({
       query: ({ reportId, comment }) => ({
         url: `reports/${reportId}/comments`,
@@ -588,6 +621,7 @@ export const dengueApi = createApi({
       }),
       invalidatesTags: [{ type: "Post", id: "LIST" }],
     }),
+
     getComments: builder.query({
       query: (reportId) => `reports/${reportId}/comments`,
     }),

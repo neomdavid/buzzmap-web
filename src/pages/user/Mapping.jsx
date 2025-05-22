@@ -86,7 +86,7 @@ const INTERVENTION_TYPE_COLORS = {
 };
 
 const Mapping = () => {
-  const [currentPosition, setCurrentPosition] = useState(null);
+  const [currentPosition, setCurrentPosition] = useState(QC_CENTER);
   const [qcPolygonPaths, setQcPolygonPaths] = useState([]);
   const [barangayData, setBarangayData] = useState(null);
   const [isFullScreen, setIsFullScreen] = useState(false);
@@ -112,7 +112,21 @@ const Mapping = () => {
   const { data: patternData } = useGetPatternRecognitionResultsQuery();
   
   // Get all barangays
-  const { data: barangaysList, isLoading: isLoadingBarangays } = useGetBarangaysQuery();
+  const { data: barangaysResponse, isLoading: isLoadingBarangays, error: barangaysError } = useGetBarangaysQuery();
+
+  // Extract the actual barangays list from the response
+  const barangaysList = barangaysResponse?.data || [];
+
+  // Log the raw response from getBarangays
+  useEffect(() => {
+    console.log('[DEBUG] Raw getBarangays Response:', {
+      rawData: barangaysResponse,
+      barangaysList: barangaysList,
+      responseType: barangaysResponse ? typeof barangaysResponse : 'undefined',
+      isArray: Array.isArray(barangaysList),
+      stringified: JSON.stringify(barangaysResponse, null, 2)
+    });
+  }, [barangaysResponse, barangaysList]);
 
   // Get posts
   const { data: posts } = useGetPostsQuery();
@@ -127,8 +141,6 @@ const Mapping = () => {
       const status = intervention.status?.toLowerCase();
       return status !== 'completed' && status !== 'complete';
     });
-    // Optional: Sort by date if needed, e.g., most recent first
-    // return filtered.sort((a, b) => new Date(b.date) - new Date(a.date));
     return filtered;
   }, [allInterventionsData]);
 
@@ -151,6 +163,27 @@ const Mapping = () => {
     }
     return true;
   };
+
+  // Initialize map with user's location
+  useEffect(() => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        ({ coords }) => {
+          const position = { lat: coords.latitude, lng: coords.longitude };
+          if (handleLocation(position)) {
+            setCurrentPosition(position);
+          }
+        },
+        () => {
+          // If geolocation fails, use QC center
+          setCurrentPosition(QC_CENTER);
+        }
+      );
+    } else {
+      // If geolocation is not supported, use QC center
+      setCurrentPosition(QC_CENTER);
+    }
+  }, []);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -207,22 +240,6 @@ const Mapping = () => {
         }
         setBarangayData(processedBarangayData);
         // --- END: Copy logic from DengueMap.jsx ---
-
-        // Get user location - only once
-        navigator.geolocation.getCurrentPosition(
-          ({ coords }) => {
-            const p = { lat: coords.latitude, lng: coords.longitude };
-            if (handleLocation(p)) {
-              setCurrentPosition(p);
-              handleLocationSelect(p);
-            }
-          },
-          () => {
-            setCurrentPosition(QC_CENTER);
-            toastWarn("Unable to get your location. Default location set to QC center.");
-            mapRef.current?.panTo(QC_CENTER);
-          }
-        );
 
         // Process breeding sites
         if (posts) {
@@ -421,7 +438,7 @@ const Mapping = () => {
           className="w-full px-4 py-2 rounded-md shadow bg-white text-black"
         >
           <option value="">Select a barangay</option>
-          {barangaysList?.map((barangay) => (
+          {barangaysList.map((barangay) => (
             <option key={barangay._id} value={barangay.name}>
               {barangay.name}
             </option>
