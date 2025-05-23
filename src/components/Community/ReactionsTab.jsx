@@ -1,6 +1,10 @@
 import React from "react";
 import { ArrowFatUp, ArrowFatDown, ChatCircleDots } from "phosphor-react";
-import { useUpvoteReportMutation, useDownvoteReportMutation, useRemoveVoteReportMutation } from "../../api/dengueApi";
+import {
+  useUpvoteReportMutation,
+  useDownvoteReportMutation,
+  useRemoveVoteReportMutation,
+} from "../../api/dengueApi";
 
 const ReactionsTab = ({
   postId,
@@ -13,6 +17,7 @@ const ReactionsTab = ({
   upvotesArray = [],
   downvotesArray = [],
   currentUserId = null,
+  onCommentClick
 }) => {
   const [upvoteReport] = useUpvoteReportMutation();
   const [downvoteReport] = useDownvoteReportMutation();
@@ -80,6 +85,7 @@ const ReactionsTab = ({
         <ChatCircleDots
           size={iconSize}
           className="cursor-pointer hover:opacity-80"
+          onClick={onCommentClick}
         />
         <span className={`font-light ${textSize}`}>{commentsCount}</span>
       </div>

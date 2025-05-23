@@ -26,6 +26,7 @@ export { default as AnnouncementCard } from "./Community/AnnouncementCard.jsx";
 export { default as ReactionsTab } from "./Community/ReactionsTab.jsx";
 export { default as ImageGrid } from "./Community/ImageGrid.jsx";
 export { default as Comment } from "./Community/Comment.jsx";
+export { default as Comment2 } from "./Community/Comment2.jsx";
 export { default as DescriptionWithImages } from "./Community/DescriptionWithImages.jsx";
 export { default as NewPostModal } from "./Community/NewPostModal.jsx";
 export { default as CustomModalToast } from "./Community/CustomModalToast.jsx";

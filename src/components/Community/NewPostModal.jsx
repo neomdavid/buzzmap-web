@@ -222,16 +222,16 @@ const NewPostModal = forwardRef(({ onSubmit, initialCoordinates = "", initialBar
     <dialog
       id="my_modal_4"
       ref={ref}
-      className="modal text-xl text-primary"
+      className="modal text-xl text-primary "
     >
-      <div className="modal-box w-10/12 max-w-5xl">
+      <div className="modal-box w-11/12 max-w-5xl max-h-[95vh]">
         <form method="dialog">
           <button className="btn btn-sm text-3xl font-bold btn-circle btn-ghost absolute right-8 top-8.5">
             ✕
           </button>
         </form>
         <main className="p-3 pr-10">
-          <p className="text-4xl font-bold text-center">New Post</p>
+          <p className="text-4xl font-bold text-center">Report to Surveillance</p>
           <hr className="text-gray-300 mt-4 mb-2" />
 
           {/* --- ANONYMOUS SWITCH --- */}

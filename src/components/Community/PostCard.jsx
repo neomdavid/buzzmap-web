@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import ReactionsTab from "./ReactionsTab";
 import ImageGrid from "./ImageGrid";
 import { UserDetailsTab } from "../";
 import { useSelector } from "react-redux";
+import CommentModal from "./CommentModal";
 
 const PostCard = ({
   profileImage,
@@ -25,6 +26,14 @@ const PostCard = ({
   downvotesArray = [],
 }) => {
   const userFromStore = useSelector((state) => state.auth?.user);
+  const commentModalRef = useRef(null);
+
+  const handleCommentClick = () => {
+    if (commentModalRef.current) {
+      commentModalRef.current.showModal();
+    }
+  };
+
   return (
     <div className="shadow-sm bg-white rounded-lg px-6 pt-6 pb-4">
       <UserDetailsTab
@@ -75,6 +84,18 @@ const PostCard = ({
         upvotesArray={upvotesArray}
         downvotesArray={downvotesArray}
         currentUserId={userFromStore?._id}
+        onCommentClick={handleCommentClick}
+      />
+
+      <CommentModal 
+        ref={commentModalRef}
+        postId={postId}
+        onCommentAdded={() => {
+          // Refresh the post data or update the comments count
+          if (window.location.pathname === '/community') {
+            window.location.reload();
+          }
+        }}
       />
     </div>
   );

@@ -10,6 +10,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@emoji-mart/data": "^1.2.1",
+    "@emoji-mart/react": "^1.1.1",
     "@react-google-maps/api": "^2.20.6",
     "@reduxjs/toolkit": "^2.6.1",
     "@tabler/icons-react": "^3.31.0",
