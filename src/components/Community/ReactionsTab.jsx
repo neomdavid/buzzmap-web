@@ -3,7 +3,8 @@ import { ArrowFatUp, ArrowFatDown, ChatCircleDots } from "phosphor-react";
 import {
   useUpvoteReportMutation,
   useDownvoteReportMutation,
-  useRemoveVoteReportMutation,
+  useRemoveUpvoteMutation,
+  useRemoveDownvoteMutation,
 } from "../../api/dengueApi";
 
 const ReactionsTab = ({
@@ -21,46 +22,50 @@ const ReactionsTab = ({
 }) => {
   const [upvoteReport] = useUpvoteReportMutation();
   const [downvoteReport] = useDownvoteReportMutation();
-  const [removeVoteReport] = useRemoveVoteReportMutation();
+  const [removeUpvote] = useRemoveUpvoteMutation();
+  const [removeDownvote] = useRemoveDownvoteMutation();
 
-  const hasUpvoted = currentUserId && upvotesArray.includes(currentUserId);
-  const hasDownvoted = currentUserId && downvotesArray.includes(currentUserId);
+  // Check if the current user has voted
+  const hasUpvoted = currentUserId && upvotesArray.some(vote => 
+    typeof vote === 'object' ? vote._id === currentUserId : vote === currentUserId
+  );
+  const hasDownvoted = currentUserId && downvotesArray.some(vote => 
+    typeof vote === 'object' ? vote._id === currentUserId : vote === currentUserId
+  );
 
-  const netVotes = upvotes - downvotes;
+  // Calculate net votes based on the length of the arrays
+  const netVotes = (Array.isArray(upvotesArray) ? upvotesArray.length : 0) - 
+                  (Array.isArray(downvotesArray) ? downvotesArray.length : 0);
 
   const handleUpvote = async () => {
-    if (hasUpvoted) {
-      // Remove upvote
-      try {
-        await removeVoteReport(postId);
-      } catch (error) {
-        console.error('Error removing upvote:', error);
+    try {
+      if (hasUpvoted) {
+        // Remove upvote
+        console.log('[DEBUG] Removing upvote from post:', postId);
+        await removeUpvote(postId).unwrap();
+      } else {
+        // Upvote
+        console.log('[DEBUG] Adding upvote to post:', postId);
+        await upvoteReport(postId).unwrap();
       }
-    } else {
-      // Upvote
-      try {
-        await upvoteReport(postId);
-      } catch (error) {
-        console.error('Error upvoting:', error);
-      }
+    } catch (error) {
+      console.error('[DEBUG] Error handling upvote:', error);
     }
   };
 
   const handleDownvote = async () => {
-    if (hasDownvoted) {
-      // Remove downvote
-      try {
-        await removeVoteReport(postId);
-      } catch (error) {
-        console.error('Error removing downvote:', error);
+    try {
+      if (hasDownvoted) {
+        // Remove downvote
+        console.log('[DEBUG] Removing downvote from post:', postId);
+        await removeDownvote(postId).unwrap();
+      } else {
+        // Downvote
+        console.log('[DEBUG] Adding downvote to post:', postId);
+        await downvoteReport(postId).unwrap();
       }
-    } else {
-      // Downvote
-      try {
-        await downvoteReport(postId);
-      } catch (error) {
-        console.error('Error downvoting:', error);
-      }
+    } catch (error) {
+      console.error('[DEBUG] Error handling downvote:', error);
     }
   };
 

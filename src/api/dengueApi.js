@@ -561,25 +561,132 @@ export const dengueApi = createApi({
     }),
 
     upvoteReport: builder.mutation({
-      query: (reportId) => ({
-        url: `reports/${reportId}/upvote`,
-        method: "POST",
-      }),
-      invalidatesTags: [{ type: "Post", id: "LIST" }],
+      query: (reportId) => {
+        console.log('[DEBUG] Upvoting report:', reportId);
+        return {
+          url: `reports/${reportId}/upvote`,
+          method: "POST",
+        };
+      },
+      async onQueryStarted(reportId, { dispatch, queryFulfilled }) {
+        try {
+          const { data } = await queryFulfilled;
+          console.log('[DEBUG] Upvote successful:', data);
+          
+          // Update the cache for both the specific post and the post list
+          dispatch(
+            dengueApi.util.updateQueryData('getPosts', undefined, (draft) => {
+              const post = draft.find(p => p._id === reportId);
+              if (post) {
+                post.upvotes = data.upvotes;
+                post.downvotes = data.downvotes;
+              }
+            })
+          );
+        } catch (error) {
+          console.error('[DEBUG] Upvote failed:', error);
+        }
+      },
+      invalidatesTags: (result, error, reportId) => [
+        { type: "Post", id: reportId },
+        { type: "Post", id: "LIST" }
+      ],
     }),
     downvoteReport: builder.mutation({
-      query: (reportId) => ({
-        url: `reports/${reportId}/downvote`,
-        method: "POST",
-      }),
-      invalidatesTags: [{ type: "Post", id: "LIST" }],
+      query: (reportId) => {
+        console.log('[DEBUG] Downvoting report:', reportId);
+        return {
+          url: `reports/${reportId}/downvote`,
+          method: "POST",
+        };
+      },
+      async onQueryStarted(reportId, { dispatch, queryFulfilled }) {
+        try {
+          const { data } = await queryFulfilled;
+          console.log('[DEBUG] Downvote successful:', data);
+          
+          // Update the cache for both the specific post and the post list
+          dispatch(
+            dengueApi.util.updateQueryData('getPosts', undefined, (draft) => {
+              const post = draft.find(p => p._id === reportId);
+              if (post) {
+                post.upvotes = data.upvotes;
+                post.downvotes = data.downvotes;
+              }
+            })
+          );
+        } catch (error) {
+          console.error('[DEBUG] Downvote failed:', error);
+        }
+      },
+      invalidatesTags: (result, error, reportId) => [
+        { type: "Post", id: reportId },
+        { type: "Post", id: "LIST" }
+      ],
     }),
-    removeVoteReport: builder.mutation({
-      query: (reportId) => ({
-        url: `reports/${reportId}/remove-vote`,
-        method: "POST",
-      }),
-      invalidatesTags: [{ type: "Post", id: "LIST" }],
+    removeUpvote: builder.mutation({
+      query: (reportId) => {
+        console.log('[DEBUG] Removing upvote from report:', reportId);
+        return {
+          url: `reports/${reportId}/upvote`,
+          method: "DELETE",
+        };
+      },
+      async onQueryStarted(reportId, { dispatch, queryFulfilled }) {
+        try {
+          const { data } = await queryFulfilled;
+          console.log('[DEBUG] Remove upvote successful:', data);
+          
+          // Update the cache for both the specific post and the post list
+          dispatch(
+            dengueApi.util.updateQueryData('getPosts', undefined, (draft) => {
+              const post = draft.find(p => p._id === reportId);
+              if (post) {
+                post.upvotes = data.upvotes;
+                post.downvotes = data.downvotes;
+              }
+            })
+          );
+        } catch (error) {
+          console.error('[DEBUG] Remove upvote failed:', error);
+        }
+      },
+      invalidatesTags: (result, error, reportId) => [
+        { type: "Post", id: reportId },
+        { type: "Post", id: "LIST" }
+      ],
+    }),
+    removeDownvote: builder.mutation({
+      query: (reportId) => {
+        console.log('[DEBUG] Removing downvote from report:', reportId);
+        return {
+          url: `reports/${reportId}/downvote`,
+          method: "DELETE",
+        };
+      },
+      async onQueryStarted(reportId, { dispatch, queryFulfilled }) {
+        try {
+          const { data } = await queryFulfilled;
+          console.log('[DEBUG] Remove downvote successful:', data);
+          
+          // Update the cache for both the specific post and the post list
+          dispatch(
+            dengueApi.util.updateQueryData('getPosts', undefined, (draft) => {
+              const post = draft.find(p => p._id === reportId);
+              if (post) {
+                post.upvotes = data.upvotes;
+                post.downvotes = data.downvotes;
+              }
+            })
+          );
+        } catch (error) {
+          console.error('[DEBUG] Remove downvote failed:', error);
+        }
+      },
+      invalidatesTags: (result, error, reportId) => [
+        { type: "Post", id: reportId },
+        { type: "Post", id: "LIST" }
+      ],
     }),
     addComment: builder.mutation({
       query: ({ reportId, content }) => ({
@@ -700,7 +807,8 @@ export const {
   useGetCommentsQuery,
   useUpvoteReportMutation,
   useDownvoteReportMutation,
-  useRemoveVoteReportMutation,
+  useRemoveUpvoteMutation,
+  useRemoveDownvoteMutation,
   useAddCommentMutation,
 
   // Add the test endpoint hook
