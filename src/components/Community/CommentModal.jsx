@@ -9,6 +9,8 @@ import ReactionsTab from "./ReactionsTab";
 import Comment2 from "./Comment2";
 import profile1 from "../../assets/profile1.png";
 import { formatDistanceToNow } from "date-fns";
+import { toastInfo } from "../../utils.jsx";
+import { useNavigate } from "react-router-dom";
 
 const CommentModal = forwardRef(({ 
   postId, 
@@ -29,6 +31,7 @@ const CommentModal = forwardRef(({
   const [addComment, { isLoading }] = useAddCommentMutation();
   const { data: comments, isLoading: isLoadingComments } = useGetCommentsQuery(postId);
   const { data: postData, isLoading: isLoadingPost } = useGetPostByIdQuery(postId);
+  const navigate = useNavigate();
 
   // Preload images when post data changes
   useEffect(() => {
@@ -74,6 +77,10 @@ const CommentModal = forwardRef(({
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!userFromStore) {
+      toastInfo("Please log in to comment");
+      return;
+    }
     if (!comment.trim()) return;
     try {
       await addComment({ reportId: postId, content: comment.trim() }).unwrap();
@@ -88,7 +95,22 @@ const CommentModal = forwardRef(({
 
   const formatTimestamp = (dateString) => {
     try {
-      return formatDistanceToNow(new Date(dateString), { addSuffix: true });
+      const date = new Date(dateString);
+      const now = new Date();
+      const diffTime = Math.abs(now - date);
+      const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+      const diffHours = Math.floor(diffTime / (1000 * 60 * 60));
+      const diffMinutes = Math.floor(diffTime / (1000 * 60));
+
+      if (diffDays > 0) {
+        return `${diffDays}d ago`;
+      } else if (diffHours > 0) {
+        return `${diffHours}h ago`;
+      } else if (diffMinutes > 0) {
+        return `${diffMinutes}m ago`;
+      } else {
+        return 'just now';
+      }
     } catch (error) {
       console.error("Error formatting date:", error);
       return "just now";
@@ -218,14 +240,14 @@ const CommentModal = forwardRef(({
                       <button
                         onClick={handlePreviousImage}
                         disabled={isTransitioning}
-                        className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/50 text-white p-2 rounded-full hover:bg-black/70 transition-all disabled:opacity-50"
+                        className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/50 text-white p-2 rounded-full hover:bg-black/70 transition-display disabled:opacity-50"
                       >
                         <CaretLeft size={24} />
                       </button>
                       <button
                         onClick={handleNextImage}
                         disabled={isTransitioning}
-                        className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/50 text-white p-2 rounded-full hover:bg-black/70 transition-all disabled:opacity-50"
+                        className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/50 text-white p-2 rounded-full hover:bg-black/70 transition-display disabled:opacity-50"
                       >
                         <CaretRight size={24} />
                       </button>
@@ -249,7 +271,7 @@ const CommentModal = forwardRef(({
                   upvotes={upvotes}
                   downvotes={downvotes}
                   commentsCount={commentsCount}
-                  iconSize={22}
+                  iconSize={29}
                   upvotesArray={upvotesArray}
                   downvotesArray={downvotesArray}
                   currentUserId={userFromStore?._id}
@@ -287,38 +309,56 @@ const CommentModal = forwardRef(({
             alt="profile"
           />
           <div className="flex-1 z-10 flex flex-col text-black">
-            <textarea
-              ref={textareaRef}
-              value={comment}
-              onChange={handleTextareaChange}
-              placeholder="Write a public comment..."
-              className="bg-gray-200/60 px-4 text-lg py-2 rounded-t-2xl outline-none text-base resize-none overflow-hidden max-h-130 min-h-[40px]"
-              rows={1}
-            />
-            <div className="pt-2 gap-3 flex justify-between text-gray-600 bg-gray-200/60 rounded-b-2xl px-4 pb-2 relative shadow-[0_4px_12px_-4px_rgba(0,0,0,0.10)]">
-              <div className="flex gap-3 relative">
-                <button type="button" onClick={() => setShowEmojiPicker(v => !v)}>
-                  <Smiley size={20}/>
-                </button>
-                {showEmojiPicker && (
-                  <div className="absolute left-0 bottom-8 z-20">
-                    <Picker
-                      data={data}
-                      onEmojiSelect={handleEmojiClick}
-                      theme="light"
-                      previewPosition="none"
-                    />
+            {userFromStore ? (
+              <>
+                <textarea
+                  ref={textareaRef}
+                  value={comment}
+                  onChange={handleTextareaChange}
+                  placeholder="Write a public comment..."
+                  className="bg-gray-200/60 px-4 text-lg py-2 rounded-t-2xl outline-none text-base resize-none overflow-hidden max-h-130 min-h-[40px]"
+                  rows={1}
+                />
+                <div className="pt-2 gap-3 flex justify-between text-gray-600 bg-gray-200/60 rounded-b-2xl px-4 pb-2 relative shadow-[0_4px_12px_-4px_rgba(0,0,0,0.10)]">
+                  <div className="flex gap-3 relative">
+                    <div className="relative group">
+                      <button type="button" onClick={() => setShowEmojiPicker(v => !v)}>
+                        <Smiley size={20} className="cursor-pointer"/>
+                      </button>
+                      <p className="absolute -top-8 left-1/2 -translate-x-1/2 bg-gray-600 text-white text-[11px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-display duration-600 ease-in-out whitespace-nowrap pointer-events-none">Add emoji</p>
+                    </div>
+                    {showEmojiPicker && (
+                      <div className="absolute left-0 bottom-10 z-20">
+                        <Picker
+                          data={data}
+                          onEmojiSelect={handleEmojiClick}
+                          theme="light"
+                          previewPosition="none"
+                        />
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
-              <button
-                type="submit"
-                disabled={!comment.trim() || isLoading}
-                className="ml-2 text-gray-400 hover:text-primary disabled:opacity-50"
+                  
+                  <div className="relative group cursor-pointer">
+                    <button
+                      type="submit"
+                      disabled={!comment.trim() || isLoading}
+                      className="ml-2 cursor-pointer text-gray-400 hover:text-primary disabled:opacity-50"
+                    >
+                      <PaperPlaneRight size={22} />
+                    </button>
+                    <p className="absolute -top-8.5 -right-7.5 bg-gray-600 text-white text-[11px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-display duration-600 ease-in-out whitespace-nowrap pointer-events-none">Send comment</p>
+                  </div>
+                </div>
+              </>
+            ) : (
+              <div 
+                onClick={() => navigate('/login')}
+                className="bg-gray-200/60 px-4 text-lg py-2 rounded-2xl outline-none text-base cursor-pointer hover:bg-gray-200/80 transition-colors text-gray-500"
               >
-                <PaperPlaneRight size={22} />
-              </button>
-            </div>
+                Log in to comment
+              </div>
+            )}
           </div>
         </form>
       </div>

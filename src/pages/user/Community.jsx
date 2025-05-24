@@ -364,7 +364,7 @@ const Community = () => {
                   postId={post._id}
                   upvotes={Array.isArray(post.upvotes) ? post.upvotes.length : 0}
                   downvotes={Array.isArray(post.downvotes) ? post.downvotes.length : 0}
-                  commentsCount={post.commentsCount || 0}
+                  _commentCount={post._commentCount || 0}
                   upvotesArray={post.upvotes || []}
                   downvotesArray={post.downvotes || []}
                 />

@@ -2,7 +2,15 @@ import React from "react";
 import profile1 from "../../assets/profile1.png";
 import { ArrowFatUp, ArrowFatDown } from "phosphor-react";
 
-const Comment2 = ({ username, profileImg = profile1, comment, bgColor = "bg-base-200", profileSize = "h-11", textSize = "text-base" }) => {
+const Comment2 = ({ 
+  username, 
+  profileImg = profile1, 
+  comment, 
+  timestamp,
+  bgColor = "bg-base-200", 
+  profileSize = "h-11", 
+  textSize = "text-base" 
+}) => {
   return (
     <div className="flex gap-x-1.5 text-black">
       <img src={profileImg} alt={username} className={`${profileSize} mt-1.5 rounded-full`} />
@@ -12,7 +20,7 @@ const Comment2 = ({ username, profileImg = profile1, comment, bgColor = "bg-base
           <p className={textSize}>{comment}</p>
         </div>
         <div className="flex items-center text-sm font-semibold gap-x-4 ml-6 mt-1">
-          <p>1m</p>
+          <p>{timestamp}</p>
           <ArrowFatUp size={22} className="cursor-pointer hover:bg-gray-200/50 rounded-full p-1" />
           <ArrowFatDown size={22} className="cursor-pointer  hover:bg-gray-200/50 rounded-full p-1" />
         </div>

@@ -25,15 +25,12 @@ const PostCard = ({
   commentsCount,
   upvotesArray = [],
   downvotesArray = [],
+  _commentCount = 0, // Add this prop with default value
 }) => {
   const userFromStore = useSelector((state) => state.auth?.user);
   const commentModalRef = useRef(null);
 
   const handleCommentClick = () => {
-    if (!userFromStore || userFromStore.role !== "user") {
-      toastInfo("Please log in to comment");
-      return;
-    }
     if (commentModalRef.current) {
       commentModalRef.current.showModal();
     }
@@ -85,11 +82,12 @@ const PostCard = ({
         postId={postId}
         upvotes={upvotes}
         downvotes={downvotes}
-        commentsCount={commentsCount}
+        commentsCount={_commentCount} // Use _commentCount here
         upvotesArray={upvotesArray}
         downvotesArray={downvotesArray}
         currentUserId={userFromStore?._id}
         onCommentClick={handleCommentClick}
+        iconSize={30}
       />
     
       <CommentModal 
@@ -97,7 +95,7 @@ const PostCard = ({
         postId={postId}
         upvotes={upvotes}
         downvotes={downvotes}
-        commentsCount={commentsCount}
+        commentsCount={_commentCount} // Use _commentCount here
         upvotesArray={upvotesArray}
         downvotesArray={downvotesArray}
         onCommentAdded={() => {

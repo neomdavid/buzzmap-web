@@ -6,6 +6,7 @@ import {
   useRemoveUpvoteMutation,
   useRemoveDownvoteMutation,
 } from "../../api/dengueApi";
+import { toastInfo } from "../../utils.jsx";
 
 const ReactionsTab = ({
   postId,
@@ -38,6 +39,10 @@ const ReactionsTab = ({
                   (Array.isArray(downvotesArray) ? downvotesArray.length : 0);
 
   const handleUpvote = async () => {
+    if (!currentUserId) {
+      toastInfo("Please log in to upvote and downvote.");
+      return;
+    }
     try {
       if (hasUpvoted) {
         // Remove upvote
@@ -54,6 +59,10 @@ const ReactionsTab = ({
   };
 
   const handleDownvote = async () => {
+    if (!currentUserId) {
+      toastInfo("Please log in to upvote and downvote.");
+      return;
+    }
     try {
       if (hasDownvoted) {
         // Remove downvote
@@ -75,22 +84,21 @@ const ReactionsTab = ({
         <ArrowFatUp
           size={iconSize}
           weight={hasUpvoted ? "fill" : "regular"}
-          className={`cursor-pointer hover:opacity-80 ${hasUpvoted ? "text-success" : "text-gray-400"}`}
+          className={`cursor-pointer hover:bg-gray-200/80 rounded-full p-1.5 ${hasUpvoted ? "text-success" : "text-gray-400"}`}
           onClick={handleUpvote}
         />
-        <span className={`font-light ${textSize}`}>{netVotes}</span>
+        <span className={`font-normal ${textSize}`}>{netVotes}</span>
         <ArrowFatDown
           size={iconSize}
           weight={hasDownvoted ? "fill" : "regular"}
-          className={`cursor-pointer hover:opacity-80 ${hasDownvoted ? "text-error" : "text-gray-400"}`}
+          className={`cursor-pointer hover:bg-gray-200/80 rounded-full p-1.5 ${hasDownvoted ? "text-error" : "text-gray-400"}`}
           onClick={handleDownvote}
         />
       </div>
-      <div className="flex items-center gap-x-2 py-2 px-2">
+      <div  onClick={onCommentClick} className="flex items-center cursor-pointer gap-x-2 py-1 px-3 pr-4  hover:bg-gray-200/80 rounded-full">
         <ChatCircleDots
           size={iconSize}
-          className="cursor-pointer hover:opacity-80"
-          onClick={onCommentClick}
+          className=" rounded-full text-gray-400 p-1.5"
         />
         <span className={`font-light ${textSize}`}>{commentsCount}</span>
       </div>
