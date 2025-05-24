@@ -1,6 +1,6 @@
-import React, { useState, forwardRef, useRef } from "react";
-import { useGetCommentsQuery, useAddCommentMutation } from "../../api/dengueApi";
-import { Smiley, PaperPlaneRight } from "phosphor-react";
+import React, { useState, forwardRef, useRef, useEffect } from "react";
+import { useGetCommentsQuery, useAddCommentMutation, useGetPostByIdQuery } from "../../api/dengueApi";
+import { Smiley, PaperPlaneRight, UserCircle, CaretLeft, CaretRight } from "phosphor-react";
 import Picker from '@emoji-mart/react';
 import data from '@emoji-mart/data';
 import { useSelector } from "react-redux";
@@ -10,13 +10,51 @@ import Comment2 from "./Comment2";
 import profile1 from "../../assets/profile1.png";
 import { formatDistanceToNow } from "date-fns";
 
-const CommentModal = forwardRef(({ postId, onCommentAdded }, ref) => {
+const CommentModal = forwardRef(({ 
+  postId, 
+  onCommentAdded,
+  upvotes = 0,
+  downvotes = 0,
+  commentsCount = 0,
+  upvotesArray = [],
+  downvotesArray = []
+}, ref) => {
   const [comment, setComment] = useState("");
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [isTransitioning, setIsTransitioning] = useState(false);
+  const [preloadedImages, setPreloadedImages] = useState({});
   const textareaRef = useRef(null);
   const userFromStore = useSelector((state) => state.auth?.user);
   const [addComment, { isLoading }] = useAddCommentMutation();
   const { data: comments, isLoading: isLoadingComments } = useGetCommentsQuery(postId);
+  const { data: postData, isLoading: isLoadingPost } = useGetPostByIdQuery(postId);
+
+  // Preload images when post data changes
+  useEffect(() => {
+    if (postData?.data?.images) {
+      const images = postData.data.images;
+      images.forEach((src, index) => {
+        const img = new Image();
+        img.src = src;
+        img.onload = () => {
+          setPreloadedImages(prev => ({
+            ...prev,
+            [index]: true
+          }));
+        };
+      });
+    }
+  }, [postData]);
+
+  // Debug effect to track post data and current image index
+  useEffect(() => {
+    console.log('[DEBUG] Post Data:', postData);
+    console.log('[DEBUG] Current Image Index:', currentImageIndex);
+    if (postData?.data?.images) {
+      console.log('[DEBUG] Available Images:', postData.data.images);
+    }
+  }, [postData, currentImageIndex]);
 
   const handleTextareaChange = (e) => {
     setComment(e.target.value);
@@ -57,14 +95,75 @@ const CommentModal = forwardRef(({ postId, onCommentAdded }, ref) => {
     }
   };
 
+  if (isLoadingPost) {
+    return (
+      <dialog id="comment_modal" ref={ref} className="modal text-xl text-primary">
+        <div className="modal-box w-11/12 max-w-4xl max-h-[90vh] flex flex-col p-0">
+          <div className="flex items-center justify-center h-32">
+            <span className="loading loading-spinner loading-lg"></span>
+          </div>
+        </div>
+      </dialog>
+    );
+  }
+
+  const post = postData?.data;
+  console.log('[DEBUG] Current Post:', post);
+
+  const handlePreviousImage = () => {
+    if (isTransitioning) return;
+    
+    console.log('[DEBUG] Previous Image Clicked');
+    console.log('[DEBUG] Current Index:', currentImageIndex);
+    console.log('[DEBUG] Total Images:', post?.images?.length);
+    
+    if (!post?.images?.length) {
+      console.log('[DEBUG] No images available');
+      return;
+    }
+
+    setIsTransitioning(true);
+    const newIndex = currentImageIndex === 0 ? post.images.length - 1 : currentImageIndex - 1;
+    console.log('[DEBUG] New Index:', newIndex);
+    setCurrentImageIndex(newIndex);
+    
+    // Reset transition state after animation
+    setTimeout(() => {
+      setIsTransitioning(false);
+    }, 300);
+  };
+
+  const handleNextImage = () => {
+    if (isTransitioning) return;
+    
+    console.log('[DEBUG] Next Image Clicked');
+    console.log('[DEBUG] Current Index:', currentImageIndex);
+    console.log('[DEBUG] Total Images:', post?.images?.length);
+    
+    if (!post?.images?.length) {
+      console.log('[DEBUG] No images available');
+      return;
+    }
+
+    setIsTransitioning(true);
+    const newIndex = currentImageIndex === post.images.length - 1 ? 0 : currentImageIndex + 1;
+    console.log('[DEBUG] New Index:', newIndex);
+    setCurrentImageIndex(newIndex);
+    
+    // Reset transition state after animation
+    setTimeout(() => {
+      setIsTransitioning(false);
+    }, 300);
+  };
+
   return (
     <dialog id="comment_modal" ref={ref} className="modal text-xl text-primary">
       <div className="modal-box w-11/12 max-w-4xl max-h-[90vh] flex flex-col p-0">
-        {/* THIS IS WHERE THE REPORT INFO COMES FROM, I HAVE AN API TO GET ALL REPORTS OR GET REPORT  */}
         <div className="sticky top-0 z-10 bg-white flex items-center justify-between px-8 py-6 pt-7 border-b border-gray-400/70">
           <div className="flex-1"></div>
-          {/* this is the username of the user who made the report */}
-          <p className="text-2xl font-bold">Jason Madrid's Post</p>
+          <p className="text-2xl font-bold">
+            {post?.isAnonymous ? "Anonymous Post" : "User's Post"}
+          </p>
           <form method="dialog" className="flex-1 flex justify-end">
             <button className="btn btn-sm text-3xl font-bold btn-circle btn-ghost">
               ✕
@@ -77,30 +176,89 @@ const CommentModal = forwardRef(({ postId, onCommentAdded }, ref) => {
               <div className="flex flex-col gap-4 px-6 mb-5">
                 <div className="flex justify-between">
                   <div className="flex gap-3">
-                    <div className="w-13 h-13 rounded-full bg-gray-400 self-center"></div>
+                    {post?.isAnonymous ? (
+                      <UserCircle size={48} className="text-gray-400 mr-[-6px]" />
+                    ) : (
+                      <img
+                        src={profile1}
+                        className="h-12 w-12 rounded-full object-cover"
+                        alt="profile"
+                      />
+                    )}
                     <div className="flex flex-col text-lg">
-                      {/* this is the username of the user who made the comment */}
-                      <p className="font-bold">Jason Madrid</p>
-                      {/* this is the timestamp of the comment */}
-                      <p>2 hours ago</p>
+                      <p className="font-bold">
+                        {post?.isAnonymous ? "Anonymous" : "User"}
+                      </p>
+                      <p>{formatTimestamp(post?.createdAt)}</p>
                     </div>
                   </div>
                   <DotsThree size={28} />
                 </div>
-                <p className="text-black">happy birthday!!</p>
+                <p className="text-black">{post?.description}</p>
               </div>
-              {/* this is the image of the report if there are images*/}
-              <div className="w-full rounded-b-2xl bg-black flex justify-center items-center aspect-video max-h-170">
-                <img src="https://upload.wikimedia.org/wikipedia/en/a/af/Drake_-_Views_cover.jpg" alt="Sample" className="w-full h-full object-contain" />
-              </div>
-              {/* this is the reactions tab, show the number of upvote and downvote of the report */}
+              {post?.images && post.images.length > 0 && (
+                <div className="w-full rounded-b-2xl bg-black flex justify-center items-center aspect-video max-h-170 relative overflow-hidden">
+                  <div className="relative w-full h-full">
+                    {post.images.map((src, index) => (
+                      <img 
+                        key={src}
+                        src={src}
+                        alt={`Post ${index + 1}`}
+                        className={`absolute w-full h-full object-contain transition-opacity duration-300 ${
+                          index === currentImageIndex ? 'opacity-100' : 'opacity-0'
+                        }`}
+                        style={{
+                          display: index === currentImageIndex ? 'block' : 'none'
+                        }}
+                      />
+                    ))}
+                  </div>
+                  {post.images.length > 1 && (
+                    <>
+                      <button
+                        onClick={handlePreviousImage}
+                        disabled={isTransitioning}
+                        className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/50 text-white p-2 rounded-full hover:bg-black/70 transition-all disabled:opacity-50"
+                      >
+                        <CaretLeft size={24} />
+                      </button>
+                      <button
+                        onClick={handleNextImage}
+                        disabled={isTransitioning}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/50 text-white p-2 rounded-full hover:bg-black/70 transition-all disabled:opacity-50"
+                      >
+                        <CaretRight size={24} />
+                      </button>
+                      <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1">
+                        {post.images.map((_, index) => (
+                          <div
+                            key={index}
+                            className={`w-2 h-2 rounded-full transition-all duration-300 ${
+                              index === currentImageIndex ? 'bg-white scale-125' : 'bg-white/50'
+                            }`}
+                          />
+                        ))}
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
               <div className="border-y border-gray-400/70 mx-2 my-3 mt-4 px-2 py-1"> 
-                <ReactionsTab iconSize={22}/>
+                <ReactionsTab 
+                  postId={postId}
+                  upvotes={upvotes}
+                  downvotes={downvotes}
+                  commentsCount={commentsCount}
+                  iconSize={22}
+                  upvotesArray={upvotesArray}
+                  downvotesArray={downvotesArray}
+                  currentUserId={userFromStore?._id}
+                  onCommentClick={() => {}}
+                />
               </div>
             </div>
           </div>
 
-          {/* this is where u now get all the comments of the report */}
           <div className="">
             <div className="flex flex-col gap-2.5 px-4 py-2 text-lg">
               {isLoadingComments ? (
@@ -122,7 +280,6 @@ const CommentModal = forwardRef(({ postId, onCommentAdded }, ref) => {
           </div>
         </div>
 
-        {/* this is where u can add a comment */}
         <form onSubmit={handleSubmit} className="flex items-start gap-3 px-4 py-4 shadow-[0_-1px_4px_2px_rgba(0,0,0,0.08)]">
           <img
             className="h-12 w-12 rounded-full object-cover"

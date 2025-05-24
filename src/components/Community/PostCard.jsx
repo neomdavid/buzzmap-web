@@ -95,6 +95,11 @@ const PostCard = ({
       <CommentModal 
         ref={commentModalRef}
         postId={postId}
+        upvotes={upvotes}
+        downvotes={downvotes}
+        commentsCount={commentsCount}
+        upvotesArray={upvotesArray}
+        downvotesArray={downvotesArray}
         onCommentAdded={() => {
           // No need to reload the page, RTK Query will handle cache invalidation
         }}
