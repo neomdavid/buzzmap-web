@@ -4,6 +4,7 @@ import ImageGrid from "./ImageGrid";
 import { UserDetailsTab } from "../";
 import { useSelector } from "react-redux";
 import CommentModal from "./CommentModal";
+import { toastInfo } from "../../utils.jsx";
 
 const PostCard = ({
   profileImage,
@@ -29,6 +30,10 @@ const PostCard = ({
   const commentModalRef = useRef(null);
 
   const handleCommentClick = () => {
+    if (!userFromStore || userFromStore.role !== "user") {
+      toastInfo("Please log in to comment");
+      return;
+    }
     if (commentModalRef.current) {
       commentModalRef.current.showModal();
     }
@@ -86,15 +91,12 @@ const PostCard = ({
         currentUserId={userFromStore?._id}
         onCommentClick={handleCommentClick}
       />
-
+    
       <CommentModal 
         ref={commentModalRef}
         postId={postId}
         onCommentAdded={() => {
-          // Refresh the post data or update the comments count
-          if (window.location.pathname === '/community') {
-            window.location.reload();
-          }
+          // No need to reload the page, RTK Query will handle cache invalidation
         }}
       />
     </div>

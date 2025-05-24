@@ -62,6 +62,7 @@ export const dengueApi = createApi({
     "Barangay",
     "Alert",
     "Accounts",
+    "Comments",
   ],
   endpoints: (builder) => ({
     // Authentication Endpoints
@@ -581,15 +582,21 @@ export const dengueApi = createApi({
       invalidatesTags: [{ type: "Post", id: "LIST" }],
     }),
     addComment: builder.mutation({
-      query: ({ reportId, comment }) => ({
+      query: ({ reportId, content }) => ({
         url: `reports/${reportId}/comments`,
         method: "POST",
-        body: { comment },
+        body: { content },
       }),
-      invalidatesTags: [{ type: "Post", id: "LIST" }],
+      invalidatesTags: (result, error, { reportId }) => [
+        { type: "Post", id: reportId },
+        { type: "Comments", id: reportId }
+      ],
     }),
     getComments: builder.query({
       query: (reportId) => `reports/${reportId}/comments`,
+      providesTags: (result, error, reportId) => [
+        { type: "Comments", id: reportId }
+      ],
     }),
 
     // Test endpoint to verify API connectivity
