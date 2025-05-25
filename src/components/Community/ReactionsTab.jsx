@@ -6,7 +6,7 @@ import {
   useRemoveUpvoteMutation,
   useRemoveDownvoteMutation,
 } from "../../api/dengueApi";
-import { toastInfo } from "../../utils.jsx";
+import { showCustomToast } from "../../utils.jsx";
 
 const ReactionsTab = ({
   postId,
@@ -19,7 +19,9 @@ const ReactionsTab = ({
   upvotesArray = [],
   downvotesArray = [],
   currentUserId = null,
-  onCommentClick
+  onCommentClick,
+  useCustomToast = false,
+  onShowToast
 }) => {
   const [upvoteReport] = useUpvoteReportMutation();
   const [downvoteReport] = useDownvoteReportMutation();
@@ -40,7 +42,11 @@ const ReactionsTab = ({
 
   const handleUpvote = async () => {
     if (!currentUserId) {
-      toastInfo("Please log in to upvote and downvote.");
+      if (onShowToast) {
+        onShowToast("Please log in to vote", "error");
+      } else {
+        showCustomToast("Please log in to vote", "error");
+      }
       return;
     }
     try {
@@ -60,7 +66,11 @@ const ReactionsTab = ({
 
   const handleDownvote = async () => {
     if (!currentUserId) {
-      toastInfo("Please log in to upvote and downvote.");
+      if (onShowToast) {
+        onShowToast("Please log in to vote", "error");
+      } else {
+        showCustomToast("Please log in to vote", "error");
+      }
       return;
     }
     try {
@@ -95,10 +105,10 @@ const ReactionsTab = ({
           onClick={handleDownvote}
         />
       </div>
-      <div  onClick={onCommentClick} className="flex items-center cursor-pointer gap-x-2 py-1 px-3 pr-4  hover:bg-gray-200/80 rounded-full">
+      <div onClick={onCommentClick} className="flex items-center cursor-pointer gap-x-2 py-1 px-3 pr-4 hover:bg-gray-200/80 rounded-full">
         <ChatCircleDots
           size={iconSize}
-          className=" rounded-full text-gray-400 p-1.5"
+          className="rounded-full text-gray-400 p-1.5"
         />
         <span className={`font-light ${textSize}`}>{commentsCount}</span>
       </div>

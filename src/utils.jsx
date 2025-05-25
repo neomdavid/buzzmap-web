@@ -256,7 +256,7 @@ export const showCustomToast = (message, type) => {
   toast.style.borderRadius = "8px";
   toast.style.boxShadow = "0 4px 6px rgba(0, 0, 0, 0.1)";
   toast.style.fontSize = "14px";
-  toast.style.zIndex = "2147483647"; // Maximum valid z-index value
+  toast.style.zIndex = "1000000000000000"; // Maximum valid z-index value
   toast.style.opacity = "0";
   toast.style.transition = "opacity 0.5s";
   toast.style.color = "#FFFFFF"; // Set text color to white for visibility

@@ -9,7 +9,6 @@ import ReactionsTab from "./ReactionsTab";
 import Comment2 from "./Comment2";
 import profile1 from "../../assets/profile1.png";
 import { formatDistanceToNow } from "date-fns";
-import { toastInfo } from "../../utils.jsx";
 import { useNavigate } from "react-router-dom";
 
 const CommentModal = forwardRef(({ 
@@ -26,12 +25,20 @@ const CommentModal = forwardRef(({
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [preloadedImages, setPreloadedImages] = useState({});
+  const [toast, setToast] = useState(null);
   const textareaRef = useRef(null);
   const userFromStore = useSelector((state) => state.auth?.user);
   const [addComment, { isLoading }] = useAddCommentMutation();
   const { data: comments, isLoading: isLoadingComments } = useGetCommentsQuery(postId);
   const { data: postData, isLoading: isLoadingPost } = useGetPostByIdQuery(postId);
   const navigate = useNavigate();
+
+  const showToast = (message, type) => {
+    setToast({ message, type });
+    setTimeout(() => {
+      setToast(null);
+    }, 3000);
+  };
 
   // Preload images when post data changes
   useEffect(() => {
@@ -78,7 +85,7 @@ const CommentModal = forwardRef(({
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!userFromStore) {
-      toastInfo("Please log in to comment");
+      showToast("Please log in to comment", "error");
       return;
     }
     if (!comment.trim()) return;
@@ -90,6 +97,7 @@ const CommentModal = forwardRef(({
       }
     } catch (error) {
       console.error("Failed to add comment:", error);
+      showToast("Failed to add comment", "error");
     }
   };
 
@@ -115,6 +123,13 @@ const CommentModal = forwardRef(({
       console.error("Error formatting date:", error);
       return "just now";
     }
+  };
+
+  const handleLoginClick = () => {
+    showToast("Please log in to comment", "error");
+    setTimeout(() => {
+      navigate('/login');
+    }, 1000);
   };
 
   if (isLoadingPost) {
@@ -180,6 +195,15 @@ const CommentModal = forwardRef(({
 
   return (
     <dialog id="comment_modal" ref={ref} className="modal text-xl text-primary">
+      {toast && (
+        <div 
+          className={`fixed top-30 left-1/2 -translate-x-1/2 px-5 py-2.5 rounded-lg text-white text-[13px] shadow-lg z-[999999] transition-all duration-300 ${
+            toast.type === "error" ? "bg-warning" : "bg-info"
+          }`}
+        >
+          {toast.message}
+        </div>
+      )}
       <div className="modal-box w-11/12 max-w-4xl max-h-[90vh] flex flex-col p-0">
         <div className="sticky top-0 z-10 bg-white flex items-center justify-between px-8 py-6 pt-7 border-b border-gray-400/70">
           <div className="flex-1"></div>
@@ -274,8 +298,10 @@ const CommentModal = forwardRef(({
                   iconSize={29}
                   upvotesArray={upvotesArray}
                   downvotesArray={downvotesArray}
-                  currentUserId={userFromStore?._id}
+                  currentUserId={userFromStore?.role === "user" ? userFromStore?._id : null}
                   onCommentClick={() => {}}
+                  useCustomToast={true}
+                  onShowToast={showToast}
                 />
               </div>
             </div>
@@ -309,7 +335,7 @@ const CommentModal = forwardRef(({
             alt="profile"
           />
           <div className="flex-1 z-10 flex flex-col text-black">
-            {userFromStore ? (
+            {userFromStore && userFromStore.role === "user" ? (
               <>
                 <textarea
                   ref={textareaRef}
@@ -353,7 +379,7 @@ const CommentModal = forwardRef(({
               </>
             ) : (
               <div 
-                onClick={() => navigate('/login')}
+                onClick={handleLoginClick}
                 className="bg-gray-200/60 px-4 text-lg py-2 rounded-2xl outline-none text-base cursor-pointer hover:bg-gray-200/80 transition-colors text-gray-500"
               >
                 Log in to comment
