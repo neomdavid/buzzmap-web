@@ -713,6 +713,135 @@ export const dengueApi = createApi({
         method: 'GET',
       }),
     }),
+
+    // Add comment voting endpoints
+    upvoteComment: builder.mutation({
+      query: (commentId) => ({
+        url: `comments/${commentId}/upvote`,
+        method: "POST",
+      }),
+      async onQueryStarted(commentId, { dispatch, queryFulfilled, getState }) {
+        try {
+          const { data } = await queryFulfilled;
+          console.log('[DEBUG] Comment upvote successful:', data);
+          
+          // Get the report ID from the comment data
+          const reportId = data.report;
+          
+          // Update the cache for the specific report's comments
+          dispatch(
+            dengueApi.util.updateQueryData('getComments', reportId, (draft) => {
+              const comment = draft.find(c => c._id === commentId);
+              if (comment) {
+                comment.upvotes = data.upvotes;
+                comment.downvotes = data.downvotes;
+              }
+            })
+          );
+        } catch (error) {
+          console.error('[DEBUG] Comment upvote failed:', error);
+        }
+      },
+      invalidatesTags: (result, error, commentId) => [
+        { type: "Comments", id: "LIST" }
+      ],
+    }),
+
+    downvoteComment: builder.mutation({
+      query: (commentId) => ({
+        url: `comments/${commentId}/downvote`,
+        method: "POST",
+      }),
+      async onQueryStarted(commentId, { dispatch, queryFulfilled, getState }) {
+        try {
+          const { data } = await queryFulfilled;
+          console.log('[DEBUG] Comment downvote successful:', data);
+          
+          // Get the report ID from the comment data
+          const reportId = data.report;
+          
+          // Update the cache for the specific report's comments
+          dispatch(
+            dengueApi.util.updateQueryData('getComments', reportId, (draft) => {
+              const comment = draft.find(c => c._id === commentId);
+              if (comment) {
+                comment.upvotes = data.upvotes;
+                comment.downvotes = data.downvotes;
+              }
+            })
+          );
+        } catch (error) {
+          console.error('[DEBUG] Comment downvote failed:', error);
+        }
+      },
+      invalidatesTags: (result, error, commentId) => [
+        { type: "Comments", id: "LIST" }
+      ],
+    }),
+
+    removeCommentUpvote: builder.mutation({
+      query: (commentId) => ({
+        url: `comments/${commentId}/upvote`,
+        method: "DELETE",
+      }),
+      async onQueryStarted(commentId, { dispatch, queryFulfilled, getState }) {
+        try {
+          const { data } = await queryFulfilled;
+          console.log('[DEBUG] Remove comment upvote successful:', data);
+          
+          // Get the report ID from the comment data
+          const reportId = data.report;
+          
+          // Update the cache for the specific report's comments
+          dispatch(
+            dengueApi.util.updateQueryData('getComments', reportId, (draft) => {
+              const comment = draft.find(c => c._id === commentId);
+              if (comment) {
+                comment.upvotes = data.upvotes;
+                comment.downvotes = data.downvotes;
+              }
+            })
+          );
+        } catch (error) {
+          console.error('[DEBUG] Remove comment upvote failed:', error);
+        }
+      },
+      invalidatesTags: (result, error, commentId) => [
+        { type: "Comments", id: "LIST" }
+      ],
+    }),
+
+    removeCommentDownvote: builder.mutation({
+      query: (commentId) => ({
+        url: `comments/${commentId}/downvote`,
+        method: "DELETE",
+      }),
+      async onQueryStarted(commentId, { dispatch, queryFulfilled, getState }) {
+        try {
+          const { data } = await queryFulfilled;
+          console.log('[DEBUG] Remove comment downvote successful:', data);
+          
+          // Get the report ID from the comment data
+          const reportId = data.report;
+          
+          // Update the cache for the specific report's comments
+          dispatch(
+            dengueApi.util.updateQueryData('getComments', reportId, (draft) => {
+              const comment = draft.find(c => c._id === commentId);
+              if (comment) {
+                comment.upvotes = data.upvotes;
+                comment.downvotes = data.downvotes;
+              }
+            })
+          );
+        } catch (error) {
+          console.error('[DEBUG] Remove comment downvote failed:', error);
+        }
+      },
+      invalidatesTags: (result, error, commentId) => [
+        { type: "Comments", id: "LIST" }
+      ],
+    }),
   }),
 });
 
@@ -736,7 +865,15 @@ export const {
   useValidatePostMutation,
   useLikePostMutation,
 
-  //Intervention hooks
+  // Comment hooks
+  useGetCommentsQuery,
+  useAddCommentMutation,
+  useUpvoteCommentMutation,
+  useDownvoteCommentMutation,
+  useRemoveCommentUpvoteMutation,
+  useRemoveCommentDownvoteMutation,
+
+  // Intervention hooks
   useGetInterventionQuery,
   useGetAllInterventionsQuery,
   useCreateInterventionMutation,
@@ -804,12 +941,10 @@ export const {
   // Add this to the exported hooks
   useAnalyzeInterventionEffectivityMutation,
 
-  useGetCommentsQuery,
   useUpvoteReportMutation,
   useDownvoteReportMutation,
   useRemoveUpvoteMutation,
   useRemoveDownvoteMutation,
-  useAddCommentMutation,
 
   // Add the test endpoint hook
   useTestApiConnectionQuery,

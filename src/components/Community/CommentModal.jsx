@@ -198,7 +198,7 @@ const CommentModal = forwardRef(({
       {toast && (
         <div 
           className={`fixed top-30 left-1/2 -translate-x-1/2 px-5 py-2.5 rounded-lg text-white text-[13px] shadow-lg z-[999999] transition-all duration-300 ${
-            toast.type === "error" ? "bg-warning" : "bg-info"
+            toast.type === "error" ? "bg-error" : "bg-info"
           }`}
         >
           {toast.message}
@@ -319,6 +319,11 @@ const CommentModal = forwardRef(({
                     username={comment.user.username}
                     comment={comment.content}
                     timestamp={formatTimestamp(comment.createdAt)}
+                    commentId={comment._id}
+                    upvotesArray={comment.upvotes || []}
+                    downvotesArray={comment.downvotes || []}
+                    currentUserId={userFromStore?.role === "user" ? userFromStore?._id : null}
+                    onShowToast={showToast}
                   />
                 ))
               ) : (
