@@ -195,16 +195,17 @@ const CommentModal = forwardRef(({
 
   return (
     <dialog id="comment_modal" ref={ref} className="modal text-xl text-primary">
+     
+      <div className="modal-box w-11/12 max-w-4xl max-h-[90vh] flex flex-col p-0">
       {toast && (
         <div 
-          className={`fixed top-30 left-1/2 -translate-x-1/2 px-5 py-2.5 rounded-lg text-white text-[13px] shadow-lg z-[999999] transition-all duration-300 ${
+          className={`fixed top-[10%] left-1/2 -translate-x-1/2 px-5 py-2.5 rounded-lg text-white text-[13px] shadow-lg z-[999999] transition-all duration-300 ${
             toast.type === "error" ? "bg-error" : "bg-info"
           }`}
         >
           {toast.message}
         </div>
       )}
-      <div className="modal-box w-11/12 max-w-4xl max-h-[90vh] flex flex-col p-0">
         <div className="sticky top-0 z-10 bg-white flex items-center justify-between px-8 py-6 pt-7 border-b border-gray-400/70">
           <div className="flex-1"></div>
           <p className="text-2xl font-bold">
