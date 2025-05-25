@@ -129,14 +129,15 @@ const AnnouncementCard = ({ announcement }) => { // Accept announcement as a pro
             <div className="flex-1 flex items-center">
               <input
                 className="bg-white opacity-93 rounded-2xl placeholder-primary/70 px-4 w-full h-full text-primary focus:outline-none"
-                placeholder="Comment on this post..."
+                placeholder={!userFromStore || userFromStore.role !== "user" ? "Log in to comment on this post..." : "Comment on this post..."}
                 type="text"
                 value={comment}
                 onChange={(e) => setComment(e.target.value)}
+                disabled={!userFromStore || userFromStore.role !== "user"}
               />
               <button
                 type="submit"
-                disabled={!comment.trim()}
+                disabled={!userFromStore || userFromStore.role !== "user" || !comment.trim()}
                 className="ml-2 p-2 cursor-pointer text-white hover:text-white/80 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
               >
                 <PaperPlaneRight size={24} weight="fill" />
