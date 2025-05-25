@@ -1,31 +1,44 @@
 import React from "react";
 import profile1 from "../../assets/profile1.png";
 import { ArrowFatUp, ArrowFatDown } from "phosphor-react";
-import { 
-  useUpvoteCommentMutation, 
-  useDownvoteCommentMutation, 
-  useRemoveCommentUpvoteMutation, 
-  useRemoveCommentDownvoteMutation 
+import {
+  useUpvoteCommentMutation,
+  useDownvoteCommentMutation,
+  useRemoveCommentUpvoteMutation,
+  useRemoveCommentDownvoteMutation,
+  useUpvoteAdminPostCommentMutation,
+  useDownvoteAdminPostCommentMutation,
+  useRemoveAdminPostCommentUpvoteMutation,
+  useRemoveAdminPostCommentDownvoteMutation,
 } from "../../api/dengueApi";
+import { showCustomToast } from "../../utils.jsx";
 
-const Comment2 = ({ 
-  username, 
-  profileImg = profile1, 
-  comment, 
+const Comment2 = ({
+  username,
+  profileImg = profile1,
+  comment,
   timestamp,
-  bgColor = "bg-base-200", 
-  profileSize = "h-11", 
+  bgColor = "bg-base-200",
+  profileSize = "h-11",
   textSize = "text-base",
   commentId,
   upvotesArray = [],
   downvotesArray = [],
   currentUserId = null,
-  onShowToast
+  onShowToast,
+  isAdminPostComment = false
 }) => {
+  // Regular comment mutations
   const [upvoteComment] = useUpvoteCommentMutation();
   const [downvoteComment] = useDownvoteCommentMutation();
   const [removeCommentUpvote] = useRemoveCommentUpvoteMutation();
   const [removeCommentDownvote] = useRemoveCommentDownvoteMutation();
+
+  // Admin post comment mutations
+  const [upvoteAdminPostComment] = useUpvoteAdminPostCommentMutation();
+  const [downvoteAdminPostComment] = useDownvoteAdminPostCommentMutation();
+  const [removeAdminPostCommentUpvote] = useRemoveAdminPostCommentUpvoteMutation();
+  const [removeAdminPostCommentDownvote] = useRemoveAdminPostCommentDownvoteMutation();
 
   // Check if the current user has voted
   const hasUpvoted = currentUserId && upvotesArray.some(vote => 
@@ -35,7 +48,7 @@ const Comment2 = ({
     typeof vote === 'object' ? vote._id === currentUserId : vote === currentUserId
   );
 
-  // Calculate net votes
+  // Calculate net votes based on the length of the arrays
   const netVotes = (Array.isArray(upvotesArray) ? upvotesArray.length : 0) - 
                   (Array.isArray(downvotesArray) ? downvotesArray.length : 0);
 
@@ -43,17 +56,34 @@ const Comment2 = ({
     if (!currentUserId) {
       if (onShowToast) {
         onShowToast("Please log in to vote", "error");
+      } else {
+        showCustomToast("Please log in to vote", "error");
       }
       return;
     }
     try {
       if (hasUpvoted) {
-        await removeCommentUpvote(commentId).unwrap();
+        // Remove upvote
+        console.log('[DEBUG] Removing upvote from comment:', commentId);
+        if (isAdminPostComment) {
+          await removeAdminPostCommentUpvote(commentId).unwrap();
+        } else {
+          await removeCommentUpvote(commentId).unwrap();
+        }
       } else {
-        await upvoteComment(commentId).unwrap();
+        // Upvote
+        console.log('[DEBUG] Adding upvote to comment:', commentId);
+        if (isAdminPostComment) {
+          await upvoteAdminPostComment(commentId).unwrap();
+        } else {
+          await upvoteComment(commentId).unwrap();
+        }
       }
     } catch (error) {
-      console.error('[DEBUG] Error handling comment upvote:', error);
+      console.error('[DEBUG] Error handling upvote:', error);
+      if (onShowToast) {
+        onShowToast("Failed to update vote", "error");
+      }
     }
   };
 
@@ -61,17 +91,34 @@ const Comment2 = ({
     if (!currentUserId) {
       if (onShowToast) {
         onShowToast("Please log in to vote", "error");
+      } else {
+        showCustomToast("Please log in to vote", "error");
       }
       return;
     }
     try {
       if (hasDownvoted) {
-        await removeCommentDownvote(commentId).unwrap();
+        // Remove downvote
+        console.log('[DEBUG] Removing downvote from comment:', commentId);
+        if (isAdminPostComment) {
+          await removeAdminPostCommentDownvote(commentId).unwrap();
+        } else {
+          await removeCommentDownvote(commentId).unwrap();
+        }
       } else {
-        await downvoteComment(commentId).unwrap();
+        // Downvote
+        console.log('[DEBUG] Adding downvote to comment:', commentId);
+        if (isAdminPostComment) {
+          await downvoteAdminPostComment(commentId).unwrap();
+        } else {
+          await downvoteComment(commentId).unwrap();
+        }
       }
     } catch (error) {
-      console.error('[DEBUG] Error handling comment downvote:', error);
+      console.error('[DEBUG] Error handling downvote:', error);
+      if (onShowToast) {
+        onShowToast("Failed to update vote", "error");
+      }
     }
   };
 

@@ -1,14 +1,23 @@
-import React from "react";
+import React, { useState } from "react";
 import surveillanceLogo from "../../assets/icons/quezon_surveillance.png";
 import announcementImg from "../../assets/announcementimg.png"; // Default image
 import profile1 from "../../assets/profile1.png";
 
-import { DotsThree } from "phosphor-react";
+import { DotsThree, PaperPlaneRight } from "phosphor-react";
 import ImageGrid from "./ImageGrid";
 import ReactionsTab from "./ReactionsTab";
-import Comment from "./Comment";
+import Comment2 from "./Comment2";
+import { useSelector } from "react-redux";
+import { useGetAdminPostCommentsQuery, useAddAdminPostCommentMutation } from "../../api/dengueApi";
+import { showCustomToast } from "../../utils.jsx";
+import { formatDistanceToNow } from "date-fns";
 
 const AnnouncementCard = ({ announcement }) => { // Accept announcement as a prop
+  const [comment, setComment] = useState("");
+  const userFromStore = useSelector((state) => state.auth?.user);
+  const { data: comments, isLoading: isLoadingComments, refetch } = useGetAdminPostCommentsQuery(announcement?._id);
+  const [addComment] = useAddAdminPostCommentMutation();
+
   // Use dynamic data if available, otherwise fallback to static/default values
   const title = announcement?.title || "Important Announcement";
   // Split content by newline characters for rendering paragraphs
@@ -27,6 +36,40 @@ const AnnouncementCard = ({ announcement }) => { // Accept announcement as a pro
   const commentsCount = announcement?.commentsCount || "43k"; // Assuming commentsCount might come from data
   const shares = announcement?.sharesCount || "20k"; // Assuming sharesCount might come from data
 
+  const formatTimestamp = (dateString) => {
+    try {
+      const date = new Date(dateString);
+      const now = new Date();
+      const diffTime = Math.abs(now - date);
+      const diffMinutes = Math.floor(diffTime / (1000 * 60));
+      
+      if (diffMinutes < 1) {
+        return "just now";
+      }
+      return formatDistanceToNow(date, { addSuffix: true });
+    } catch (error) {
+      console.error("Error formatting date:", error);
+      return "just now";
+    }
+  };
+
+  const handleCommentSubmit = async (e) => {
+    e.preventDefault();
+    if (!userFromStore) {
+      showCustomToast("Please log in to comment", "error");
+      return;
+    }
+    if (!comment.trim()) return;
+    try {
+      await addComment({ postId: announcement._id, content: comment.trim() }).unwrap();
+      setComment("");
+      refetch();
+    } catch (error) {
+      console.error("Failed to add comment:", error);
+      showCustomToast("Failed to add comment", "error");
+    }
+  };
+
   return (
     <div className="flex flex-col">
       <section className="bg-primary text-white flex flex-col p-6 py-6 rounded-2xl">
@@ -36,10 +79,11 @@ const AnnouncementCard = ({ announcement }) => { // Accept announcement as a pro
             <div className="flex flex-col">
               {/* Use dynamic title */}
               <h1 className="text-4xl">{title}</h1>
-              <p className="font-semibold text-xs">
+              <p className="font-semibold text-[12px]">
                 <span className="font-normal">From</span> Quezon City
                 Epidemiology & Surveillance Division (CESU)
               </p>
+              <p className="font-semibold text-[12px]">{formatTimestamp(announcement?.publishDate)}</p>
             </div>
           </div>
           <DotsThree size={32} />
@@ -50,81 +94,87 @@ const AnnouncementCard = ({ announcement }) => { // Accept announcement as a pro
           {contentParts.map((part, index) => (
             <p key={index} className={part.includes("Read more...") ? "italic underline font-semibold" : ""}>
               {part === "" ? <br /> : part}
-          </p>
+            </p>
           ))}
           {/* Use dynamic images */}
           {images.length > 0 && (
-          <div className="mt-4">
+            <div className="mt-4">
               {/* Assuming ImageGrid can handle an array of URLs */}
               <ImageGrid images={images} sourceType={announcement?.images ? "url" : "import"} />
-          </div>
+            </div>
           )}
         </div>
 
         <div>
           <ReactionsTab
-            likes={likes}
-            comments={commentsCount}
-            shares={shares}
+            postId={announcement?._id}
+            upvotes={announcement?.upvotes?.length || 0}
+            downvotes={announcement?.downvotes?.length || 0}
+            commentsCount={comments?.length || 0}
             iconSize={21}
             textSize="text-lg"
             className={"mb-2"}
+            upvotesArray={announcement?.upvotes || []}
+            downvotesArray={announcement?.downvotes || []}
+            currentUserId={userFromStore?._id}
+            onCommentClick={() => {}}
+            useCustomToast={true}
+            onShowToast={showCustomToast}
+            isAdminPost={true}
           />
           <hr className="text-white opacity-35 mb-4" />
-          <div className="flex">
+          {/* Comment Input */}
+          <form onSubmit={handleCommentSubmit} className="flex">
             <img src={profile1} className="h-11 w-11 rounded-full mr-3" />
-            <input
-              className="bg-white opacity-93 rounded-2xl placeholder-primary/70 px-4 w-full text-primary focus:outline-none"
-              placeholder="Comment on this post..."
-              type="text"
-            />
-          </div>
+            <div className="flex-1 flex items-center">
+              <input
+                className="bg-white opacity-93 rounded-2xl placeholder-primary/70 px-4 w-full h-full text-primary focus:outline-none"
+                placeholder="Comment on this post..."
+                type="text"
+                value={comment}
+                onChange={(e) => setComment(e.target.value)}
+              />
+              <button
+                type="submit"
+                disabled={!comment.trim()}
+                className="ml-2 p-2 cursor-pointer text-white hover:text-white/80 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+              >
+                <PaperPlaneRight size={24} weight="fill" />
+              </button>
+            </div>
+          </form>
         </div>
       </section>
-
-      {/* Remove the static comments section
+          
       <section className="py-4 px-4">
         <p className="text-primary mb-4 opacity-65 font-semibold text-lg">
           Comments from the Community
         </p>
         <div>
           <div className="flex flex-col gap-4">
-            <Comment
-              username="Anonymous Pig"
-              comment="Stay safe, everyone! Let's clean our surroundings."
-            />
-            <Comment
-              username="Anonymous Cat"
-              comment="Saw stagnant water near our street. Reporting it now!"
-            />
-            <Comment
-              username="Anonymous Unicorn"
-              comment="Thanks for the update. Time to check for mosquito breeding spots."
-            />
-            <Comment
-              username="Anonymous Shrimp"
-              comment="Let's all do our part. Wear repellents and cover up!"
-            />
-            <Comment
-              username="Anonymous Tiger"
-              comment="Let's stay vigilant. Always use mosquito nets at night!"
-            />
-            <Comment
-              username="Anonymous Elephant"
-              comment="QC residents, don't forget to check your water containers!"
-            />
-            <Comment
-              username="Anonymous Elephant"
-              comment="QC residents, don't forget to check your water containers!"
-            />
-            <Comment
-              username="Anonymous Elephant"
-              comment="QC residents, don't forget to check your water containers!"
-            />
+            {isLoadingComments ? (
+              <div className="text-center py-4">Loading comments...</div>
+            ) : comments && comments.length > 0 ? (
+              comments.map((comment) => (
+                <Comment2
+                  key={comment._id}
+                  username={comment.user.username}
+                  comment={comment.content}
+                  timestamp={formatTimestamp(comment.createdAt)}
+                  commentId={comment._id}
+                  upvotesArray={comment.upvotes || []}
+                  downvotesArray={comment.downvotes || []}
+                  currentUserId={userFromStore?._id}
+                  onShowToast={showCustomToast}
+                  isAdminPostComment={true}
+                />
+              ))
+            ) : (
+              <div className="text-center py-4 text-gray-500">No comments yet</div>
+            )}
           </div>
         </div>
       </section>
-      */}
     </div>
   );
 };

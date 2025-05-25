@@ -376,7 +376,7 @@ const Community = () => {
 
       <aside
         className={`bg-base-300 px-6 py-8 shadow-2xl rounded-sm overflow-y-scroll transition-transform duration-300 ease-in-out 
-    fixed inset-y-0 right-0 w-[70vw] top-[68px] max-w-[70vw] pt-20 lg:pt-6 z-50 lg:z-0 lg:sticky lg:top-22 lg:h-[calc(100vh-1.5rem)] 
+    fixed inset-y-0 right-0 w-[90vw] top-[58px] max-w-[90vw] pt-20 lg:pt-6 z-50 lg:z-0 lg:sticky lg:top-19 lg:h-[calc(100vh-1.5rem)] 
     lg:w-[40vw] lg:max-w-[450px] lg:shadow-sm ${
       showAside ? "translate-x-0" : "translate-x-full"
     } lg:translate-x-0`}

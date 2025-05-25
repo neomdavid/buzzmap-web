@@ -5,6 +5,10 @@ import {
   useDownvoteReportMutation,
   useRemoveUpvoteMutation,
   useRemoveDownvoteMutation,
+  useUpvoteAdminPostMutation,
+  useDownvoteAdminPostMutation,
+  useRemoveAdminPostUpvoteMutation,
+  useRemoveAdminPostDownvoteMutation,
 } from "../../api/dengueApi";
 import { showCustomToast } from "../../utils.jsx";
 
@@ -21,12 +25,20 @@ const ReactionsTab = ({
   currentUserId = null,
   onCommentClick,
   useCustomToast = false,
-  onShowToast
+  onShowToast,
+  isAdminPost = false
 }) => {
+  // Regular post mutations
   const [upvoteReport] = useUpvoteReportMutation();
   const [downvoteReport] = useDownvoteReportMutation();
   const [removeUpvote] = useRemoveUpvoteMutation();
   const [removeDownvote] = useRemoveDownvoteMutation();
+
+  // Admin post mutations
+  const [upvoteAdminPost] = useUpvoteAdminPostMutation();
+  const [downvoteAdminPost] = useDownvoteAdminPostMutation();
+  const [removeAdminPostUpvote] = useRemoveAdminPostUpvoteMutation();
+  const [removeAdminPostDownvote] = useRemoveAdminPostDownvoteMutation();
 
   // Check if the current user has voted
   const hasUpvoted = currentUserId && upvotesArray.some(vote => 
@@ -53,14 +65,25 @@ const ReactionsTab = ({
       if (hasUpvoted) {
         // Remove upvote
         console.log('[DEBUG] Removing upvote from post:', postId);
-        await removeUpvote(postId).unwrap();
+        if (isAdminPost) {
+          await removeAdminPostUpvote(postId).unwrap();
+        } else {
+          await removeUpvote(postId).unwrap();
+        }
       } else {
         // Upvote
         console.log('[DEBUG] Adding upvote to post:', postId);
-        await upvoteReport(postId).unwrap();
+        if (isAdminPost) {
+          await upvoteAdminPost(postId).unwrap();
+        } else {
+          await upvoteReport(postId).unwrap();
+        }
       }
     } catch (error) {
       console.error('[DEBUG] Error handling upvote:', error);
+      if (onShowToast) {
+        onShowToast("Failed to update vote", "error");
+      }
     }
   };
 
@@ -77,14 +100,25 @@ const ReactionsTab = ({
       if (hasDownvoted) {
         // Remove downvote
         console.log('[DEBUG] Removing downvote from post:', postId);
-        await removeDownvote(postId).unwrap();
+        if (isAdminPost) {
+          await removeAdminPostDownvote(postId).unwrap();
+        } else {
+          await removeDownvote(postId).unwrap();
+        }
       } else {
         // Downvote
         console.log('[DEBUG] Adding downvote to post:', postId);
-        await downvoteReport(postId).unwrap();
+        if (isAdminPost) {
+          await downvoteAdminPost(postId).unwrap();
+        } else {
+          await downvoteReport(postId).unwrap();
+        }
       }
     } catch (error) {
       console.error('[DEBUG] Error handling downvote:', error);
+      if (onShowToast) {
+        onShowToast("Failed to update vote", "error");
+      }
     }
   };
 

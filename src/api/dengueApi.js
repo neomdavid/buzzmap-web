@@ -842,6 +842,250 @@ export const dengueApi = createApi({
         { type: "Comments", id: "LIST" }
       ],
     }),
+
+    // Admin post voting endpoints
+    upvoteAdminPost: builder.mutation({
+      query: (postId) => ({
+        url: `adminposts/${postId}/upvote`,
+        method: "POST",
+      }),
+      async onQueryStarted(postId, { dispatch, queryFulfilled }) {
+        try {
+          const { data } = await queryFulfilled;
+          console.log('[DEBUG] Admin post upvote successful:', data);
+          
+          // Update the cache for admin posts
+          dispatch(
+            dengueApi.util.updateQueryData('getAllAdminPosts', undefined, (draft) => {
+              const post = draft.find(p => p._id === postId);
+              if (post) {
+                post.upvotes = data.upvotes;
+                post.downvotes = data.downvotes;
+              }
+            })
+          );
+        } catch (error) {
+          console.error('[DEBUG] Admin post upvote failed:', error);
+        }
+      },
+      invalidatesTags: ["Post"],
+    }),
+
+    downvoteAdminPost: builder.mutation({
+      query: (postId) => ({
+        url: `adminposts/${postId}/downvote`,
+        method: "POST",
+      }),
+      async onQueryStarted(postId, { dispatch, queryFulfilled }) {
+        try {
+          const { data } = await queryFulfilled;
+          console.log('[DEBUG] Admin post downvote successful:', data);
+          
+          // Update the cache for admin posts
+          dispatch(
+            dengueApi.util.updateQueryData('getAllAdminPosts', undefined, (draft) => {
+              const post = draft.find(p => p._id === postId);
+              if (post) {
+                post.upvotes = data.upvotes;
+                post.downvotes = data.downvotes;
+              }
+            })
+          );
+        } catch (error) {
+          console.error('[DEBUG] Admin post downvote failed:', error);
+        }
+      },
+      invalidatesTags: ["Post"],
+    }),
+
+    removeAdminPostUpvote: builder.mutation({
+      query: (postId) => ({
+        url: `adminposts/${postId}/upvote`,
+        method: "DELETE",
+      }),
+      async onQueryStarted(postId, { dispatch, queryFulfilled }) {
+        try {
+          const { data } = await queryFulfilled;
+          console.log('[DEBUG] Remove admin post upvote successful:', data);
+          
+          // Update the cache for admin posts
+          dispatch(
+            dengueApi.util.updateQueryData('getAllAdminPosts', undefined, (draft) => {
+              const post = draft.find(p => p._id === postId);
+              if (post) {
+                post.upvotes = data.upvotes;
+                post.downvotes = data.downvotes;
+              }
+            })
+          );
+        } catch (error) {
+          console.error('[DEBUG] Remove admin post upvote failed:', error);
+        }
+      },
+      invalidatesTags: ["Post"],
+    }),
+
+    removeAdminPostDownvote: builder.mutation({
+      query: (postId) => ({
+        url: `adminposts/${postId}/downvote`,
+        method: "DELETE",
+      }),
+      async onQueryStarted(postId, { dispatch, queryFulfilled }) {
+        try {
+          const { data } = await queryFulfilled;
+          console.log('[DEBUG] Remove admin post downvote successful:', data);
+          
+          // Update the cache for admin posts
+          dispatch(
+            dengueApi.util.updateQueryData('getAllAdminPosts', undefined, (draft) => {
+              const post = draft.find(p => p._id === postId);
+              if (post) {
+                post.upvotes = data.upvotes;
+                post.downvotes = data.downvotes;
+              }
+            })
+          );
+        } catch (error) {
+          console.error('[DEBUG] Remove admin post downvote failed:', error);
+        }
+      },
+      invalidatesTags: ["Post"],
+    }),
+
+    // Admin post comments endpoints
+    getAdminPostComments: builder.query({
+      query: (postId) => `adminpost-comments/${postId}`,
+      providesTags: (result, error, postId) => [
+        { type: "AdminPostComments", id: postId }
+      ],
+    }),
+
+    addAdminPostComment: builder.mutation({
+      query: ({ postId, content }) => ({
+        url: `adminpost-comments/${postId}`,
+        method: "POST",
+        body: { content },
+      }),
+      invalidatesTags: (result, error, { postId }) => [
+        { type: "AdminPostComments", id: postId }
+      ],
+    }),
+
+    upvoteAdminPostComment: builder.mutation({
+      query: (commentId) => ({
+        url: `adminpost-comments/${commentId}/upvote`,
+        method: "POST",
+      }),
+      async onQueryStarted(commentId, { dispatch, queryFulfilled }) {
+        try {
+          const { data } = await queryFulfilled;
+          console.log('[DEBUG] Admin post comment upvote successful:', data);
+          
+          // Update the cache for admin post comments
+          dispatch(
+            dengueApi.util.updateQueryData('getAdminPostComments', data.adminPost, (draft) => {
+              const comment = draft.find(c => c._id === commentId);
+              if (comment) {
+                comment.upvotes = data.upvotes;
+                comment.downvotes = data.downvotes;
+              }
+            })
+          );
+        } catch (error) {
+          console.error('[DEBUG] Admin post comment upvote failed:', error);
+        }
+      },
+      invalidatesTags: (result, error, commentId) => [
+        { type: "AdminPostComments", id: "LIST" }
+      ],
+    }),
+
+    downvoteAdminPostComment: builder.mutation({
+      query: (commentId) => ({
+        url: `adminpost-comments/${commentId}/downvote`,
+        method: "POST",
+      }),
+      async onQueryStarted(commentId, { dispatch, queryFulfilled }) {
+        try {
+          const { data } = await queryFulfilled;
+          console.log('[DEBUG] Admin post comment downvote successful:', data);
+          
+          // Update the cache for admin post comments
+          dispatch(
+            dengueApi.util.updateQueryData('getAdminPostComments', data.adminPost, (draft) => {
+              const comment = draft.find(c => c._id === commentId);
+              if (comment) {
+                comment.upvotes = data.upvotes;
+                comment.downvotes = data.downvotes;
+              }
+            })
+          );
+        } catch (error) {
+          console.error('[DEBUG] Admin post comment downvote failed:', error);
+        }
+      },
+      invalidatesTags: (result, error, commentId) => [
+        { type: "AdminPostComments", id: "LIST" }
+      ],
+    }),
+
+    removeAdminPostCommentUpvote: builder.mutation({
+      query: (commentId) => ({
+        url: `adminpost-comments/${commentId}/upvote`,
+        method: "DELETE",
+      }),
+      async onQueryStarted(commentId, { dispatch, queryFulfilled }) {
+        try {
+          const { data } = await queryFulfilled;
+          console.log('[DEBUG] Remove admin post comment upvote successful:', data);
+          
+          // Update the cache for admin post comments
+          dispatch(
+            dengueApi.util.updateQueryData('getAdminPostComments', data.adminPost, (draft) => {
+              const comment = draft.find(c => c._id === commentId);
+              if (comment) {
+                comment.upvotes = data.upvotes;
+                comment.downvotes = data.downvotes;
+              }
+            })
+          );
+        } catch (error) {
+          console.error('[DEBUG] Remove admin post comment upvote failed:', error);
+        }
+      },
+      invalidatesTags: (result, error, commentId) => [
+        { type: "AdminPostComments", id: "LIST" }
+      ],
+    }),
+
+    removeAdminPostCommentDownvote: builder.mutation({
+      query: (commentId) => ({
+        url: `adminpost-comments/${commentId}/downvote`,
+        method: "DELETE",
+      }),
+      async onQueryStarted(commentId, { dispatch, queryFulfilled }) {
+        try {
+          const { data } = await queryFulfilled;
+          console.log('[DEBUG] Remove admin post comment downvote successful:', data);
+          
+          // Update the cache for admin post comments
+          dispatch(
+            dengueApi.util.updateQueryData('getAdminPostComments', data.adminPost, (draft) => {
+              const comment = draft.find(c => c._id === commentId);
+              if (comment) {
+                comment.upvotes = data.upvotes;
+                comment.downvotes = data.downvotes;
+              }
+            })
+          );
+        } catch (error) {
+          console.error('[DEBUG] Remove admin post comment downvote failed:', error);
+        }
+      },
+      invalidatesTags: (result, error, commentId) => [
+        { type: "AdminPostComments", id: "LIST" }
+      ],
+    }),
   }),
 });
 
@@ -948,4 +1192,18 @@ export const {
 
   // Add the test endpoint hook
   useTestApiConnectionQuery,
+
+  // Admin post voting endpoints
+  useUpvoteAdminPostMutation,
+  useDownvoteAdminPostMutation,
+  useRemoveAdminPostUpvoteMutation,
+  useRemoveAdminPostDownvoteMutation,
+
+  // Admin post comments endpoints
+  useGetAdminPostCommentsQuery,
+  useAddAdminPostCommentMutation,
+  useUpvoteAdminPostCommentMutation,
+  useDownvoteAdminPostCommentMutation,
+  useRemoveAdminPostCommentUpvoteMutation,
+  useRemoveAdminPostCommentDownvoteMutation,
 } = dengueApi;
