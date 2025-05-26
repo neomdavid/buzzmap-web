@@ -127,18 +127,36 @@ export const dengueApi = createApi({
       query: (email) => ({
         url: "auth/forgot-password",
         method: "POST",
-        body: { email },
+        body: { email: email },
       }),
       invalidatesTags: ["Auth"],
     }),
 
+    verifyResetOtp: builder.mutation({
+      query: (otpData) => ({
+        url: "auth/verify-otp",
+        method: "POST",
+        body: otpData,
+      }),
+      invalidatesTags: ["OTP", "Auth"],
+    }),
+
     resetPassword: builder.mutation({
-      query: ({ resetToken, newPassword }) => ({
+      query: (resetData) => ({
         url: "auth/reset-password",
         method: "POST",
-        body: { resetToken, newPassword },
+        body: resetData,
       }),
       invalidatesTags: ["Auth"],
+    }),
+
+    resendResetOtp: builder.mutation({
+      query: (email) => ({
+        url: "auth/resend-otp",
+        method: "POST",
+        body: { email: email, purpose: "password-reset" },
+      }),
+      invalidatesTags: ["OTP"],
     }),
 
     // Posts/Reports Endpoints
@@ -1097,7 +1115,9 @@ export const {
   useVerifyOtpMutation,
   useResendOtpMutation,
   useForgotPasswordMutation,
+  useVerifyResetOtpMutation,
   useResetPasswordMutation,
+  useResendResetOtpMutation,
 
   // Post hooks
   useGetPostsQuery,

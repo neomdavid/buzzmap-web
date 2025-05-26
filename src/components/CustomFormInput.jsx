@@ -7,6 +7,8 @@ const CustomFormInput = ({
   value,
   onChange,
   theme = "light",
+  className = "",
+  error = false,
 }) => {
   const [isFocused, setIsFocused] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -24,21 +26,23 @@ const CustomFormInput = ({
         {label}
       </label>
       <div
-        className={`relative rounded-xl px-3 py-2 transition-all duration-200
-          ${
-            isFocused
+        className={`relative rounded-xl px-3 py-2 transition-all duration-200 border
+          ${error 
+            ? "border-red-500 focus-within:outline-red-500 focus-within:outline focus-within:outline-2" 
+            : isFocused
               ? isDark
-                ? "outline outline-base-200"
-                : "outline outline-primary"
-              : ""
+                ? "outline outline-base-200 border-base-200"
+                : "outline outline-primary border-primary"
+              : isDark 
+                ? "border-white" 
+                : "border-gray-300"
           }
-          ${!isFocused ? (isDark ? "border-white" : "border-gray-300") : ""}
-          border
-          focus-within:outline focus-within:outline-2 ${
+          ${!error && `focus-within:outline focus-within:outline-2 ${
             isDark
               ? "focus-within:outline-base-200"
               : "focus-within:outline-primary"
           }`}
+          ${className}`}
       >
         <input
           type={isPassword && !showPassword ? "password" : "text"}

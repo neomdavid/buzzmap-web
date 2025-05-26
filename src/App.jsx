@@ -20,6 +20,7 @@ import {
   SingleArticle,
   Updates,
   Articles,
+  ForgotPassword,
 } from "./pages/user";
 import {
   AdminLayout,
@@ -92,6 +93,15 @@ function App() {
         { path: "/about", element: <About /> },
       ],
     },
+    // Auth routes
+    {
+      path: "/login",
+      element: (
+        <PublicRoute>
+          <Login />
+        </PublicRoute>
+      ),
+    },
     {
       path: "/signup",
       element: (
@@ -101,10 +111,10 @@ function App() {
       ),
     },
     {
-      path: "/login",
+      path: "/forgot-password",
       element: (
         <PublicRoute>
-          <Login />
+          <ForgotPassword />
         </PublicRoute>
       ),
     },
@@ -150,7 +160,6 @@ function App() {
         </PrivateRoute>
       ),
       children: [
-        // { path: "/superadmin/dashboard", element: <SprDashboard /> },
         { index: true, element: <Navigate to="/superadmin/users" replace /> },
         { path: "/superadmin/users", element: <SprUsers /> },
         { path: "/superadmin/admins", element: <SprAdmins /> },
@@ -163,7 +172,7 @@ function App() {
       element: <SearchResults />,
     },
 
-    // Fallback route
+    // Fallback route - must be last
     { path: "*", element: <Navigate to="/home" replace /> },
   ]);
 

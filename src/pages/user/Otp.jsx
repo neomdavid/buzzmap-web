@@ -1,17 +1,43 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useSelector, useDispatch } from "react-redux";
-import { useVerifyOtpMutation } from "../../api/dengueApi";
+import { useVerifyOtpMutation, useResendOtpMutation } from "../../api/dengueApi";
 // import { setCredentials } from "../../features/authSlice";
-import { toastSuccess } from "../../utils.jsx";
+import { toastSuccess, toastError } from "../../utils.jsx";
 import { useNavigate } from "react-router-dom";
+
 function Otp() {
   const [otp, setOtp] = useState(["", "", "", ""]);
   const inputRefs = useRef([]);
   const email = useSelector((state) => state.otp.email);
   const [verifyOtp, { isLoading, isError, error }] = useVerifyOtpMutation();
+  const [resendOtp, { isLoading: isResendLoading }] = useResendOtpMutation();
+  const [cooldown, setCooldown] = useState(0);
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  console.log(email);
+
+  // Add useEffect for cooldown timer
+  useEffect(() => {
+    let timer;
+    if (cooldown > 0) {
+      timer = setInterval(() => {
+        setCooldown((prev) => prev - 1);
+      }, 1000);
+    }
+    return () => {
+      if (timer) clearInterval(timer);
+    };
+  }, [cooldown]);
+
+  const handleResendOtp = async () => {
+    try {
+      await resendOtp(email).unwrap();
+      toastSuccess("A new OTP has been sent to your email");
+      setCooldown(60); // Start 60 second cooldown
+    } catch (err) {
+      toastError(err?.data?.message || "Failed to resend OTP");
+    }
+  };
+
   const handleChange = (index, value) => {
     if (!/^\d?$/.test(value)) return; // Only allow one digit
     const newOtp = [...otp];
@@ -60,7 +86,7 @@ function Otp() {
         </p>
 
         {/* 4 OTP input boxes */}
-        <div className="flex gap-5 mb-8">
+        <div className="grid grid-cols-4 gap-2 h-30 sm:h-55 md:h-65 mb-4 w-[70vw] max-w-5xl">
           {otp.map((digit, idx) => (
             <input
               key={idx}
@@ -71,7 +97,7 @@ function Otp() {
               value={digit}
               onChange={(e) => handleChange(idx, e.target.value)}
               onKeyDown={(e) => handleKeyDown(idx, e)}
-              className={`w-43 h-65   rounded-xl py-10 px-2 text-center text-9xl border-3 border-white bg-transparent focus:outline-none focus:border-accent ${
+              className={`rounded-xl py-10 px-2 text-center text-4xl sm:text-9xl border-3 border-white bg-transparent focus:outline-none focus:border-accent ${
                 isError ? "text-red-400" : ""
               }`}
             />
@@ -80,7 +106,19 @@ function Otp() {
 
         <p className="font-light mb-6">
           Didn't receive an OTP?{" "}
-          <span className="font-bold hover:cursor-pointer">Resend</span>
+          <button
+            onClick={handleResendOtp}
+            disabled={isResendLoading || cooldown > 0}
+            className={`font-bold hover:underline ${
+              (isResendLoading || cooldown > 0) && "opacity-50 cursor-not-allowed"
+            }`}
+          >
+            {isResendLoading 
+              ? "Sending..." 
+              : cooldown > 0 
+                ? `Resend (${cooldown}s)` 
+                : "Resend"}
+          </button>
         </p>
         <button
           onClick={handleVerify}

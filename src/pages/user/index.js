@@ -11,3 +11,4 @@ export { default as SingleArticle } from "./SingleArticle.jsx";
 export { default as BuzzLine } from "./BuzzLine.jsx";
 export { default as Updates } from "./Updates.jsx";
 export { default as Articles } from "./Articles.jsx";
+export { default as ForgotPassword } from "./ForgotPassword.jsx";

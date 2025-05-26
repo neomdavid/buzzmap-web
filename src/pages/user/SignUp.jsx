@@ -1,11 +1,11 @@
 import { CustomFormInput, LogoNamed } from "../../components";
 import womanLowHand from "../../assets/woman_lowhand.png";
 import { Link, useNavigate } from "react-router-dom";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRegisterMutation } from "../../api/dengueApi";
 import { useDispatch } from "react-redux";
 import { setEmailForOtp } from "../../features/otpSlice";
-import { toastError } from "../../utils.jsx";
+import { toastError, toastSuccess } from "../../utils.jsx";
 
 const SignUp = () => {
   const [username, setUsername] = useState("");
@@ -13,41 +13,82 @@ const SignUp = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [error, setError] = useState(null);
+  const [passwordErrors, setPasswordErrors] = useState({
+    length: false,
+    number: false
+  });
   const navigate = useNavigate();
 
-  const [signUp, { isLoading, isError, error }] = useRegisterMutation("");
+  const [signUp, { isLoading, isError, error: apiError }] = useRegisterMutation("");
 
   const dispatch = useDispatch();
 
+  // Password validation
+  useEffect(() => {
+    setPasswordErrors({
+      length: password.length < 8,
+      number: !/\d/.test(password)
+    });
+  }, [password]);
+
+  const isPasswordValid = () => {
+    return !passwordErrors.length && !passwordErrors.number;
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    // Add basic validation
-    if (!username.trim() || !email.trim() || !password.trim()) {
-      toastError("Please fill in all required fields");
+    setError(null);
+
+    // Frontend validation
+    if (!isPasswordValid()) {
+      setError("Please fix the password requirements");
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      setError("Passwords do not match");
       return;
     }
 
     try {
-      const res = await signUp({ 
-        username, 
-        email, 
+      const response = await signUp({
+        username,
+        email,
         password,
+        confirmPassword,
         role: "user"
       }).unwrap();
-      
+      console.log("Registration successful:", response);
+
+      // Store email in Redux for OTP verification
       dispatch(setEmailForOtp(email));
-      navigate("/otp"); // go to OTP screen
+
+      // Show success message
+      toastSuccess("Registration successful! Please verify your email.");
+
+      // Navigate to OTP page
+      navigate("/otp");
     } catch (err) {
-      console.log('Registration error:', err);
-      // Display the error message from the backend
-      toastError(err?.data?.message || "Registration failed. Please try again.");
+      console.error("Registration error:", err);
+      // Handle validation errors from the backend
+      if (err.data?.errors) {
+        // If there are multiple errors, show them all
+        const errorMessages = err.data.errors.map(error => error).join('\n');
+        setError(errorMessages);
+        toastError(errorMessages);
+      } else {
+        // Fallback error message
+        const errorMessage = err.data?.message || "Registration failed. Please try again.";
+        setError(errorMessage);
+        toastError(errorMessage);
+      }
     }
   };
 
   return (
-    <main className="flex justify-center items-center relative h-[100vh] overflow-hidden">
-      <div className="absolute left-14 top-10">
+    <main className="flex justify-center items-center relative h-[100vh] overflow-scroll">
+      <div className=" hidden sm:absolute left-14 top-10">
         <LogoNamed
           textSize="text-[28px] lg:text-5xl xl:text-5xl 2xl:text-5xl"
           iconSize="h-11 w-11 lg:h-16 lg:w-16 xl:h-16 xl:w-16 2xl:h-16 2xl:w-16"
@@ -60,7 +101,7 @@ const SignUp = () => {
 
       <section
         className="w-[87vw] max-w-220 mt-25 rounded-2xl shadow-md text-white bg-primary py-8 px-[7%] lg:px-25 flex flex-col justify-center items-center text-center text-xl lg:text-xl
-        lg:max-w-none lg:m-0 lg:rounded-none lg:absolute lg:right-0 lg:top-0 lg:h-[100vh] lg:w-[60vw] xl:w-250 overflow-y-auto"
+        lg:max-w-none lg:m-0 lg:rounded-none lg:absolute lg:right-0 lg:top-0 lg:h-[100vh] lg:w-[60vw] xl:w-250"
       >
         <h1 className="mb-2 text-7xl lg:text-8xl">Join buzzmap!</h1>
         <p className="mb-4">
@@ -91,13 +132,22 @@ const SignUp = () => {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
           />
-          <CustomFormInput
-            label="Password"
-            type="password"
-            theme="dark"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
+          <div className="w-full">
+            <CustomFormInput
+              label="Password"
+              type="password"
+              theme="dark"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              error={password && !isPasswordValid()}
+            />
+            {password && !isPasswordValid() && (
+              <div className="text-error text-[12px] mt-1 text-left">
+                {passwordErrors.length && <p>• Password must be at least 8 characters long</p>}
+                {passwordErrors.number && <p>• Password must contain at least a number</p>}
+              </div>
+            )}
+          </div>
           <CustomFormInput
             label="Confirm Password"
             type="password"
@@ -105,6 +155,7 @@ const SignUp = () => {
             value={confirmPassword}
             onChange={(e) => setConfirmPassword(e.target.value)}
             isConfirm={true}
+            error={confirmPassword && password !== confirmPassword}
           />
           <div className="mt-6 mb-7 flex justify-center  items-center gap-x-2">
             <input
@@ -122,10 +173,9 @@ const SignUp = () => {
             {isLoading ? "Signing Up..." : "Sign Up"}
           </button>
 
-          {isError && (
-            <p className="text-error font-semibold text-md mt-[-10px]">
-              {error?.data?.message ||
-                "Something went wrong. Please try again."}
+          {error && (
+            <p className="text-error font-semibold text-md">
+              {error}
             </p>
           )}
 

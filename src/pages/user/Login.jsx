@@ -1,5 +1,5 @@
 import { CustomFormInput, LogoNamed } from "../../components";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import manHighHand from "../../assets/man_highhand.png";
 import { useState } from "react";
 import { useLoginMutation } from "../../api/dengueApi";
@@ -11,8 +11,18 @@ const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const navigate = useNavigate();
+  const location = useLocation();
   const dispatch = useDispatch();
 
+  console.log("Login component rendered");
+  console.log("Current location:", location.pathname);
+
+  const handleForgotPasswordClick = (e) => {
+    e.preventDefault();
+    console.log("Forgot password clicked");
+    console.log("Attempting to navigate to /forgot-password");
+    navigate("/forgot-password", { replace: false });
+  };
 
   const [login, { isLoading, isError, error }] = useLoginMutation("");
 
@@ -104,9 +114,12 @@ const Login = () => {
               />
               <label className="text-md lg:text-[14px]">Remember Me</label>
             </div>
-            <p className="font-semibold text-[14px] italic hover:underline hover:cursor-pointer">
+            <button
+              onClick={handleForgotPasswordClick}
+              className="font-semibold text-[14px] italic hover:underline hover:cursor-pointer"
+            >
               Forgot password?
-            </p>
+            </button>
           </div>
           <div className="flex flex-col h-full"></div>
 
@@ -118,7 +131,7 @@ const Login = () => {
             {isLoading ? "Logging in..." : "Login"}
           </button>
           {isError && (
-            <p className="mt-[-4px] font-semibold text-red-500 font-light italic text-md">
+            <p className="z-10000000  font-semibold text-red-500 font-light italic text-md">
               {error?.status === 500 
                 ? "Network error. Please check your connection and try again."
                 : error?.data?.message || "Login failed. Please check your credentials."}
