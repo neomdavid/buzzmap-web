@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { useVerifyOtpMutation, useResendOtpMutation } from "../../api/dengueApi";
 // import { setCredentials } from "../../features/authSlice";
-import { toastSuccess, toastError } from "../../utils.jsx";
+import { toastError } from "../../utils.jsx";
 import { useNavigate, useLocation } from "react-router-dom";
 
 function Otp() {
@@ -23,36 +23,44 @@ function Otp() {
 
   // Log component mount and state
   useEffect(() => {
-    console.log("OTP component mounted");
-    console.log("Email from Redux:", email);
-    console.log("Location state:", location.state);
+    console.log("[OTP] Component mounted");
+    console.log("[OTP] Email from Redux:", email);
+    console.log("[OTP] Location state:", location.state);
   }, []);
 
   // Add useEffect for cooldown timer
   useEffect(() => {
     let timer;
     if (cooldown > 0) {
+      console.log("[OTP] Starting cooldown timer:", cooldown);
       timer = setInterval(() => {
-        setCooldown((prev) => prev - 1);
+        setCooldown((prev) => {
+          const newValue = prev - 1;
+          console.log("[OTP] Cooldown updated:", newValue);
+          return newValue;
+        });
       }, 1000);
     }
     return () => {
-      if (timer) clearInterval(timer);
+      if (timer) {
+        console.log("[OTP] Clearing cooldown timer");
+        clearInterval(timer);
+      }
     };
   }, [cooldown]);
 
   // Add useEffect to handle initialization
   useEffect(() => {
-    console.log("Initialization effect running");
-    console.log("Has initialized:", hasInitialized);
-    console.log("Email:", email);
-    console.log("Location state:", location.state);
+    console.log("[OTP] Initialization effect running");
+    console.log("[OTP] Has initialized:", hasInitialized);
+    console.log("[OTP] Email:", email);
+    console.log("[OTP] Location state:", location.state);
 
     const initializeOtp = async () => {
-      console.log("Initializing OTP component");
+      console.log("[OTP] Initializing OTP component");
       
       if (!emailToUse) {
-        console.log("No email found, redirecting to login");
+        console.log("[OTP] No email found, redirecting to login");
         toastError("No email found. Please try logging in again.");
         navigate("/login");
         return;
@@ -60,27 +68,34 @@ function Otp() {
 
       // Show toast if redirected from login
       if (location.state?.from === 'login') {
-        console.log("Redirected from login, showing toast");
+        console.log("[OTP] Redirected from login, showing toast");
         toastError("Account registration was not completed. Please verify your email to continue.");
       }
 
       try {
-        console.log("Attempting to send initial OTP to:", emailToUse);
+        console.log("[OTP] Attempting to send initial OTP to:", emailToUse);
         const response = await resendOtp({
           email: emailToUse,
           purpose: "account-verification"
         }).unwrap();
-        console.log("Initial OTP send response:", response);
+        console.log("[OTP] Initial OTP send response:", response);
         setCooldown(60); // Set initial cooldown
       } catch (err) {
-        console.error("Initial OTP send error:", err);
-        toastError(err?.data?.message || "Failed to send OTP");
+        console.error("[OTP] Initial OTP send error:", err);
+        // Extract cooldown time from error message if available
+        if (err?.data?.message?.includes("wait")) {
+          const waitTime = parseInt(err.data.message.match(/\d+/)[0]);
+          console.log("[OTP] Setting cooldown from error message:", waitTime);
+          setCooldown(waitTime);
+        } else {
+          toastError(err?.data?.message || "Failed to send OTP");
+        }
       }
     };
 
     // Only run initialization if we haven't already
     if (!hasInitialized) {
-      console.log("Running initialization");
+      console.log("[OTP] Running initialization");
       initializeOtp();
       setHasInitialized(true);
     }
@@ -88,14 +103,14 @@ function Otp() {
 
   const handleResendOtp = async () => {
     if (!emailToUse) {
-      console.log("No email found for resend");
+      console.log("[OTP] No email found for resend");
       toastError("No email found. Please try logging in again.");
       navigate("/login");
       return;
     }
 
     try {
-      console.log("Sending resend request with:", {
+      console.log("[OTP] Sending resend request with:", {
         email: emailToUse,
         purpose: "account-verification"
       });
@@ -103,12 +118,19 @@ function Otp() {
         email: emailToUse,
         purpose: "account-verification"
       }).unwrap();
-      console.log("OTP resend response:", response);
+      console.log("[OTP] OTP resend response:", response);
       setCooldown(60); // Start 60 second cooldown only for resend
       setHasResent(true);
     } catch (err) {
-      console.error("OTP resend error:", err);
-      toastError(err?.data?.message || "Failed to resend OTP");
+      console.error("[OTP] OTP resend error:", err);
+      // Extract cooldown time from error message if available
+      if (err?.data?.message?.includes("wait")) {
+        const waitTime = parseInt(err.data.message.match(/\d+/)[0]);
+        console.log("[OTP] Setting cooldown from error message:", waitTime);
+        setCooldown(waitTime);
+      } else {
+        toastError(err?.data?.message || "Failed to resend OTP");
+      }
     }
   };
 
@@ -139,20 +161,16 @@ function Otp() {
   const handleVerify = async () => {
     try {
       const fullOtp = otp.join(""); // combine 4 digits into a string
+      console.log("[OTP] Attempting to verify OTP");
       const response = await verifyOtp({
         email: emailToUse,
         otp: fullOtp,
         purpose: "account-verification",
       }).unwrap();
-      console.log("OTP verified:", response);
-
-      // TODO: Store user account info (see below)
-      // dispatch(setCredentials({ user }));
-
-      toastSuccess("Your account has been registered.");
+      console.log("[OTP] OTP verified successfully:", response);
       navigate("/login");
     } catch (err) {
-      console.error("OTP failed:", err);
+      console.error("[OTP] OTP verification failed:", err);
     }
   };
 
