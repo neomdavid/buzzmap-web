@@ -97,10 +97,8 @@ export const dengueApi = createApi({
         try {
           await queryFulfilled;
         } catch (error) {
-          if (error.error?.status === 500) {
-            throw new Error('Network error. Please try again later.');
-          }
-          throw error;
+          // Don't handle the error here, let it propagate to the component
+          console.log("Login error in onQueryStarted:", error);
         }
       }
     }),
@@ -115,10 +113,13 @@ export const dengueApi = createApi({
     }),
 
     resendOtp: builder.mutation({
-      query: (email) => ({
+      query: (data) => ({
         url: "auth/resend-otp",
         method: "POST",
-        body: { email },
+        body: { 
+          email: data.email,
+          purpose: data.purpose || "account-verification"
+        },
       }),
       invalidatesTags: ["OTP"],
     }),

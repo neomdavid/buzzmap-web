@@ -3,17 +3,30 @@ import { useSelector, useDispatch } from "react-redux";
 import { useVerifyOtpMutation, useResendOtpMutation } from "../../api/dengueApi";
 // import { setCredentials } from "../../features/authSlice";
 import { toastSuccess, toastError } from "../../utils.jsx";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 
 function Otp() {
   const [otp, setOtp] = useState(["", "", "", ""]);
   const inputRefs = useRef([]);
   const email = useSelector((state) => state.otp.email);
-  const [verifyOtp, { isLoading, isError, error }] = useVerifyOtpMutation();
+  const [verifyOtp, { isLoading, isError, error, reset }] = useVerifyOtpMutation();
   const [resendOtp, { isLoading: isResendLoading }] = useResendOtpMutation();
   const [cooldown, setCooldown] = useState(0);
+  const [hasInitialized, setHasInitialized] = useState(false);
+  const [hasResent, setHasResent] = useState(false);
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const location = useLocation();
+
+  // Get email from either Redux or location state
+  const emailToUse = email || location.state?.email;
+
+  // Log component mount and state
+  useEffect(() => {
+    console.log("OTP component mounted");
+    console.log("Email from Redux:", email);
+    console.log("Location state:", location.state);
+  }, []);
 
   // Add useEffect for cooldown timer
   useEffect(() => {
@@ -28,18 +41,85 @@ function Otp() {
     };
   }, [cooldown]);
 
+  // Add useEffect to handle initialization
+  useEffect(() => {
+    console.log("Initialization effect running");
+    console.log("Has initialized:", hasInitialized);
+    console.log("Email:", email);
+    console.log("Location state:", location.state);
+
+    const initializeOtp = async () => {
+      console.log("Initializing OTP component");
+      
+      if (!emailToUse) {
+        console.log("No email found, redirecting to login");
+        toastError("No email found. Please try logging in again.");
+        navigate("/login");
+        return;
+      }
+
+      // Show toast if redirected from login
+      if (location.state?.from === 'login') {
+        console.log("Redirected from login, showing toast");
+        toastError("Account registration was not completed. Please verify your email to continue.");
+      }
+
+      try {
+        console.log("Attempting to send initial OTP to:", emailToUse);
+        const response = await resendOtp({
+          email: emailToUse,
+          purpose: "account-verification"
+        }).unwrap();
+        console.log("Initial OTP send response:", response);
+        setCooldown(60); // Set initial cooldown
+      } catch (err) {
+        console.error("Initial OTP send error:", err);
+        toastError(err?.data?.message || "Failed to send OTP");
+      }
+    };
+
+    // Only run initialization if we haven't already
+    if (!hasInitialized) {
+      console.log("Running initialization");
+      initializeOtp();
+      setHasInitialized(true);
+    }
+  }, [email, location.state?.from, location.state?.email]);
+
   const handleResendOtp = async () => {
+    if (!emailToUse) {
+      console.log("No email found for resend");
+      toastError("No email found. Please try logging in again.");
+      navigate("/login");
+      return;
+    }
+
     try {
-      await resendOtp(email).unwrap();
-      toastSuccess("A new OTP has been sent to your email");
-      setCooldown(60); // Start 60 second cooldown
+      console.log("Sending resend request with:", {
+        email: emailToUse,
+        purpose: "account-verification"
+      });
+      const response = await resendOtp({
+        email: emailToUse,
+        purpose: "account-verification"
+      }).unwrap();
+      console.log("OTP resend response:", response);
+      setCooldown(60); // Start 60 second cooldown only for resend
+      setHasResent(true);
     } catch (err) {
+      console.error("OTP resend error:", err);
       toastError(err?.data?.message || "Failed to resend OTP");
     }
   };
 
   const handleChange = (index, value) => {
     if (!/^\d?$/.test(value)) return; // Only allow one digit
+    
+    // Reset error state when OTP changes
+    if (isError) {
+      reset();
+    }
+    
     const newOtp = [...otp];
     newOtp[index] = value;
     setOtp(newOtp);
@@ -60,7 +140,7 @@ function Otp() {
     try {
       const fullOtp = otp.join(""); // combine 4 digits into a string
       const response = await verifyOtp({
-        email,
+        email: emailToUse,
         otp: fullOtp,
         purpose: "account-verification",
       }).unwrap();
@@ -80,9 +160,12 @@ function Otp() {
     <main className="flex h-[100vh] items-center justify-center text-white bg-primary">
       <div className="flex flex-col items-center text-xl gap-8">
         <h1 className="text-8xl">Almost there...</h1>
-        <p className="font-semibold w-[70%] text-center mb-6">
+        <p className="font-normal w-[70%] text-center mb-2">
           We've sent a one-time password (OTP) to your email. Enter the code to
           verify your account and continue.
+        </p>
+        <p className="font-bold text-white text-2xl text-center mt-[-18px] mb-6">
+          {emailToUse}
         </p>
 
         {/* 4 OTP input boxes */}
@@ -136,7 +219,9 @@ function Otp() {
 
         {isError && (
           <p className="text-red-400 font-semibold text-md mt-[-10px]">
-            {error?.data?.message || "Something went wrong. Please try again."}
+            {error?.data?.message?.includes("email") 
+              ? "Invalid OTP code. Please try again."
+              : error?.data?.message || "Something went wrong. Please try again."}
           </p>
         )}
       </div>

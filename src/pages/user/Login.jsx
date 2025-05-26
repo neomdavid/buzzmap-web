@@ -5,6 +5,7 @@ import { useState } from "react";
 import { useLoginMutation } from "../../api/dengueApi";
 import { useDispatch } from "react-redux";
 import { login as setAuthCredentials } from "../../features/authSlice.js";
+import { setEmailForOtp } from "../../features/otpSlice";
 import { toastSuccess, toastError } from "../../utils.jsx";
 
 const Login = () => {
@@ -28,15 +29,16 @@ const Login = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    console.log("Login attempt started for email:", email);
 
     try {
-      // Include the selected role in the login request
       const response = await login({
         email,
         password,
       }).unwrap();
+      console.log("Login successful:", response);
+      
       const { user, accessToken: token } = response;
-
       dispatch(setAuthCredentials({ user, token }));
       toastSuccess(`Welcome, ${user.name}`);
 
@@ -52,10 +54,40 @@ const Login = () => {
           navigate("/");
       }
     } catch (err) {
+      console.error("Login error details:", {
+        status: err?.status,
+        message: err?.data?.message,
+        fullError: err
+      });
+      
+      // Check for unverified account error
+      if (err?.data?.message?.toLowerCase().includes("not been verified")) {
+        console.log("Unverified account detected");
+        console.log("Storing email in Redux:", email);
+        
+        // Store email in Redux for OTP verification
+        dispatch(setEmailForOtp(email));
+        
+        // Wait for Redux state to update
+        setTimeout(() => {
+          console.log("Redirecting to OTP page with state");
+          // Use replace: true to prevent back navigation
+          navigate("/otp", { 
+            replace: true,
+            state: { 
+              from: 'login',
+              email: email 
+            }
+          });
+        }, 100);
+        return;
+      }
+
+      // Handle other errors
       if (err?.status === 500) {
         toastError('Network error. Please check your connection and try again.');
       } else {
-        toastError(err?.data?.message);
+        toastError(err?.data?.message || "Login failed. Please check your credentials.");
       }
     }
   };
