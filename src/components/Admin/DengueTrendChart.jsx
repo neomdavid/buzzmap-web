@@ -67,20 +67,6 @@ export default function DengueTrendChart({ selectedBarangay, onBarangayChange })
     number_of_weeks: weeks
   });
 
-  // Helper to format date range
-  function formatDateRange(dateRange) {
-    if (!Array.isArray(dateRange) || dateRange.length !== 2) return '';
-    const [start, end] = dateRange;
-    const startDate = new Date(start);
-    const endDate = new Date(end);
-    // Format as 'MMM D - MMM D' or 'MMM D - D' if same month
-    const options = { month: 'short', day: 'numeric' };
-    if (startDate.getMonth() === endDate.getMonth()) {
-      return `${startDate.toLocaleDateString(undefined, options)} - ${endDate.getDate()}`;
-    }
-    return `${startDate.toLocaleDateString(undefined, options)} - ${endDate.toLocaleDateString(undefined, options)}`;
-  }
-
   // Transform the API data to match the chart format
   const chartData = useMemo(() => {
     try {
@@ -92,7 +78,6 @@ export default function DengueTrendChart({ selectedBarangay, onBarangayChange })
       console.log('[DEBUG] Raw weekly counts data:', trendsData.data.weekly_counts);
 
       const completeWeeks = trendsData.data.weekly_counts.complete_weeks || {};
-      const currentWeek = trendsData.data.weekly_counts.current_week;
 
       // Transform complete weeks
       const weekEntries = Object.entries(completeWeeks)
@@ -109,16 +94,6 @@ export default function DengueTrendChart({ selectedBarangay, onBarangayChange })
           return dateA - dateB;
         });
 
-      // Optionally add current week
-      if (currentWeek) {
-        weekEntries.push({
-          week: formatDateRange(currentWeek.date_range),
-          cases: currentWeek.count,
-          dateRange: currentWeek.date_range,
-          patternType: selectedBarangayPattern
-        });
-      }
-
       console.log('[DEBUG] Transformed chart data:', weekEntries);
       return weekEntries;
     } catch (error) {
@@ -126,6 +101,20 @@ export default function DengueTrendChart({ selectedBarangay, onBarangayChange })
       return [];
     }
   }, [trendsData, selectedBarangayPattern]);
+
+  // Helper to format date range
+  function formatDateRange(dateRange) {
+    if (!Array.isArray(dateRange) || dateRange.length !== 2) return '';
+    const [start, end] = dateRange;
+    const startDate = new Date(start);
+    const endDate = new Date(end);
+    // Format as 'MMM D - MMM D' or 'MMM D - D' if same month
+    const options = { month: 'short', day: 'numeric' };
+    if (startDate.getMonth() === endDate.getMonth()) {
+      return `${startDate.toLocaleDateString(undefined, options)} - ${endDate.getDate()}`;
+    }
+    return `${startDate.toLocaleDateString(undefined, options)} - ${endDate.toLocaleDateString(undefined, options)}`;
+  }
 
   // Find the max cases for the current chartData (for consistent Y axis)
   const maxCases = useMemo(() => {

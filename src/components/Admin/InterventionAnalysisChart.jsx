@@ -13,6 +13,7 @@ import annotationPlugin from 'chartjs-plugin-annotation';
 import { Line } from 'react-chartjs-2';
 import { useAnalyzeInterventionEffectivityMutation } from '../../api/dengueApi';
 import { formatDateWithRelativeTime } from '../../utils';
+import { GoogleMap, Marker, useLoadScript } from '@react-google-maps/api';
 
 // Helper to format week range label
 function formatWeekRange(startDate) {
@@ -39,6 +40,117 @@ ChartJS.register(
 
 const InterventionAnalysisChart = ({ interventionId, onStats, percentChange }) => {
   const [analyzeEffectivity, { data: analysisData, isLoading, error }] = useAnalyzeInterventionEffectivityMutation();
+
+  // Google Maps setup
+  const { isLoaded } = useLoadScript({
+    googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY,
+    libraries: ['places']
+  });
+
+  const mapContainerStyle = {
+    width: '100%',
+    height: '300px',
+    borderRadius: '0.5rem',
+    marginTop: '1rem'
+  };
+
+  const center = analysisData?.intervention?.specific_location 
+    ? {
+        lat: analysisData.intervention.specific_location[1],
+        lng: analysisData.intervention.specific_location[0]
+      }
+    : { lat: 14.5995, lng: 120.9842 }; // Default to Manila
+
+  // Dark mode map styles
+  const darkMapStyles = [
+    {
+      "elementType": "geometry",
+      "stylers": [{ "color": "#242f3e" }]
+    },
+    {
+      "elementType": "labels.text.stroke",
+      "stylers": [{ "color": "#242f3e" }]
+    },
+    {
+      "elementType": "labels.text.fill",
+      "stylers": [{ "color": "#746855" }]
+    },
+    {
+      "featureType": "administrative.locality",
+      "elementType": "labels.text.fill",
+      "stylers": [{ "color": "#d59563" }]
+    },
+    {
+      "featureType": "poi",
+      "elementType": "labels.text.fill",
+      "stylers": [{ "color": "#d59563" }]
+    },
+    {
+      "featureType": "poi.park",
+      "elementType": "geometry",
+      "stylers": [{ "color": "#263c3f" }]
+    },
+    {
+      "featureType": "poi.park",
+      "elementType": "labels.text.fill",
+      "stylers": [{ "color": "#6b9a76" }]
+    },
+    {
+      "featureType": "road",
+      "elementType": "geometry",
+      "stylers": [{ "color": "#38414e" }]
+    },
+    {
+      "featureType": "road",
+      "elementType": "geometry.stroke",
+      "stylers": [{ "color": "#212a37" }]
+    },
+    {
+      "featureType": "road",
+      "elementType": "labels.text.fill",
+      "stylers": [{ "color": "#9ca5b3" }]
+    },
+    {
+      "featureType": "road.highway",
+      "elementType": "geometry",
+      "stylers": [{ "color": "#746855" }]
+    },
+    {
+      "featureType": "road.highway",
+      "elementType": "geometry.stroke",
+      "stylers": [{ "color": "#1f2835" }]
+    },
+    {
+      "featureType": "road.highway",
+      "elementType": "labels.text.fill",
+      "stylers": [{ "color": "#f3d19c" }]
+    },
+    {
+      "featureType": "transit",
+      "elementType": "geometry",
+      "stylers": [{ "color": "#2f3948" }]
+    },
+    {
+      "featureType": "transit.station",
+      "elementType": "labels.text.fill",
+      "stylers": [{ "color": "#d59563" }]
+    },
+    {
+      "featureType": "water",
+      "elementType": "geometry",
+      "stylers": [{ "color": "#17263c" }]
+    },
+    {
+      "featureType": "water",
+      "elementType": "labels.text.fill",
+      "stylers": [{ "color": "#515c6d" }]
+    },
+    {
+      "featureType": "water",
+      "elementType": "labels.text.stroke",
+      "stylers": [{ "color": "#17263c" }]
+    }
+  ];
 
   // Calculate summary stats
   let totalBefore = 0, totalAfter = 0, computedPercentChange = '-';
@@ -344,12 +456,48 @@ const InterventionAnalysisChart = ({ interventionId, onStats, percentChange }) =
           <p className='text-lg'><span className="font-bold">Type:</span> {analysisData.intervention.type}</p>
           <p className='text-lg'><span className="font-bold">Date:</span> {formatDateWithRelativeTime(analysisData.intervention.date)}</p>
           <p className='text-lg'><span className="font-bold">Personnel:</span> {analysisData.intervention.personnel}</p>
+          <p className='text-lg'><span className="font-bold">Address:</span> {analysisData.intervention.address}</p>
         </div>
       </div>
-      <CustomLegend afterLineColor={afterColor} />
+
+      {isLoaded && (
+        <div className="mb-4">
+          <GoogleMap
+            mapContainerStyle={mapContainerStyle}
+            center={center}
+            zoom={17}
+            options={{
+              mapTypeId: 'satellite',
+              styles: darkMapStyles,
+              mapTypeControl: true,
+              mapTypeControlOptions: {
+                style: window.google.maps.MapTypeControlStyle.DROPDOWN_MENU,
+                position: window.google.maps.ControlPosition.TOP_RIGHT
+              },
+              zoomControl: true,
+              streetViewControl: false,
+              fullscreenControl: true
+            }}
+          >
+            <Marker
+              position={center}
+              icon={{
+                path: window.google.maps.SymbolPath.CIRCLE,
+                scale: 8,
+                fillColor: "#FF0000",
+                fillOpacity: 1,
+                strokeWeight: 2,
+                strokeColor: "#FFFFFF"
+              }}
+            />
+          </GoogleMap>
+        </div>
+      )}
+
       <div className="w-full h-[250px] sm:h-[300px] md:h-[350px] lg:h-[400px] xl:h-[450px]">
         <Line key={JSON.stringify(chartData)} data={chartData} options={options} />
       </div>
+      <CustomLegend afterLineColor={afterColor} />
     </div>
   );
 };
