@@ -42,12 +42,12 @@ const InterventionAnalysisChart = ({ interventionId, onStats, percentChange }) =
 
   // Calculate summary stats
   let totalBefore = 0, totalAfter = 0, computedPercentChange = '-';
-  if (analysisData?.analysis?.before_intervention && analysisData?.analysis?.after_intervention) {
-    const beforeData = Object.values(analysisData.analysis.before_intervention);
-    const afterData = Object.values(analysisData.analysis.after_intervention);
+  if (analysisData?.analysis?.before && analysisData?.analysis?.after) {
+    const beforeData = Object.values(analysisData.analysis.before);
+    const afterData = Object.values(analysisData.analysis.after);
     totalBefore = beforeData.reduce((a, b) => a + b, 0);
     totalAfter = afterData.reduce((a, b) => a + b, 0);
-    computedPercentChange = totalBefore === 0 ? (totalAfter === 0 ? 0 : 100) : (((totalAfter - totalBefore) / totalBefore) * 100).toFixed(1);
+    computedPercentChange = analysisData.analysis.percentage_change;
   }
 
   React.useEffect(() => {
@@ -59,32 +59,51 @@ const InterventionAnalysisChart = ({ interventionId, onStats, percentChange }) =
 
   useEffect(() => {
     if (interventionId) {
-      console.log('Fetching analysis for intervention:', interventionId);
+      console.log('=== Intervention Effectivity Analysis Debug ===');
+      console.log('Fetching analysis for intervention ID:', interventionId);
       analyzeEffectivity(interventionId)
         .unwrap()
         .then((response) => {
           console.log('=== API Response Debug ===');
-          console.log('Full Response:', response);
+          console.log('Full Response:', JSON.stringify(response, null, 2));
           console.log('Response Type:', typeof response);
           console.log('Has Intervention:', !!response?.intervention);
           console.log('Has Analysis:', !!response?.analysis);
+          
           if (response?.intervention) {
             console.log('Intervention Details:', {
               id: response.intervention.id,
               type: response.intervention.type,
               date: response.intervention.date,
-              barangay: response.intervention.barangay
+              barangay: response.intervention.barangay,
+              status: response.intervention.status
             });
           }
+          
           if (response?.analysis) {
             console.log('Analysis Structure:', {
-              hasBefore: !!response.analysis.before_intervention,
-              hasAfter: !!response.analysis.after_intervention,
-              beforeKeys: response.analysis.before_intervention ? Object.keys(response.analysis.before_intervention) : [],
-              afterKeys: response.analysis.after_intervention ? Object.keys(response.analysis.after_intervention) : []
+              hasBefore: !!response.analysis.before,
+              hasAfter: !!response.analysis.after,
+              beforeKeys: response.analysis.before ? Object.keys(response.analysis.before) : [],
+              afterKeys: response.analysis.after ? Object.keys(response.analysis.after) : []
             });
-            console.log('Before Data:', response.analysis.before_intervention);
-            console.log('After Data:', response.analysis.after_intervention);
+            
+            console.log('Before Intervention Data:', JSON.stringify(response.analysis.before, null, 2));
+            console.log('After Intervention Data:', JSON.stringify(response.analysis.after, null, 2));
+            
+            // Calculate and log statistics
+            const beforeData = Object.values(response.analysis.before);
+            const afterData = Object.values(response.analysis.after);
+            const totalBefore = beforeData.reduce((a, b) => a + b, 0);
+            const totalAfter = afterData.reduce((a, b) => a + b, 0);
+            
+            console.log('Calculated Statistics:', {
+              totalBefore,
+              totalAfter,
+              percentChange: response.analysis.percentage_change,
+              beforeDataPoints: beforeData.length,
+              afterDataPoints: afterData.length
+            });
           }
           console.log('=== End API Response Debug ===');
         })
@@ -127,7 +146,7 @@ const InterventionAnalysisChart = ({ interventionId, onStats, percentChange }) =
     );
   }
 
-  if (!analysisData?.analysis?.before_intervention || !analysisData?.analysis?.after_intervention) {
+  if (!analysisData?.analysis?.before || !analysisData?.analysis?.after) {
     console.log('No analysis data available');
     return (
       <div className="flex items-center justify-center h-[300px]">
@@ -143,15 +162,15 @@ const InterventionAnalysisChart = ({ interventionId, onStats, percentChange }) =
   console.log('Complete Analysis Data Structure:', {
     intervention: analysisData.intervention,
     analysis: analysisData.analysis,
-    beforeData: analysisData.analysis.before_intervention,
-    afterData: analysisData.analysis.after_intervention,
-    beforeWeeks: Object.keys(analysisData.analysis.before_intervention),
-    afterWeeks: Object.keys(analysisData.analysis.after_intervention)
+    beforeData: analysisData.analysis.before,
+    afterData: analysisData.analysis.after,
+    beforeWeeks: Object.keys(analysisData.analysis.before),
+    afterWeeks: Object.keys(analysisData.analysis.after)
   });
 
   // Prepare before and after data
-  const beforeData = Object.values(analysisData.analysis.before_intervention);
-  const afterData = Object.values(analysisData.analysis.after_intervention);
+  const beforeData = Object.values(analysisData.analysis.before);
+  const afterData = Object.values(analysisData.analysis.after);
   const beforeCount = beforeData.length;
   const afterCount = afterData.length;
 
