@@ -17,6 +17,17 @@ const customBaseQuery = fetchBaseQuery({
 const baseQueryWithErrorHandling = async (args, api, extraOptions) => {
   try {
     const result = await customBaseQuery(args, api, extraOptions);
+    
+    // Check for 401 Unauthorized response
+    if (result.error?.status === 401) {
+      return { 
+        error: { 
+          status: 'UNAUTHORIZED', 
+          data: 'Please log in to perform this action' 
+        } 
+      };
+    }
+    
     return result;
   } catch (error) {
     return { error: { status: 'CUSTOM_ERROR', data: error.message } };
@@ -587,6 +598,7 @@ export const dengueApi = createApi({
           );
         } catch (error) {
           console.error('[DEBUG] Upvote failed:', error);
+          // The error will be handled by the component to show the toast
         }
       },
       invalidatesTags: (result, error, reportId) => [
