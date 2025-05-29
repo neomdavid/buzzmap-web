@@ -16,35 +16,9 @@ const customBaseQuery = fetchBaseQuery({
 // Wrap the base query with error handling
 const baseQueryWithErrorHandling = async (args, api, extraOptions) => {
   try {
-    console.log('[DEBUG] API Request:', {
-      url: args.url,
-      method: args.method || 'GET',
-      body: args.body
-    });
-    
     const result = await customBaseQuery(args, api, extraOptions);
-    
-    console.log('[DEBUG] API Response:', {
-      status: result.status,
-      data: result.data,
-      error: result.error
-    });
-
-    if (result.error) {
-      console.error('[DEBUG] API Error:', {
-        status: result.error.status,
-        data: result.error.data,
-        originalError: result.error
-      });
-    }
-
     return result;
   } catch (error) {
-    console.error('[DEBUG] API Exception:', {
-      message: error.message,
-      stack: error.stack,
-      originalError: error
-    });
     return { error: { status: 'CUSTOM_ERROR', data: error.message } };
   }
 };
@@ -973,26 +947,26 @@ export const dengueApi = createApi({
 
     // Admin post comments endpoints
     getAdminPostComments: builder.query({
-      query: (postId) => `adminpost-comments/${postId}`,
+      query: (postId) => `comments/${postId}`,
       providesTags: (result, error, postId) => [
-        { type: "AdminPostComments", id: postId }
+        { type: "Comments", id: postId }
       ],
     }),
 
     addAdminPostComment: builder.mutation({
       query: ({ postId, content }) => ({
-        url: `adminpost-comments/${postId}`,
+        url: `comments/${postId}`,
         method: "POST",
         body: { content },
       }),
       invalidatesTags: (result, error, { postId }) => [
-        { type: "AdminPostComments", id: postId }
+        { type: "Comments", id: postId }
       ],
     }),
 
     upvoteAdminPostComment: builder.mutation({
       query: (commentId) => ({
-        url: `adminpost-comments/${commentId}/upvote`,
+        url: `comments/${commentId}/upvote`,
         method: "POST",
       }),
       async onQueryStarted(commentId, { dispatch, queryFulfilled }) {
@@ -1015,13 +989,13 @@ export const dengueApi = createApi({
         }
       },
       invalidatesTags: (result, error, commentId) => [
-        { type: "AdminPostComments", id: "LIST" }
+        { type: "Comments", id: "LIST" }
       ],
     }),
 
     downvoteAdminPostComment: builder.mutation({
       query: (commentId) => ({
-        url: `adminpost-comments/${commentId}/downvote`,
+        url: `comments/${commentId}/downvote`,
         method: "POST",
       }),
       async onQueryStarted(commentId, { dispatch, queryFulfilled }) {
@@ -1044,13 +1018,13 @@ export const dengueApi = createApi({
         }
       },
       invalidatesTags: (result, error, commentId) => [
-        { type: "AdminPostComments", id: "LIST" }
+        { type: "Comments", id: "LIST" }
       ],
     }),
 
     removeAdminPostCommentUpvote: builder.mutation({
       query: (commentId) => ({
-        url: `adminpost-comments/${commentId}/upvote`,
+        url: `comments/${commentId}/upvote`,
         method: "DELETE",
       }),
       async onQueryStarted(commentId, { dispatch, queryFulfilled }) {
@@ -1073,13 +1047,13 @@ export const dengueApi = createApi({
         }
       },
       invalidatesTags: (result, error, commentId) => [
-        { type: "AdminPostComments", id: "LIST" }
+        { type: "Comments", id: "LIST" }
       ],
     }),
 
     removeAdminPostCommentDownvote: builder.mutation({
       query: (commentId) => ({
-        url: `adminpost-comments/${commentId}/downvote`,
+        url: `comments/${commentId}/downvote`,
         method: "DELETE",
       }),
       async onQueryStarted(commentId, { dispatch, queryFulfilled }) {
@@ -1102,7 +1076,7 @@ export const dengueApi = createApi({
         }
       },
       invalidatesTags: (result, error, commentId) => [
-        { type: "AdminPostComments", id: "LIST" }
+        { type: "Comments", id: "LIST" }
       ],
     }),
   }),

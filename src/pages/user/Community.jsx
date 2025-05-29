@@ -54,7 +54,7 @@ const Community = () => {
   const navigate = useNavigate();
 
   // Fetch admin posts
-  const { data: adminPosts, isLoading: isAdminPostsLoading, isError: isAdminPostsError, error: adminPostsErrorData } = useGetAllAdminPostsQuery();
+  const { data: adminPosts, isLoading: isLoadingAdminPosts } = useGetAllAdminPostsQuery();
 
   // Find the latest announcement
   const latestAnnouncement = React.useMemo(() => {
@@ -65,18 +65,6 @@ const Community = () => {
     announcements.sort((a, b) => new Date(b.publishDate) - new Date(a.publishDate));
     return announcements[0]; // Return the latest one
   }, [adminPosts]);
-
-  React.useEffect(() => {
-    if (isAdminPostsLoading) {
-      console.log("Loading admin posts...");
-    }
-    if (isAdminPostsError) {
-      console.error("Error fetching admin posts:", adminPostsErrorData);
-    }
-    if (adminPosts) {
-      console.log("Admin Posts Data:", JSON.stringify(adminPosts, null, 2));
-    }
-  }, [adminPosts, isAdminPostsLoading, isAdminPostsError, adminPostsErrorData]);
 
   const getCurrentLocation = () => {
     if (navigator.geolocation) {
@@ -103,12 +91,10 @@ const Community = () => {
   };
 
   // Get all posts without filtering
-  const { data: posts, isLoading, isError, refetch } = useGetPostsQuery({
-    ...searchParams,
-    // Only include non-empty values
-    ...Object.fromEntries(
-      Object.entries(searchParams).filter(([_, value]) => value !== '')
-    )
+  const { data: posts, isLoading: isLoadingPosts } = useGetPostsQuery({
+    status: "Validated",
+    sortBy: "createdAt",
+    sortOrder: "desc"
   });
 
   // Filter and sort posts based on the selected tab
@@ -186,7 +172,6 @@ const Community = () => {
       } else {
         await createPost(postData).unwrap();
       }
-      refetch();
     } catch (error) {
       console.error("Failed to create post:", error);
     }
@@ -216,11 +201,12 @@ const Community = () => {
     });
     setSearchQuery('');
     setIsSearching(false);
-    refetch();
   };
 
-  if (isLoading) return <div>Loading posts...</div>;
-  if (isError) return <div>Error loading posts</div>;
+  if (isLoadingAdminPosts || isLoadingPosts) {
+    return <div>Loading...</div>;
+  }
+
   return (
     <main className="pl-6 text-primary text-lg flex gap-x-6 max-w-[1350px] m-auto relative mt-12">
       <article className="flex-8 shadow-xl p-12 rounded-lg w-[90vw] lg:w-[30vw]">
@@ -320,12 +306,10 @@ const Community = () => {
           </button>
         </section>
         {/* POST MODAL */}
-        <NewPostModal onSubmit={refetch} />
+        <NewPostModal onSubmit={handleClearSearch} />
         <section className="bg-base-200 px-8 py-6 rounded-lg flex flex-col gap-y-6">
-          {isLoading ? (
+          {isLoadingPosts ? (
             <div className="text-center">Loading posts...</div>
-          ) : isError ? (
-            <div className="text-center text-error">Error loading posts</div>
           ) : filteredPosts.length === 0 ? (
             <p className="text-center text-gray-500">
               {searchQuery

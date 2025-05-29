@@ -29,7 +29,7 @@ const CommentModal = forwardRef(({
   const textareaRef = useRef(null);
   const userFromStore = useSelector((state) => state.auth?.user);
   const [addComment, { isLoading }] = useAddCommentMutation();
-  const { data: comments, isLoading: isLoadingComments } = useGetCommentsQuery(postId);
+  const { data: comments, isLoading: isLoadingComments, refetch } = useGetCommentsQuery(postId);
   const { data: postData, isLoading: isLoadingPost } = useGetPostByIdQuery(postId);
   const navigate = useNavigate();
 
@@ -95,6 +95,7 @@ const CommentModal = forwardRef(({
       if (onCommentAdded) {
         onCommentAdded();
       }
+      refetch();
     } catch (error) {
       console.error("Failed to add comment:", error);
       showToast("Failed to add comment", "error");

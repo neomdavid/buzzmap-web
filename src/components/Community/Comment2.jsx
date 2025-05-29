@@ -54,7 +54,7 @@ const Comment2 = ({
                   (Array.isArray(downvotesArray) ? downvotesArray.length : 0);
 
   const handleUpvote = async () => {
-    if (!currentUserId || userFromStore?.role !== "user") {
+    if (!currentUserId) {
       if (onShowToast) {
         onShowToast("Please log in to vote", "error");
       } else {
@@ -89,7 +89,7 @@ const Comment2 = ({
   };
 
   const handleDownvote = async () => {
-    if (!currentUserId || userFromStore?.role !== "user") {
+    if (!currentUserId) {
       if (onShowToast) {
         onShowToast("Please log in to vote", "error");
       } else {
