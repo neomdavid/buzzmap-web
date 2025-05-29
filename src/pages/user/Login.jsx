@@ -4,13 +4,14 @@ import manHighHand from "../../assets/man_highhand.png";
 import { useState } from "react";
 import { useLoginMutation } from "../../api/dengueApi";
 import { useDispatch } from "react-redux";
-import { login as setAuthCredentials } from "../../features/authSlice.js";
+import { setAuthCredentials } from "../../features/authSlice.js";
 import { setEmailForOtp } from "../../features/otpSlice";
 import { toastSuccess, toastError } from "../../utils.jsx";
 
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [rememberMe, setRememberMe] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
   const dispatch = useDispatch();
@@ -38,20 +39,43 @@ const Login = () => {
       }).unwrap();
       console.log("Login successful:", response);
       
-      const { user, accessToken: token } = response;
-      dispatch(setAuthCredentials({ user, token }));
+      const { user, accessToken } = response;
+      
+      // First update Redux state
+      dispatch(setAuthCredentials({ user, token: accessToken, rememberMe }));
+
+      // Show success message
       toastSuccess(`Welcome, ${user.name}`);
 
-      // Redirect based on role
+      // Wait for state to be updated and persisted
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      // Verify the state was updated correctly by checking both storage types
+      const storedUser = localStorage.getItem('user') || sessionStorage.getItem('user');
+      const storedToken = localStorage.getItem('token') || sessionStorage.getItem('token');
+      
+      console.log('[DEBUG] Stored auth data:', {
+        user: storedUser,
+        token: storedToken,
+        storage: rememberMe ? 'localStorage' : 'sessionStorage'
+      });
+
+      if (!storedUser || !storedToken) {
+        console.error('[DEBUG] Auth data not properly stored');
+        toastError('Login failed - please try again');
+        return;
+      }
+
+      // Navigate based on role
       switch (user.role) {
         case "admin":
-          navigate("/admin/dashboard");
+          navigate("/admin/dashboard", { replace: true });
           break;
         case "superadmin":
-          navigate("/superadmin/users");
+          navigate("/superadmin/users", { replace: true });
           break;
         default:
-          navigate("/");
+          navigate("/", { replace: true });
       }
     } catch (err) {
       console.error("Login error details:", {
@@ -142,7 +166,9 @@ const Login = () => {
             <div className="flex justify-center  items-center gap-x-2">
               <input
                 type="checkbox"
-                className="checkbox checkbox-lg border-primary bg-transparent checked:bg-transparent checked:text-primary checked:border-primary "
+                className="checkbox checkbox-lg border-primary bg-transparent checked:bg-transparent checked:text-primary checked:border-primary"
+                checked={rememberMe}
+                onChange={(e) => setRememberMe(e.target.checked)}
               />
               <label className="text-md lg:text-[14px]">Remember Me</label>
             </div>

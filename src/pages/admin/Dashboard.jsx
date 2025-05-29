@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   ReportCard,
   ReportTable2,
@@ -14,7 +14,16 @@ import { useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 
 const Dashboard = () => {
-  const userFromStore = useSelector((state) => state.auth?.user);
+  const { user } = useSelector((state) => state.auth);
+  const [isLoading, setIsLoading] = useState(true);
+  const [stats, setStats] = useState({
+    totalReports: 0,
+    verifiedReports: 0,
+    pendingReports: 0,
+    totalInterventions: 0,
+    activeInterventions: 0,
+    completedInterventions: 0,
+  });
   const navigate = useNavigate();
 
   // Fetching the posts from the API
@@ -97,11 +106,23 @@ const Dashboard = () => {
     navigate("/admin/denguemapping");
   };
 
+  // Add null check for user
+  if (!user) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold text-primary mb-4">Loading...</h2>
+          <p>Please wait while we load your dashboard.</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <main className="flex flex-col w-full">
       <div className="bg-primary text-white flex flex-col p-6 rounded-2xl mb-4">
         <p className="text-5xl font-[Koulen] lowercase">
-          Hello, {userFromStore.name}
+          Hello, {user.name}
         </p>
         <p className="text-lg">Today is {formattedDate}</p>
       </div>

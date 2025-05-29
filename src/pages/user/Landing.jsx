@@ -33,23 +33,60 @@ import RiskMap from "../../components/RiskMap";
 import NewPostModal from "../../components/Community/NewPostModal";
 import { useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
-import { toastInfo } from "../../utils";
+import { toastInfo, toastSuccess } from "../../utils";
 
 const Landing = () => {
   const modalRef = useRef(null);
   const navigate = useNavigate();
+  const { user } = useSelector((state) => state.auth);
 
-  // Get user from Redux store (same as Navbar)
-  const userFromStore = useSelector((state) => state.auth?.user);
-  let user;
-  if (userFromStore && userFromStore.role === "user") {
-    user = userFromStore;
-  } else {
-    user = { name: "Guest" };
-  }
+  useEffect(() => {
+    // Check if there's a token in localStorage
+    const token = localStorage.getItem("token");
+    if (token) {
+      // If there's a user in Redux state, use that
+      if (user) {
+        console.log("[DEBUG] Landing - Redirecting based on Redux user role:", user.role);
+        switch (user.role) {
+          case "admin":
+            navigate("/admin/dashboard");
+            break;
+          case "superadmin":
+            navigate("/superadmin/users");
+            break;
+          case "user":
+            // Stay on landing page for regular users
+            break;
+          default:
+            break;
+        }
+      } else {
+        // If no user in Redux but token exists, try to get user from localStorage
+        const storedUser = localStorage.getItem("user");
+        if (storedUser) {
+          const parsedUser = JSON.parse(storedUser);
+          console.log("[DEBUG] Landing - Redirecting based on localStorage user role:", parsedUser.role);
+          switch (parsedUser.role) {
+            case "admin":
+              navigate("/admin/dashboard");
+              break;
+            case "superadmin":
+              navigate("/superadmin/users");
+              break;
+            case "user":
+              // Stay on landing page for regular users
+              break;
+            default:
+              break;
+          }
+        }
+      }
+    }
+  }, [navigate, user]);
 
   const handleReportClick = () => {
-    if (user.name === "Guest") {
+    // Check if user exists and has a name property
+    if (!user || user.name === "Guest") {
       // Show toast message instead of navigating directly
       toastInfo("Please log in to share your report");
       // Optional: navigate to login after a short delay
@@ -172,7 +209,7 @@ const Landing = () => {
           <img src={profile1} className="h-12 w-12 rounded-full" />
           <input
             type="text"
-            placeholder={user.name === "Guest" ? "Login to share your report..." : "Share your report here..."}
+            placeholder={!user || user.name === "Guest" ? "Login to share your report..." : "Share your report here..."}
             className="flex-1 input input-lg my-1 text-lg rounded-2xl input-primary placeholder:text-primary placeholder:italic"
             readOnly
           />
