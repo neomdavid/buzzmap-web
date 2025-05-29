@@ -109,9 +109,9 @@ const ArchivedAccounts = ({
   }, [columns]);
 
   return (
-    <div className="flex flex-col h-[500px]">
-      <div className="flex justify-between items-center mb-4">
-        <p className="text-2xl font-bold">{title}</p>
+    <div className="flex flex-col h-[500px] py-6">
+      <div className="flex justify-between items-center mb-6">
+        <p className="text-2xl font-bold text-5xl font-extrabold mb-12 md:mb-0 text-center md:justify-start md:text-left md:w-[48%] ">{title}</p>
         <Link 
           to={backLink}
           className="btn btn-outline rounded-full"

@@ -318,7 +318,7 @@ function SprAdmins() {
         <p className="flex justify-center text-5xl font-extrabold mb-12 md:mb-0 text-center md:justify-start md:text-left md:w-[48%] ">
           Admin Management
         </p>
-        <div className="flex gap-4">
+        <div className="flex items-center gap-6">
           <Link to="/superadmin/admins/archives" className="btn btn-outline rounded-full">
             View Archives
           </Link>

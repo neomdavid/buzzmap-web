@@ -22,10 +22,10 @@ const containerStyle = {
 };
 
 const QC_BOUNDS = {
-  north: 14.7406,
-  south: 14.4795,
-  east: 121.1535,
-  west: 121.022,
+  north: 14.7800,
+  south: 14.4500,
+  east: 121.2000,
+  west: 120.9800,
 };
 
 const QC_CENTER = {
@@ -132,26 +132,64 @@ const Mapping = () => {
     return filtered;
   }, [allInterventionsData]);
 
-  console.log('Barangays List:', barangaysList); // Debug barangays list
-  console.log('Pattern Data:', patternData); // Debug pattern data
+  // Add this function to verify location using Google Maps Geocoding
+  const verifyLocationWithGoogle = async (coords) => {
+    try {
+      const geocoder = new window.google.maps.Geocoder();
+      const response = await new Promise((resolve, reject) => {
+        geocoder.geocode(
+          { location: coords },
+          (results, status) => {
+            if (status === 'OK') {
+              resolve(results);
+            } else {
+              reject(new Error('Geocoding failed'));
+            }
+          }
+        );
+      });
 
-  // Create a separate function for location handling
-  const handleLocation = (coords) => {
-    // Check if location is within QC bounds
-    if (
-      coords.lat < QC_BOUNDS.south ||
-      coords.lat > QC_BOUNDS.north ||
-      coords.lng < QC_BOUNDS.west ||
-      coords.lng > QC_BOUNDS.east
-    ) {
-      setCurrentPosition(QC_CENTER);
-      toastWarn("Location is outside Quezon City.");
-      mapRef.current?.panTo(QC_CENTER);
-      return false;
+      // Check if the location is in Quezon City
+      const isInQuezonCity = response.some(result => 
+        result.address_components.some(component => 
+          component.long_name === 'Quezon City' && 
+          component.types.includes('locality')
+        )
+      );
+
+      if (isInQuezonCity) {
+        return coords;
+      }
+
+      // If not in Quezon City, try to find the center of Quezon City
+      const qcResponse = await new Promise((resolve, reject) => {
+        geocoder.geocode(
+          { address: 'Quezon City, Philippines' },
+          (results, status) => {
+            if (status === 'OK') {
+              resolve(results);
+            } else {
+              reject(new Error('Geocoding failed'));
+            }
+          }
+        );
+      });
+
+      if (qcResponse && qcResponse[0] && qcResponse[0].geometry && qcResponse[0].geometry.location) {
+        return {
+          lat: qcResponse[0].geometry.location.lat(),
+          lng: qcResponse[0].geometry.location.lng()
+        };
+      }
+
+      return QC_CENTER;
+    } catch (error) {
+      console.error('Error in verifyLocationWithGoogle:', error);
+      return QC_CENTER;
     }
-    return true;
   };
 
+  // Add back the fetchData function
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -172,7 +210,7 @@ const Mapping = () => {
         if (!barangayResponse.ok) throw new Error('Failed to load barangay data');
         const barangayGeoJson = await barangayResponse.json();
 
-        // --- BEGIN: Copy logic from DengueMap.jsx for integrating barangaysList ---
+        // Process barangay data
         let processedBarangayData = barangayGeoJson;
         if (barangaysList) {
           processedBarangayData = {
@@ -183,7 +221,6 @@ const Mapping = () => {
               const barangayListObj = barangaysList.find(
                 b => normalizeBarangayName(b.name) === normalizedGeoJsonName
               );
-              // Get pattern type ONLY from status_and_recommendation.pattern_based.status
               let patternType = barangayListObj?.status_and_recommendation?.pattern_based?.status?.toLowerCase();
               if (!patternType || patternType === "") patternType = "none";
               const color = PATTERN_COLORS[patternType] || PATTERN_COLORS.default;
@@ -206,23 +243,6 @@ const Mapping = () => {
           };
         }
         setBarangayData(processedBarangayData);
-        // --- END: Copy logic from DengueMap.jsx ---
-
-        // Get user location - only once
-        navigator.geolocation.getCurrentPosition(
-          ({ coords }) => {
-            const p = { lat: coords.latitude, lng: coords.longitude };
-            if (handleLocation(p)) {
-              setCurrentPosition(p);
-              handleLocationSelect(p);
-            }
-          },
-          () => {
-            setCurrentPosition(QC_CENTER);
-            toastWarn("Unable to get your location. Default location set to QC center.");
-            mapRef.current?.panTo(QC_CENTER);
-          }
-        );
 
         // Process breeding sites
         if (posts) {
@@ -235,7 +255,7 @@ const Mapping = () => {
           setBreedingSites(validatedSites);
         }
       } catch (err) {
-        console.error('Error in fetchData:', err); // Debug errors
+        console.error('Error in fetchData:', err);
         setError(err.message);
       } finally {
         setLoading(false);
@@ -245,10 +265,72 @@ const Mapping = () => {
     fetchData();
   }, [barangaysList, posts]);
 
+  // Update the location handling useEffect to handle errors better
+  useEffect(() => {
+    if (!currentPosition && isLoaded) {
+      const geoOptions = {
+        enableHighAccuracy: true,
+        timeout: 15000,
+        maximumAge: 0
+      };
+
+      navigator.geolocation.getCurrentPosition(
+        async ({ coords }) => {
+          try {
+            const initialPosition = { 
+              lat: coords.latitude, 
+              lng: coords.longitude 
+            };
+
+            // Verify location with Google Maps
+            const verifiedPosition = await verifyLocationWithGoogle(initialPosition);
+            
+            setCurrentPosition(verifiedPosition);
+            setUserMarker(verifiedPosition);
+            
+            if (mapRef.current) {
+              mapRef.current.panTo(verifiedPosition);
+              mapRef.current.setZoom(15);
+            }
+          } catch (error) {
+            console.error('Error getting location:', error);
+            setCurrentPosition(QC_CENTER);
+            setUserMarker(QC_CENTER);
+            if (mapRef.current) {
+              mapRef.current.panTo(QC_CENTER);
+              mapRef.current.setZoom(15);
+            }
+          }
+        },
+        async () => {
+          try {
+            // If geolocation fails, use Google Maps to get Quezon City center
+            const qcPosition = await verifyLocationWithGoogle(QC_CENTER);
+            setCurrentPosition(qcPosition);
+            setUserMarker(qcPosition);
+            toastWarn("Unable to get your location. Default location set to QC center.");
+            if (mapRef.current) {
+              mapRef.current.panTo(qcPosition);
+              mapRef.current.setZoom(15);
+            }
+          } catch (error) {
+            console.error('Error getting QC center:', error);
+            setCurrentPosition(QC_CENTER);
+            setUserMarker(QC_CENTER);
+            if (mapRef.current) {
+              mapRef.current.panTo(QC_CENTER);
+              mapRef.current.setZoom(15);
+            }
+          }
+        },
+        geoOptions
+      );
+    }
+  }, [isLoaded]);
+
   // Handle barangay selection
   const handleBarangaySelect = (e) => {
     const selectedBarangayName = e.target.value;
-    console.log('Selected Barangay:', selectedBarangayName); // Debug selected barangay
 
     if (!selectedBarangayName || !barangayData) return;
 
@@ -256,14 +338,10 @@ const Mapping = () => {
       feature.properties.name === selectedBarangayName
     );
 
-    console.log('Matching Barangay Feature:', matchingBarangay); // Debug matching feature
-
     if (matchingBarangay) {
       const center = turf.center(matchingBarangay.geometry);
       const { coordinates } = center.geometry;
       const [lng, lat] = coordinates;
-
-      console.log('Found coordinates:', { lat, lng }); // Debug coordinates
 
       if (lat && lng && !isNaN(lat) && !isNaN(lng)) {
         mapRef.current?.panTo({ lat, lng });
@@ -305,39 +383,42 @@ const Mapping = () => {
 
   const toggleFullScreen = () => setIsFullScreen((prev) => !prev);
 
-  const showCurrentLocation = () => {
+  // Update showCurrentLocation function
+  const showCurrentLocation = async () => {
     if (!navigator.geolocation) {
       toastWarn("Geolocation is not supported by your browser");
       return;
     }
 
+    const geoOptions = {
+      enableHighAccuracy: true,
+      timeout: 15000,
+      maximumAge: 0
+    };
+
     navigator.geolocation.getCurrentPosition(
-      ({ coords }) => {
+      async ({ coords }) => {
         const position = { lat: coords.latitude, lng: coords.longitude };
         
-        // Check if location is within QC bounds
-        if (
-          position.lat < QC_BOUNDS.south ||
-          position.lat > QC_BOUNDS.north ||
-          position.lng < QC_BOUNDS.west ||
-          position.lng > QC_BOUNDS.east
-        ) {
-          toastWarn("Your location is outside Quezon City");
-          return;
-        }
-
-        // Set the user marker
-        setUserMarker(position);
+        // Verify location with Google Maps
+        const verifiedLocation = await verifyLocationWithGoogle(position);
         
-        // Pan the map to the user's location
+        setUserMarker(verifiedLocation);
         if (mapRef.current) {
-          mapRef.current.panTo(position);
-          mapRef.current.setZoom(15); // Zoom in a bit to show the location better
+          mapRef.current.panTo(verifiedLocation);
+          mapRef.current.setZoom(15);
         }
       },
-      () => {
+      async () => {
+        const verifiedLocation = await verifyLocationWithGoogle(QC_CENTER);
+        setUserMarker(verifiedLocation);
         toastWarn("Unable to get your location");
-      }
+        if (mapRef.current) {
+          mapRef.current.panTo(verifiedLocation);
+          mapRef.current.setZoom(15);
+        }
+      },
+      geoOptions
     );
   };
 
