@@ -302,7 +302,12 @@ const Community = () => {
             }}
             className="w-full hover:cursor-pointer"
           >
-            <CustomInput profileSrc={profile1} showImagePicker={true} className="hover:cursor-pointer" />
+            <CustomInput 
+              profileSrc={profile1} 
+              showImagePicker={true} 
+              className="hover:cursor-pointer" 
+              readOnly
+            />
           </button>
         </section>
         {/* POST MODAL */}

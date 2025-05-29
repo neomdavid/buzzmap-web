@@ -5,6 +5,7 @@ import { toastSuccess, toastError } from "../../utils.jsx";
 import { useCreateAdminMutation, useVerifyAdminOTPMutation, useLoginMutation, useGetAccountsQuery } from "../../api/dengueApi";
 import { useSelector } from "react-redux";
 import { UserGear, CheckCircle, XCircle, Clock } from "phosphor-react";
+import { Link } from "react-router-dom";
 
 function SprAdmins() {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -126,20 +127,21 @@ function SprAdmins() {
 
   const handleNextStep = async () => {
     if (validateForm()) {
-      // Check if email already exists in accounts
+      // Check if email already exists in active accounts only
       const emailExists = accounts?.some(account => 
-        account.email.toLowerCase() === formData.email.trim().toLowerCase()
+        account.email.toLowerCase() === formData.email.trim().toLowerCase() &&
+        account.status !== 'deleted' // Only check non-deleted accounts
       );
 
       if (emailExists) {
         setErrors(prev => ({
           ...prev,
-          email: "An account with this email already exists"
+          email: "An active account with this email already exists"
         }));
-        return; // Don't proceed to next step if email exists
+        return; // Don't proceed to next step if email exists in active accounts
       }
 
-      // If email doesn't exist, proceed to next step
+      // If email doesn't exist in active accounts, proceed to next step
       setCurrentStep(2);
     }
   };
@@ -176,6 +178,9 @@ function SprAdmins() {
       role: "admin"
     };
 
+    console.log('[DEBUG] Creating admin account with data:', requestData);
+    console.log('[DEBUG] API URL:', 'http://localhost:4000/api/v1/accounts');
+
     try {
       const isVerified = await verifySuperAdmin();
       if (!isVerified) {
@@ -183,14 +188,17 @@ function SprAdmins() {
         return;
       }
 
+      console.log('[DEBUG] Sending create admin request...');
       const response = await createAdmin(requestData).unwrap();
+      console.log('[DEBUG] Create admin response:', response);
       
       toastSuccess("Admin account created successfully. Please check your email for verification.");
       setCurrentStep(3);
     } catch (error) {
-      console.error('Admin creation failed:', {
+      console.error('[DEBUG] Admin creation failed:', {
         errorStatus: error?.status,
-        errorMessage: error?.data?.message
+        errorMessage: error?.data?.message,
+        errorData: error?.data
       });
       toastError(error?.data?.message || "Failed to create admin");
     } finally {
@@ -310,14 +318,18 @@ function SprAdmins() {
         <p className="flex justify-center text-5xl font-extrabold mb-12 md:mb-0 text-center md:justify-start md:text-left md:w-[48%] ">
           Admin Management
         </p>
-        
-        <button
-          className="flex items-center justify-center gap-2 bg-primary text-white px-6 py-3 rounded-lg hover:bg-primary/90 transition-colors shadow-sm md:w-auto w-full hover:cursor-pointer"
-          onClick={() => setIsModalOpen(true)}
-        >
-          <IconPlus size={20} />
-          Create New Admin
-        </button>
+        <div className="flex gap-4">
+          <Link to="/superadmin/admins/archives" className="btn btn-outline rounded-full">
+            View Archives
+          </Link>
+          <button
+            className="flex items-center justify-center gap-2 bg-primary text-white px-6 py-3 rounded-lg hover:bg-primary/90 transition-colors shadow-sm md:w-auto w-full hover:cursor-pointer"
+            onClick={() => setIsModalOpen(true)}
+          >
+            <IconPlus size={20} />
+            Create New Admin
+          </button>
+        </div>
       </div>
 
         {/* Add Filters Section */}
@@ -393,7 +405,11 @@ function SprAdmins() {
         onClose={handleModalClose}
       >
         <div className="modal-box gap-6 text-lg w-10/12 max-w-3xl p-8 sm:p-12 rounded-3xl">
-          <form onSubmit={handleSubmit}>
+          <form onSubmit={(e) => {
+            e.preventDefault();
+            console.log('[DEBUG] Form submitted');
+            handleSubmit(e);
+          }}>
             {currentStep === 1 ? (
               <div className="flex flex-col gap-6">
                 <p className="text-center text-3xl font-bold">
@@ -529,6 +545,7 @@ function SprAdmins() {
                   </button>
                   <button
                     type="submit"
+                    onClick={() => console.log('[DEBUG] Submit button clicked')}
                     className={`flex items-center gap-2 bg-gradient-to-r from-[#245261] to-[#4AA8C7] text-white px-6 py-2.5 rounded-xl hover:opacity-90 transition-opacity hover:cursor-pointer ${
                       isSubmitting ? "opacity-70 cursor-wait" : ""
                     }`}

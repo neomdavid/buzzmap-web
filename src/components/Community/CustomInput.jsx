@@ -5,6 +5,7 @@ const CustomInput = ({
   placeholder = "Is there anything you'd like to share?",
   profileSrc,
   showImagePicker = false,
+  readOnly = false,
 }) => {
   return (
     <div className="flex items-center gap-4">
@@ -15,6 +16,7 @@ const CustomInput = ({
         <input
           type="text"
           placeholder={placeholder}
+          readOnly={readOnly}
           className="w-full text-md bg-white px-4 py-3 pr-15 rounded-lg border-none placeholder-gray-400 focus:outline-none"
         />
         {showImagePicker && (

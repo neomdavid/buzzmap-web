@@ -2,6 +2,7 @@ import { UsersTable } from "../../components";
 import { useState, useEffect } from "react";
 import { User, CheckCircle, XCircle, Clock } from "phosphor-react";
 import { useGetUsersQuery } from "../../api/dengueApi";
+import { Link } from "react-router-dom";
 
 function SprUsers() {
   // Add the users query
@@ -98,6 +99,9 @@ function SprUsers() {
         <p className="flex justify-center text-5xl font-extrabold mb-12 md:mb-0 text-center md:justify-start md:text-left md:w-[48%]">
           User Management
         </p>
+        <Link to="/superadmin/users/archives" className="btn btn-outline rounded-full">
+          View Archives
+        </Link>
       </div>
 
        {/* Filters Section */}

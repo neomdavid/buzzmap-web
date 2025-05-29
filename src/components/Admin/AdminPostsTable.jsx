@@ -8,6 +8,7 @@ import {
 } from "../../api/dengueApi";
 import { useSelector } from "react-redux";
 import { toastSuccess, toastError } from "../../utils";
+import { Link } from "react-router-dom";
 
 const customTheme = themeQuartz.withParams({
   borderRadius: 10,
@@ -112,12 +113,14 @@ const AdminPostsTable = () => {
 
   const rows = useMemo(
     () =>
-      (adminPosts || []).map((post) => ({
-        ...post,
-        publishDate: post.publishDate
-          ? new Date(post.publishDate).toLocaleString()
-          : "N/A",
-      })),
+      (adminPosts || [])
+        .filter(post => post.status === "active")
+        .map((post) => ({
+          ...post,
+          publishDate: post.publishDate
+            ? new Date(post.publishDate).toLocaleString()
+            : "N/A",
+        })),
     [adminPosts]
   );
 
@@ -180,12 +183,17 @@ const AdminPostsTable = () => {
 
   return (
     <div className="flex flex-col h-[500px]">
-      <p className="text-2xl font-bold mb-4">Recent Admin Posts</p>
+      <div className="flex justify-between items-center mb-4">
+        <p className="text-2xl font-bold">Recent Admin Posts</p>
+        <Link to="/admin/cea/ap/archives" className="btn btn-outline rounded-full">
+          View Archives
+        </Link>
+      </div>
       {isLoading ? (
         <p>Loading...</p>
       ) : rows.length === 0 ? (
         <div className="h-[500px] flex items-center justify-center text-gray-500">
-          No posts to display.
+          No active posts to display.
         </div>
       ) : (
         <div className="ag-theme-quartz h-[500px] w-full">

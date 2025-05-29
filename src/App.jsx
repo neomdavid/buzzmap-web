@@ -42,6 +42,10 @@ import {
 import { toastError } from "./utils.jsx";
 import ErrorPage from "./pages/ErrorPage";
 import SearchResults from './pages/user/SearchResults';
+import ActivePosts from './pages/admin/CEA/ActivePosts';
+import ArchivedAdminPosts from './pages/admin/CEA/ArchivedAdminPosts';
+import ArchivedUsers from './pages/superadmin/ArchivedUsers';
+import ArchivedAdmins from './pages/superadmin/ArchivedAdmins';
 
 // Helper functions
 const getUserData = () => {
@@ -220,7 +224,14 @@ function App() {
         { path: "/admin/interventions", element: <Interventions /> },
         { path: "/admin/interventions/all", element: <AllInterventions /> },
         { path: "/admin/interventions/e", element: <InterventionEffectivity /> },
-        { path: "/admin/cea", element: <CEA /> },
+        { 
+          path: "/admin/cea",
+          element: <CEA />,
+          children: [
+            { index: true, element: <ActivePosts /> },
+            { path: "ap/archives", element: <ArchivedAdminPosts /> }
+          ]
+        },
       ],
     },
 
@@ -235,7 +246,9 @@ function App() {
       children: [
         { index: true, element: <Navigate to="/superadmin/users" replace /> },
         { path: "/superadmin/users", element: <SprUsers /> },
+        { path: "/superadmin/users/archives", element: <ArchivedUsers /> },
         { path: "/superadmin/admins", element: <SprAdmins /> },
+        { path: "/superadmin/admins/archives", element: <ArchivedAdmins /> },
       ],
     },
 

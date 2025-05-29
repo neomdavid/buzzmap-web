@@ -291,8 +291,9 @@ function AdminsTable({ statusFilter, roleFilter, searchQuery }) {
     
     return accounts
       .filter(account => {
-        // First filter by role (admin/superadmin)
+        // First filter by role (admin/superadmin) and not deleted
         const roleMatch = account.role === 'admin' || account.role === 'superadmin';
+        const isNotDeleted = account.status !== 'deleted';
         
         // Then apply status filter if it exists
         const statusMatch = !statusFilter || 
@@ -308,7 +309,7 @@ function AdminsTable({ statusFilter, roleFilter, searchQuery }) {
           account.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
           account.email.toLowerCase().includes(searchQuery.toLowerCase());
 
-        return roleMatch && statusMatch && roleTypeMatch && searchMatch;
+        return roleMatch && isNotDeleted && statusMatch && roleTypeMatch && searchMatch;
       })
       .map(account => ({
         _id: account._id,

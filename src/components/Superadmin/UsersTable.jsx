@@ -6,7 +6,7 @@ import {
 import { AgGridReact } from "ag-grid-react";
 import { useState, useMemo, useRef, useCallback, useEffect } from "react";
 import { IconSearch, IconBan, IconTrash } from "@tabler/icons-react";
-import { useGetUsersQuery, useDeleteAccountMutation, useLoginMutation, useToggleAccountStatusMutation } from "../../api/dengueApi";
+import { useGetAccountsQuery, useDeleteAccountMutation, useLoginMutation, useToggleAccountStatusMutation } from "../../api/dengueApi";
 import { useSelector } from "react-redux";
 import { toastSuccess, toastError } from "../../utils.jsx";
 
@@ -33,7 +33,7 @@ const customTheme = themeQuartz.withParams({
 });
 
 function UsersTable({ statusFilter, roleFilter, searchQuery }) {
-  const { data: users, isLoading, error, refetch } = useGetUsersQuery();
+  const { data: accounts, isLoading, error, refetch } = useGetAccountsQuery();
   const gridRef = useRef(null);
   
   // Add state for modals and actions
@@ -167,19 +167,23 @@ function UsersTable({ statusFilter, roleFilter, searchQuery }) {
 
   // Move ActionsCell inside UsersTable component
   const ActionsCell = useCallback((p) => {
+    const showBanButton = p.data.status === 'active' || p.data.status === 'banned';
+    
     return (
       <div className="py-2 h-full w-full flex items-center gap-2">
         <button className="flex items-center gap-1 text-primary hover:bg-gray-200 p-1 rounded-md">
           <IconSearch size={13} stroke={2.5} />
           <p className="text-sm">view</p>
         </button>
-        <button 
-          onClick={() => handleBanClick(p.data)}
-          className="flex items-center gap-1 text-warning hover:bg-gray-200 p-1 rounded-md"
-        >
-          <IconBan size={15} stroke={2} />
-          <p className="text-sm">{p.data.status === "banned" ? "unban" : "ban"}</p>
-        </button>
+        {showBanButton && (
+          <button 
+            onClick={() => handleBanClick(p.data)}
+            className="flex items-center gap-1 text-warning hover:bg-gray-200 p-1 rounded-md"
+          >
+            <IconBan size={15} stroke={2} />
+            <p className="text-sm">{p.data.status === "banned" ? "unban" : "ban"}</p>
+          </button>
+        )}
         <button 
           onClick={() => handleDeleteClick(p.data)}
           className="flex items-center gap-1 text-error hover:bg-gray-200 p-1 rounded-md"
@@ -193,45 +197,41 @@ function UsersTable({ statusFilter, roleFilter, searchQuery }) {
 
   // Transform the data for the grid
   const rowData = useMemo(() => {
-    if (!users) return [];
+    if (!accounts) return [];
     
-    console.log('Raw users data before transformation:', users);
+    console.log('Raw accounts data before transformation:', accounts);
     
-    const transformedData = users
-      .filter(user => {
-        // Apply status filter
-        const statusMatch = !statusFilter || user.status === statusFilter;
+    const transformedData = accounts
+      .filter(account => {
+        // First filter for users only and not deleted
+        const isUser = account.role === 'user';
+        const isNotDeleted = account.status !== 'deleted';
         
-        // Apply role filter
-        const roleMatch = !roleFilter || user.role === roleFilter;
+        // Then apply status filter
+        const statusMatch = !statusFilter || account.status === statusFilter;
+        
+        // Then apply role filter
+        const roleMatch = !roleFilter || account.role === roleFilter;
 
         // Apply search filter
         const searchMatch = !searchQuery || 
-          user.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          user.email.toLowerCase().includes(searchQuery.toLowerCase());
+          account.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          account.email.toLowerCase().includes(searchQuery.toLowerCase());
 
-        return statusMatch && roleMatch && searchMatch;
+        return isUser && isNotDeleted && statusMatch && roleMatch && searchMatch;
       })
-      .map(user => {
-        // Use the status directly from the API response
-        const transformed = {
-          _id: user._id,
-          username: user.username,
-          email: user.email,
-          role: user.role,
-          joined: user.createdAt || user.updatedAt,
-          status: user.status, // Use the status directly from the API
-        };
-        console.log('Transformed user data:', {
-          original: user,
-          transformed: transformed
-        });
-        return transformed;
-      });
+      .map(account => ({
+        _id: account._id,
+        username: account.username,
+        email: account.email,
+        role: account.role,
+        joined: account.createdAt || account.updatedAt,
+        status: account.status,
+      }));
 
     console.log('Final transformed data:', transformedData);
     return transformedData;
-  }, [users, statusFilter, roleFilter, searchQuery]);
+  }, [accounts, statusFilter, roleFilter, searchQuery]);
 
   const columnDefs = useMemo(
     () => [
@@ -349,55 +349,56 @@ function UsersTable({ statusFilter, roleFilter, searchQuery }) {
       {/* Delete Confirmation Modal */}
       <dialog id="delete_modal" className="modal" open={showDeleteModal}>
         <div className="modal-box gap-6 text-lg w-10/12 max-w-3xl p-8 sm:p-12 rounded-3xl">
-          <div className="flex flex-col gap-6">
-            <p className="text-center text-3xl font-bold text-error">
-              Confirm User Deletion
-            </p>
-            <p className="text-center text-gray-600">
-              Please enter your super admin password to confirm this action
-            </p>
+          <form onSubmit={(e) => { e.preventDefault(); handleDeleteConfirm(); }}>
+            <div className="flex flex-col gap-6">
+              <p className="text-center text-3xl font-bold text-error">
+                Confirm User Deletion
+              </p>
+              <p className="text-center text-gray-600">
+                Please enter your super admin password to confirm this action
+              </p>
 
-            <div className="w-full flex flex-col gap-1">
-              <label className="text-primary font-bold">
-                Super Admin Password*
-              </label>
-              <input
-                type="password"
-                value={superAdminPassword}
-                onChange={(e) => {
-                  setSuperAdminPassword(e.target.value);
-                  setAuthError("");
-                }}
-                className={`p-3 bg-base-200 text-primary rounded-xl border-none ${
-                  authError ? "border-2 border-error" : ""
-                }`}
-                placeholder="Enter super admin password"
-              />
-              {authError && (
-                <p className="text-error text-sm mt-1">{authError}</p>
-              )}
-            </div>
+              <div className="w-full flex flex-col gap-1">
+                <label className="text-primary font-bold">
+                  Super Admin Password*
+                </label>
+                <input
+                  type="password"
+                  value={superAdminPassword}
+                  onChange={(e) => {
+                    setSuperAdminPassword(e.target.value);
+                    setAuthError("");
+                  }}
+                  className={`p-3 bg-base-200 text-primary rounded-xl border-none ${
+                    authError ? "border-2 border-error" : ""
+                  }`}
+                  placeholder="Enter super admin password"
+                />
+                {authError && (
+                  <p className="text-error text-sm mt-1">{authError}</p>
+                )}
+              </div>
 
-            <div className="w-full flex justify-end gap-3 mt-4">
-              <button
-                type="button"
-                className="bg-gray-300 text-white px-6 py-2.5 rounded-xl hover:bg-gray-400 transition-colors hover:cursor-pointer"
-                onClick={handleModalClose}
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleDeleteConfirm}
-                className={`flex items-center gap-2 bg-error text-white px-6 py-2.5 rounded-xl hover:opacity-90 transition-opacity hover:cursor-pointer ${
-                  isSubmitting ? "opacity-70 cursor-wait" : ""
-                }`}
-                disabled={isSubmitting}
-              >
-                {isSubmitting ? "Processing..." : "Delete User"}
-              </button>
+              <div className="w-full flex justify-end gap-3 mt-4">
+                <button
+                  type="button"
+                  className="bg-gray-300 text-white px-6 py-2.5 rounded-xl hover:bg-gray-400 transition-colors hover:cursor-pointer"
+                  onClick={handleModalClose}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className={`flex items-center gap-2 bg-error text-white px-6 py-2.5 rounded-xl hover:opacity-90 transition-opacity hover:cursor-pointer ${
+                    isSubmitting ? "opacity-70 cursor-wait" : ""
+                  }`}
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? "Processing..." : "Delete User"}
+                </button>
+              </div>
             </div>
-          </div>
+          </form>
         </div>
 
         <form method="dialog" className="modal-backdrop">
@@ -408,55 +409,56 @@ function UsersTable({ statusFilter, roleFilter, searchQuery }) {
       {/* Ban Confirmation Modal */}
       <dialog id="ban_modal" className="modal" open={showBanModal}>
         <div className="modal-box gap-6 text-lg w-10/12 max-w-3xl p-8 sm:p-12 rounded-3xl">
-          <div className="flex flex-col gap-6">
-            <p className="text-center text-3xl font-bold text-warning">
-              Confirm User {isBanning ? 'Ban' : 'Unban'}
-            </p>
-            <p className="text-center text-gray-600">
-              Please enter your super admin password to {isBanning ? 'ban' : 'unban'} this user
-            </p>
+          <form onSubmit={(e) => { e.preventDefault(); handleBanConfirm(); }}>
+            <div className="flex flex-col gap-6">
+              <p className="text-center text-3xl font-bold text-warning">
+                Confirm User {isBanning ? 'Ban' : 'Unban'}
+              </p>
+              <p className="text-center text-gray-600">
+                Please enter your super admin password to {isBanning ? 'ban' : 'unban'} this user
+              </p>
 
-            <div className="w-full flex flex-col gap-1">
-              <label className="text-primary font-bold">
-                Super Admin Password*
-              </label>
-              <input
-                type="password"
-                value={superAdminPassword}
-                onChange={(e) => {
-                  setSuperAdminPassword(e.target.value);
-                  setAuthError("");
-                }}
-                className={`p-3 bg-base-200 text-primary rounded-xl border-none ${
-                  authError ? "border-2 border-error" : ""
-                }`}
-                placeholder="Enter super admin password"
-              />
-              {authError && (
-                <p className="text-error text-sm mt-1">{authError}</p>
-              )}
-            </div>
+              <div className="w-full flex flex-col gap-1">
+                <label className="text-primary font-bold">
+                  Super Admin Password*
+                </label>
+                <input
+                  type="password"
+                  value={superAdminPassword}
+                  onChange={(e) => {
+                    setSuperAdminPassword(e.target.value);
+                    setAuthError("");
+                  }}
+                  className={`p-3 bg-base-200 text-primary rounded-xl border-none ${
+                    authError ? "border-2 border-error" : ""
+                  }`}
+                  placeholder="Enter super admin password"
+                />
+                {authError && (
+                  <p className="text-error text-sm mt-1">{authError}</p>
+                )}
+              </div>
 
-            <div className="w-full flex justify-end gap-3 mt-4">
-              <button
-                type="button"
-                className="bg-gray-300 text-white px-6 py-2.5 rounded-xl hover:bg-gray-400 transition-colors hover:cursor-pointer"
-                onClick={handleModalClose}
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleBanConfirm}
-                className={`flex items-center gap-2 bg-warning text-white px-6 py-2.5 rounded-xl hover:opacity-90 transition-opacity hover:cursor-pointer ${
-                  isSubmitting ? "opacity-70 cursor-wait" : ""
-                }`}
-                disabled={isSubmitting}
-              >
-                {isSubmitting ? "Processing..." : `${isBanning ? 'Ban' : 'Unban'} User`}
-              </button>
+              <div className="w-full flex justify-end gap-3 mt-4">
+                <button
+                  type="button"
+                  className="bg-gray-300 text-white px-6 py-2.5 rounded-xl hover:bg-gray-400 transition-colors hover:cursor-pointer"
+                  onClick={handleModalClose}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className={`flex items-center gap-2 bg-warning text-white px-6 py-2.5 rounded-xl hover:opacity-90 transition-opacity hover:cursor-pointer ${
+                    isSubmitting ? "opacity-70 cursor-wait" : ""
+                  }`}
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? "Processing..." : `${isBanning ? 'Ban' : 'Unban'} User`}
+                </button>
+              </div>
             </div>
-          </div>
+          </form>
         </div>
 
         <form method="dialog" className="modal-backdrop">

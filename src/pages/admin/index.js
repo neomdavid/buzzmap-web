@@ -7,3 +7,4 @@ export { default as DengueMapping } from "./DengueMapping.jsx";
 export { default as Interventions } from "./Interventions.jsx";
 export { default as AllInterventions } from "./AllInterventions.jsx";
 export { default as InterventionEffectivity } from './InterventionEffectivity.jsx';
+export { default as Archives } from "./Archives.jsx";
