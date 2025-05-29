@@ -132,6 +132,20 @@ const Mapping = () => {
     return filtered;
   }, [allInterventionsData]);
 
+  // Add this helper function near the top of the component
+  const panToWithOffset = (map, position, offsetY = 1230) => {
+    const bounds = map.getBounds();
+    if (!bounds) {
+      map.panTo(position);
+      return;
+    }
+    const ne = bounds.getNorthEast();
+    const sw = bounds.getSouthWest();
+    const latSpan = ne.lat() - sw.lat();
+    const newLat = position.lat + latSpan * offsetY;
+    map.panTo({ lat: newLat, lng: position.lng });
+  };
+
   // Add this function to verify location using Google Maps Geocoding
   const verifyLocationWithGoogle = async (coords) => {
     try {
@@ -289,7 +303,7 @@ const Mapping = () => {
             setUserMarker(verifiedPosition);
             
             if (mapRef.current) {
-              mapRef.current.panTo(verifiedPosition);
+              panToWithOffset(mapRef.current, verifiedPosition, 0.15);
               mapRef.current.setZoom(15);
             }
           } catch (error) {
@@ -297,7 +311,7 @@ const Mapping = () => {
             setCurrentPosition(QC_CENTER);
             setUserMarker(QC_CENTER);
             if (mapRef.current) {
-              mapRef.current.panTo(QC_CENTER);
+              panToWithOffset(mapRef.current, QC_CENTER, 0.15);
               mapRef.current.setZoom(15);
             }
           }
@@ -310,7 +324,7 @@ const Mapping = () => {
             setUserMarker(qcPosition);
             toastWarn("Unable to get your location. Default location set to QC center.");
             if (mapRef.current) {
-              mapRef.current.panTo(qcPosition);
+              panToWithOffset(mapRef.current, qcPosition, 0.15);
               mapRef.current.setZoom(15);
             }
           } catch (error) {
@@ -318,7 +332,7 @@ const Mapping = () => {
             setCurrentPosition(QC_CENTER);
             setUserMarker(QC_CENTER);
             if (mapRef.current) {
-              mapRef.current.panTo(QC_CENTER);
+              panToWithOffset(mapRef.current, QC_CENTER, 0.15);
               mapRef.current.setZoom(15);
             }
           }
@@ -344,7 +358,7 @@ const Mapping = () => {
       const [lng, lat] = coordinates;
 
       if (lat && lng && !isNaN(lat) && !isNaN(lng)) {
-        mapRef.current?.panTo({ lat, lng });
+        panToWithOffset(mapRef.current, { lat, lng }, 0.15);
         mapRef.current?.setZoom(15);
         setSelectedBarangayFeature(matchingBarangay);
         setSelectedBarangayCenter({ lat, lng });
@@ -405,7 +419,7 @@ const Mapping = () => {
         
         setUserMarker(verifiedLocation);
         if (mapRef.current) {
-          mapRef.current.panTo(verifiedLocation);
+          panToWithOffset(mapRef.current, verifiedLocation, 0.15);
           mapRef.current.setZoom(15);
         }
       },
@@ -414,7 +428,7 @@ const Mapping = () => {
         setUserMarker(verifiedLocation);
         toastWarn("Unable to get your location");
         if (mapRef.current) {
-          mapRef.current.panTo(verifiedLocation);
+          panToWithOffset(mapRef.current, verifiedLocation, 0.15);
           mapRef.current.setZoom(15);
         }
       },
@@ -463,110 +477,13 @@ const Mapping = () => {
   if (!currentPosition) return <ErrorMessage error="Unable to get your location" className="m-4" />;
 
   return (
-    <div className="flex flex-col pt-8 px-8 items-center bg-primary text-white h-[93vh] mt-[-13px] text-center pb-5">
-      <h1 className="text-7xl md:text-8xl">Check your place</h1>
-      <p className="text-lg md:text-xl mb-4">
-        Stay Protected. Look out for Dengue Outbreaks.
-      </p>
-
-      <div className="w-full max-w-md mb-4 flex gap-2"> {/* Use flex and gap for button layout */}
-        <button
-          onClick={() => setShowBreedingSites(!showBreedingSites)}
-          className={`w-full px-4 py-2 rounded-md shadow transition-colors ${
-            showBreedingSites
-              ? "bg-white text-primary"
-              : "bg-white/20 text-white hover:bg-white/30"
-          }`}
-        >
-          {showBreedingSites ? "Hide Breeding Sites" : "Show Breeding Sites"}
-        </button>
-        <button // New button for interventions
-          onClick={() => {
-            setShowInterventions(!showInterventions);
-            if (showInterventions) setSelectedIntervention(null); // Clear selection when hiding
-          }}
-          className={`w-full px-4 py-2 rounded-md shadow transition-colors ${
-            showInterventions
-              ? "bg-white text-primary"
-              : "bg-white/20 text-white hover:bg-white/30"
-          }`}
-        >
-          {showInterventions ? "Hide Interventions" : "Show Interventions"}
-        </button>
-      </div>
-
-      <div className="w-full max-w-md mb-4">
-        <select
-          value={searchQuery}
-          onChange={handleBarangaySelect}
-          className="w-full px-4 py-2 rounded-md shadow bg-white text-black"
-        >
-          <option value="">Select a barangay</option>
-          {barangaysList?.map((barangay) => (
-            <option key={barangay._id} value={barangay.name}>
-              {barangay.name}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      {/* Container for Legends */}
-      <div className="w-full max-w-md mb-4 flex flex-col sm:flex-row gap-4">
-        {/* Updated Legend for Pattern Types */}
-        <div className="flex-1 bg-white text-black rounded-md shadow px-4 py-3">
-          <p className="font-semibold mb-2 text-center sm:text-left">Pattern Types</p>
-          <div className="flex items-center justify-between sm:justify-start gap-2 flex-wrap">
-            {Object.entries(PATTERN_COLORS)
-              .filter(([key]) => key !== 'default') // Exclude 'default' from legend
-              .sort(([aKey], [bKey]) => { 
-                // Updated order: None, Stability, Decline, Gradual Rise, Spike
-                const order = { none: 0, stability: 1, decline: 2, gradual_rise: 3, spike: 4 };
-                return order[aKey] - order[bKey];
-              })
-              .map(([pattern, color]) => (
-                <div key={pattern} className="flex items-center gap-1">
-                  <span
-                    style={{ backgroundColor: color, width: '12px', height: '12px' }}
-                    className="inline-block"
-                  />
-                  <span className="text-xs">
-                    {pattern.charAt(0).toUpperCase() + pattern.slice(1).replace('_', ' ')}
-                  </span>
-                </div>
-              ))}
-          </div>
-        </div>
-
-        {/* Intervention Legend - Moved here */}
-        {showInterventions && (
-          <div className="flex-1 bg-white text-black rounded-md shadow px-4 py-3">
-            <p className="font-semibold mb-2 text-center sm:text-left">Intervention Status</p>
-            <div className="flex items-center justify-around sm:justify-start gap-2 flex-wrap">
-              {Object.entries(INTERVENTION_STATUS_COLORS)
-                .filter(([key]) => key !== 'default' && key !== 'completed') // Show relevant statuses
-                .map(([status, color]) => (
-                  <div key={status} className="flex items-center gap-1">
-                    <span
-                      style={{ backgroundColor: color }}
-                      className="w-3 h-3 inline-block rounded-full"
-                    />
-                    <span className="text-xs">
-                      {status.charAt(0).toUpperCase() + status.slice(1)}
-                    </span>
-                  </div>
-                ))}
-            </div>
-          </div>
-        )}
-      </div>
-
-      <div className="w-full z-[10] h-[68vh] rounded-md shadow-md relative">
-      
-
+    <div className="relative h-[92.3vh] mt-[-9.5px]  w-[100vw] overflow-hidden">
+      {/* Map container - full screen */}
+      <div className="absolute inset-0 z-0 ">
         <GoogleMap
           mapContainerStyle={{
-            ...containerStyle,
-            height: isFullScreen ? "100vh" : "100%",
+            width: "100%",
+            height: "100%",
           }}
           center={currentPosition}
           zoom={13}
@@ -665,7 +582,7 @@ const Mapping = () => {
                     setSelectedBarangayCenter({ lat, lng });
                     setSelectedBarangayId(`${index}-${i}`);
                     if (mapRef.current && lat && lng && !isNaN(lat) && !isNaN(lng)) {
-                      mapRef.current.panTo({ lat, lng });
+                      panToWithOffset(mapRef.current, { lat, lng }, 0.15);
                     }
                   }}
                 />
@@ -713,10 +630,10 @@ const Mapping = () => {
                     onClick={() => {
                       setSelectedBreedingSite(site);
                       if (mapRef.current) {
-                        mapRef.current.panTo({
+                        panToWithOffset(mapRef.current, {
                           lat: site.specific_location.coordinates[1],
                           lng: site.specific_location.coordinates[0],
-                        });
+                        }, 0.15);
                         mapRef.current.setZoom(17);
                       }
                     }}
@@ -755,10 +672,11 @@ const Mapping = () => {
                   }}
                   options={{
                     pixelOffset: new window.google.maps.Size(0, -30),
-                    disableAutoPan: false
+                    disableAutoPan: false,
+                    maxWidth: 500
                   }}
                 >
-                  <div className="bg-white p-4 rounded-lg text-center h-auto" style={{ width: "50vw" }}>
+                  <div className="bg-white p-4 rounded-lg text-center h-auto">
                     <p className="text-4xl font-[900]" style={{ color: patternCardColor }}>
                       Barangay {displayName}
                     </p>
@@ -800,10 +718,13 @@ const Mapping = () => {
                 lng: selectedBreedingSite.specific_location.coordinates[0],
               }}
               onCloseClick={() => setSelectedBreedingSite(null)}
+              options={{
+                maxWidth: 500
+              }}
             >
-              <div className="bg-white p-4 rounded-lg text-primary w-[50vw] text-center">
+              <div className="bg-white p-4 rounded-lg text-primary text-center">
                 <p className="font-bold text-4xl font-extrabold mb-4 text-primary">
-                  {selectedBreedingSite.report_type}
+                  {selectedBreedingSite.report_type}  
                 </p>
                 <div className="flex flex-col items-center mt-2 space-y-1 font-normal text-center">
                   <p className="text-xl">
@@ -875,12 +796,11 @@ const Mapping = () => {
                 }}
                 onClick={() => {
                   setSelectedIntervention(intervention);
-                  // Optionally pan to the marker
                   if (mapRef.current) {
-                    mapRef.current.panTo({
+                    panToWithOffset(mapRef.current, {
                       lat: intervention.specific_location.coordinates[1],
                       lng: intervention.specific_location.coordinates[0],
-                    });
+                    }, 0.15);
                   }
                 }}
               />
@@ -895,10 +815,11 @@ const Mapping = () => {
               }}
               onCloseClick={() => setSelectedIntervention(null)}
               options={{
-                pixelOffset: new window.google.maps.Size(0, -30), // Adjust as needed
+                pixelOffset: new window.google.maps.Size(0, -30),
+                maxWidth: 500
               }}
             >
-              <div className="p-3 flex flex-col items-center gap-1 font-normal bg-white rounded-md shadow-md w-64 text-primary w-[50vw]">
+              <div className="p-3 flex flex-col items-center gap-1 font-normal bg-white rounded-md shadow-md text-primary">
                 <p className="text-4xl font-extrabold text-primary mb-2">{selectedIntervention.interventionType}</p>
                 <div className="text-lg flex items-center gap-2">
                   <span className="font-bold">Status:</span>
@@ -948,16 +869,122 @@ const Mapping = () => {
             />
           )}
         </GoogleMap>
-
-        {/* Add the location button */}
-        <button
-          onClick={showCurrentLocation}
-          className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-white text-primary hover:bg-gray-100 px-4 py-2 rounded-full shadow-lg flex items-center gap-2 transition-all duration-200"
-        >
-          <MapPin size={20} weight="fill" />
-          Show Current Location
-        </button>
       </div>
+
+      {/* Top shadow overlay */}
+      <div className="absolute top-0 left-0 right-0 h-24 bg-gradient-to-b from-black/10 to-transparent z-[1]" />
+
+      {/* Floating controls card */}
+      <div className="absolute top-4 left-10 z-10">
+        <div className="bg-white/60 backdrop-blur-md rounded-lg shadow-xl p-6 w-[400px] text-primary">
+          <h1 className="text-3xl font-bold text-primary mb-2">Check your place</h1>
+          <p className="text-sm text-primary mb-4">
+            Stay Protected. Look out for Dengue Outbreaks.
+          </p>
+
+          {/* Controls */}
+          <div className="flex flex-col gap-3">
+            {/* Buttons */}
+            <div className="flex gap-2">
+              <button
+                onClick={() => setShowBreedingSites(!showBreedingSites)}
+                className={`w-full px-4 py-2 rounded-md shadow transition-colors ${
+                  showBreedingSites
+                    ? "bg-primary text-white"
+                    : "bg-white text-primary hover:bg-gray-50 border border-gray-200"
+                }`}
+              >
+                {showBreedingSites ? "Hide Breeding Sites" : "Show Breeding Sites"}
+              </button>
+              <button
+                onClick={() => {
+                  setShowInterventions(!showInterventions);
+                  if (showInterventions) setSelectedIntervention(null);
+                }}
+                className={`w-full px-4 py-2 rounded-md shadow transition-colors ${
+                  showInterventions
+                    ? "bg-primary text-white"
+                    : "bg-white text-primary hover:bg-gray-50 border border-gray-200"
+                }`}
+              >
+                {showInterventions ? "Hide Interventions" : "Show Interventions"}
+              </button>
+            </div>
+
+            {/* Barangay Select */}
+            <select
+              value={searchQuery}
+              onChange={handleBarangaySelect}
+              className="w-full px-4 py-2 rounded-md shadow bg-white text-primary border border-gray-200"
+            >
+              <option value="">Select a barangay</option>
+              {barangaysList?.map((barangay) => (
+                <option key={barangay._id} value={barangay.name}>
+                  {barangay.name}
+                </option>
+              ))}
+            </select>
+
+            {/* Legends */}
+            <div className="flex flex-col gap-3">
+              {/* Pattern Types Legend */}
+              <div className="bg-white rounded-md shadow px-4 py-3 border border-gray-200">
+                <p className="font-semibold mb-2 text-primary">Pattern Types</p>
+                <div className="flex items-center justify-between sm:justify-start gap-2 flex-wrap">
+                  {Object.entries(PATTERN_COLORS)
+                    .filter(([key]) => key !== 'default')
+                    .sort(([aKey], [bKey]) => { 
+                      const order = { none: 0, stability: 1, decline: 2, gradual_rise: 3, spike: 4 };
+                      return order[aKey] - order[bKey];
+                    })
+                    .map(([pattern, color]) => (
+                      <div key={pattern} className="flex items-center gap-1">
+                        <span
+                          style={{ backgroundColor: color, width: '12px', height: '12px' }}
+                          className="inline-block"
+                        />
+                        <span className="text-xs text-primary">
+                          {pattern.charAt(0).toUpperCase() + pattern.slice(1).replace('_', ' ')}
+                        </span>
+                      </div>
+                    ))}
+                </div>
+              </div>
+
+              {/* Intervention Legend */}
+              {showInterventions && (
+                <div className="bg-white rounded-md shadow px-4 py-3 border border-gray-200">
+                  <p className="font-semibold mb-2 text-primary">Intervention Status</p>
+                  <div className="flex items-center justify-around sm:justify-start gap-2 flex-wrap">
+                    {Object.entries(INTERVENTION_STATUS_COLORS)
+                      .filter(([key]) => key !== 'default' && key !== 'completed')
+                      .map(([status, color]) => (
+                        <div key={status} className="flex items-center gap-1">
+                          <span
+                            style={{ backgroundColor: color }}
+                            className="w-3 h-3 inline-block rounded-full"
+                          />
+                          <span className="text-xs text-primary">
+                            {status.charAt(0).toUpperCase() + status.slice(1)}
+                          </span>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Location button */}
+      <button
+        onClick={showCurrentLocation}
+        className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-white text-primary hover:bg-gray-50 px-4 py-2 rounded-full shadow-lg flex items-center gap-2 transition-all duration-200 z-10"
+      >
+        <MapPin size={20} weight="fill" />
+        Show Current Location
+      </button>
     </div>
   );
 };
