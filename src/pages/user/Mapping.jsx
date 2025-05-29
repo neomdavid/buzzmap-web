@@ -877,7 +877,7 @@ const Mapping = () => {
       {/* Floating controls card */}
       <div className="absolute top-4 left-10 z-10">
         <div className="bg-white/60 backdrop-blur-md rounded-lg shadow-xl p-6 w-[400px] text-primary">
-          <h1 className="text-3xl font-bold text-primary mb-2">Check your place</h1>
+          <p className="text-3xl font-extrabold text-primary mb-2">Check your place</p>
           <p className="text-sm text-primary mb-4">
             Stay Protected. Look out for Dengue Outbreaks.
           </p>

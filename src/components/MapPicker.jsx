@@ -31,6 +31,15 @@ const RISK_LEVEL_COLORS = {
   unknown: "#718096",   // gray
 };
 
+// Add this near the top, after QC_BOUNDS and QC_CENTER
+const WORLD_BOUNDS = [
+  { lat: 90, lng: -180 },
+  { lat: 90, lng: 180 },
+  { lat: -90, lng: 180 },
+  { lat: -90, lng: -180 },
+  { lat: 90, lng: -180 }
+];
+
 export default function MapPicker({ onLocationSelect, bounds, defaultCity, defaultCoordinates }) {
   const [currentPosition, setCurrentPosition] = useState(null);
   const [markerPosition, setMarkerPosition] = useState(null);
@@ -39,6 +48,7 @@ export default function MapPicker({ onLocationSelect, bounds, defaultCity, defau
   const [isDataLoaded, setIsDataLoaded] = useState(false);
   const [toastMessage, setToastMessage] = useState(null);
   const [toastType, setToastType] = useState(null);
+  const [barangayHoles, setBarangayHoles] = useState([]);
   const mapRef = useRef(null);
   const { isLoaded } = useGoogleMaps();
   const [zoom, setZoom] = useState(13); // default zoom
@@ -77,6 +87,19 @@ export default function MapPicker({ onLocationSelect, bounds, defaultCity, defau
       .then((data) => {
         setBarangayData(data);
         setIsDataLoaded(true);
+        // Prepare holes for the mask
+        if (data.features && data.features.length > 0) {
+          const holes = data.features.map((feature) => {
+            if (feature.geometry.type === "Polygon") {
+              return feature.geometry.coordinates[0].map(([lng, lat]) => ({ lat, lng }));
+            } else if (feature.geometry.type === "MultiPolygon") {
+              // Use the first polygon in MultiPolygon
+              return feature.geometry.coordinates[0][0].map(([lng, lat]) => ({ lat, lng }));
+            }
+            return null;
+          }).filter(Boolean);
+          setBarangayHoles(holes);
+        }
       })
       .catch(error => {
         console.error('Error loading barangay boundaries:', error);
@@ -316,43 +339,7 @@ export default function MapPicker({ onLocationSelect, bounds, defaultCity, defau
           fullscreenControl: false
         }}
       >
-        {barangayData && barangayData.features.map((feature, index) => {
-          if (!feature || !feature.properties || !feature.properties.name) {
-            return null;
-          }
-
-          let paths = [];
-          if (feature.geometry.type === "Polygon") {
-            paths = feature.geometry.coordinates[0].map(coord => ({
-              lat: coord[1],
-              lng: coord[0]
-            }));
-          } else if (feature.geometry.type === "MultiPolygon") {
-            paths = feature.geometry.coordinates[0][0].map(coord => ({
-              lat: coord[1],
-              lng: coord[0]
-            }));
-          }
-
-          const barangayName = feature.properties.name;
-          const colors = getRiskColor(barangayName);
-
-          return (
-            <Polygon
-              key={index}
-              paths={paths}
-              options={{
-                strokeColor: colors.stroke,
-                strokeOpacity: 1,
-                strokeWeight: 2,
-                fillColor: colors.fill,
-                fillOpacity: 0.5,
-                clickable: false
-              }}
-            />
-          );
-        })}
-
+        {/* No mask, no barangay polygons */}
         {markerPosition && (
           <Marker
             position={markerPosition}
