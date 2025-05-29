@@ -26,7 +26,8 @@ const Comment2 = ({
   downvotesArray = [],
   currentUserId = null,
   onShowToast,
-  isAdminPostComment = false
+  isAdminPostComment = false,
+  userFromStore = null
 }) => {
   // Regular comment mutations
   const [upvoteComment] = useUpvoteCommentMutation();
@@ -53,7 +54,7 @@ const Comment2 = ({
                   (Array.isArray(downvotesArray) ? downvotesArray.length : 0);
 
   const handleUpvote = async () => {
-    if (!currentUserId) {
+    if (!currentUserId || userFromStore?.role !== "user") {
       if (onShowToast) {
         onShowToast("Please log in to vote", "error");
       } else {
@@ -88,7 +89,7 @@ const Comment2 = ({
   };
 
   const handleDownvote = async () => {
-    if (!currentUserId) {
+    if (!currentUserId || userFromStore?.role !== "user") {
       if (onShowToast) {
         onShowToast("Please log in to vote", "error");
       } else {

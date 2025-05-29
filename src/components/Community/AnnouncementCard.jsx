@@ -121,6 +121,7 @@ const AnnouncementCard = ({ announcement }) => { // Accept announcement as a pro
             useCustomToast={true}
             onShowToast={showCustomToast}
             isAdminPost={true}
+            userFromStore={userFromStore}
           />
           <hr className="text-white opacity-35 mb-4" />
           {/* Comment Input */}
@@ -168,6 +169,7 @@ const AnnouncementCard = ({ announcement }) => { // Accept announcement as a pro
                   currentUserId={userFromStore?._id}
                   onShowToast={showCustomToast}
                   isAdminPostComment={true}
+                  userFromStore={userFromStore}
                 />
               ))
             ) : (

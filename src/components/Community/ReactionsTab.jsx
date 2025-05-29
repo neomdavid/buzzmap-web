@@ -26,7 +26,8 @@ const ReactionsTab = ({
   onCommentClick,
   useCustomToast = false,
   onShowToast,
-  isAdminPost = false
+  isAdminPost = false,
+  userFromStore = null,
 }) => {
   // Regular post mutations
   const [upvoteReport] = useUpvoteReportMutation();
@@ -53,7 +54,7 @@ const ReactionsTab = ({
                   (Array.isArray(downvotesArray) ? downvotesArray.length : 0);
 
   const handleUpvote = async () => {
-    if (!currentUserId) {
+    if (!currentUserId || userFromStore?.role !== "user") {
       if (onShowToast) {
         onShowToast("Please log in to vote", "error");
       } else {
@@ -88,7 +89,7 @@ const ReactionsTab = ({
   };
 
   const handleDownvote = async () => {
-    if (!currentUserId) {
+    if (!currentUserId || userFromStore?.role !== "user") {
       if (onShowToast) {
         onShowToast("Please log in to vote", "error");
       } else {
