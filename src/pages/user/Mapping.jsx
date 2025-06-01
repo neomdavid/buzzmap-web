@@ -262,13 +262,16 @@ const Mapping = () => {
 
         // Process breeding sites
         if (posts) {
-          const validatedSites = posts.filter(post => {
-            return post.status === "Validated" &&
-              post.specific_location &&
-              Array.isArray(post.specific_location.coordinates) &&
-              post.specific_location.coordinates.length === 2;
-          });
+          const validPosts = Array.isArray(posts) ? posts : posts.posts || [];
+          const validatedSites = validPosts.filter(post => 
+            post.status === "Validated" &&
+            post.specific_location &&
+            Array.isArray(post.specific_location.coordinates) &&
+            post.specific_location.coordinates.length === 2
+          );
           setBreedingSites(validatedSites);
+        } else {
+          setBreedingSites([]);
         }
       } catch (err) {
         console.error('Error in fetchData:', err);
