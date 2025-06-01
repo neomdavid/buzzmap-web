@@ -384,21 +384,22 @@ const CommentModal = forwardRef(({
                   {comments.map((comment) => {
                     console.log('[DEBUG] Rendering comment:', comment);
                     return (
-                      <Comment2
-                        key={comment._id}
-                        profileSize="h-12"
-                        username={comment.user?.username || 'Anonymous'}
-                        comment={comment.content}
-                        timestamp={formatTimestamp(comment.createdAt)}
-                        commentId={comment._id}
-                        upvotesArray={localCommentVotes[comment._id]?.upvotes || comment.upvotes || []}
-                        downvotesArray={localCommentVotes[comment._id]?.downvotes || comment.downvotes || []}
-                        currentUserId={userFromStore?.role === "user" ? userFromStore?._id : null}
-                        onShowToast={showToast}
-                        onVoteUpdate={(newUpvotes, newDownvotes) => 
-                          handleCommentVoteUpdate(comment._id, newUpvotes, newDownvotes)
-                        }
-                      />
+                      <div key={comment._id} className="break-words self-start w-fit max-w-full">
+                        <Comment2
+                          profileSize="h-12"
+                          username={comment.user?.username || 'Anonymous'}
+                          comment={comment.content}
+                          timestamp={formatTimestamp(comment.createdAt)}
+                          commentId={comment._id}
+                          upvotesArray={localCommentVotes[comment._id]?.upvotes || comment.upvotes || []}
+                          downvotesArray={localCommentVotes[comment._id]?.downvotes || comment.downvotes || []}
+                          currentUserId={userFromStore?.role === "user" ? userFromStore?._id : null}
+                          onShowToast={showToast}
+                          onVoteUpdate={(newUpvotes, newDownvotes) => 
+                            handleCommentVoteUpdate(comment._id, newUpvotes, newDownvotes)
+                          }
+                        />
+                      </div>
                     );
                   })}
                 </>

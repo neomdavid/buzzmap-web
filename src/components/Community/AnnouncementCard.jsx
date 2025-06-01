@@ -238,20 +238,21 @@ const AnnouncementCard = ({ announcement }) => {
               </div>
             ) : comments && comments.length > 0 ? (
               comments.map((comment) => (
-                <Comment2
-                  key={comment._id}
-                  username={comment.user?.username || 'Anonymous'}
-                  comment={comment.content}
-                  timestamp={formatTimestamp(comment.createdAt)}
-                  commentId={comment._id}
-                  upvotesArray={localCommentVotes[comment._id]?.upvotes || comment.upvotes || []}
-                  downvotesArray={localCommentVotes[comment._id]?.downvotes || comment.downvotes || []}
-                  currentUserId={userFromStore?.role === "user" ? userFromStore?._id : null}
-                  onShowToast={showCustomToast}
-                  onVoteUpdate={(newUpvotes, newDownvotes) => 
-                    handleCommentVoteUpdate(comment._id, newUpvotes, newDownvotes)
-                  }
-                />
+                <div key={comment._id} className="break-words self-start w-fit max-w-full">
+                  <Comment2
+                    username={comment.user?.username || 'Anonymous'}
+                    comment={comment.content}
+                    timestamp={formatTimestamp(comment.createdAt)}
+                    commentId={comment._id}
+                    upvotesArray={localCommentVotes[comment._id]?.upvotes || comment.upvotes || []}
+                    downvotesArray={localCommentVotes[comment._id]?.downvotes || comment.downvotes || []}
+                    currentUserId={userFromStore?.role === "user" ? userFromStore?._id : null}
+                    onShowToast={showCustomToast}
+                    onVoteUpdate={(newUpvotes, newDownvotes) => 
+                      handleCommentVoteUpdate(comment._id, newUpvotes, newDownvotes)
+                    }
+                  />
+                </div>
               ))
             ) : (
               <div className="text-center py-4 text-gray-500">No comments yet</div>
