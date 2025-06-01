@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useGetPostsQuery, useGetBarangaysQuery } from '../../api/dengueApi';
 import { PostCard, CustomSearchBar, Navbar } from '../../components';
@@ -26,6 +26,18 @@ const SearchResults = () => {
     username: ''
   });
   const [searchQuery, setSearchQuery] = useState(searchParams.get('q') || '');
+  const [page, setPage] = useState(1);
+  const observer = useRef();
+  const lastPostElementRef = useCallback(node => {
+    if (isLoading) return;
+    if (observer.current) observer.current.disconnect();
+    observer.current = new IntersectionObserver(entries => {
+      if (entries[0].isIntersecting && data?.pagination?.hasMore) {
+        setPage(prevPage => prevPage + 1);
+      }
+    });
+    if (node) observer.current.observe(node);
+  }, [isLoading, data?.pagination?.hasMore]);
 
   // Fetch barangays
   const { data: barangays, isLoading: isLoadingBarangays } = useGetBarangaysQuery();
@@ -38,13 +50,17 @@ const SearchResults = () => {
       description: searchParams.get('description') || '',
       username: searchParams.get('username') || ''
     });
+    // Reset page when filters change
+    setPage(1);
   }, [searchParams]);
 
-  // Get posts with search parameters
-  const { data: posts, isLoading, isError } = useGetPostsQuery({
+  // Get posts with search parameters and pagination
+  const { data, isLoading, isError } = useGetPostsQuery({
     search: searchQuery,
     ...filters,
-    status: 'Validated'
+    status: 'Validated',
+    page,
+    limit: 10
   });
 
   // Compute if "All" is active (all filters are empty)
@@ -57,6 +73,7 @@ const SearchResults = () => {
   const handleFilterChange = (key, value) => {
     const newFilters = { ...filters, [key]: value };
     setFilters(newFilters);
+    setPage(1); // Reset page when filter changes
 
     // Update URL with new filters
     const newParams = new URLSearchParams(searchParams);
@@ -70,6 +87,7 @@ const SearchResults = () => {
 
   const handleSearch = (query) => {
     setSearchQuery(query);
+    setPage(1); // Reset page when search changes
     const newParams = new URLSearchParams(searchParams);
     newParams.set('q', query);
     setSearchParams(newParams);
@@ -246,22 +264,26 @@ const SearchResults = () => {
               </div>
             </div>
 
-            {isLoading ? (
+            {isLoading && page === 1 ? (
               <div className="text-center">Loading posts...</div>
             ) : isError ? (
               <div className="text-center text-error">Error loading posts</div>
-            ) : posts?.length === 0 ? (
+            ) : data?.posts?.length === 0 ? (
               <p className="text-lg text-primary font-semibold">
                 No posts found matching your search criteria.
               </p>
             ) : (
               <>
                 <p className="text-2xl text-primary font-semibold mb-4">
-                  Found {posts.length} result{posts.length !== 1 ? 's' : ''}
+                  Found {data?.pagination?.totalItems || 0} result{data?.pagination?.totalItems !== 1 ? 's' : ''}
                 </p>
                 <div className="space-y-6">
-                  {posts.map((post) => (
-                    <div key={post._id} className='shadow-sm'>
+                  {data?.posts?.map((post, index) => (
+                    <div 
+                      key={post._id} 
+                      className='shadow-sm'
+                      ref={index === data.posts.length - 1 ? lastPostElementRef : null}
+                    >
                       <PostCard
                         profileImage={profile1}
                         username={post.anonymous ? "Anonymous" : post.user?.username || "User"}
@@ -275,10 +297,20 @@ const SearchResults = () => {
                         comments={post.commentsCount || "0"}
                         shares={post.sharesCount || "0"}
                         images={post.images}
+                        postId={post._id}
+                        upvotes={post.upvotes}
+                        downvotes={post.downvotes}
+                        commentsCount={post.commentsCount}
+                        upvotesArray={post.upvotes}
+                        downvotesArray={post.downvotes}
+                        _commentCount={post.commentsCount}
                       />
                     </div>
                   ))}
                 </div>
+                {isLoading && page > 1 && (
+                  <div className="text-center py-4">Loading more posts...</div>
+                )}
               </>
             )}
           </div>

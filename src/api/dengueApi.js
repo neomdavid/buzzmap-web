@@ -165,7 +165,9 @@ export const dengueApi = createApi({
         sortBy,
         sortOrder,
         username,
-        description
+        description,
+        page = 1,
+        limit = 10
       } = {}) => {
         let url = 'reports';
         const params = new URLSearchParams();
@@ -181,6 +183,10 @@ export const dengueApi = createApi({
         if (sortOrder) params.append('sortOrder', sortOrder);
         if (username) params.append('username', username);
         if (description) params.append('description', description);
+        
+        // Add pagination parameters
+        params.append('page', page);
+        params.append('limit', limit);
 
         // Add the query string if we have any parameters
         const queryString = params.toString();
@@ -192,10 +198,34 @@ export const dengueApi = createApi({
         console.log('API Request URL:', url);
         return url;
       },
+      transformResponse: (response, meta, arg) => {
+        // If the response includes pagination info, return it along with the posts
+        if (response && response.data) {
+          return {
+            posts: response.data,
+            pagination: {
+              currentPage: response.currentPage,
+              totalPages: response.totalPages,
+              totalItems: response.totalItems,
+              hasMore: response.currentPage < response.totalPages
+            }
+          };
+        }
+        // If no pagination info, return the response as is
+        return {
+          posts: response,
+          pagination: {
+            currentPage: 1,
+            totalPages: 1,
+            totalItems: response.length,
+            hasMore: false
+          }
+        };
+      },
       providesTags: (result) => 
-        result
+        result?.posts
           ? [
-              ...result.map(({ id }) => ({ type: 'Post', id })),
+              ...result.posts.map(({ id }) => ({ type: 'Post', id })),
               { type: 'Post', id: 'LIST' },
             ]
           : [{ type: 'Post', id: 'LIST' }],
@@ -761,8 +791,10 @@ export const dengueApi = createApi({
         console.log('[DEBUG] Comments cache tags for postId:', postId);
         return [{ type: "Comments", id: postId }];
       },
-      // Add polling to keep comments updated
-      pollingInterval: 5000,
+      // Remove polling to prevent constant refetching
+      // pollingInterval: 5000,
+      // Add staleTime to prevent unnecessary refetches
+      keepUnusedDataFor: 60, // Keep data in cache for 60 seconds
     }),
 
     // Test endpoint to verify API connectivity

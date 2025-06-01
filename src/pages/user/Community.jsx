@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo, useRef, useCallback } from "react";
 import { ArrowLeft, MagnifyingGlass, UserCircle } from "phosphor-react";
 import profile1 from "../../assets/profile1.png";
 import post1 from "../../assets/post1.jpg";
@@ -41,11 +41,12 @@ const Community = () => {
   const [filter, setFilter] = useState("latest"); // 'latest', 'popular', 'myPosts'
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearching, setIsSearching] = useState(false);
+  const [page, setPage] = useState(1);
   const userFromStore = useSelector((state) => state.auth?.user);
   const [searchParams, setSearchParams] = useState({
     barangay: '',
     report_type: '',
-    status: 'Validated', // Default to showing only validated posts
+    status: 'Validated',
     username: '',
     description: '',
     sortBy: 'createdAt',
@@ -56,18 +57,36 @@ const Community = () => {
   // Fetch admin posts
   const { data: adminPosts, isLoading: isLoadingAdminPosts } = useGetAllAdminPostsQuery();
 
+  // Get posts with pagination
+  const { data, isLoading, isError } = useGetPostsQuery({
+    status: 'Validated',
+    page,
+    limit: 10,
+    sortBy: searchParams.sortBy,
+    sortOrder: searchParams.sortOrder,
+    ...searchParams
+  });
+
+  // Intersection Observer for infinite scroll
+  const observer = useRef();
+  const lastPostElementRef = useCallback(node => {
+    if (isLoading) return;
+    if (observer.current) observer.current.disconnect();
+    observer.current = new IntersectionObserver(entries => {
+      if (entries[0].isIntersecting && data?.pagination?.hasMore) {
+        setPage(prevPage => prevPage + 1);
+      }
+    });
+    if (node) observer.current.observe(node);
+  }, [isLoading, data?.pagination?.hasMore]);
+
   // Find the latest announcement
   const latestAnnouncement = React.useMemo(() => {
-    console.log('[DEBUG] Community - Admin Posts:', adminPosts);
     if (!adminPosts) return null;
     const announcements = adminPosts.filter(post => post.category === "announcement");
-    console.log('[DEBUG] Community - Filtered Announcements:', announcements);
     if (announcements.length === 0) return null;
-    // Sort by publishDate in descending order
     announcements.sort((a, b) => new Date(b.publishDate) - new Date(a.publishDate));
-    const latest = announcements[0];
-    console.log('[DEBUG] Community - Latest Announcement:', latest);
-    return latest;
+    return announcements[0];
   }, [adminPosts]);
 
   const getCurrentLocation = () => {
@@ -94,70 +113,28 @@ const Community = () => {
     }
   };
 
-  // Get all posts without filtering
-  const { data: posts, isLoading: isLoadingPosts } = useGetPostsQuery({
-    status: "Validated",
-    sortBy: "createdAt",
-    sortOrder: "desc"
-  });
-
-  // Filter and sort posts based on the selected tab
-  const filteredPosts = React.useMemo(() => {
-    if (!posts) return [];
+  // Memoize filtered posts
+  const filteredPosts = useMemo(() => {
+    if (!data?.posts) return [];
     
-    // First filter for validated posts
-    let filtered = posts.filter(post => post.status === "Validated");
+    let filtered = data.posts;
     
     // Apply search filter if there's a search query
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter(post => 
-        // Search in username
         (post.user?.username?.toLowerCase().includes(query)) ||
-        // Search in barangay
         (post.barangay?.toLowerCase().includes(query)) ||
-        // Search in report type
         (post.report_type?.toLowerCase().includes(query)) ||
-        // Search in description
         (post.description?.toLowerCase().includes(query))
       );
     }
     
-    // Then apply the selected filter
-    switch (filter) {
-      case "popular":
-        filtered = filtered.sort((a, b) => 
-          ((Array.isArray(b.upvotes) ? b.upvotes.length : 0) - (Array.isArray(b.downvotes) ? b.downvotes.length : 0)) -
-          ((Array.isArray(a.upvotes) ? a.upvotes.length : 0) - (Array.isArray(a.downvotes) ? a.downvotes.length : 0))
-        );
-        break;
-      
-      case "latest":
-        filtered = filtered.sort((a, b) => 
-          new Date(b.createdAt) - new Date(a.createdAt)
-        );
-        break;
-      
-      case "myPosts":
-        if (userFromStore) {
-          filtered = filtered
-            .filter(post => post.user?._id === userFromStore._id)
-            .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-        }
-        break;
-      
-      default:
-        filtered = filtered.sort((a, b) => 
-          new Date(b.createdAt) - new Date(a.createdAt)
-        );
-    }
-    
     return filtered;
-  }, [posts, filter, userFromStore, searchQuery]);
+  }, [data?.posts, searchQuery]);
 
   const [createPost] = useCreatePostMutation();
   const [createPostWithImage] = useCreatePostWithImageMutation();
-  console.log(posts);
 
   const handleCreatePost = async (postData) => {
     try {
@@ -181,17 +158,14 @@ const Community = () => {
     }
   };
 
-  // Update the handleSearch function
   const handleSearch = (e) => {
     e.preventDefault();
     const searchValue = searchQuery.trim();
     if (searchValue) {
-      console.log('Navigating to search with query:', searchValue);
       navigate(`/search?q=${encodeURIComponent(searchValue)}`);
     }
   };
 
-  // Add a clear search handler
   const handleClearSearch = (e) => {
     e.preventDefault();
     setSearchParams({
@@ -207,13 +181,13 @@ const Community = () => {
     setIsSearching(false);
   };
 
-  if (isLoadingAdminPosts || isLoadingPosts) {
+  if (isLoadingAdminPosts || isLoading) {
     return <div>Loading...</div>;
   }
 
   return (
     <main className="pl-6 text-primary text-lg flex gap-x-6 max-w-[1350px] m-auto relative mt-12">
-      <article className="flex-8 shadow-xl p-12 rounded-lg w-[90vw] lg:w-[30vw]">
+      <article className="flex-8 shadow-xl p-12 rounded-lg w-[90vw] max-w-500 lg:w-[30vw]">
         <form onSubmit={handleSearch} className="mb-6">
           <div className="relative">
             <input
@@ -289,7 +263,7 @@ const Community = () => {
           text="Stay /ahead/ of dengue."
           className="text-[47px] sm:text-7xl lg:text-8xl text-center mb-4 leading-21"
         />
-        <p className=" text-lg sm:text-xl sm:mt-0 text-center font-semibold text-primary mb-6">
+        <p className="text-lg sm:text-xl sm:mt-0 text-center font-semibold text-primary mb-6">
           Real-Time Dengue Updates from the Community.
         </p>
         <section className="bg-base-200 px-8 py-5 rounded-lg mb-4">
@@ -314,11 +288,12 @@ const Community = () => {
             />
           </button>
         </section>
-        {/* POST MODAL */}
         <NewPostModal onSubmit={handleClearSearch} />
         <section className="bg-base-200 px-8 py-6 rounded-lg flex flex-col gap-y-6">
-          {isLoadingPosts ? (
+          {isLoading && page === 1 ? (
             <div className="text-center">Loading posts...</div>
+          ) : isError ? (
+            <div className="text-center text-error">Error loading posts</div>
           ) : filteredPosts.length === 0 ? (
             <p className="text-center text-gray-500">
               {searchQuery
@@ -331,37 +306,40 @@ const Community = () => {
             <>
               {searchQuery && (
                 <p className="text-sm text-gray-500 mb-4">
-                  Found {filteredPosts.length} result{filteredPosts.length !== 1 ? 's' : ''}
+                  Found {data?.pagination?.totalItems || 0} result{data?.pagination?.totalItems !== 1 ? 's' : ''}
                 </p>
               )}
-              {filteredPosts.map((post) => (
-                <PostCard
+              {filteredPosts.map((post, index) => (
+                <div 
                   key={post._id}
-                  profileImage={
-                    post.isAnonymous
-                      ? <UserCircle size={48} className="text-gray-400 mr-[-6px]" />
-                      : profile1
-                  }
-                  username={
-                    post.isAnonymous
-                      ? post.anonymousId || "Anonymous"
-                      : post.user?.username || "User"
-                  }
-                  timestamp={formatTimestamp(post.createdAt)}
-                  barangay={post.barangay}
-                  coordinates={post.specific_location?.coordinates || []}
-                  dateTime={new Date(post.date_and_time).toLocaleString()}
-                  reportType={post.report_type}
-                  description={post.description}
-                  images={post.images}
-                  postId={post._id}
-                  upvotes={Array.isArray(post.upvotes) ? post.upvotes.length : 0}
-                  downvotes={Array.isArray(post.downvotes) ? post.downvotes.length : 0}
-                  _commentCount={post._commentCount || 0}
-                  upvotesArray={post.upvotes || []}
-                  downvotesArray={post.downvotes || []}
-                />
+                  ref={index === filteredPosts.length - 1 ? lastPostElementRef : null}
+                >
+                  <PostCard
+                    profileImage={profile1}
+                    username={post.anonymous ? "Anonymous" : post.user?.username || "User"}
+                    timestamp={formatDistanceToNow(new Date(post.createdAt), { addSuffix: true })}
+                    barangay={post.barangay}
+                    coordinates={post.specific_location?.coordinates || []}
+                    dateTime={new Date(post.date_and_time).toLocaleString()}
+                    reportType={post.report_type}
+                    description={post.description}
+                    likes={post.likesCount || "0"}
+                    comments={post.commentsCount || "0"}
+                    shares={post.sharesCount || "0"}
+                    images={post.images}
+                    postId={post._id}
+                    upvotes={post.upvotes}
+                    downvotes={post.downvotes}
+                    commentsCount={post.commentsCount}
+                    upvotesArray={post.upvotes}
+                    downvotesArray={post.downvotes}
+                    _commentCount={post.commentsCount}
+                  />
+                </div>
               ))}
+              {isLoading && page > 1 && (
+                <div className="text-center py-4">Loading more posts...</div>
+              )}
             </>
           )}
         </section>
@@ -369,10 +347,10 @@ const Community = () => {
 
       <aside
         className={`bg-base-300 shadow-2xl rounded-sm overflow-y-scroll transition-transform duration-300 ease-in-out 
-    fixed inset-y-0 right-0 w-[60vw] top-[58px] pb-4 max-w-[90vw] z-10 lg:z-0 lg:sticky lg:top-19 lg:h-[calc(100vh-1.5rem)] 
-    lg:w-[40vw] lg:max-w-[450px] lg:shadow-sm ${
-      showAside ? "translate-x-0" : "translate-x-full"
-    } lg:translate-x-0`}
+        fixed inset-y-0 right-0 w-[60vw] top-[58px] pb-4 max-w-[90vw] z-10 lg:z-0 lg:sticky lg:top-19 lg:h-[calc(100vh-1.5rem)] 
+        lg:w-[40vw] lg:max-w-[450px] lg:shadow-sm ${
+          showAside ? "translate-x-0" : "translate-x-full"
+        } lg:translate-x-0`}
       >
         <div className="sticky top-0 bg-base-300 px-6 py-4 flex justify-between items-center z-100 border-b border-gray-200 pt-6 pb-4">
           <p className="text-3xl font-bold text-primary">Official Announcement</p>
