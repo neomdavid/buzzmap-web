@@ -28,6 +28,16 @@ const SearchResults = () => {
   const [searchQuery, setSearchQuery] = useState(searchParams.get('q') || '');
   const [page, setPage] = useState(1);
   const observer = useRef();
+
+  // Get posts with search parameters and pagination
+  const { data, isLoading, isError } = useGetPostsQuery({
+    search: searchQuery,
+    ...filters,
+    status: 'Validated',
+    page,
+    limit: 10
+  });
+
   const lastPostElementRef = useCallback(node => {
     if (isLoading) return;
     if (observer.current) observer.current.disconnect();
@@ -53,15 +63,6 @@ const SearchResults = () => {
     // Reset page when filters change
     setPage(1);
   }, [searchParams]);
-
-  // Get posts with search parameters and pagination
-  const { data, isLoading, isError } = useGetPostsQuery({
-    search: searchQuery,
-    ...filters,
-    status: 'Validated',
-    page,
-    limit: 10
-  });
 
   // Compute if "All" is active (all filters are empty)
   const isAllActive =
