@@ -30,16 +30,22 @@ const PostCard = ({
   const userFromStore = useSelector((state) => state.auth?.user);
   const commentModalRef = useRef(null);
   
-  // Add local state for votes
+  // Initialize local state with props
   const [localUpvotes, setLocalUpvotes] = useState(upvotesArray);
   const [localDownvotes, setLocalDownvotes] = useState(downvotesArray);
   const [localCommentCount, setLocalCommentCount] = useState(_commentCount);
 
-  // Update local state when props change
+  // Only update local state when props change and they're different
   useEffect(() => {
-    setLocalUpvotes(upvotesArray);
-    setLocalDownvotes(downvotesArray);
-    setLocalCommentCount(_commentCount);
+    if (JSON.stringify(upvotesArray) !== JSON.stringify(localUpvotes)) {
+      setLocalUpvotes(upvotesArray);
+    }
+    if (JSON.stringify(downvotesArray) !== JSON.stringify(localDownvotes)) {
+      setLocalDownvotes(downvotesArray);
+    }
+    if (_commentCount !== localCommentCount) {
+      setLocalCommentCount(_commentCount);
+    }
   }, [upvotesArray, downvotesArray, _commentCount]);
 
   const handleCommentClick = () => {
@@ -119,7 +125,6 @@ const PostCard = ({
           setLocalDownvotes(newDownvotes);
         }}
         onCommentAdded={() => {
-          // Update comment count when a new comment is added
           setLocalCommentCount(prev => prev + 1);
         }}
       />

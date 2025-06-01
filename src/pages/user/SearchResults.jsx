@@ -5,10 +5,8 @@ import { PostCard, CustomSearchBar, Navbar } from '../../components';
 import { formatDistanceToNow } from 'date-fns';
 import profile1 from '../../assets/profile1.png';
 import { Browser, MagnifyingGlass, User } from "phosphor-react";
-import { NewspaperClipping } from "phosphor-react"; // Only need this for "All"
-
-// Add icons for the sidebar (you can use any icon library)
-import { Users } from "phosphor-react"; // Example icons
+import { NewspaperClipping } from "phosphor-react";
+import { Users } from "phosphor-react";
 import { IconMenuDeep, IconTableShare } from '@tabler/icons-react';
 
 const FILTER_TYPES = [
@@ -27,9 +25,7 @@ const SearchResults = () => {
     description: '',
     username: ''
   });
-
-  // Get search query from URL
-  const searchQuery = searchParams.get('q') || '';
+  const [searchQuery, setSearchQuery] = useState(searchParams.get('q') || '');
 
   // Fetch barangays
   const { data: barangays, isLoading: isLoadingBarangays } = useGetBarangaysQuery();
@@ -72,6 +68,13 @@ const SearchResults = () => {
     setSearchParams(newParams);
   };
 
+  const handleSearch = (query) => {
+    setSearchQuery(query);
+    const newParams = new URLSearchParams(searchParams);
+    newParams.set('q', query);
+    setSearchParams(newParams);
+  };
+
   // Log the current search parameters
   useEffect(() => {
     console.log('Current Search Parameters:', {
@@ -85,8 +88,8 @@ const SearchResults = () => {
     <>
       <Navbar />
       <div className="flex min-h-screen mt-21.5">
-        {/* Sidebar */}
-        <aside className="w-120 fixed top-22 bottom-0 bg-base-200/40 text-primary py-10 px-8" >
+        {/* Desktop Sidebar */}
+        <aside className="hidden lg:block sticky top-22 bottom-0 w-[300px] bg-base-200/40 text-primary py-10 px-8">
           <p className="text-3xl font-semibold mb-4">Search Results for <br /> <span className='font-extrabold capitalize'>"{searchQuery}"</span></p>
           <hr className='mt-8 mb-8 border-accent' />
           <div className='flex flex-col font-semibold text-lg gap-1'>
@@ -155,11 +158,94 @@ const SearchResults = () => {
             </select>
           </div>
         </aside>
-        <div className='w-120'></div>
 
         {/* Main Content */}
         <main className="flex-1 p-6">
           <div className="max-w-6xl mx-auto">
+            {/* Search Bar */}
+            <div className="mb-6">
+              <CustomSearchBar
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onSearch={handleSearch}
+                placeholder="Search for posts, people, or locations..."
+                className="w-full max-w-2xl mx-auto"
+              />
+            </div>
+
+            {/* Mobile Filters */}
+            <div className="lg:hidden mb-6">
+              <p className="text-2xl font-semibold mb-4 text-primary">Search Results for <span className='font-extrabold capitalize'>"{searchQuery}"</span></p>
+              <div className='flex flex-col font-semibold text-lg gap-2 bg-base-200/40 p-4 rounded-lg'>
+                <p className='text-[18px] text-primary'>Filters</p>
+                <div className="flex gap-2 overflow-x-auto pb-2">
+                  <button
+                    className={`flex gap-2 items-center px-4 py-2 rounded-xl whitespace-nowrap ${
+                      isAllActive ? 'bg-primary text-white' : 'text-primary hover:bg-primary/60 hover:text-white'
+                    }`}
+                    onClick={() => {
+                      setFilters({
+                        barangay: '',
+                        report_type: '',
+                        description: '',
+                        username: ''
+                      });
+                      const newParams = new URLSearchParams(searchParams);
+                      newParams.delete('barangay');
+                      newParams.delete('report_type');
+                      newParams.delete('description');
+                      newParams.delete('username');
+                      setSearchParams(newParams);
+                    }}
+                  >
+                    <IconMenuDeep stroke={3} />
+                    <span>All</span>
+                  </button>
+                  <button
+                    className={`flex gap-2 items-center px-4 py-2 rounded-xl whitespace-nowrap ${
+                      filters.report_type ? 'bg-primary text-white' : 'text-primary hover:bg-primary/60 hover:text-white'
+                    }`}
+                    onClick={() => handleFilterChange('report_type', 'Breeding Site')}
+                  >
+                    <IconTableShare stroke={2} size={23} weight='fill' />
+                    <span>Posts</span>
+                  </button>
+                  <button
+                    className={`flex gap-2 items-center px-4 py-2 rounded-xl whitespace-nowrap ${
+                      filters.username ? 'bg-primary text-white' : 'text-primary hover:bg-primary/60 hover:text-white'
+                    }`}
+                    onClick={() => handleFilterChange('username', searchQuery)}
+                  >
+                    <Users stroke={2} size={23} weight='fill' />
+                    <span>People</span>
+                  </button>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <select 
+                    className='select w-full text-lg select-primary bg-inherit rounded-lg hover:cursor-pointer text-primary'
+                    value={filters.barangay}
+                    onChange={(e) => handleFilterChange('barangay', e.target.value)}
+                  >
+                    <option value="" className="text-primary">All Barangays</option>
+                    {!isLoadingBarangays && barangays?.map((barangay) => (
+                      <option key={barangay._id} value={barangay.name} className="text-primary">
+                        {barangay.name}
+                      </option>
+                    ))}
+                  </select>
+                  <select 
+                    className='select w-full text-lg select-primary bg-inherit rounded-lg hover:cursor-pointer text-primary'
+                    value={filters.report_type}
+                    onChange={(e) => handleFilterChange('report_type', e.target.value)}
+                  >
+                    <option value="" className="text-primary">All Report Types</option>
+                    <option value="Breeding Site" className="text-primary">Breeding Site</option>
+                    <option value="Dengue Case" className="text-primary">Dengue Case</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
             {isLoading ? (
               <div className="text-center">Loading posts...</div>
             ) : isError ? (
@@ -174,10 +260,9 @@ const SearchResults = () => {
                   Found {posts.length} result{posts.length !== 1 ? 's' : ''}
                 </p>
                 <div className="space-y-6">
-                  {posts.map((post) => {
-                    return <div className='shadow-sm'>
+                  {posts.map((post) => (
+                    <div key={post._id} className='shadow-sm'>
                       <PostCard
-                        key={post._id}
                         profileImage={profile1}
                         username={post.anonymous ? "Anonymous" : post.user?.username || "User"}
                         timestamp={formatDistanceToNow(new Date(post.createdAt), { addSuffix: true })}
@@ -192,12 +277,11 @@ const SearchResults = () => {
                         images={post.images}
                       />
                     </div>
-                  })}
+                  ))}
                 </div>
               </>
             )}
           </div>
-
         </main>
       </div>
     </>
