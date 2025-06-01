@@ -374,6 +374,7 @@ const Mapping = () => {
         mapRef.current?.setZoom(15);
         setSelectedBarangayFeature(matchingBarangay);
         setSelectedBarangayCenter({ lat, lng });
+        setShowControlPanel(false);
       }
     }
   };
