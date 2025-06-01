@@ -58,12 +58,16 @@ const Community = () => {
 
   // Find the latest announcement
   const latestAnnouncement = React.useMemo(() => {
+    console.log('[DEBUG] Community - Admin Posts:', adminPosts);
     if (!adminPosts) return null;
     const announcements = adminPosts.filter(post => post.category === "announcement");
+    console.log('[DEBUG] Community - Filtered Announcements:', announcements);
     if (announcements.length === 0) return null;
     // Sort by publishDate in descending order
     announcements.sort((a, b) => new Date(b.publishDate) - new Date(a.publishDate));
-    return announcements[0]; // Return the latest one
+    const latest = announcements[0];
+    console.log('[DEBUG] Community - Latest Announcement:', latest);
+    return latest;
   }, [adminPosts]);
 
   const getCurrentLocation = () => {
@@ -370,7 +374,12 @@ const Community = () => {
       showAside ? "translate-x-0" : "translate-x-full"
     } lg:translate-x-0`}
       >
-        <AnnouncementCard announcement={latestAnnouncement} />
+        {latestAnnouncement && (
+          <AnnouncementCard 
+            announcement={latestAnnouncement} 
+            key={latestAnnouncement._id}
+          />
+        )}
         <button
           onClick={() => setShowAside(false)}
           className="absolute top-4 right-4 lg:hidden bg-primary text-white p-2 rounded-full hover:cursor-pointer hover:bg-white hover:text-primary transition-all duration-200"

@@ -29,6 +29,18 @@ const PostCard = ({
 }) => {
   const userFromStore = useSelector((state) => state.auth?.user);
   const commentModalRef = useRef(null);
+  
+  // Add local state for votes
+  const [localUpvotes, setLocalUpvotes] = useState(upvotesArray);
+  const [localDownvotes, setLocalDownvotes] = useState(downvotesArray);
+  const [localCommentCount, setLocalCommentCount] = useState(_commentCount);
+
+  // Update local state when props change
+  useEffect(() => {
+    setLocalUpvotes(upvotesArray);
+    setLocalDownvotes(downvotesArray);
+    setLocalCommentCount(_commentCount);
+  }, [upvotesArray, downvotesArray, _commentCount]);
 
   const handleCommentClick = () => {
     if (commentModalRef.current) {
@@ -82,12 +94,16 @@ const PostCard = ({
         postId={postId}
         upvotes={upvotes}
         downvotes={downvotes}
-        commentsCount={_commentCount} // Use _commentCount here
-        upvotesArray={upvotesArray}
-        downvotesArray={downvotesArray}
+        commentsCount={localCommentCount}
+        upvotesArray={localUpvotes}
+        downvotesArray={localDownvotes}
         currentUserId={userFromStore?._id}
         onCommentClick={handleCommentClick}
         iconSize={30}
+        onVoteUpdate={(newUpvotes, newDownvotes) => {
+          setLocalUpvotes(newUpvotes);
+          setLocalDownvotes(newDownvotes);
+        }}
       />
     
       <CommentModal 
@@ -95,11 +111,16 @@ const PostCard = ({
         postId={postId}
         upvotes={upvotes}
         downvotes={downvotes}
-        commentsCount={_commentCount} // Use _commentCount here
-        upvotesArray={upvotesArray}
-        downvotesArray={downvotesArray}
+        commentsCount={localCommentCount}
+        upvotesArray={localUpvotes}
+        downvotesArray={localDownvotes}
+        onVoteUpdate={(newUpvotes, newDownvotes) => {
+          setLocalUpvotes(newUpvotes);
+          setLocalDownvotes(newDownvotes);
+        }}
         onCommentAdded={() => {
-          // No need to reload the page, RTK Query will handle cache invalidation
+          // Update comment count when a new comment is added
+          setLocalCommentCount(prev => prev + 1);
         }}
       />
     </div>

@@ -1,5 +1,4 @@
-import React, { useState } from "react";
-import surveillanceLogo from "../../assets/icons/quezon_surveillance.png";
+import React, { useState, useEffect } from "react";
 import announcementImg from "../../assets/announcementimg.png"; // Default image
 import profile1 from "../../assets/profile1.png";
 
@@ -8,15 +7,69 @@ import ImageGrid from "./ImageGrid";
 import ReactionsTab from "./ReactionsTab";
 import Comment2 from "./Comment2";
 import { useSelector } from "react-redux";
-import { useGetAdminPostCommentsQuery, useAddAdminPostCommentMutation } from "../../api/dengueApi";
+import { 
+  useGetAdminPostCommentsQuery, 
+  useAddAdminPostCommentMutation,
+  useUpvoteAdminPostCommentMutation,
+  useDownvoteAdminPostCommentMutation,
+  useRemoveAdminPostCommentUpvoteMutation,
+  useRemoveAdminPostCommentDownvoteMutation
+} from "../../api/dengueApi";
 import { showCustomToast } from "../../utils.jsx";
 import { formatDistanceToNow } from "date-fns";
 
-const AnnouncementCard = ({ announcement }) => { // Accept announcement as a prop
+const AnnouncementCard = ({ announcement }) => {
+  console.log('[DEBUG] AnnouncementCard - Initial announcement:', announcement);
+  
   const [comment, setComment] = useState("");
   const userFromStore = useSelector((state) => state.auth?.user);
-  const { data: comments, isLoading: isLoadingComments, refetch } = useGetAdminPostCommentsQuery(announcement?._id);
+  
+  // Use the admin post comments endpoint
+  const { data: comments, isLoading: isLoadingComments, refetch, error } = useGetAdminPostCommentsQuery(announcement?._id, {
+    skip: !announcement?._id,
+    pollingInterval: 5000,
+  });
+
   const [addComment] = useAddAdminPostCommentMutation();
+  const [upvoteComment] = useUpvoteAdminPostCommentMutation();
+  const [downvoteComment] = useDownvoteAdminPostCommentMutation();
+  const [removeCommentUpvote] = useRemoveAdminPostCommentUpvoteMutation();
+  const [removeCommentDownvote] = useRemoveAdminPostCommentDownvoteMutation();
+
+  // Debug effect for comments
+  useEffect(() => {
+    console.log('[DEBUG] AnnouncementCard - Fetching comments for announcement:', announcement?._id);
+    console.log('[DEBUG] AnnouncementCard - Comments data:', comments);
+    console.log('[DEBUG] AnnouncementCard - Is loading:', isLoadingComments);
+    console.log('[DEBUG] AnnouncementCard - Error:', error);
+  }, [announcement?._id, comments, isLoadingComments, error]);
+
+  // Add local state for announcement votes
+  const [localUpvotes, setLocalUpvotes] = useState(announcement?.upvotes || []);
+  const [localDownvotes, setLocalDownvotes] = useState(announcement?.downvotes || []);
+
+  // Add local state for comment votes
+  const [localCommentVotes, setLocalCommentVotes] = useState({});
+
+  // Update local state when props change
+  useEffect(() => {
+    setLocalUpvotes(announcement?.upvotes || []);
+    setLocalDownvotes(announcement?.downvotes || []);
+  }, [announcement?.upvotes, announcement?.downvotes]);
+
+  // Update comment votes when comments change
+  useEffect(() => {
+    if (comments) {
+      const initialCommentVotes = {};
+      comments.forEach(comment => {
+        initialCommentVotes[comment._id] = {
+          upvotes: comment.upvotes || [],
+          downvotes: comment.downvotes || []
+        };
+      });
+      setLocalCommentVotes(initialCommentVotes);
+    }
+  }, [comments]);
 
   // Use dynamic data if available, otherwise fallback to static/default values
   const title = announcement?.title || "Important Announcement";
@@ -55,19 +108,41 @@ const AnnouncementCard = ({ announcement }) => { // Accept announcement as a pro
 
   const handleCommentSubmit = async (e) => {
     e.preventDefault();
+    console.log('[DEBUG] AnnouncementCard - Submitting comment:', {
+      postId: announcement._id,
+      content: comment.trim(),
+      user: userFromStore
+    });
+
     if (!userFromStore) {
       showCustomToast("Please log in to comment", "error");
       return;
     }
     if (!comment.trim()) return;
     try {
-      await addComment({ postId: announcement._id, content: comment.trim() }).unwrap();
+      const result = await addComment({ postId: announcement._id, content: comment.trim() }).unwrap();
+      console.log('[DEBUG] AnnouncementCard - Comment submission result:', result);
       setComment("");
       refetch();
     } catch (error) {
-      console.error("Failed to add comment:", error);
+      console.error('[DEBUG] AnnouncementCard - Failed to add comment:', error);
       showCustomToast("Failed to add comment", "error");
     }
+  };
+
+  const handleVoteUpdate = (newUpvotes, newDownvotes) => {
+    setLocalUpvotes(newUpvotes);
+    setLocalDownvotes(newDownvotes);
+  };
+
+  const handleCommentVoteUpdate = (commentId, newUpvotes, newDownvotes) => {
+    setLocalCommentVotes(prev => ({
+      ...prev,
+      [commentId]: {
+        upvotes: newUpvotes,
+        downvotes: newDownvotes
+      }
+    }));
   };
 
   return (
@@ -75,9 +150,7 @@ const AnnouncementCard = ({ announcement }) => { // Accept announcement as a pro
       <section className="bg-primary text-white flex flex-col p-6 py-6 rounded-2xl">
         <div className="flex justify-between mb-8">
           <div className="flex gap-x-3">
-            <img src={surveillanceLogo} className="h-14" />
             <div className="flex flex-col">
-              {/* Use dynamic title */}
               <h1 className="text-4xl">{title}</h1>
               <p className="font-semibold text-[12px]">
                 <span className="font-normal">From</span> Quezon City
@@ -90,16 +163,13 @@ const AnnouncementCard = ({ announcement }) => { // Accept announcement as a pro
         </div>
 
         <div className="mb-4">
-          {/* Render content parts as paragraphs */}
           {contentParts.map((part, index) => (
             <p key={index} className={part.includes("Read more...") ? "italic underline font-semibold" : ""}>
               {part === "" ? <br /> : part}
             </p>
           ))}
-          {/* Use dynamic images */}
           {images.length > 0 && (
             <div className="mt-4">
-              {/* Assuming ImageGrid can handle an array of URLs */}
               <ImageGrid images={images} sourceType={announcement?.images ? "url" : "import"} />
             </div>
           )}
@@ -108,23 +178,23 @@ const AnnouncementCard = ({ announcement }) => { // Accept announcement as a pro
         <div>
           <ReactionsTab
             postId={announcement?._id}
-            upvotes={announcement?.upvotes?.length || 0}
-            downvotes={announcement?.downvotes?.length || 0}
+            upvotes={localUpvotes.length}
+            downvotes={localDownvotes.length}
             commentsCount={comments?.length || 0}
             iconSize={21}
             textSize="text-lg"
             className={"mb-2"}
-            upvotesArray={announcement?.upvotes || []}
-            downvotesArray={announcement?.downvotes || []}
+            upvotesArray={localUpvotes}
+            downvotesArray={localDownvotes}
             currentUserId={userFromStore?._id}
             onCommentClick={() => {}}
             useCustomToast={true}
             onShowToast={showCustomToast}
             isAdminPost={true}
             userFromStore={userFromStore}
+            onVoteUpdate={handleVoteUpdate}
           />
           <hr className="text-white opacity-35 mb-4" />
-          {/* Comment Input */}
           <form onSubmit={handleCommentSubmit} className="flex">
             <img src={profile1} className="h-11 w-11 rounded-full mr-3" />
             <div className="flex-1 flex items-center">
@@ -156,20 +226,31 @@ const AnnouncementCard = ({ announcement }) => { // Accept announcement as a pro
           <div className="flex flex-col gap-4">
             {isLoadingComments ? (
               <div className="text-center py-4">Loading comments...</div>
+            ) : error ? (
+              <div className="text-center py-4 text-error">
+                <p>Error loading comments</p>
+                <button 
+                  onClick={() => refetch()}
+                  className="mt-2 text-primary hover:underline"
+                >
+                  Retry
+                </button>
+              </div>
             ) : comments && comments.length > 0 ? (
               comments.map((comment) => (
                 <Comment2
                   key={comment._id}
-                  username={comment.user.username}
+                  username={comment.user?.username || 'Anonymous'}
                   comment={comment.content}
                   timestamp={formatTimestamp(comment.createdAt)}
                   commentId={comment._id}
-                  upvotesArray={comment.upvotes || []}
-                  downvotesArray={comment.downvotes || []}
-                  currentUserId={userFromStore?._id}
+                  upvotesArray={localCommentVotes[comment._id]?.upvotes || comment.upvotes || []}
+                  downvotesArray={localCommentVotes[comment._id]?.downvotes || comment.downvotes || []}
+                  currentUserId={userFromStore?.role === "user" ? userFromStore?._id : null}
                   onShowToast={showCustomToast}
-                  isAdminPostComment={true}
-                  userFromStore={userFromStore}
+                  onVoteUpdate={(newUpvotes, newDownvotes) => 
+                    handleCommentVoteUpdate(comment._id, newUpvotes, newDownvotes)
+                  }
                 />
               ))
             ) : (

@@ -18,7 +18,8 @@ const CommentModal = forwardRef(({
   downvotes = 0,
   commentsCount = 0,
   upvotesArray = [],
-  downvotesArray = []
+  downvotesArray = [],
+  onVoteUpdate,
 }, ref) => {
   const [comment, setComment] = useState("");
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
@@ -26,10 +27,13 @@ const CommentModal = forwardRef(({
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [preloadedImages, setPreloadedImages] = useState({});
   const [toast, setToast] = useState(null);
+  const [localCommentVotes, setLocalCommentVotes] = useState({});
   const textareaRef = useRef(null);
   const userFromStore = useSelector((state) => state.auth?.user);
   const [addComment, { isLoading }] = useAddCommentMutation();
-  const { data: comments, isLoading: isLoadingComments, refetch } = useGetCommentsQuery(postId);
+  const { data: comments, isLoading: isLoadingComments, refetch, error } = useGetCommentsQuery(postId, {
+    pollingInterval: 5000,
+  });
   const { data: postData, isLoading: isLoadingPost } = useGetPostByIdQuery(postId);
   const navigate = useNavigate();
 
@@ -65,6 +69,45 @@ const CommentModal = forwardRef(({
       console.log('[DEBUG] Available Images:', postData.data.images);
     }
   }, [postData, currentImageIndex]);
+
+  // Update comment votes when comments change
+  useEffect(() => {
+    if (comments) {
+      const initialCommentVotes = {};
+      comments.forEach(comment => {
+        initialCommentVotes[comment._id] = {
+          upvotes: comment.upvotes || [],
+          downvotes: comment.downvotes || []
+        };
+      });
+      setLocalCommentVotes(initialCommentVotes);
+    }
+  }, [comments]);
+
+  // Add debug effect for comments
+  useEffect(() => {
+    console.log('[DEBUG] CommentModal - postId:', postId);
+    console.log('[DEBUG] CommentModal - Comments data:', comments);
+    console.log('[DEBUG] CommentModal - Is loading:', isLoadingComments);
+    console.log('[DEBUG] CommentModal - Error:', error);
+    console.log('[DEBUG] CommentModal - CommentsCount prop:', commentsCount);
+    if (comments) {
+      console.log('[DEBUG] CommentModal - Number of comments:', comments.length);
+      console.log('[DEBUG] CommentModal - First comment:', comments[0]);
+      console.log('[DEBUG] CommentModal - Comments type:', typeof comments);
+      console.log('[DEBUG] CommentModal - Is array:', Array.isArray(comments));
+    }
+  }, [postId, comments, isLoadingComments, error, commentsCount]);
+
+  const handleCommentVoteUpdate = (commentId, newUpvotes, newDownvotes) => {
+    setLocalCommentVotes(prev => ({
+      ...prev,
+      [commentId]: {
+        upvotes: newUpvotes,
+        downvotes: newDownvotes
+      }
+    }));
+  };
 
   const handleTextareaChange = (e) => {
     setComment(e.target.value);
@@ -131,6 +174,12 @@ const CommentModal = forwardRef(({
     setTimeout(() => {
       navigate('/login');
     }, 1000);
+  };
+
+  // Add a function to force refetch comments
+  const handleRefetchComments = () => {
+    console.log('[DEBUG] Manually refetching comments for postId:', postId);
+    refetch();
   };
 
   if (isLoadingPost) {
@@ -304,6 +353,7 @@ const CommentModal = forwardRef(({
                   onCommentClick={() => {}}
                   useCustomToast={true}
                   onShowToast={showToast}
+                  onVoteUpdate={onVoteUpdate}
                 />
               </div>
             </div>
@@ -312,24 +362,63 @@ const CommentModal = forwardRef(({
           <div className="">
             <div className="flex flex-col gap-2.5 px-4 py-2 text-lg">
               {isLoadingComments ? (
-                <div className="text-center py-4">Loading comments...</div>
-              ) : comments && comments.length > 0 ? (
-                comments.map((comment) => (
-                  <Comment2
-                    key={comment._id || comment.id}
-                    profileSize="h-12"
-                    username={comment.user.username}
-                    comment={comment.content}
-                    timestamp={formatTimestamp(comment.createdAt)}
-                    commentId={comment._id}
-                    upvotesArray={comment.upvotes || []}
-                    downvotesArray={comment.downvotes || []}
-                    currentUserId={userFromStore?.role === "user" ? userFromStore?._id : null}
-                    onShowToast={showToast}
-                  />
-                ))
+                <div className="text-center py-4">
+                  <div className="loading loading-spinner loading-md"></div>
+                  <p className="mt-2">Loading comments...</p>
+                </div>
+              ) : error ? (
+                <div className="text-center py-4 text-error">
+                  <p>Error loading comments</p>
+                  <button 
+                    onClick={handleRefetchComments}
+                    className="mt-2 text-primary hover:underline"
+                  >
+                    Retry
+                  </button>
+                </div>
+              ) : comments && Array.isArray(comments) && comments.length > 0 ? (
+                <>
+                  <p className="text-sm text-gray-500 mb-4">
+                    {comments.length} comment{comments.length !== 1 ? 's' : ''}
+                  </p>
+                  {comments.map((comment) => {
+                    console.log('[DEBUG] Rendering comment:', comment);
+                    return (
+                      <Comment2
+                        key={comment._id}
+                        profileSize="h-12"
+                        username={comment.user?.username || 'Anonymous'}
+                        comment={comment.content}
+                        timestamp={formatTimestamp(comment.createdAt)}
+                        commentId={comment._id}
+                        upvotesArray={localCommentVotes[comment._id]?.upvotes || comment.upvotes || []}
+                        downvotesArray={localCommentVotes[comment._id]?.downvotes || comment.downvotes || []}
+                        currentUserId={userFromStore?.role === "user" ? userFromStore?._id : null}
+                        onShowToast={showToast}
+                        onVoteUpdate={(newUpvotes, newDownvotes) => 
+                          handleCommentVoteUpdate(comment._id, newUpvotes, newDownvotes)
+                        }
+                      />
+                    );
+                  })}
+                </>
               ) : (
-                <div className="text-center py-4 text-gray-500">No comments yet</div>
+                <div className="text-center py-4 text-gray-500">
+                  {commentsCount > 0 ? (
+                    <>
+                      <div className="loading loading-spinner loading-md"></div>
+                      <p className="mt-2">Loading comments...</p>
+                      <button 
+                        onClick={handleRefetchComments}
+                        className="mt-2 text-primary hover:underline"
+                      >
+                        Refresh
+                      </button>
+                    </>
+                  ) : (
+                    "No comments yet"
+                  )}
+                </div>
               )}
             </div>
           </div>

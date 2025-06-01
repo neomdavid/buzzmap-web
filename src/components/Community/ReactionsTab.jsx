@@ -28,6 +28,7 @@ const ReactionsTab = ({
   onShowToast,
   isAdminPost = false,
   userFromStore = null,
+  onVoteUpdate,
 }) => {
   // Regular post mutations
   const [upvoteReport] = useUpvoteReportMutation();
@@ -41,7 +42,7 @@ const ReactionsTab = ({
   const [removeAdminPostUpvote] = useRemoveAdminPostUpvoteMutation();
   const [removeAdminPostDownvote] = useRemoveAdminPostDownvoteMutation();
 
-  // Check if the current user has voted
+  // Check if the current user has voted using the shared state
   const hasUpvoted = currentUserId && upvotesArray.some(vote => 
     typeof vote === 'object' ? vote._id === currentUserId : vote === currentUserId
   );
@@ -49,7 +50,7 @@ const ReactionsTab = ({
     typeof vote === 'object' ? vote._id === currentUserId : vote === currentUserId
   );
 
-  // Calculate net votes based on the length of the arrays
+  // Calculate net votes based on the shared arrays
   const netVotes = (Array.isArray(upvotesArray) ? upvotesArray.length : 0) - 
                   (Array.isArray(downvotesArray) ? downvotesArray.length : 0);
 
@@ -62,18 +63,36 @@ const ReactionsTab = ({
       }
       return;
     }
+
+    // Create new arrays for optimistic update
+    let newUpvotes = [...upvotesArray];
+    let newDownvotes = [...downvotesArray];
+
+    if (hasUpvoted) {
+      newUpvotes = newUpvotes.filter(vote => 
+        typeof vote === 'object' ? vote._id !== currentUserId : vote !== currentUserId
+      );
+    } else {
+      newUpvotes.push(currentUserId);
+      // If user had downvoted, remove it
+      if (hasDownvoted) {
+        newDownvotes = newDownvotes.filter(vote => 
+          typeof vote === 'object' ? vote._id !== currentUserId : vote !== currentUserId
+        );
+      }
+    }
+
+    // Update parent component immediately
+    onVoteUpdate?.(newUpvotes, newDownvotes);
+
     try {
       if (hasUpvoted) {
-        // Remove upvote
-        console.log('[DEBUG] Removing upvote from post:', postId);
         if (isAdminPost) {
           await removeAdminPostUpvote(postId).unwrap();
         } else {
           await removeUpvote(postId).unwrap();
         }
       } else {
-        // Upvote
-        console.log('[DEBUG] Adding upvote to post:', postId);
         if (isAdminPost) {
           await upvoteAdminPost(postId).unwrap();
         } else {
@@ -82,6 +101,8 @@ const ReactionsTab = ({
       }
     } catch (error) {
       console.error('[DEBUG] Error handling upvote:', error);
+      // Revert optimistic update on error
+      onVoteUpdate?.(upvotesArray, downvotesArray);
       if (onShowToast) {
         onShowToast("Failed to update vote", "error");
       }
@@ -97,18 +118,36 @@ const ReactionsTab = ({
       }
       return;
     }
+
+    // Create new arrays for optimistic update
+    let newUpvotes = [...upvotesArray];
+    let newDownvotes = [...downvotesArray];
+
+    if (hasDownvoted) {
+      newDownvotes = newDownvotes.filter(vote => 
+        typeof vote === 'object' ? vote._id !== currentUserId : vote !== currentUserId
+      );
+    } else {
+      newDownvotes.push(currentUserId);
+      // If user had upvoted, remove it
+      if (hasUpvoted) {
+        newUpvotes = newUpvotes.filter(vote => 
+          typeof vote === 'object' ? vote._id !== currentUserId : vote !== currentUserId
+        );
+      }
+    }
+
+    // Update parent component immediately
+    onVoteUpdate?.(newUpvotes, newDownvotes);
+
     try {
       if (hasDownvoted) {
-        // Remove downvote
-        console.log('[DEBUG] Removing downvote from post:', postId);
         if (isAdminPost) {
           await removeAdminPostDownvote(postId).unwrap();
         } else {
           await removeDownvote(postId).unwrap();
         }
       } else {
-        // Downvote
-        console.log('[DEBUG] Adding downvote to post:', postId);
         if (isAdminPost) {
           await downvoteAdminPost(postId).unwrap();
         } else {
@@ -117,6 +156,8 @@ const ReactionsTab = ({
       }
     } catch (error) {
       console.error('[DEBUG] Error handling downvote:', error);
+      // Revert optimistic update on error
+      onVoteUpdate?.(upvotesArray, downvotesArray);
       if (onShowToast) {
         onShowToast("Failed to update vote", "error");
       }

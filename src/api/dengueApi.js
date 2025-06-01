@@ -6,9 +6,7 @@ console.log('Current Mode:', import.meta.env.MODE);
 console.log('VITE_API_BASE_URL:', import.meta.env.VITE_API_BASE_URL);
 
 // Custom error handler
-const BASE_URL = import.meta.env.VITE_MODE === 'PROD'
-  ? import.meta.env.VITE_API_BASE_URL
-  : 'http://localhost:4000/';
+const BASE_URL = 'http://localhost:4000/';
 
 console.log('Final BASE_URL:', BASE_URL);
 
@@ -724,10 +722,47 @@ export const dengueApi = createApi({
       ],
     }),
     getComments: builder.query({
-      query: (reportId) => `reports/${reportId}/comments`,
-      providesTags: (result, error, reportId) => [
-        { type: "Comments", id: reportId }
-      ],
+      query: (postId) => {
+        console.log('[DEBUG] Fetching comments for postId:', postId);
+        return {
+          url: `reports/${postId}/comments`,
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        };
+      },
+      transformResponse: (response, meta, arg) => {
+        console.log('[DEBUG] Raw Comments API Response:', response);
+        try {
+          // If response is an array, return it directly
+          if (Array.isArray(response)) {
+            console.log('[DEBUG] Response is an array with length:', response.length);
+            return response;
+          }
+          // If response is an object with a data property, return that
+          if (response && response.data) {
+            console.log('[DEBUG] Response has data property with length:', response.data.length);
+            return response.data;
+          }
+          // If response is empty or null, return empty array
+          console.log('[DEBUG] Response is empty or null');
+          return [];
+        } catch (error) {
+          console.error('[DEBUG] Error transforming comments response:', error);
+          return [];
+        }
+      },
+      transformErrorResponse: (response, meta, arg) => {
+        console.error('[DEBUG] Comments API Error:', response);
+        return response;
+      },
+      providesTags: (result, error, postId) => {
+        console.log('[DEBUG] Comments cache tags for postId:', postId);
+        return [{ type: "Comments", id: postId }];
+      },
+      // Add polling to keep comments updated
+      pollingInterval: 5000,
     }),
 
     // Test endpoint to verify API connectivity

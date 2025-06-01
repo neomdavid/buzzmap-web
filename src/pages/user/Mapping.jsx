@@ -919,7 +919,7 @@ const Mapping = () => {
               <div className="flex gap-2">
                 <button
                   onClick={() => setShowBreedingSites(!showBreedingSites)}
-                  className={`w-full px-4 py-2 rounded-md shadow transition-colors ${
+                  className={`w-full px-4 py-2 hover:cursor-pointer rounded-md shadow transition-colors ${
                     showBreedingSites
                       ? "bg-primary text-white"
                       : "bg-white text-primary hover:bg-gray-50 border border-gray-200"
@@ -932,7 +932,7 @@ const Mapping = () => {
                     setShowInterventions(!showInterventions);
                     if (showInterventions) setSelectedIntervention(null);
                   }}
-                  className={`w-full px-4 py-2 rounded-md shadow transition-colors ${
+                  className={`w-full px-4 hover:cursor-pointer py-2 rounded-md shadow transition-colors ${
                     showInterventions
                       ? "bg-primary text-white"
                       : "bg-white text-primary hover:bg-gray-50 border border-gray-200"
@@ -946,7 +946,7 @@ const Mapping = () => {
               <select
                 value={searchQuery}
                 onChange={handleBarangaySelect}
-                className="w-full px-4 py-2 rounded-md shadow bg-transparent text-primary border border-primary/20 focus:border-primary focus:outline-none"
+                className="w-full px-4 py-2 hover:cursor-pointer rounded-md shadow bg-transparent text-primary border border-primary/20 focus:border-primary focus:outline-none"
               >
                 <option value="">Select a barangay</option>
                 {barangaysList?.map((barangay) => (
