@@ -91,119 +91,71 @@ const SearchResults = () => {
           <hr className='mt-8 mb-8 border-accent' />
           <div className='flex flex-col font-semibold text-lg gap-1'>
             <p className='mb-2 text-[18px]'> Filters</p>
-            <div className='flex gap-2.5 items-center text-primary hover:text-white hover:bg-primary/60 hover:cursor-pointer transition-all duration-300 rounded-xl px-4 py-2 '>
+            <div 
+              className={`flex gap-2.5 items-center text-primary hover:text-white hover:bg-primary/60 hover:cursor-pointer transition-all duration-300 rounded-xl px-4 py-2 ${
+                isAllActive ? 'bg-primary text-white' : ''
+              }`}
+              onClick={() => {
+                setFilters({
+                  barangay: '',
+                  report_type: '',
+                  description: '',
+                  username: ''
+                });
+                const newParams = new URLSearchParams(searchParams);
+                newParams.delete('barangay');
+                newParams.delete('report_type');
+                newParams.delete('description');
+                newParams.delete('username');
+                setSearchParams(newParams);
+              }}
+            >
               <div><IconMenuDeep stroke={3} /> </div>
               <p>All</p>
             </div>
-            <div className='flex gap-2.5 items-center text-primary hover:text-white hover:bg-primary/60 hover:cursor-pointer transition-all duration-300 rounded-xl px-4 py-2 '>
+            <div 
+              className={`flex gap-2.5 items-center text-primary hover:text-white hover:bg-primary/60 hover:cursor-pointer transition-all duration-300 rounded-xl px-4 py-2 ${
+                filters.report_type ? 'bg-primary text-white' : ''
+              }`}
+              onClick={() => handleFilterChange('report_type', 'Breeding Site')}
+            >
               <div><IconTableShare stroke={2} size={23} weight='fill' /> </div>
               <p>Posts</p>
             </div>
-            <div className='flex gap-2.5 items-center text-primary hover:text-white hover:bg-primary/60 hover:cursor-pointer transition-all duration-300 rounded-xl px-4 py-2 mb-3 '>
+            <div 
+              className={`flex gap-2.5 items-center text-primary hover:text-white hover:bg-primary/60 hover:cursor-pointer transition-all duration-300 rounded-xl px-4 py-2 mb-3 ${
+                filters.username ? 'bg-primary text-white' : ''
+              }`}
+              onClick={() => handleFilterChange('username', searchQuery)}
+            >
               <div><Users stroke={2} size={23} weight='fill' /> </div>
               <p>People</p>
             </div>
 
-            <select className='select w-full text-lg select-primary bg-inherit rounded-lg mb-2 hover:cursor-pointer'>
-              <option value="All">All</option>
+            <select 
+              className='select w-full text-lg select-primary bg-inherit rounded-lg mb-2 hover:cursor-pointer'
+              value={filters.barangay}
+              onChange={(e) => handleFilterChange('barangay', e.target.value)}
+            >
+              <option value="">All Barangays</option>
+              {!isLoadingBarangays && barangays?.map((barangay) => (
+                <option key={barangay._id} value={barangay.name}>
+                  {barangay.name}
+                </option>
+              ))}
             </select>
-            <select className='select w-full text-lg select-primary bg-inherit rounded-lg hover:cursor-pointer'>
-              <option value="All">Report Type</option>
+            <select 
+              className='select w-full text-lg select-primary bg-inherit rounded-lg hover:cursor-pointer'
+              value={filters.report_type}
+              onChange={(e) => handleFilterChange('report_type', e.target.value)}
+            >
+              <option value="">All Report Types</option>
+              <option value="Breeding Site">Breeding Site</option>
+              <option value="Dengue Case">Dengue Case</option>
             </select>
-
-          </div>
-          {/* Filter Type Tabs */}
-          <div className="mb-6">
-            <div className="flex flex-col gap-2">
-              <button
-                className={`flex items-center gap-3 px-4 py-2 rounded-lg transition-all
-                  ${isAllActive
-                    ? "bg-primary text-white"
-                    : "bg-gray-100 text-gray-700 hover:bg-primary/10"
-                  }`}
-                // Reset all filters when "All" is clicked
-                onClick={() => {
-                  setFilters({
-                    barangay: '',
-                    report_type: '',
-                    description: '',
-                    username: ''
-                  });
-                  // Also update the URL params
-                  const newParams = new URLSearchParams(searchParams);
-                  newParams.delete('barangay');
-                  newParams.delete('report_type');
-                  newParams.delete('description');
-                  newParams.delete('username');
-                  setSearchParams(newParams);
-                }}
-              >
-                <span className="bg-gray-200 rounded-full p-2 flex items-center justify-center">
-                  <NewspaperClipping size={20} />
-                </span>
-                <span className="font-semibold">All</span>
-              </button>
-            </div>
-          </div>
-
-          {/* Detailed Filters */}
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium mb-2">Barangay</label>
-              <select
-                value={filters.barangay}
-                onChange={(e) => handleFilterChange('barangay', e.target.value)}
-                className="w-full p-2 rounded border"
-              >
-                <option value="">Any</option>
-                <option value="All Barangays">All Barangays</option>
-                {!isLoadingBarangays && barangays?.map((barangay) => (
-                  <option key={barangay._id} value={barangay.name}>
-                    {barangay.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-2">Report Type</label>
-              <select
-                value={filters.report_type}
-                onChange={(e) => handleFilterChange('report_type', e.target.value)}
-                className="w-full p-2 rounded border"
-              >
-                <option value="">All</option>
-                <option value="Breeding Site">Breeding Site</option>
-                <option value="Dengue Case">Dengue Case</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-2">Description</label>
-              <input
-                type="text"
-                value={filters.description}
-                onChange={(e) => handleFilterChange('description', e.target.value)}
-                className="w-full p-2 rounded border"
-                placeholder="Filter by description"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-2">People</label>
-              <input
-                type="text"
-                value={filters.username}
-                onChange={(e) => handleFilterChange('username', e.target.value)}
-                className="w-full p-2 rounded border"
-                placeholder="Filter by username"
-              />
-            </div>
           </div>
         </aside>
-        <div className='w-120'>
-
-        </div>
+        <div className='w-120'></div>
 
         {/* Main Content */}
         <main className="flex-1 p-6">
