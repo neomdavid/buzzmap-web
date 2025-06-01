@@ -368,24 +368,29 @@ const Community = () => {
       </article>
 
       <aside
-        className={`bg-base-300 px-6 py-8 shadow-2xl rounded-sm overflow-y-scroll transition-transform duration-300 ease-in-out 
-    fixed inset-y-0 right-0 w-[90vw] top-[58px] max-w-[90vw] pt-20 lg:pt-6 z-10 lg:z-0 lg:sticky lg:top-19 lg:h-[calc(100vh-1.5rem)] 
+        className={`bg-base-300 shadow-2xl rounded-sm overflow-y-scroll transition-transform duration-300 ease-in-out 
+    fixed inset-y-0 right-0 w-[60vw] top-[58px] pb-4 max-w-[90vw] z-10 lg:z-0 lg:sticky lg:top-19 lg:h-[calc(100vh-1.5rem)] 
     lg:w-[40vw] lg:max-w-[450px] lg:shadow-sm ${
       showAside ? "translate-x-0" : "translate-x-full"
     } lg:translate-x-0`}
       >
-        {latestAnnouncement && (
-          <AnnouncementCard 
-            announcement={latestAnnouncement} 
-            key={latestAnnouncement._id}
-          />
-        )}
-        <button
-          onClick={() => setShowAside(false)}
-          className="absolute top-4 right-4 lg:hidden bg-primary text-white p-2 rounded-full hover:cursor-pointer hover:bg-white hover:text-primary transition-all duration-200"
-        >
-          <ArrowLeft size={18} className="rotate-180" />
-        </button>
+        <div className="sticky top-0 bg-base-300 px-6 py-4 flex justify-between items-center z-100 border-b border-gray-200 pt-6 pb-4">
+          <p className="text-3xl font-bold text-primary">Official Announcement</p>
+          <button
+            onClick={() => setShowAside(false)}
+            className="lg:hidden bg-primary text-white p-2 rounded-full hover:cursor-pointer hover:bg-white hover:text-primary transition-all duration-200"
+          >
+            <ArrowLeft size={18} className="rotate-180" />
+          </button>
+        </div>
+        <div className="px-6 py-8">
+          {latestAnnouncement && (
+            <AnnouncementCard 
+              announcement={latestAnnouncement} 
+              key={latestAnnouncement._id}
+            />
+          )}
+        </div>
       </aside>
 
       {!showAside && (

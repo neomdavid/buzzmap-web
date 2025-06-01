@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import announcementImg from "../../assets/announcementimg.png"; // Default image
 import profile1 from "../../assets/profile1.png";
 
-import { DotsThree, PaperPlaneRight } from "phosphor-react";
+import { DotsThree, PaperPlaneRight, ArrowLeft } from "phosphor-react";
 import ImageGrid from "./ImageGrid";
 import ReactionsTab from "./ReactionsTab";
 import Comment2 from "./Comment2";
@@ -144,6 +144,8 @@ const AnnouncementCard = ({ announcement }) => {
       }
     }));
   };
+
+  const [showAside, setShowAside] = useState(true);
 
   return (
     <div className="flex flex-col">
