@@ -1,8 +1,17 @@
 // api/dengueApi.js
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 
+// Debug environment variables
+console.log('Current Mode:', import.meta.env.MODE);
+console.log('VITE_API_BASE_URL:', import.meta.env.VITE_API_BASE_URL);
+
 // Custom error handler
-const BASE_URL = import.meta.env.VITE_API_BASE_URL;
+const BASE_URL = import.meta.env.VITE_MODE === 'PROD'
+  ? import.meta.env.VITE_API_BASE_URL
+  : 'http://localhost:4000/';
+
+console.log('Final BASE_URL:', BASE_URL);
+
 const customBaseQuery = fetchBaseQuery({
   baseUrl: BASE_URL+"api/v1/",
   prepareHeaders: (headers, { getState }) => {
