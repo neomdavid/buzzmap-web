@@ -13,7 +13,7 @@ import { toastWarn } from "../../utils.jsx";
 import LoadingSpinner from "../../components/ui/LoadingSpinner";
 import ErrorMessage from "../../components/ui/ErrorMessage";
 import { useGetPatternRecognitionResultsQuery, useGetBarangaysQuery, useGetPostsQuery, useGetAllInterventionsQuery } from "../../api/dengueApi";
-import { MapPin } from "phosphor-react";
+import { MapPin, CaretLeft, CaretRight } from "phosphor-react";
 import { useNavigate } from "react-router-dom";
 
 const containerStyle = {
@@ -102,6 +102,8 @@ const Mapping = () => {
   const [breedingSites, setBreedingSites] = useState([]);
   const [selectedBreedingSite, setSelectedBreedingSite] = useState(null);
   const [selectedBarangayId, setSelectedBarangayId] = useState(null);
+  const [showControlPanel, setShowControlPanel] = useState(true);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768); // 768px is md breakpoint
   const navigate = useNavigate();
 
   // State for interventions
@@ -342,6 +344,16 @@ const Mapping = () => {
     }
   }, [isLoaded]);
 
+  // Add window resize listener
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   // Handle barangay selection
   const handleBarangaySelect = (e) => {
     const selectedBarangayName = e.target.value;
@@ -474,7 +486,7 @@ const Mapping = () => {
   if (!isLoaded) return <LoadingSpinner size={32} className="h-screen" />;
   if (loading) return <LoadingSpinner size={32} className="h-screen" />;
   if (error) return <ErrorMessage error={error} className="m-4" />;
-  if (!currentPosition) return <ErrorMessage error="Unable to get your location" className="m-4" />;
+  if (!currentPosition) return <LoadingSpinner size={32} className="h-screen" message="Getting your location..." />;
 
   return (
     <div className="relative h-[92.3vh] mt-[-9.5px]  w-[100vw] overflow-hidden">
@@ -581,6 +593,9 @@ const Mapping = () => {
                     const [lng, lat] = coordinates;
                     setSelectedBarangayCenter({ lat, lng });
                     setSelectedBarangayId(`${index}-${i}`);
+                    if (isMobile) {
+                      setShowControlPanel(false);
+                    }
                     if (mapRef.current && lat && lng && !isNaN(lat) && !isNaN(lng)) {
                       panToWithOffset(mapRef.current, { lat, lng }, 0.15);
                     }
@@ -629,11 +644,15 @@ const Mapping = () => {
                     }
                     onClick={() => {
                       setSelectedBreedingSite(site);
+                      if (isMobile) {
+                        setShowControlPanel(false);
+                      }
                       if (mapRef.current) {
-                        panToWithOffset(mapRef.current, {
+                        const position = {
                           lat: site.specific_location.coordinates[1],
                           lng: site.specific_location.coordinates[0],
-                        }, 0.15);
+                        };
+                        mapRef.current.panTo(position);
                         mapRef.current.setZoom(17);
                       }
                     }}
@@ -673,7 +692,8 @@ const Mapping = () => {
                   options={{
                     pixelOffset: new window.google.maps.Size(0, -30),
                     disableAutoPan: false,
-                    maxWidth: 500
+                    maxWidth: 500,
+                    zIndex: 1000
                   }}
                 >
                   <div className="bg-white p-4 rounded-lg text-center h-auto">
@@ -719,10 +739,13 @@ const Mapping = () => {
               }}
               onCloseClick={() => setSelectedBreedingSite(null)}
               options={{
-                maxWidth: 500
+                pixelOffset: new window.google.maps.Size(0, -30),
+                disableAutoPan: false,
+                zIndex: 1000,
+                maxWidth: 500,
               }}
             >
-              <div className="bg-white p-4 rounded-lg text-primary text-center">
+              <div className="bg-white p-4 rounded-lg text-primary text-center max-w-120 w-[50vw]">
                 <p className="font-bold text-4xl font-extrabold mb-4 text-primary">
                   {selectedBreedingSite.report_type}  
                 </p>
@@ -796,6 +819,9 @@ const Mapping = () => {
                 }}
                 onClick={() => {
                   setSelectedIntervention(intervention);
+                  if (isMobile) {
+                    setShowControlPanel(false);
+                  }
                   if (mapRef.current) {
                     panToWithOffset(mapRef.current, {
                       lat: intervention.specific_location.coordinates[1],
@@ -816,10 +842,12 @@ const Mapping = () => {
               onCloseClick={() => setSelectedIntervention(null)}
               options={{
                 pixelOffset: new window.google.maps.Size(0, -30),
-                maxWidth: 500
+                disableAutoPan: false,
+                maxWidth: 500,
+                zIndex: 1000
               }}
             >
-              <div className="p-3 flex flex-col items-center gap-1 font-normal bg-white rounded-md shadow-md text-primary">
+              <div className="p-3 flex flex-col items-center gap-1 font-normal bg-white text-center rounded-md shadow-md text-primary">
                 <p className="text-4xl font-extrabold text-primary mb-2">{selectedIntervention.interventionType}</p>
                 <div className="text-lg flex items-center gap-2">
                   <span className="font-bold">Status:</span>
@@ -875,106 +903,118 @@ const Mapping = () => {
       <div className="absolute top-0 left-0 right-0 h-24 bg-gradient-to-b from-black/10 to-transparent z-[1]" />
 
       {/* Floating controls card */}
-      <div className="absolute top-4 left-10 z-10">
-        <div className="bg-white/60 backdrop-blur-md rounded-lg shadow-xl p-6 w-[400px] text-primary">
-          <p className="text-3xl font-extrabold text-primary mb-2">Check your place</p>
-          <p className="text-sm text-primary mb-4">
-            Stay Protected. Look out for Dengue Outbreaks.
-          </p>
+      <div className="absolute top-4 left-10 z-[1]">
+        {showControlPanel && (
+          <div 
+            className="bg-white/60 backdrop-blur-md rounded-lg shadow-xl p-6 w-[400px] text-primary transition-all duration-300 ease-in-out transform"
+          >
+            <p className="text-3xl font-extrabold text-primary mb-2">Check your place</p>
+            <p className="text-sm text-primary mb-4">
+              Stay Protected. Look out for Dengue Outbreaks.
+            </p>
 
-          {/* Controls */}
-          <div className="flex flex-col gap-3">
-            {/* Buttons */}
-            <div className="flex gap-2">
-              <button
-                onClick={() => setShowBreedingSites(!showBreedingSites)}
-                className={`w-full px-4 py-2 rounded-md shadow transition-colors ${
-                  showBreedingSites
-                    ? "bg-primary text-white"
-                    : "bg-white text-primary hover:bg-gray-50 border border-gray-200"
-                }`}
-              >
-                {showBreedingSites ? "Hide Breeding Sites" : "Show Breeding Sites"}
-              </button>
-              <button
-                onClick={() => {
-                  setShowInterventions(!showInterventions);
-                  if (showInterventions) setSelectedIntervention(null);
-                }}
-                className={`w-full px-4 py-2 rounded-md shadow transition-colors ${
-                  showInterventions
-                    ? "bg-primary text-white"
-                    : "bg-white text-primary hover:bg-gray-50 border border-gray-200"
-                }`}
-              >
-                {showInterventions ? "Hide Interventions" : "Show Interventions"}
-              </button>
-            </div>
-
-            {/* Barangay Select */}
-            <select
-              value={searchQuery}
-              onChange={handleBarangaySelect}
-              className="w-full px-4 py-2 rounded-md shadow bg-white text-primary border border-gray-200"
-            >
-              <option value="">Select a barangay</option>
-              {barangaysList?.map((barangay) => (
-                <option key={barangay._id} value={barangay.name}>
-                  {barangay.name}
-                </option>
-              ))}
-            </select>
-
-            {/* Legends */}
+            {/* Controls */}
             <div className="flex flex-col gap-3">
-              {/* Pattern Types Legend */}
-              <div className="bg-white rounded-md shadow px-4 py-3 border border-gray-200">
-                <p className="font-semibold mb-2 text-primary">Pattern Types</p>
-                <div className="flex items-center justify-between sm:justify-start gap-2 flex-wrap">
-                  {Object.entries(PATTERN_COLORS)
-                    .filter(([key]) => key !== 'default')
-                    .sort(([aKey], [bKey]) => { 
-                      const order = { none: 0, stability: 1, decline: 2, gradual_rise: 3, spike: 4 };
-                      return order[aKey] - order[bKey];
-                    })
-                    .map(([pattern, color]) => (
-                      <div key={pattern} className="flex items-center gap-1">
-                        <span
-                          style={{ backgroundColor: color, width: '12px', height: '12px' }}
-                          className="inline-block"
-                        />
-                        <span className="text-xs text-primary">
-                          {pattern.charAt(0).toUpperCase() + pattern.slice(1).replace('_', ' ')}
-                        </span>
-                      </div>
-                    ))}
-                </div>
+              {/* Buttons */}
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setShowBreedingSites(!showBreedingSites)}
+                  className={`w-full px-4 py-2 rounded-md shadow transition-colors ${
+                    showBreedingSites
+                      ? "bg-primary text-white"
+                      : "bg-white text-primary hover:bg-gray-50 border border-gray-200"
+                  }`}
+                >
+                  {showBreedingSites ? "Hide Breeding Sites" : "Show Breeding Sites"}
+                </button>
+                <button
+                  onClick={() => {
+                    setShowInterventions(!showInterventions);
+                    if (showInterventions) setSelectedIntervention(null);
+                  }}
+                  className={`w-full px-4 py-2 rounded-md shadow transition-colors ${
+                    showInterventions
+                      ? "bg-primary text-white"
+                      : "bg-white text-primary hover:bg-gray-50 border border-gray-200"
+                  }`}
+                >
+                  {showInterventions ? "Hide Interventions" : "Show Interventions"}
+                </button>
               </div>
 
-              {/* Intervention Legend */}
-              {showInterventions && (
+              {/* Barangay Select */}
+              <select
+                value={searchQuery}
+                onChange={handleBarangaySelect}
+                className="w-full px-4 py-2 rounded-md shadow bg-transparent text-primary border border-primary/20 focus:border-primary focus:outline-none"
+              >
+                <option value="">Select a barangay</option>
+                {barangaysList?.map((barangay) => (
+                  <option key={barangay._id} value={barangay.name}>
+                    {barangay.name}
+                  </option>
+                ))}
+              </select>
+
+              {/* Legends */}
+              <div className="flex flex-col gap-3">
+                {/* Pattern Types Legend */}
                 <div className="bg-white rounded-md shadow px-4 py-3 border border-gray-200">
-                  <p className="font-semibold mb-2 text-primary">Intervention Status</p>
-                  <div className="flex items-center justify-around sm:justify-start gap-2 flex-wrap">
-                    {Object.entries(INTERVENTION_STATUS_COLORS)
-                      .filter(([key]) => key !== 'default' && key !== 'completed')
-                      .map(([status, color]) => (
-                        <div key={status} className="flex items-center gap-1">
+                  <p className="font-semibold mb-2 text-primary">Pattern Types</p>
+                  <div className="flex items-center justify-between sm:justify-start gap-2 flex-wrap">
+                    {Object.entries(PATTERN_COLORS)
+                      .filter(([key]) => key !== 'default')
+                      .sort(([aKey], [bKey]) => { 
+                        const order = { none: 0, stability: 1, decline: 2, gradual_rise: 3, spike: 4 };
+                        return order[aKey] - order[bKey];
+                      })
+                      .map(([pattern, color]) => (
+                        <div key={pattern} className="flex items-center gap-1">
                           <span
-                            style={{ backgroundColor: color }}
-                            className="w-3 h-3 inline-block rounded-full"
+                            style={{ backgroundColor: color, width: '12px', height: '12px' }}
+                            className="inline-block"
                           />
                           <span className="text-xs text-primary">
-                            {status.charAt(0).toUpperCase() + status.slice(1)}
+                            {pattern.charAt(0).toUpperCase() + pattern.slice(1).replace('_', ' ')}
                           </span>
                         </div>
                       ))}
                   </div>
                 </div>
-              )}
+
+                {/* Intervention Legend */}
+                {showInterventions && (
+                  <div className="bg-white rounded-md shadow px-4 py-3 border border-gray-200">
+                    <p className="font-semibold mb-2 text-primary">Intervention Status</p>
+                    <div className="flex items-center justify-around sm:justify-start gap-2 flex-wrap">
+                      {Object.entries(INTERVENTION_STATUS_COLORS)
+                        .filter(([key]) => key !== 'default' && key !== 'completed')
+                        .map(([status, color]) => (
+                          <div key={status} className="flex items-center gap-1">
+                            <span
+                              style={{ backgroundColor: color }}
+                              className="w-3 h-3 inline-block rounded-full"
+                            />
+                            <span className="text-xs text-primary">
+                              {status.charAt(0).toUpperCase() + status.slice(1)}
+                            </span>
+                          </div>
+                        ))}
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
-        </div>
+        )}
+        <button
+          onClick={() => setShowControlPanel(!showControlPanel)}
+          className={`absolute hover:cursor-pointer top-0.5 bg-white/60 backdrop-blur-md p-2 rounded-full shadow-lg text-primary hover:bg-white/80 ${
+            showControlPanel ? 'translate-x-[405px]' : 'translate-x-0'
+          }`}
+        >
+          {showControlPanel ? <CaretLeft size={20} weight="bold" /> : <CaretRight size={20} weight="bold" />}
+        </button>
       </div>
 
       {/* Location button */}
