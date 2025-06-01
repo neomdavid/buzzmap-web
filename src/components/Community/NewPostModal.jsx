@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef, forwardRef } from "react";
-import { DescriptionWithImages, RiskLevelLegends, SecondaryButton } from "../";
+import React, { useState, useEffect, useRef, forwardRef, useMemo } from "react";
+import { DescriptionWithImages, SecondaryButton } from "../";
 import profile1 from "../../assets/profile1.png";
 // import anonProfile from "../../assets/anon-profile.png";
 import { MapPicker, CustomModalToast } from "../";
@@ -7,6 +7,7 @@ import { showCustomToast, toastError } from "../../utils.jsx";
 import {
   useCreatePostMutation,
   useCreatePostWithImageMutation,
+  useGetBarangaysQuery,
 } from "../../api/dengueApi";
 import { useSelector } from "react-redux";
 import { IconUserCircle } from "@tabler/icons-react";
@@ -33,11 +34,23 @@ const NewPostModal = forwardRef(({ onSubmit, initialCoordinates = "", initialBar
   const token = useSelector((state) => state.auth.token);
   const [toast, setToast] = useState(null); // For storing the toast message
   const [isAnonymous, setIsAnonymous] = useState(false);
+  const [searchBarangay, setSearchBarangay] = useState("");
+  const { data: barangays = [] } = useGetBarangaysQuery();
+  const mapPickerRef = useRef(null);
 
   // RTK Query mutations
   const [createPost] = useCreatePostMutation();
   const [createPostWithImage, { isLoading, isError, error }] =
     useCreatePostWithImageMutation();
+
+  // Filter barangays based on search
+  const filteredBarangays = useMemo(() => {
+    if (!searchBarangay) return barangays;
+    return barangays.filter(b => 
+      b.name.toLowerCase().includes(searchBarangay.toLowerCase()) ||
+      b.displayName?.toLowerCase().includes(searchBarangay.toLowerCase())
+    );
+  }, [barangays, searchBarangay]);
 
   const showToast = (message, type) => {
     setToast({ message, type });
@@ -224,16 +237,20 @@ const NewPostModal = forwardRef(({ onSubmit, initialCoordinates = "", initialBar
       ref={ref}
       className="modal text-xl text-primary "
     >
-      <div className="modal-box w-11/12 max-w-5xl max-h-[95vh]">
-        <form method="dialog">
-          <button className="btn btn-sm text-3xl font-bold btn-circle btn-ghost absolute right-8 top-8.5">
-            ✕
-          </button>
-        </form>
-        <main className="p-3 pr-10">
-          <p className="text-4xl font-bold text-center">Report to Surveillance</p>
-          <hr className="text-gray-300 mt-4 mb-2" />
+      <div className="modal-box w-11/12 max-w-5xl max-h-[95vh] p-0">
+        {/* Fixed Header */}
+        <div className="sticky top-0 bg-base-100 z-10000 w-full border-b border-gray-200">
+          <div className="flex justify-between items-center px-8 py-4">
+            <p className="text-4xl font-bold">Report to Surveillance</p>
+            <form method="dialog">
+              <button className="btn btn-sm text-3xl font-bold btn-circle btn-ghost">
+                ✕
+              </button>
+            </form>
+          </div>
+        </div>
 
+        <main className="p-8">
           {/* --- ANONYMOUS SWITCH --- */}
           <div className="flex items-center justify-between mb-4 bg-base-200 p-4 rounded-lg">
             <span className="font-semibold text-[14px]">Participate anonymously</span>
@@ -251,7 +268,6 @@ const NewPostModal = forwardRef(({ onSubmit, initialCoordinates = "", initialBar
               ></div>
             </label>
           </div>
-          {/* --- END ANONYMOUS SWITCH --- */}
 
           <form className="flex flex-col" onSubmit={handleSubmit}>
             <section className="flex mb-4">
@@ -272,9 +288,9 @@ const NewPostModal = forwardRef(({ onSubmit, initialCoordinates = "", initialBar
                 {/* 📍 Location Section */}
                 <div className="flex flex-col gap-2">
                   <div className="flex items-center gap-2">
-                    <p className="font-bold text-xl">
+                    {/* <p className="font-bold text-xl">
                       📍Location <span className="text-error">*</span>
-                    </p>
+                    </p> */}
                     {(formErrors.location || locationError) && (
                       <span className="text-error text-sm">
                         {formErrors.location || locationError}
@@ -282,145 +298,98 @@ const NewPostModal = forwardRef(({ onSubmit, initialCoordinates = "", initialBar
                     )}
                   </div>
 
-                  <div className="flex gap-4 mb-2">
-                    <button
-                      type="button"
-                      className={`btn  btn-lg ${
-                        locationMethod === "map" ? "btn-primary text-white" : "btn-ghost"
-                      }`}
-                      onClick={() => setLocationMethod("map")}
-                    >
-                      Pin on Map
-                    </button>
-                    <button
-                      type="button"
-                      className={`btn btn-lg ${
-                        locationMethod === "manual"
-                          ? "btn-primary text-white "
-                          : "btn-ghost"
-                      }`}
-                      onClick={() => setLocationMethod("manual")}
-                    >
-                      Enter Coordinates
-                    </button>
-                  </div>
-
-                  {locationMethod === "map" ? (
-                    <div className="flex flex-col gap-4">
-                      <div className="h-100 rounded-lg overflow-hidden border border-gray-300">
-                        <RiskLevelLegends />
-                        <MapPicker
-                          onLocationSelect={handleLocationSelect}
-                          bounds={QC_BOUNDS}
-                          defaultCity="Quezon City"
-                          defaultCoordinates={coordinates}
-                        />
-                      </div>
-
-                      <div className="grid grid-cols-3 gap-4">
-                        <div>
-                          <label className="label">
-                            <span className="label-text mb-1">City</span>
-                          </label>
-                          <input
-                            type="text"
-                            className="input input-bordered py-6  w-full text-lg"
-                            value="Quezon City"
-                            readOnly
-                          />
+                  <div className="flex flex-col gap-4">
+                    {/* Barangay Search */}
+                    <div className="relative">
+                      <input
+                        type="text"
+                        className="input input-bordered py-6 w-full text-lg"
+                        placeholder="Type to search barangay..."
+                        value={searchBarangay}
+                        onChange={(e) => setSearchBarangay(e.target.value)}
+                      />
+                      {searchBarangay && filteredBarangays.length > 0 && (
+                        <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                          {filteredBarangays.map((b) => (
+                            <button
+                              key={b._id}
+                              type="button"
+                              className="w-full px-4 py-2 text-left hover:bg-gray-100 focus:bg-gray-100"
+                              onClick={() => {
+                                setBarangay(b.name);
+                                setSearchBarangay("");
+                                // Pan to the selected barangay
+                                if (mapPickerRef.current) {
+                                  mapPickerRef.current.panToBarangay(b.name);
+                                }
+                              }}
+                            >
+                              {b.displayName || b.name}
+                            </button>
+                          ))}
                         </div>
-
-                        <div>
-                          <label className="label">
-                            <span className="label-text mb-1">Barangay</span>
-                          </label>
-                          <input
-                            type="text"
-                            readOnly
-                            className="input input-bordered py-6  w-full text-lg"
-                            value={barangay}
-                            onChange={(e) => setBarangay(e.target.value)}
-                            placeholder="Select on map or enter manually"
-                          />
-                        </div>
-
-                        <div>
-                          <label className="label">
-                            <span className="label-text mb-1">Coordinates</span>
-                          </label>
-                          <input
-                            type="text"
-                            className="input input-bordered py-6 w-full text-lg"
-                            value={coordinates}
-                            readOnly
-                            placeholder="Select on map"
-                          />
-                        </div>
-                      </div>
+                      )}
                     </div>
-                  ) : (
-                    <div className="flex flex-col gap-4">
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <label className="label">
-                            <span className="label-text mb-1">City</span>
-                          </label>
-                          <input
-                            type="text"
-                            className="input input-bordered py-6 w-full text-lg"
-                            value="Quezon City"
-                            readOnly
-                          />
-                        </div>
 
-                        <div>
-                          <label className="label">
-                            <span className="label-text mb-1">Barangay</span>
-                          </label>
-                          <input
-                            type="text"
-                            className="input input-bordered py-6 w-full text-lg"
-                            value={barangay}
-                            onChange={(e) => setBarangay(e.target.value)}
-                            placeholder="Enter barangay"
-                          />
-                        </div>
+                    <div className="h-100 rounded-lg overflow-hidden border border-gray-300">
+                      <MapPicker
+                        ref={mapPickerRef}
+                        onLocationSelect={handleLocationSelect}
+                        bounds={QC_BOUNDS}
+                        defaultCity="Quezon City"
+                        defaultCoordinates={coordinates}
+                        selectedBarangay={barangay}
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-4">
+                      <div>
+                        <label className="label">
+                          <span className="label-text text-primary font-bold mb-1">City</span>
+                        </label>
+                        <input
+                          type="text"
+                          className="input input-bordered py-6 w-full text-lg"
+                          value="Quezon City"
+                          readOnly
+                        />
                       </div>
 
                       <div>
                         <label className="label">
-                          <span className="label-text mb-1">Coordinates</span>
+                          <span className="label-text text-primary font-bold mb-1">Barangay</span>
                         </label>
-                        <div className="flex gap-2">
-                          <input
-                            type="text"
-                            className="input input-bordered py-6 flex-1 text-lg"
-                            placeholder="Latitude, Longitude"
-                            value={coordinates}
-                            onChange={(e) => setCoordinates(e.target.value)}
-                          />
-                          <button
-                            type="button"
-                            onClick={getCurrentLocation}
-                            className="btn text-lg"
-                          >
-                            Use Current
-                          </button>
-                        </div>
-                        <p className="text-sm text-gray-500 mt-1">
-                          Must be within Quezon City boundaries
-                        </p>
+                        <input
+                          type="text"
+                          readOnly
+                          className="input input-bordered py-6 w-full text-lg"
+                          value={barangay}
+                          placeholder="Select on map or search above"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="label">
+                          <span className="label-text text-primary font-bold mb-1">Coordinates</span>
+                        </label>
+                        <input
+                          type="text"
+                          className="input input-bordered py-6 w-full text-lg"
+                          value={coordinates}
+                          readOnly
+                          placeholder="Select on map"
+                        />
                       </div>
                     </div>
-                  )}
+                  </div>
                 </div>
 
                 {/* 🕑 Date & Time Section */}
                 <div className="flex flex-col gap-2">
                   <div className="flex items-center gap-2">
-                    <p className="font-bold text-xl">
+                    {/* <p className="font-bold text-xl">
                       🕑Date & Time: <span className="text-error">*</span>
-                    </p>
+                    </p> */}
                     {formErrors.datetime && (
                       <span className="text-error text-sm">
                         {formErrors.datetime}
@@ -431,7 +400,7 @@ const NewPostModal = forwardRef(({ onSubmit, initialCoordinates = "", initialBar
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className="label">
-                        <span className="label-text mb-1">Date</span>
+                        <span className="label-text text-primary font-bold mb-1">Date</span>
                       </label>
                       <input
                         type="date"
@@ -443,7 +412,7 @@ const NewPostModal = forwardRef(({ onSubmit, initialCoordinates = "", initialBar
 
                     <div>
                       <label className="label">
-                        <span className="label-text mb-1">Time</span>
+                        <span className="label-text text-primary font-bold mb-1">Time</span>
                       </label>
                       <input
                         type="time"
@@ -457,18 +426,18 @@ const NewPostModal = forwardRef(({ onSubmit, initialCoordinates = "", initialBar
                   <button
                     type="button"
                     onClick={setNow}
-                    className="btn btn-md btn-outline cursor-pointer mt-2 btn-lg self-center"
+                    className="btn btn-md btn-outline cursor-pointer mt-2  btn-lg self-center"
                   >
                     Use Current Date & Time
                   </button>
                 </div>
 
                 {/* ⚠️ Report Type Section */}
-                <div className="flex flex-col gap-2">
+                <div className="flex flex-col gap-2 mt-[-3px]">
                   <div className="flex items-center gap-2">
-                    <p className="font-bold text-xl">
+                    {/* <p className="font-bold text-xl">
                       ⚠️Report Type: <span className="text-error">*</span>
-                    </p>
+                    </p> */}
                     {formErrors.reportType && (
                       <span className="text-error text-sm">
                         {formErrors.reportType}
@@ -476,15 +445,20 @@ const NewPostModal = forwardRef(({ onSubmit, initialCoordinates = "", initialBar
                     )}
                   </div>
 
-                  <select
-                    className="select select-bordered h-12 w-full text-lg"
-                    value={reportType}
-                    onChange={(e) => setReportType(e.target.value)}
-                  >
-                    <option value="">Choose Report Type</option>
-                    <option value="Standing Water">Standing Water</option>
-                    <option value="Breeding Site">Breeding Site</option>
-                  </select>
+                  <div>
+                    <label className="label">
+                      <span className="label-text text-primary font-bold mb-1">Report Type</span>
+                    </label>
+                    <select
+                      className="select select-bordered h-12 w-full text-lg mb-2"
+                      value={reportType}
+                      onChange={(e) => setReportType(e.target.value)}
+                    >
+                      <option value="">Choose Report Type</option>
+                      <option value="Standing Water">Standing Water</option>
+                      <option value="Breeding Site">Breeding Site</option>
+                    </select>
+                  </div>
                 </div>
               </div>
             </section>
@@ -504,10 +478,10 @@ const NewPostModal = forwardRef(({ onSubmit, initialCoordinates = "", initialBar
             <div className="flex justify-end mt-6">
               <SecondaryButton
                 text="Share"
-                loadingText="Sharing..." // Optional custom loading text
+                loadingText="Sharing..."
                 className="h-11 w-[20%]"
                 type="submit"
-                isLoading={isLoading} // Pass the loading state
+                isLoading={isLoading}
               />
             </div>
           </form>

@@ -69,6 +69,8 @@ const Community = () => {
 
   // Intersection Observer for infinite scroll
   const observer = useRef();
+  
+  // Memoize the intersection observer callback
   const lastPostElementRef = useCallback(node => {
     if (isLoading) return;
     if (observer.current) observer.current.disconnect();
@@ -80,14 +82,64 @@ const Community = () => {
     if (node) observer.current.observe(node);
   }, [isLoading, data?.pagination?.hasMore]);
 
-  // Find the latest announcement
-  const latestAnnouncement = React.useMemo(() => {
+  // Memoize filtered posts
+  const filteredPosts = useMemo(() => {
+    if (!data?.posts) return [];
+    
+    let filtered = data.posts;
+    
+    // Apply search filter if there's a search query
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter(post => 
+        (post.user?.username?.toLowerCase().includes(query)) ||
+        (post.barangay?.toLowerCase().includes(query)) ||
+        (post.report_type?.toLowerCase().includes(query)) ||
+        (post.description?.toLowerCase().includes(query))
+      );
+    }
+    
+    return filtered;
+  }, [data?.posts, searchQuery]);
+
+  // Memoize the latest announcement
+  const latestAnnouncement = useMemo(() => {
     if (!adminPosts) return null;
     const announcements = adminPosts.filter(post => post.category === "announcement");
     if (announcements.length === 0) return null;
     announcements.sort((a, b) => new Date(b.publishDate) - new Date(a.publishDate));
     return announcements[0];
   }, [adminPosts]);
+
+  // Memoize the post card render function
+  const renderPostCard = useCallback((post, index) => (
+    <div 
+      key={post._id}
+      ref={index === filteredPosts.length - 1 ? lastPostElementRef : null}
+    >
+      <PostCard
+        profileImage={profile1}
+        username={post.anonymous ? "Anonymous" : post.user?.username || "User"}
+        timestamp={formatDistanceToNow(new Date(post.createdAt), { addSuffix: true })}
+        barangay={post.barangay}
+        coordinates={post.specific_location?.coordinates || []}
+        dateTime={new Date(post.date_and_time).toLocaleString()}
+        reportType={post.report_type}
+        description={post.description}
+        likes={post.likesCount || "0"}
+        comments={post.commentsCount || "0"}
+        shares={post.sharesCount || "0"}
+        images={post.images}
+        postId={post._id}
+        upvotes={post.upvotes}
+        downvotes={post.downvotes}
+        commentsCount={post.commentsCount}
+        upvotesArray={post.upvotes}
+        downvotesArray={post.downvotes}
+        _commentCount={post.commentsCount}
+      />
+    </div>
+  ), [lastPostElementRef]);
 
   const getCurrentLocation = () => {
     if (navigator.geolocation) {
@@ -112,26 +164,6 @@ const Community = () => {
       return "just now";
     }
   };
-
-  // Memoize filtered posts
-  const filteredPosts = useMemo(() => {
-    if (!data?.posts) return [];
-    
-    let filtered = data.posts;
-    
-    // Apply search filter if there's a search query
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(post => 
-        (post.user?.username?.toLowerCase().includes(query)) ||
-        (post.barangay?.toLowerCase().includes(query)) ||
-        (post.report_type?.toLowerCase().includes(query)) ||
-        (post.description?.toLowerCase().includes(query))
-      );
-    }
-    
-    return filtered;
-  }, [data?.posts, searchQuery]);
 
   const [createPost] = useCreatePostMutation();
   const [createPostWithImage] = useCreatePostWithImageMutation();
@@ -167,7 +199,9 @@ const Community = () => {
   };
 
   const handleClearSearch = (e) => {
-    e.preventDefault();
+    if (e) {
+      e.preventDefault();
+    }
     setSearchParams({
       barangay: '',
       report_type: '',
@@ -309,34 +343,7 @@ const Community = () => {
                   Found {data?.pagination?.totalItems || 0} result{data?.pagination?.totalItems !== 1 ? 's' : ''}
                 </p>
               )}
-              {filteredPosts.map((post, index) => (
-                <div 
-                  key={post._id}
-                  ref={index === filteredPosts.length - 1 ? lastPostElementRef : null}
-                >
-                  <PostCard
-                    profileImage={profile1}
-                    username={post.anonymous ? "Anonymous" : post.user?.username || "User"}
-                    timestamp={formatDistanceToNow(new Date(post.createdAt), { addSuffix: true })}
-                    barangay={post.barangay}
-                    coordinates={post.specific_location?.coordinates || []}
-                    dateTime={new Date(post.date_and_time).toLocaleString()}
-                    reportType={post.report_type}
-                    description={post.description}
-                    likes={post.likesCount || "0"}
-                    comments={post.commentsCount || "0"}
-                    shares={post.sharesCount || "0"}
-                    images={post.images}
-                    postId={post._id}
-                    upvotes={post.upvotes}
-                    downvotes={post.downvotes}
-                    commentsCount={post.commentsCount}
-                    upvotesArray={post.upvotes}
-                    downvotesArray={post.downvotes}
-                    _commentCount={post.commentsCount}
-                  />
-                </div>
-              ))}
+              {filteredPosts.map((post, index) => renderPostCard(post, index))}
               {isLoading && page > 1 && (
                 <div className="text-center py-4">Loading more posts...</div>
               )}

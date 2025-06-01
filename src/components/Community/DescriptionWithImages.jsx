@@ -24,9 +24,8 @@ const DescriptionWithImages = ({
   return (
     <div className="flex flex-col p-2 gap-2 ml-16">
       <div className="flex justify-between items-center">
-        <p className="font-bold text-xl">
-          📝 Description <span className="text-error">*</span>
-        </p>
+      <span className="label-text mb-1 text-primary font-bold">Description</span>
+
 
         {/* Image Picker */}
         <label className="btn btn-md btn-outline cursor-pointer">

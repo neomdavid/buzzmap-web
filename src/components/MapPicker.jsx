@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef, forwardRef, useImperativeHandle } from "react";
 import { GoogleMap, Marker, InfoWindow, Polygon } from "@react-google-maps/api";
 import { useGoogleMaps } from "./GoogleMapsProvider";
 import { CustomModalToast } from "./";
@@ -31,24 +31,14 @@ const RISK_LEVEL_COLORS = {
   unknown: "#718096",   // gray
 };
 
-// Add this near the top, after QC_BOUNDS and QC_CENTER
-const WORLD_BOUNDS = [
-  { lat: 90, lng: -180 },
-  { lat: 90, lng: 180 },
-  { lat: -90, lng: 180 },
-  { lat: -90, lng: -180 },
-  { lat: 90, lng: -180 }
-];
-
-export default function MapPicker({ onLocationSelect, bounds, defaultCity, defaultCoordinates }) {
+const MapPicker = forwardRef(({ onLocationSelect, bounds, defaultCity, defaultCoordinates, selectedBarangay }, ref) => {
   const [currentPosition, setCurrentPosition] = useState(null);
   const [markerPosition, setMarkerPosition] = useState(null);
   const [barangayData, setBarangayData] = useState(null);
-  const [selectedBarangay, setSelectedBarangay] = useState(null);
+  const [selectedBarangayState, setSelectedBarangayState] = useState(selectedBarangay);
   const [isDataLoaded, setIsDataLoaded] = useState(false);
   const [toastMessage, setToastMessage] = useState(null);
   const [toastType, setToastType] = useState(null);
-  const [barangayHoles, setBarangayHoles] = useState([]);
   const mapRef = useRef(null);
   const { isLoaded } = useGoogleMaps();
   const [zoom, setZoom] = useState(13); // default zoom
@@ -57,15 +47,10 @@ export default function MapPicker({ onLocationSelect, bounds, defaultCity, defau
   const { data: patternDataRaw } = useGetPatternRecognitionResultsQuery();
   const patternData = patternDataRaw?.data || [];
 
-  // // Add debug logs
-  // useEffect(() => {
-  //   console.log('Pattern Recognition Data:', {
-  //     raw: patternDataRaw,
-  //     processed: patternData,
-  //     firstItem: patternData[0],
-  //     length: patternData.length
-  //   });
-  // }, [patternDataRaw, patternData]);
+  // Update selectedBarangayState when prop changes
+  useEffect(() => {
+    setSelectedBarangayState(selectedBarangay);
+  }, [selectedBarangay]);
 
   // Add toast timeout cleanup
   useEffect(() => {
@@ -87,19 +72,6 @@ export default function MapPicker({ onLocationSelect, bounds, defaultCity, defau
       .then((data) => {
         setBarangayData(data);
         setIsDataLoaded(true);
-        // Prepare holes for the mask
-        if (data.features && data.features.length > 0) {
-          const holes = data.features.map((feature) => {
-            if (feature.geometry.type === "Polygon") {
-              return feature.geometry.coordinates[0].map(([lng, lat]) => ({ lat, lng }));
-            } else if (feature.geometry.type === "MultiPolygon") {
-              // Use the first polygon in MultiPolygon
-              return feature.geometry.coordinates[0][0].map(([lng, lat]) => ({ lat, lng }));
-            }
-            return null;
-          }).filter(Boolean);
-          setBarangayHoles(holes);
-        }
       })
       .catch(error => {
         console.error('Error loading barangay boundaries:', error);
@@ -186,7 +158,7 @@ export default function MapPicker({ onLocationSelect, bounds, defaultCity, defau
       
       if (barangayName) {
         // Store the barangay name in state
-        setSelectedBarangay(barangayName);
+        setSelectedBarangayState(barangayName);
         
         // Set marker position
         setMarkerPosition(coords);
@@ -258,7 +230,7 @@ export default function MapPicker({ onLocationSelect, bounds, defaultCity, defau
         
         if (barangayName) {
           // Store the barangay name in state
-          setSelectedBarangay(barangayName);
+          setSelectedBarangayState(barangayName);
           
           // Set marker position
           setMarkerPosition(coords);
@@ -289,6 +261,49 @@ export default function MapPicker({ onLocationSelect, bounds, defaultCity, defau
     );
   };
 
+  // Expose methods to parent component
+  useImperativeHandle(ref, () => ({
+    panToBarangay: (barangayName) => {
+      if (!barangayData || !mapRef.current) return;
+
+      // Find the barangay in the data
+      const barangay = barangayData.features.find(
+        feature => feature.properties.name.toLowerCase() === barangayName.toLowerCase()
+      );
+
+      if (barangay) {
+        // Calculate the center of the barangay polygon
+        let paths = [];
+        if (barangay.geometry.type === "Polygon") {
+          paths = barangay.geometry.coordinates[0].map(coord => ({
+            lat: coord[1],
+            lng: coord[0]
+          }));
+        } else if (barangay.geometry.type === "MultiPolygon") {
+          paths = barangay.geometry.coordinates[0][0].map(coord => ({
+            lat: coord[1],
+            lng: coord[0]
+          }));
+        }
+
+        // Calculate bounds of the polygon
+        const bounds = new google.maps.LatLngBounds();
+        paths.forEach(path => bounds.extend(path));
+
+        // Add padding to the bounds to shift the view slightly higher
+        const ne = bounds.getNorthEast();
+        const sw = bounds.getSouthWest();
+        const latPadding = (ne.lat() - sw.lat()) * 0.2; // 20% padding
+        bounds.extend({ lat: ne.lat() + latPadding, lng: ne.lng() });
+        bounds.extend({ lat: sw.lat() - latPadding, lng: sw.lng() });
+
+        // Pan and zoom to the barangay
+        mapRef.current.fitBounds(bounds);
+        setZoom(15); // Set a closer zoom level
+      }
+    }
+  }));
+
   if (!isLoaded || !currentPosition || !isDataLoaded) {
     return <p>Loading map and barangay data...</p>;
   }
@@ -306,7 +321,7 @@ export default function MapPicker({ onLocationSelect, bounds, defaultCity, defau
           }`}
         >
           {toastType === "success" ? (
-            <>Location set in <strong>{selectedBarangay}</strong></>
+            <>Location set in <strong>{selectedBarangayState}</strong></>
           ) : (
             toastMessage
           )}
@@ -339,7 +354,44 @@ export default function MapPicker({ onLocationSelect, bounds, defaultCity, defau
           fullscreenControl: false
         }}
       >
-        {/* No mask, no barangay polygons */}
+        {barangayData && barangayData.features.map((feature, index) => {
+          if (!feature || !feature.properties || !feature.properties.name) {
+            return null;
+          }
+
+          let paths = [];
+          if (feature.geometry.type === "Polygon") {
+            paths = feature.geometry.coordinates[0].map(coord => ({
+              lat: coord[1],
+              lng: coord[0]
+            }));
+          } else if (feature.geometry.type === "MultiPolygon") {
+            paths = feature.geometry.coordinates[0][0].map(coord => ({
+              lat: coord[1],
+              lng: coord[0]
+            }));
+          }
+
+          const barangayName = feature.properties.name;
+          const colors = getRiskColor(barangayName);
+          const isSelected = selectedBarangayState && selectedBarangayState.toLowerCase() === barangayName.toLowerCase();
+
+          return (
+            <Polygon
+              key={index}
+              paths={paths}
+              options={{
+                strokeColor: isSelected ? "#000000" : colors.stroke,
+                strokeOpacity: isSelected ? 1 : 0.5,
+                strokeWeight: isSelected ? 3 : 2,
+                fillColor: colors.fill,
+                fillOpacity: isSelected ? 0.7 : 0.5,
+                clickable: false
+              }}
+            />
+          );
+        })}
+
         {markerPosition && (
           <Marker
             position={markerPosition}
@@ -351,4 +403,6 @@ export default function MapPicker({ onLocationSelect, bounds, defaultCity, defau
       </GoogleMap>
     </div>
   );
-}
+});
+
+export default MapPicker;
