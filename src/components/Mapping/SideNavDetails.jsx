@@ -1,5 +1,5 @@
 import { CustomDropDown, SecondaryButton, LogoNamed } from "../";
-import UPBuilding from "../../assets/UPBuilding.jpg";
+import UPBuilding from "../../assets/UPbuilding.jpg";
 import { useEffect, useState, useMemo, useRef } from "react";
 import { useGetPostsQuery } from "../../api/dengueApi";
 import NewPostModal from "../Community/NewPostModal";

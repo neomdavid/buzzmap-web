@@ -2,8 +2,9 @@
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 
 // Custom error handler
+const BASE_URL = import.meta.env.VITE_API_BASE_URL;
 const customBaseQuery = fetchBaseQuery({
-  baseUrl: "http://localhost:4000/api/v1/",
+  baseUrl: BASE_URL+"api/v1/",
   prepareHeaders: (headers, { getState }) => {
     const token = getState().auth.token;
     if (token) {
