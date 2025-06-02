@@ -6,6 +6,15 @@ import ErrorMessage from "../../components/ui/ErrorMessage";
 import { toastWarn } from "../../utils.jsx";
 import { CaretLeft, CaretRight, MapPin } from "phosphor-react";
 import { useNavigate } from "react-router-dom";
+import cleanUpIcon from "../../assets/icons/cleanup.svg";
+import foggingIcon from "../../assets/icons/fogging.svg";
+import educationIcon from "../../assets/icons/education.svg";
+import trappingIcon from "../../assets/icons/trapping.svg";
+
+import stagnantIcon from "../../assets/icons/stagnant_water.svg";
+import standingIcon from '../../assets/icons/standing_water.svg';
+import garbageIcon from '../../assets/icons/garbage.svg';
+import othersIcon from '../../assets/icons/others.svg';
 
 // Color constants (move to top for global scope)
 const REPORT_STATUS_COLORS = {
@@ -33,6 +42,24 @@ const INTERVENTION_STATUS_COLORS = {
   // completed: "#10b981", // Emerald-500 
 };
 
+// Intervention type icon mapping
+const INTERVENTION_TYPE_ICONS = {
+  "Fogging": foggingIcon,
+  "Ovicidal-Larvicidal Trapping": trappingIcon,
+  "Clean-up Drive": cleanUpIcon,
+  "Education Campaign": educationIcon,
+  "default": foggingIcon // fallback icon
+};
+
+// Breeding site type icon mapping
+const BREEDING_SITE_TYPE_ICONS = {
+  "Stagnant Water": stagnantIcon,
+  "Standing Water": standingIcon,
+  "Garbage": garbageIcon,
+  "Others": othersIcon,
+  "default": stagnantIcon // fallback
+};
+
 // Helper function to normalize barangay names for comparison
 function normalizeBarangayName(name) {
   if (!name) return '';
@@ -50,15 +77,15 @@ function normalizeBarangayName(name) {
 function panToWithOffset(map, position, offsetY = 0.15) {
   if (!map || !position) return;
   const bounds = map.getBounds && map.getBounds();
-  if (!bounds) {
-    map.panTo(position);
-    return;
-  }
-  const ne = bounds.getNorthEast();
-  const sw = bounds.getSouthWest();
-  const latSpan = ne.lat() - sw.lat();
-  const newLat = position.lat + latSpan * offsetY;
-  map.panTo({ lat: newLat, lng: position.lng });
+    if (!bounds) {
+      map.panTo(position);
+      return;
+    }
+    const ne = bounds.getNorthEast();
+    const sw = bounds.getSouthWest();
+    const latSpan = ne.lat() - sw.lat();
+    const newLat = position.lat + latSpan * offsetY;
+    map.panTo({ lat: newLat, lng: position.lng });
 }
 
 const QC_CENTER = { lat: 14.676, lng: 121.0437 };
@@ -86,7 +113,7 @@ function loadGoogleMapsScript(apiKey) {
         if (window.google && window.google.maps && window.google.maps.Map) {
           console.log('Google Maps loaded from existing script');
           resolve();
-        } else {
+            } else {
           console.log('Waiting for Google Maps to load...');
           setTimeout(check, 50);
         }
@@ -284,8 +311,8 @@ const Mapping = () => {
         // Find matching barangay in barangaysList
         let barangayObj = barangaysList?.find(b => normalizeBarangayName(b.name) === normalizeBarangayName(feature.properties.name));
         let patternType = (barangayObj?.status_and_recommendation?.pattern_based?.status || feature.properties.patternType || feature.properties.pattern_type || 'none').toLowerCase();
-        if (!patternType || patternType === '') patternType = 'none';
-        const patternColor = PATTERN_COLORS[patternType] || PATTERN_COLORS.default;
+            if (!patternType || patternType === '') patternType = 'none';
+            const patternColor = PATTERN_COLORS[patternType] || PATTERN_COLORS.default;
         coordsArray.forEach((polygonCoords) => {
           const path = polygonCoords[0].map(([lng, lat]) => ({ lat, lng }));
           // Highlight if selected
@@ -293,16 +320,16 @@ const Mapping = () => {
           const polygon = new window.google.maps.Polygon({
             paths: path,
             strokeColor: isSelected ? patternColor : '#333',
-            strokeOpacity: isSelected ? 1 : 0.6,
+                    strokeOpacity: isSelected ? 1 : 0.6,
             strokeWeight: isSelected ? 4 : 1,
-            fillOpacity: 0.5,
-            fillColor: patternColor,
+                    fillOpacity: 0.5,
+                    fillColor: patternColor,
             map,
             zIndex: isSelected ? 2 : 1,
           });
           polygon.addListener('click', (e) => {
             // Center of polygon
-            const center = turf.center(feature.geometry);
+                    const center = turf.center(feature.geometry);
             const [lng, lat] = center.geometry.coordinates;
             if (mapInstance.current) {
               mapInstance.current.panTo({ lat, lng });
@@ -310,14 +337,14 @@ const Mapping = () => {
             }
             // Hide control panel on md screens and lower
             if (window.matchMedia && window.matchMedia('(max-width: 768px)').matches) {
-              setShowControlPanel(false);
-            }
+                      setShowControlPanel(false);
+                    }
             setSelectedBarangayFeature(feature); // highlight
             let barangayObj = barangaysList?.find(b => normalizeBarangayName(b.name) === normalizeBarangayName(feature.properties.name));
             let patternBased = barangayObj?.status_and_recommendation?.pattern_based;
-            let patternType = (patternBased?.status || feature.properties.patternType || "none").toLowerCase();
-            if (!patternType || patternType === "") patternType = "none";
-            const patternCardColor = PATTERN_COLORS[patternType] || PATTERN_COLORS.default;
+              let patternType = (patternBased?.status || feature.properties.patternType || "none").toLowerCase();
+              if (!patternType || patternType === "") patternType = "none";
+              const patternCardColor = PATTERN_COLORS[patternType] || PATTERN_COLORS.default;
             let reportBased = barangayObj?.status_and_recommendation?.report_based;
             let reportAlert = reportBased?.alert;
             let reportStatus = (reportBased?.status || "unknown").toLowerCase();
@@ -329,27 +356,27 @@ const Mapping = () => {
                 <p class="text-4xl font-[900]" style="color:${patternCardColor}">Barangay ${feature.properties.displayName || feature.properties.name || 'Unknown Barangay'}</p>
                 <div class="mt-3 flex flex-col gap-3 text-black">
                   <div class="p-3 rounded-lg border-2" style="border-color:${patternCardColor}">
-                    <div>
+                        <div>
                       <p class="text-sm font-medium text-gray-600 uppercase">Pattern</p>
                       <p class="text-lg font-semibold">
                         ${patternType === 'none'
-                          ? 'No pattern detected'
-                          : patternType.charAt(0).toUpperCase() + patternType.slice(1).replace('_', ' ')}
-                      </p>
-                    </div>
-                  </div>
+                              ? 'No pattern detected'
+                              : patternType.charAt(0).toUpperCase() + patternType.slice(1).replace('_', ' ')}
+                          </p>
+                        </div>
+                      </div>
                   <div class="p-3 rounded-lg border-2 ${reportCardColor}">
-                    <div>
+                        <div>
                       <p class="text-sm font-medium text-gray-600 uppercase">Breeding Site Reports</p>
                       <p class="text-lg font-semibold">
                         ${(reportAlert && reportAlert.toLowerCase() !== "none")
-                          ? reportAlert
-                          : "No breeding site reported in this barangay."}
-                      </p>
+                              ? reportAlert
+                              : "No breeding site reported in this barangay."}
+                          </p>
+                        </div>
+                      </div>
                     </div>
                   </div>
-                </div>
-              </div>
             `;
             infoWindow.setContent(content);
             infoWindow.setPosition({ lat, lng });
@@ -366,22 +393,33 @@ const Mapping = () => {
       // --- Draw breeding site markers with clustering ---
       let breedingMarkers = [];
       if (showBreedingSites && breedingSites.length > 0 && window.google.maps.marker) {
+        const { AdvancedMarkerElement, PinElement } = window.google.maps.marker;
         breedingMarkers = breedingSites.map((site) => {
-          // Orange pin for breeding sites
-          const markerContent = document.createElement("div");
-          markerContent.innerHTML = `
-            <svg width="36" height="36" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M18 2C10.82 2 5 7.82 5 15c0 7.18 10.13 17.13 12.6 19.4a2 2 0 0 0 2.8 0C20.87 32.13 31 22.18 31 15c0-7.18-5.82-13-13-13zm0 18.5A5.5 5.5 0 1 1 18 9.5a5.5 5.5 0 0 1 0 11z" fill="#f59e0b" stroke="#fff" stroke-width="2"/>
-              <text x="18" y="23" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">B</text>
-            </svg>
-          `;
-          const marker = new window.google.maps.marker.AdvancedMarkerElement({
+          // Use the correct SVG icon for the breeding site type
+          const iconUrl = BREEDING_SITE_TYPE_ICONS[site.report_type] || BREEDING_SITE_TYPE_ICONS.default;
+          const glyphImg = document.createElement("img");
+          glyphImg.src = iconUrl;
+          glyphImg.style.width = "28px";
+          glyphImg.style.height = "28px";
+          glyphImg.style.objectFit = "contain";
+          glyphImg.style.backgroundColor = "#FFFFFF";
+          glyphImg.style.borderRadius = "100%";
+          glyphImg.style.padding = "2px";
+
+          const pin = new PinElement({
+            glyph: glyphImg,
+            background: "#FF6347", 
+            borderColor: "#FF6347",
+            scale: 1.5,
+          });
+          const marker = new AdvancedMarkerElement({
             map,
             position: {
-              lat: site.specific_location.coordinates[1],
-              lng: site.specific_location.coordinates[0],
+                      lat: site.specific_location.coordinates[1],
+                      lng: site.specific_location.coordinates[0],
             },
-            content: markerContent,
+            content: pin.element,
+            title: site.report_type || 'Breeding Site',
           });
           marker.addListener('click', () => {
             // Pan to marker position and zoom in
@@ -399,26 +437,26 @@ const Mapping = () => {
             // Use a div with Tailwind classes for InfoWindow content
             const content = document.createElement('div');
             content.innerHTML = `
-              <div class="bg-white p-4 rounded-lg text-primary text-center max-w-120 w-[50vw]">
-                <p class="font-bold text-4xl font-extrabold mb-4 text-primary">
+              <div class=\"bg-white p-4 rounded-lg text-primary text-center max-w-120 w-[50vw]\">
+                <p class=\"font-bold text-4xl font-extrabold mb-4 text-primary\">
                   ${site.report_type || 'Breeding Site'}
                 </p>
-                <div class="flex flex-col items-center mt-2 space-y-1 font-normal text-center">
-                  <p class="text-xl">
-                    <span class="font-bold">Barangay:</span> ${site.barangay || ''}
+                <div class=\"flex flex-col items-center mt-2 space-y-1 font-normal text-center\">
+                  <p class=\"text-xl\">
+                    <span class=\"font-bold\">Barangay:</span> ${site.barangay || ''}
                   </p>
-                  <p class="text-xl">
-                    <span class="font-bold">Reported by:</span> ${site.user?.username || ''}
+                  <p class=\"text-xl\">
+                    <span class=\"font-bold\">Reported by:</span> ${site.user?.username || ''}
                   </p>
-                  <p class="text-xl">
-                    <span class="font-bold">Date:</span> ${site.date_and_time ? new Date(site.date_and_time).toLocaleDateString() : ''}
+                  <p class=\"text-xl\">
+                    <span class=\"font-bold\">Date:</span> ${site.date_and_time ? new Date(site.date_and_time).toLocaleDateString() : ''}
                   </p>
-                  <p class="text-xl">
-                    <span class="font-bold">Description:</span> ${site.description || ''}
+                  <p class=\"text-xl\">
+                    <span class=\"font-bold\">Description:</span> ${site.description || ''}
                   </p>
                   ${(site.images && site.images.length > 0) ? `<div class='mt-2 flex justify-center gap-2'>${site.images.map(img => `<img src='${img}' class='w-35 h-25 object-cover rounded border'/>`).join('')}</div>` : ''}
                 </div>
-                <button class="mt-4 px-4 py-2 bg-primary w-[40%] text-white rounded-lg shadow hover:bg-primary/80 hover:cursor-pointer font-bold" onclick="window.location.href='/mapping/${site._id}'">View Details</button>
+                <button class=\"mt-4 px-4 py-2 bg-primary w-[40%] text-white rounded-lg shadow hover:bg-primary/80 hover:cursor-pointer font-bold\" onclick=\"window.location.href='/mapping/${site._id}'\">View Details</button>
               </div>
             `;
             infoWindow.setContent(content);
@@ -439,22 +477,33 @@ const Mapping = () => {
 
       // --- Draw intervention markers ---
       if (showInterventions && interventions.length > 0 && window.google.maps.marker) {
+        const { AdvancedMarkerElement, PinElement } = window.google.maps.marker;
         interventions.forEach((intervention) => {
-          // Purple pin for interventions
-          const markerContent = document.createElement("div");
-          markerContent.innerHTML = `
-            <svg width="36" height="36" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M18 2C10.82 2 5 7.82 5 15c0 7.18 10.13 17.13 12.6 19.4a2 2 0 0 0 2.8 0C20.87 32.13 31 22.18 31 15c0-7.18-5.82-13-13-13zm0 18.5A5.5 5.5 0 1 1 18 9.5a5.5 5.5 0 0 1 0 11z" fill="#8b5cf6" stroke="#fff" stroke-width="2"/>
-              <text x="18" y="23" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">I</text>
-            </svg>
-          `;
-          const marker = new window.google.maps.marker.AdvancedMarkerElement({
+          const iconUrl = INTERVENTION_TYPE_ICONS[intervention.interventionType] || INTERVENTION_TYPE_ICONS.default;
+          const glyphImg = document.createElement("img");
+          glyphImg.src = iconUrl;
+          glyphImg.style.width = "28px";
+          glyphImg.style.height = "28px";
+          glyphImg.style.objectFit = "contain";
+          glyphImg.style.backgroundColor = "#FFFFFF";
+          glyphImg.style.borderRadius = "100%";
+          glyphImg.style.padding = "2px";
+
+          const pin = new PinElement({
+            glyph: glyphImg,
+            background: "#1893F8", // intervention marker background is white
+            borderColor: "#1893F8",
+            scale: 1.5,
+          });
+
+          const marker = new AdvancedMarkerElement({
             map,
             position: {
               lat: intervention.specific_location.coordinates[1],
               lng: intervention.specific_location.coordinates[0],
             },
-            content: markerContent,
+            content: pin.element,
+            title: intervention.interventionType,
           });
           marker.addListener('click', () => {
             // Pan to marker position and zoom in
@@ -467,8 +516,8 @@ const Mapping = () => {
             }
             // Hide control panel on md screens and lower
             if (window.matchMedia && window.matchMedia('(max-width: 768px)').matches) {
-              setShowControlPanel(false);
-            }
+                        setShowControlPanel(false);
+                      }
             // Use a div with Tailwind classes for InfoWindow content
             const content = document.createElement('div');
             content.innerHTML = `
@@ -476,7 +525,7 @@ const Mapping = () => {
                 <p class="text-4xl font-extrabold text-primary mb-2">${intervention.interventionType || 'Intervention'}</p>
                 <div class="text-lg flex items-center gap-2">
                   <span class="font-bold">Status:</span>
-                  <span class="px-3 py-1 rounded-full text-white font-bold text-sm" style="background-color:#8b5cf6;box-shadow:0 1px 4px rgba(0,0,0,0.08);">
+                  <span class="px-3 py-1 rounded-full text-white font-bold text-sm" style="background-color:#FF6347;box-shadow:0 1px 4px rgba(0,0,0,0.08);">
                     ${intervention.status || ''}
                   </span>
                 </div>
@@ -518,9 +567,9 @@ const Mapping = () => {
       const [lng, lat] = center.geometry.coordinates;
       let barangayObj = barangaysList.find(b => normalizeBarangayName(b.name) === normalizeBarangayName(feature.properties.name));
       let patternBased = barangayObj?.status_and_recommendation?.pattern_based;
-      let patternType = (patternBased?.status || feature.properties.patternType || "none").toLowerCase();
-      if (!patternType || patternType === "") patternType = "none";
-      const patternCardColor = PATTERN_COLORS[patternType] || PATTERN_COLORS.default;
+              let patternType = (patternBased?.status || feature.properties.patternType || "none").toLowerCase();
+              if (!patternType || patternType === "") patternType = "none";
+              const patternCardColor = PATTERN_COLORS[patternType] || PATTERN_COLORS.default;
       let reportBased = barangayObj?.status_and_recommendation?.report_based;
       let reportAlert = reportBased?.alert;
       let reportStatus = (reportBased?.status || "unknown").toLowerCase();
@@ -531,27 +580,27 @@ const Mapping = () => {
           <p class="text-4xl font-[900]" style="color:${patternCardColor}">Barangay ${feature.properties.displayName || feature.properties.name || 'Unknown Barangay'}</p>
           <div class="mt-3 flex flex-col gap-3 text-black">
             <div class="p-3 rounded-lg border-2" style="border-color:${patternCardColor}">
-              <div>
+                        <div>
                 <p class="text-sm font-medium text-gray-600 uppercase">Pattern</p>
                 <p class="text-lg font-semibold">
                   ${patternType === 'none'
-                    ? 'No pattern detected'
-                    : patternType.charAt(0).toUpperCase() + patternType.slice(1).replace('_', ' ')}
-                </p>
-              </div>
-            </div>
+                              ? 'No pattern detected'
+                              : patternType.charAt(0).toUpperCase() + patternType.slice(1).replace('_', ' ')}
+                          </p>
+                        </div>
+                      </div>
             <div class="p-3 rounded-lg border-2 ${reportCardColor}">
-              <div>
+                        <div>
                 <p class="text-sm font-medium text-gray-600 uppercase">Breeding Site Reports</p>
                 <p class="text-lg font-semibold">
                   ${(reportAlert && reportAlert.toLowerCase() !== "none")
-                    ? reportAlert
-                    : "No breeding site reported in this barangay."}
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
+                              ? reportAlert
+                              : "No breeding site reported in this barangay."}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
       `;
       if (!infoWindowRef.current) {
         infoWindowRef.current = new window.google.maps.InfoWindow({ maxWidth: 500 });
@@ -607,12 +656,12 @@ const Mapping = () => {
               <div class=\"p-3 rounded-lg border-2\" style=\"border-color:${patternCardColor}\">
                 <div>
                   <p class=\"text-sm font-medium text-gray-600 uppercase\">Pattern</p>
-                  <p class=\"text-lg font-semibold\">
+                  <p class="text-lg font-semibold">
                     ${patternType === 'none'
                       ? 'No pattern detected'
                       : patternType.charAt(0).toUpperCase() + patternType.slice(1).replace('_', ' ')}
                   </p>
-                </div>
+      </div>
               </div>
               <div class=\"p-3 rounded-lg border-2 ${reportCardColor}\">
                 <div>
@@ -622,9 +671,9 @@ const Mapping = () => {
                       ? reportAlert
                       : "No breeding site reported in this barangay."}
                   </p>
+                    </div>
                 </div>
               </div>
-            </div>
           </div>
         `;
         if (window.google && window.google.maps && mapInstance.current) {
@@ -669,7 +718,7 @@ const Mapping = () => {
         className="absolute top-6 left-0 md:left-10 z-10 w-full md:w-auto flex justify-center md:block"
       >
         {showControlPanel && (
-          <div
+          <div 
             className="relative bg-white/60 backdrop-blur-md rounded-lg shadow-xl p-6 w-[70vw] sm:w-[70vw] md:w-[400px] text-primary transition-all duration-300 ease-in-out transform"
           >
             <button
@@ -777,13 +826,13 @@ const Mapping = () => {
           </div>
         )}
         {!showControlPanel && (
-          <button
+        <button
             onClick={() => setShowControlPanel(true)}
             className="fixed top-30 left-4 z-50 hover:cursor-pointer bg-white/90 hover:bg-gray-200 text-primary rounded-full p-2 shadow-lg border border-primary"
             aria-label="Show panel"
           >
             <CaretRight size={28} weight="bold" />
-          </button>
+        </button>
         )}
       </div>
       {/* Map container */}
