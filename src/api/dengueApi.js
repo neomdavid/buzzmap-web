@@ -4,14 +4,17 @@ import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 // Debug environment variables
 console.log('Current Mode:', import.meta.env.MODE);
 console.log('VITE_API_BASE_URL:', import.meta.env.VITE_API_BASE_URL);
+console.log('VITE_MODE:', import.meta.env.VITE_MODE);
 
-// Custom error handler
-const BASE_URL = 'http://localhost:4000/';
+// Determine base URL based on environment
+const BASE_URL = import.meta.env.VITE_MODE === 'PROD' || import.meta.env.MODE === 'PROD'
+  ? import.meta.env.VITE_API_BASE_URL 
+  : 'http://localhost:4000/';
 
 console.log('Final BASE_URL:', BASE_URL);
 
 const customBaseQuery = fetchBaseQuery({
-  baseUrl: BASE_URL+"api/v1/",
+  baseUrl: BASE_URL + "api/v1/",
   prepareHeaders: (headers, { getState }) => {
     const token = getState().auth.token;
     if (token) {
@@ -38,6 +41,17 @@ const baseQueryWithErrorHandling = async (args, api, extraOptions) => {
     
     return result;
   } catch (error) {
+    // Handle connection refused errors
+    if (error.message?.includes('Failed to fetch') || error.message?.includes('NetworkError')) {
+      console.error('Connection error:', error);
+      return { 
+        error: { 
+          status: 'CONNECTION_ERROR', 
+          data: 'Unable to connect to the server. Please check if the server is running.' 
+        } 
+      };
+    }
+    
     return { error: { status: 'CUSTOM_ERROR', data: error.message } };
   }
 };
