@@ -15,6 +15,10 @@ import ErrorMessage from "../../components/ui/ErrorMessage";
 import { useGetPatternRecognitionResultsQuery, useGetBarangaysQuery, useGetPostsQuery, useGetAllInterventionsQuery } from "../../api/dengueApi";
 import { MapPin, CaretLeft, CaretRight } from "phosphor-react";
 import { useNavigate } from "react-router-dom";
+import cleanUpIcon from "../../assets/icons/cleanup.svg";
+import foggingIcon from "../../assets/icons/fogging.svg";
+import educationIcon from "../../assets/icons/education.svg";
+import trappingIcon from "../../assets/icons/trapping.svg";
 
 const containerStyle = {
   width: "100%",

@@ -33,6 +33,7 @@ import NewPostModal from "../../components/Community/NewPostModal";
 import { useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { toastInfo, toastSuccess } from "../../utils";
+import MapOnly from '../../components/Mapping/MapOnly';
 
 const Landing = () => {
   const modalRef = useRef(null);
@@ -148,7 +149,7 @@ const Landing = () => {
 
       <section className="flex flex-col lg:flex-row  justify-center max-w-[95vw] m-auto px-6 sm:px-6 gap-x-4">
         <div className="rounded-xl overflow-hidden h-[400px] lg:h-[500px] mb-6 lg:mb-0 lg:flex-13 flex items-center justify-center bg-gray-100">
-          <RiskMap height="400px" />
+          <MapOnly style={{height: '400px', width: '100%'}} />
         </div>
         <div className="mb-16 flex flex-col flex-10  mx-6 items-center text-center lg:items-end lg:text-right">
           <Heading
