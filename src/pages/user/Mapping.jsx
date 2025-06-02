@@ -367,11 +367,12 @@ const Mapping = () => {
       let breedingMarkers = [];
       if (showBreedingSites && breedingSites.length > 0 && window.google.maps.marker) {
         breedingMarkers = breedingSites.map((site) => {
+          // Orange pin for breeding sites
           const markerContent = document.createElement("div");
           markerContent.innerHTML = `
-            <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
-              <circle cx="16" cy="16" r="12" fill="#DC2626" stroke="#fff" stroke-width="3"/>
-              <text x="16" y="21" text-anchor="middle" font-size="14" fill="#fff" font-weight="bold">B</text>
+            <svg width="36" height="36" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M18 2C10.82 2 5 7.82 5 15c0 7.18 10.13 17.13 12.6 19.4a2 2 0 0 0 2.8 0C20.87 32.13 31 22.18 31 15c0-7.18-5.82-13-13-13zm0 18.5A5.5 5.5 0 1 1 18 9.5a5.5 5.5 0 0 1 0 11z" fill="#f59e0b" stroke="#fff" stroke-width="2"/>
+              <text x="18" y="23" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">B</text>
             </svg>
           `;
           const marker = new window.google.maps.marker.AdvancedMarkerElement({
@@ -437,22 +438,23 @@ const Mapping = () => {
       }
 
       // --- Draw intervention markers ---
-      if (showInterventions && interventions.length > 0 && window.google.maps) {
+      if (showInterventions && interventions.length > 0 && window.google.maps.marker) {
         interventions.forEach((intervention) => {
-          const marker = new window.google.maps.Marker({
+          // Purple pin for interventions
+          const markerContent = document.createElement("div");
+          markerContent.innerHTML = `
+            <svg width="36" height="36" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M18 2C10.82 2 5 7.82 5 15c0 7.18 10.13 17.13 12.6 19.4a2 2 0 0 0 2.8 0C20.87 32.13 31 22.18 31 15c0-7.18-5.82-13-13-13zm0 18.5A5.5 5.5 0 1 1 18 9.5a5.5 5.5 0 0 1 0 11z" fill="#8b5cf6" stroke="#fff" stroke-width="2"/>
+              <text x="18" y="23" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">I</text>
+            </svg>
+          `;
+          const marker = new window.google.maps.marker.AdvancedMarkerElement({
             map,
             position: {
               lat: intervention.specific_location.coordinates[1],
               lng: intervention.specific_location.coordinates[0],
             },
-            icon: {
-              path: window.google.maps.SymbolPath.CIRCLE,
-              scale: 8,
-              fillColor: '#8b5cf6',
-              fillOpacity: 1,
-              strokeWeight: 2,
-              strokeColor: "#fff",
-            },
+            content: markerContent,
           });
           marker.addListener('click', () => {
             // Pan to marker position and zoom in
