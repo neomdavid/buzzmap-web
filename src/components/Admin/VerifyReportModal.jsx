@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef } from "react";
-import { useGoogleMaps } from "../GoogleMapsProvider";
 import { useValidatePostMutation } from "../../api/dengueApi.js";
 import { toast } from "react-toastify";
 

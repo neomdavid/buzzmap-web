@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef } from "react";
-import { useGoogleMaps } from "../GoogleMapsProvider";
 
 const ReportDetailsModal = ({
   reportId,
@@ -20,10 +19,9 @@ const ReportDetailsModal = ({
   const streetViewRef = useRef(null);
   const streetViewModalRef = useRef(null);
   const [address, setAddress] = useState(location);
-  const { isLoaded } = useGoogleMaps();
 
   useEffect(() => {
-    if (!isLoaded || !coordinates || coordinates.length !== 2) return;
+    if (!coordinates || coordinates.length !== 2) return;
 
     const geocoder = new window.google.maps.Geocoder();
     const latLng = new window.google.maps.LatLng(
@@ -51,7 +49,7 @@ const ReportDetailsModal = ({
         zoom: 1,
       });
     }
-  }, [isLoaded, coordinates, images, type]);
+  }, [coordinates, images, type]);
 
   const handleConfirmAction = () => {
     onConfirmAction?.(type);
@@ -60,7 +58,7 @@ const ReportDetailsModal = ({
 
   const openStreetViewModal = () => {
     const streetViewElement = streetViewModalRef.current;
-    if (streetViewElement && isLoaded && coordinates?.length === 2) {
+    if (streetViewElement && coordinates?.length === 2) {
       streetViewElement.showModal();
 
       new window.google.maps.StreetViewPanorama(

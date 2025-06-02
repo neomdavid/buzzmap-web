@@ -1,21 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { GoogleMap, useJsApiLoader, MarkerF, Polygon } from '@react-google-maps/api';
-import * as turf from '@turf/turf';
-
-const MAP_CONTAINER_STYLE = {
-  width: '100%',
-  height: '400px',
-  borderRadius: '0.5rem',
-  marginBottom: '1rem',
-};
-
-const QC_DEFAULT_CENTER = {
-  lat: 14.6488, // Quezon City Hall
-  lng: 121.0509,
-};
-
-const GOOGLE_MAPS_LIBRARIES = ['geometry', 'marker', 'places'];
-
+// This component previously used @react-google-maps/api.
+// It must be rewritten to use the plain Google Maps JS API if needed.
 const InterventionLocationPicker = ({ onPinChange, initialPin, focusCommand }) => {
   const { isLoaded, loadError } = useJsApiLoader({
     googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY,

@@ -27,7 +27,6 @@ import AltPreventionCard from "../../components/Landing/AltPreventionCard";
 import { Link } from "react-router-dom";
 import StreetViewMap from "../../components/StreetViewMap";
 import { useState, useEffect, useRef } from "react";
-import { useGoogleMaps } from "../../components/GoogleMapsProvider.jsx";
 import Mapping from "./Mapping";
 import RiskMap from "../../components/RiskMap";
 import NewPostModal from "../../components/Community/NewPostModal";

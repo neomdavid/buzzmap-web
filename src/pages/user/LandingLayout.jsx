@@ -5,7 +5,7 @@ import { NavLink, useLocation } from "react-router-dom";
 
 const LandingLayout = () => {
   return (
-    <div className="pt-23 relative">
+    <div className="min-h-screen relative">
       <Navbar />
       <Outlet />
     </div>
