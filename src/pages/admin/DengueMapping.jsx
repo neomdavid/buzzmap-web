@@ -3,6 +3,7 @@ import { MapPinLine, Circle, CheckCircle, Hourglass, MagnifyingGlass, Upload } f
 import { useState, useMemo, useRef, useEffect } from "react";
 import { useGetInterventionsInProgressQuery, useGetPostsQuery, useGetAllInterventionsQuery, useGetBarangaysQuery } from "@/api/dengueApi";
 import * as turf from '@turf/turf';
+import MapOnly from '../../components/Mapping/MapOnly';
 
 const DengueMapping = () => {
   const [selectedBarangay, setSelectedBarangay] = useState(null);
@@ -15,6 +16,9 @@ const DengueMapping = () => {
   const [importError, setImportError] = useState("");
   const [isImporting, setIsImporting] = useState(false);
   const [recentReports, setRecentReports] = useState([]);
+  const [showBreedingSites, setShowBreedingSites] = useState(true);
+  const [showInterventions, setShowInterventions] = useState(false);
+  const mapOnlyRef = useRef(null);
   const mapRef = useRef(null);
   const modalRef = useRef(null);
   const streetViewModalRef = useRef(null);
@@ -142,7 +146,10 @@ const DengueMapping = () => {
       }
       try {
         const barangayName = selectedBarangay.properties.displayName.trim();
-        const response = await fetch("http://localhost:4000/api/v1/barangays/get-recent-reports-for-barangay", {
+        const BASE_URL = import.meta.env.VITE_MODE === 'PROD' || import.meta.env.MODE === 'PROD'
+          ? import.meta.env.VITE_API_BASE_URL 
+          : 'http://localhost:4000/';
+        const response = await fetch(`${BASE_URL}api/v1/barangays/get-recent-reports-for-barangay`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ barangay_name: barangayName })
@@ -175,33 +182,23 @@ const DengueMapping = () => {
   };
 
   const handleShowOnMap = (item, type) => {
-    console.log('handleShowOnMap called with item:', item, 'type:', type);
-    console.log('Map ref current:', mapRef.current);
-    
     setSelectedMapItem({ type, item });
-
     let coordinates;
     if (type === 'report' && item.specific_location?.coordinates) {
       coordinates = item.specific_location.coordinates;
     } else if (type === 'intervention' && item.specific_location?.coordinates) {
       coordinates = item.specific_location.coordinates;
     }
-
-    if (mapRef.current && coordinates) {
+    if (mapOnlyRef.current && coordinates) {
       const position = {
         lat: coordinates[1],
         lng: coordinates[0]
       };
-      console.log('Attempting to pan to position:', position);
-      
-      mapRef.current.panTo(position);
-      mapRef.current.setZoom(17);
-
+      mapOnlyRef.current.panTo(position);
+      mapOnlyRef.current.setZoom(17);
       if (mapContainerRef.current) {
         mapContainerRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
       }
-    } else {
-      console.error('Map reference is not available or coordinates missing');
     }
   };
 
@@ -370,17 +367,28 @@ const DengueMapping = () => {
       </div>
 
       <div className="flex h-[50vh] mb-4" ref={mapContainerRef}>
-        <DengueMapNoInfo 
-          ref={mapRef}
-          onBarangaySelect={handleBarangaySelect}
-          searchQuery={searchQuery}
-          onSearchClear={handleSearchClear}
-          selectedMapItem={selectedMapItem}
-          activeInterventions={activeInterventions}
-          isLoadingInterventions={isLoadingAllInterventions}
-          barangaysList={barangaysList}
-          onPropsDebug={{ activeInterventions, isLoadingAllInterventions, selectedMapItem }}
+        <MapOnly
+          ref={mapOnlyRef}
+          showBreedingSites={showBreedingSites}
+          showInterventions={showInterventions}
+          selectedBarangay={selectedBarangay}
+          onBarangaySelect={setSelectedBarangay}
+          style={{height: '100%', width: '100%'}}
         />
+      </div>
+      <div className="flex gap-2 mb-4">
+        <button
+          onClick={() => setShowBreedingSites((prev) => !prev)}
+          className={`px-4 py-2 rounded ${showBreedingSites ? 'bg-primary text-white' : 'bg-gray-200 text-primary'}`}
+        >
+          {showBreedingSites ? 'Hide Breeding Sites' : 'Show Breeding Sites'}
+        </button>
+        <button
+          onClick={() => setShowInterventions((prev) => !prev)}
+          className={`px-4 py-2 rounded ${showInterventions ? 'bg-primary text-white' : 'bg-gray-200 text-primary'}`}
+        >
+          {showInterventions ? 'Hide Interventions' : 'Show Interventions'}
+        </button>
       </div>
       <p className="text-left text-primary text-lg font-extrabold flex items-center gap-2 mb-8">
         <div className="text-success">

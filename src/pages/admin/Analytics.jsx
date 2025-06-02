@@ -6,7 +6,6 @@ import {
   AlertCard,
   DengueChartCard,
   DengueTrendChart,
-  DengueMap,
   PieChart,
   DengueMapLegend,
   InterventionAnalysisChart
@@ -26,6 +25,7 @@ import {
   Tooltip,
   Legend
 } from 'chart.js';
+import DengueMap from "../../components/DengueMap";
 
 // import { IconCheck, IconHourglassEmpty, IconSearch } from "@tabler/icons-react";
 
@@ -102,7 +102,10 @@ const Analytics = () => {
 
   // Handle barangay selection from map
   const handleBarangaySelect = (barangayFeature) => {
-    if (barangayFeature?.properties?.name) {
+    // Accept both string and object for safety
+    if (typeof barangayFeature === 'string') {
+      setSelectedBarangay(barangayFeature);
+    } else if (barangayFeature?.properties?.name) {
       setSelectedBarangay(barangayFeature.properties.name);
     }
   };

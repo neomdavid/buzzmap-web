@@ -1,5 +1,5 @@
-import React, { useEffect, useRef, useState } from "react";
-import { useGetBarangaysQuery, useGetPostsQuery, useGetAllInterventionsQuery } from "../../api/dengueApi";
+import React, { useEffect, useRef, useState, forwardRef, useImperativeHandle } from "react";
+import { useGetBarangaysQuery, useGetPostsQuery } from "../../api/dengueApi";
 import * as turf from "@turf/turf";
 import LoadingSpinner from "../ui/LoadingSpinner";
 import ErrorMessage from "../ui/ErrorMessage";
@@ -75,7 +75,15 @@ function loadGoogleMapsScript(apiKey) {
   return googleMapsScriptLoadingPromise;
 }
 
-const MapOnly = ({ showBreedingSites = true, showInterventions = false, style = {}, className = "" }) => {
+const MapOnly = forwardRef(({
+  showBreedingSites = true,
+  showInterventions = false,
+  style = {},
+  className = "",
+  selectedBarangay = null,
+  onBarangaySelect = null,
+  interventions = [],
+}, ref) => {
   const mapRef = useRef(null);
   const mapInstance = useRef(null);
   const overlaysRef = useRef([]);
@@ -84,11 +92,9 @@ const MapOnly = ({ showBreedingSites = true, showInterventions = false, style = 
   const [error, setError] = useState(null);
   const [barangayData, setBarangayData] = useState(null);
   const [breedingSites, setBreedingSites] = useState([]);
-  const [interventions, setInterventions] = useState([]);
   const [mapLoaded, setMapLoaded] = useState(false);
   const { data: barangaysList } = useGetBarangaysQuery();
   const { data: posts } = useGetPostsQuery();
-  const { data: allInterventionsData } = useGetAllInterventionsQuery ? useGetAllInterventionsQuery() : { data: [] };
   const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
   const mapId = import.meta.env.VITE_GOOGLE_MAPS_MAP_ID;
 
@@ -139,13 +145,18 @@ const MapOnly = ({ showBreedingSites = true, showInterventions = false, style = 
     fetchData();
   }, [barangaysList, posts]);
 
-  useEffect(() => {
-    if (allInterventionsData) {
-      setInterventions(
-        allInterventionsData.filter(i => i.specific_location && Array.isArray(i.specific_location.coordinates) && i.specific_location.coordinates.length === 2)
-      );
+  useImperativeHandle(ref, () => ({
+    panTo: (position) => {
+      if (mapInstance.current) {
+        mapInstance.current.panTo(position);
+      }
+    },
+    setZoom: (zoom) => {
+      if (mapInstance.current) {
+        mapInstance.current.setZoom(zoom);
+      }
     }
-  }, [allInterventionsData]);
+  }), []);
 
   useEffect(() => {
     if (loading || error || !barangayData || !isMountedRef.current) {
@@ -189,17 +200,35 @@ const MapOnly = ({ showBreedingSites = true, showInterventions = false, style = 
         let patternType = (barangayObj?.status_and_recommendation?.pattern_based?.status || feature.properties.patternType || feature.properties.pattern_type || 'none').toLowerCase();
         if (!patternType || patternType === '') patternType = 'none';
         const patternColor = PATTERN_COLORS[patternType] || PATTERN_COLORS.default;
+        const isSelected = selectedBarangay && (feature.properties.name === selectedBarangay.properties?.name || feature.properties.displayName === selectedBarangay.properties?.displayName);
         coordsArray.forEach((polygonCoords) => {
           const path = polygonCoords[0].map(([lng, lat]) => ({ lat, lng }));
           const polygon = new window.google.maps.Polygon({
             paths: path,
-            strokeColor: patternColor,
-            strokeOpacity: 0.7,
-            strokeWeight: 1,
+            strokeColor: isSelected ? '#333' : patternColor,
+            strokeOpacity: isSelected ? 1 : 0.7,
+            strokeWeight: isSelected ? 3 : 1,
             fillOpacity: 0.5,
             fillColor: patternColor,
             map,
-            zIndex: 1,
+            zIndex: isSelected ? 6 : 1,
+          });
+          polygon.addListener('click', () => {
+            if (onBarangaySelect) {
+              const selectedFeature = {
+                ...feature,
+                properties: {
+                  ...feature.properties,
+                  displayName: feature.properties.name,
+                  patternType,
+                  color: patternColor,
+                  status_and_recommendation: barangayObj?.status_and_recommendation,
+                  risk_level: barangayObj?.risk_level,
+                  pattern_data: barangayObj?.pattern_data
+                }
+              };
+              onBarangaySelect(selectedFeature);
+            }
           });
           overlays.push(polygon);
         });
@@ -277,13 +306,13 @@ const MapOnly = ({ showBreedingSites = true, showInterventions = false, style = 
       overlaysRef.current.forEach(o => o.setMap(null));
       overlaysRef.current = [];
     };
-  }, [loading, error, barangayData, breedingSites, showBreedingSites, showInterventions, interventions, apiKey, mapId]);
+  }, [loading, error, barangayData, showBreedingSites, breedingSites, showInterventions, interventions, selectedBarangay, onBarangaySelect, barangaysList]);
 
   if (loading) return <LoadingSpinner size={32} className="h-full" message="Loading map..." />;
   if (error) return <ErrorMessage error={error} className="m-4" />;
 
   return (
-    <div style={{ position: 'relative', width: '100%', height: '100%', minHeight: 300, ...style }} className={className}>
+    <div className={className} style={{ position: 'relative', width: '100%', height: '100%', minHeight: 300, ...style }}>
       <div
         ref={mapRef}
         style={{ width: '100%', height: '100%' }}
@@ -294,8 +323,9 @@ const MapOnly = ({ showBreedingSites = true, showInterventions = false, style = 
           <LoadingSpinner size={40} message="Loading map..." />
         </div>
       )}
+      {error && <ErrorMessage error={error} className="absolute top-2 left-2 z-20" />}
     </div>
   );
-};
+});
 
 export default MapOnly; 

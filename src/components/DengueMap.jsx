@@ -1,4 +1,497 @@
 // This component previously used @react-google-maps/api and useGoogleMaps.
 // It must be rewritten to use the plain Google Maps JS API if needed.
-const DengueMap = () => <div>DengueMap needs to be rewritten for plain Google Maps API.</div>;
+import { useEffect, useRef, useState } from 'react';
+import { useGetPostsQuery } from '../api/dengueApi';
+import stagnantIcon from "../assets/icons/stagnant_water.svg";
+import standingIcon from "../assets/icons/standing_water.svg";
+import garbageIcon from "../assets/icons/garbage.svg";
+import othersIcon from "../assets/icons/others.svg";
+import foggingIcon from "../assets/icons/fogging.svg";
+import trappingIcon from "../assets/icons/trapping.svg";
+import cleanUpIcon from "../assets/icons/cleanup.svg";
+import educationIcon from "../assets/icons/education.svg";
+
+const DengueMap = ({
+  showLegends = true,
+  defaultTab = 'cases',
+  initialFocusBarangayName = null,
+  searchQuery = '',
+  activeInterventions = [],
+  isLoadingInterventions = false,
+  barangaysList = [],
+  onBarangaySelect = () => {},
+}) => {
+  const mapRef = useRef(null);
+  const mapInstanceRef = useRef(null);
+  const markersRef = useRef([]);
+  const polygonsRef = useRef([]);
+  const { data: posts } = useGetPostsQuery();
+  const [mapLoaded, setMapLoaded] = useState(false);
+  const [geojsonBarangays, setGeojsonBarangays] = useState([]);
+  const infoWindowRef = useRef(null);
+  const [selectedBarangayFeature, setSelectedBarangayFeature] = useState(null);
+  const [infoWindowPosition, setInfoWindowPosition] = useState(null);
+  const [showBreedingSites, setShowBreedingSites] = useState(true);
+  const [showInterventions, setShowInterventions] = useState(false);
+  const [breedingSites, setBreedingSites] = useState([]);
+  const [selectedBreedingSite, setSelectedBreedingSite] = useState(null);
+  const [selectedIntervention, setSelectedIntervention] = useState(null);
+
+  // Load GeoJSON for barangay boundaries
+  useEffect(() => {
+    fetch('/quezon_barangays_boundaries.geojson')
+      .then(res => res.json())
+      .then(data => {
+        if (data && data.features) {
+          setGeojsonBarangays(data.features);
+        } else {
+          setGeojsonBarangays([]);
+        }
+      })
+      .catch(() => setGeojsonBarangays([]));
+  }, []);
+
+  // Load Google Maps script if not already loaded
+  useEffect(() => {
+    if (!window.google) {
+      const script = document.createElement('script');
+      script.src = `https://maps.googleapis.com/maps/api/js?key=${import.meta.env.VITE_GOOGLE_MAPS_API_KEY}&libraries=places,marker`;
+      script.async = true;
+      script.defer = true;
+      script.onload = () => {
+        console.log('[DengueMap DEBUG] Google Maps script loaded');
+        if (!mapInstanceRef.current && mapRef.current) {
+          mapInstanceRef.current = new window.google.maps.Map(mapRef.current, {
+            center: { lat: 14.5995, lng: 120.9842 },
+            zoom: 12,
+            mapId: import.meta.env.VITE_GOOGLE_MAPS_MAP_ID,
+            styles: [
+              { featureType: 'administrative', elementType: 'geometry', stylers: [{ visibility: 'on' }] },
+              { featureType: 'administrative.land_parcel', stylers: [{ visibility: 'off' }] },
+              { featureType: 'administrative.neighborhood', stylers: [{ visibility: 'off' }] },
+              { featureType: 'poi', elementType: 'labels.text', stylers: [{ visibility: 'off' }] },
+              { featureType: 'poi.business', stylers: [{ visibility: 'off' }] },
+              { featureType: 'poi.park', elementType: 'labels.text', stylers: [{ visibility: 'off' }] },
+              { featureType: 'road', elementType: 'labels.icon', stylers: [{ visibility: 'off' }] }
+            ]
+          });
+          setMapLoaded(true);
+        }
+      };
+      document.head.appendChild(script);
+    } else {
+      if (!mapInstanceRef.current && mapRef.current) {
+        mapInstanceRef.current = new window.google.maps.Map(mapRef.current, {
+          center: { lat: 14.5995, lng: 120.9842 },
+          zoom: 12,
+          mapId: import.meta.env.VITE_GOOGLE_MAPS_MAP_ID,
+          styles: [
+            { featureType: 'administrative', elementType: 'geometry', stylers: [{ visibility: 'on' }] },
+            { featureType: 'administrative.land_parcel', stylers: [{ visibility: 'off' }] },
+            { featureType: 'administrative.neighborhood', stylers: [{ visibility: 'off' }] },
+            { featureType: 'poi', elementType: 'labels.text', stylers: [{ visibility: 'off' }] },
+            { featureType: 'poi.business', stylers: [{ visibility: 'off' }] },
+            { featureType: 'poi.park', elementType: 'labels.text', stylers: [{ visibility: 'off' }] },
+            { featureType: 'road', elementType: 'labels.icon', stylers: [{ visibility: 'off' }] }
+          ]
+        });
+        setMapLoaded(true);
+      }
+    }
+    return () => {
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current = null;
+      }
+    };
+  }, []);
+
+  // Initialize breeding sites from posts
+  useEffect(() => {
+    if (posts) {
+      console.log('[DengueMap DEBUG] Processing posts for breeding sites:', posts);
+      const breedingSitesFromPosts = (Array.isArray(posts.posts) ? posts.posts : posts).filter(post =>
+        post.status === "Validated" && 
+        post.specific_location?.coordinates &&
+        (post.report_type === "Breeding Site" || post.report_type === "Standing Water" || post.report_type === "Infestation")
+      );
+      console.log('[DengueMap DEBUG] Filtered breeding sites:', breedingSitesFromPosts);
+      setBreedingSites(breedingSitesFromPosts);
+    }
+  }, [posts]);
+
+  // Pattern color mapping
+  const PATTERN_COLORS = {
+    spike: "#e53e3e",        // red (error)
+    gradual_rise: "#dd6b20", // orange (warning)
+    decline: "#38a169",      // green (success)
+    stability: "#3182ce",    // blue (info)
+    none: "#718096",         // gray (default for no pattern)
+    default: "#718096",      // gray (fallback)
+  };
+
+  // Breeding site type icon mapping
+  const BREEDING_SITE_TYPE_ICONS = {
+    "Stagnant Water": stagnantIcon,
+    "Standing Water": standingIcon,
+    "Garbage": garbageIcon,
+    "Others": othersIcon,
+    "default": stagnantIcon,
+  };
+
+  // Intervention type icon mapping
+  const INTERVENTION_TYPE_ICONS = {
+    "Fogging": foggingIcon,
+    "Ovicidal-Larvicidal Trapping": trappingIcon,
+    "Clean-up Drive": cleanUpIcon,
+    "Education Campaign": educationIcon,
+    "default": foggingIcon,
+  };
+
+  function normalizeBarangayName(name) {
+    if (!name) return '';
+    return name
+      .toLowerCase()
+      .replace(/\bsr\.?\b/g, '')
+      .replace(/\bjr\.?\b/g, '')
+      .replace(/[.\-']/g, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  // Merge pattern/status from barangaysList into geojsonBarangays
+  const mergedBarangays = geojsonBarangays.map(feature => {
+    const geoName = normalizeBarangayName(feature.properties?.name);
+    const apiBarangay = barangaysList.find(b => normalizeBarangayName(b.name) === geoName);
+    return {
+      ...feature,
+      patternType: apiBarangay?.status_and_recommendation?.pattern_based?.status || feature.properties?.patternType || 'none',
+      status_and_recommendation: apiBarangay?.status_and_recommendation,
+      risk_level: apiBarangay?.risk_level,
+      pattern_data: apiBarangay?.pattern_data,
+      apiBarangayName: apiBarangay?.name,
+    };
+  });
+
+  // Draw polygons and markers
+  useEffect(() => {
+    if (!mapLoaded || !mergedBarangays.length) return;
+    const map = mapInstanceRef.current;
+    if (!map) return;
+
+    // Clear existing polygons and markers
+    polygonsRef.current.forEach(polygon => polygon.setMap(null));
+    polygonsRef.current = [];
+    markersRef.current.forEach(marker => marker.setMap(null));
+    markersRef.current = [];
+
+    // Normalize selected barangay name
+    const selectedNorm = normalizeBarangayName(searchQuery || '');
+
+    // Draw all barangay polygons
+    mergedBarangays.forEach(barangay => {
+      if (!barangay.geometry?.coordinates) return;
+      
+      // Determine pattern type and color
+      let patternType = (barangay.patternType || 'none').toLowerCase();
+      if (!patternType || patternType === '') patternType = 'none';
+      const fillColor = PATTERN_COLORS[patternType] || PATTERN_COLORS.default;
+      
+      // Normalize for selection
+      const barangayNorm = normalizeBarangayName(barangay.properties?.name || '');
+      const isSelected = barangayNorm === selectedNorm;
+
+      // Handle both Polygon and MultiPolygon
+      let coordsArray = [];
+      if (barangay.geometry.type === 'Polygon') {
+        coordsArray = [barangay.geometry.coordinates];
+      } else if (barangay.geometry.type === 'MultiPolygon') {
+        coordsArray = barangay.geometry.coordinates;
+      } else {
+        return; // Skip if not a polygon type
+      }
+
+      coordsArray.forEach((polygonCoords) => {
+        if (!Array.isArray(polygonCoords[0])) return;
+        const path = polygonCoords[0].map(([lng, lat]) => ({ lat, lng }));
+        const polygon = new window.google.maps.Polygon({
+          paths: path,
+          strokeColor: isSelected ? '#222' : fillColor,
+          strokeOpacity: isSelected ? 1 : 0.7,
+          strokeWeight: isSelected ? 3 : 1,
+          fillColor,
+          fillOpacity: 0.5,
+          map: map,
+          zIndex: isSelected ? 6 : 1,
+        });
+        polygon.addListener('click', () => {
+          // Calculate center of polygon
+          let latSum = 0, lngSum = 0, count = 0;
+          polygonCoords[0].forEach(([lng, lat]) => {
+            latSum += lat;
+            lngSum += lng;
+            count++;
+          });
+          const center = { lat: latSum / count, lng: lngSum / count };
+          if (showInterventions) {
+            setSelectedIntervention(null);
+            setSelectedBarangayFeature(null);
+            setInfoWindowPosition(center);
+          } else if (showBreedingSites) {
+            setSelectedBreedingSite(null);
+            setSelectedBarangayFeature(null);
+            setInfoWindowPosition(center);
+          }
+        });
+        polygonsRef.current.push(polygon);
+      });
+    });
+
+    // Add markers based on toggles
+    if (showBreedingSites && breedingSites.length > 0 && window.google.maps.marker) {
+      const { AdvancedMarkerElement, PinElement } = window.google.maps.marker;
+      breedingSites.forEach(site => {
+        if (site.specific_location?.coordinates) {
+          const iconUrl = BREEDING_SITE_TYPE_ICONS[site.report_type] || BREEDING_SITE_TYPE_ICONS.default;
+          const glyphImg = document.createElement("img");
+          glyphImg.src = iconUrl;
+          glyphImg.style.width = "28px";
+          glyphImg.style.height = "28px";
+          glyphImg.style.objectFit = "contain";
+          glyphImg.style.backgroundColor = "#FFFFFF";
+          glyphImg.style.borderRadius = "100%";
+          glyphImg.style.padding = "2px";
+          const pin = new PinElement({
+            glyph: glyphImg,
+            background: "#FF6347",         
+            borderColor: "#FF6347",
+            scale: 1.5,
+          });
+          const marker = new AdvancedMarkerElement({
+            map,
+            position: {
+              lat: site.specific_location.coordinates[1],
+              lng: site.specific_location.coordinates[0],
+            },
+            content: pin.element,
+            title: site.report_type || 'Breeding Site',
+          });
+          marker.addListener('click', () => {
+            setSelectedBreedingSite(site);
+            setSelectedBarangayFeature(null);
+            setSelectedIntervention(null);
+            setInfoWindowPosition({
+              lat: site.specific_location.coordinates[1],
+              lng: site.specific_location.coordinates[0]
+            });
+          });
+          markersRef.current.push(marker);
+        }
+      });
+    }
+    if (showInterventions && Array.isArray(activeInterventions) && window.google.maps.marker) {
+      const { AdvancedMarkerElement, PinElement } = window.google.maps.marker;
+      activeInterventions.forEach(intervention => {
+        if (intervention.specific_location?.coordinates) {
+          const iconUrl = INTERVENTION_TYPE_ICONS[intervention.interventionType] || INTERVENTION_TYPE_ICONS.default;
+          const glyphImg = document.createElement("img");
+          glyphImg.src = iconUrl;
+          glyphImg.style.width = "28px";
+          glyphImg.style.height = "28px";
+          glyphImg.style.objectFit = "contain";
+          glyphImg.style.backgroundColor = "#FFFFFF";
+          glyphImg.style.borderRadius = "100%";
+          glyphImg.style.padding = "2px";
+          const pin = new PinElement({
+            glyph: glyphImg,
+            background: "#1893F8",
+            borderColor: "#1893F8",
+            scale: 1.5,
+          });
+          const marker = new AdvancedMarkerElement({
+            map,
+            position: {
+              lat: intervention.specific_location.coordinates[1],
+              lng: intervention.specific_location.coordinates[0],
+            },
+            content: pin.element,
+            title: intervention.interventionType,
+          });
+          marker.addListener('click', () => {
+            setSelectedIntervention(intervention);
+            setSelectedBreedingSite(null);
+            setSelectedBarangayFeature(null);
+            setInfoWindowPosition({
+              lat: intervention.specific_location.coordinates[1],
+              lng: intervention.specific_location.coordinates[0]
+            });
+          });
+          markersRef.current.push(marker);
+        }
+      });
+    }
+  }, [mapLoaded, mergedBarangays, searchQuery, posts, activeInterventions, onBarangaySelect, breedingSites, showBreedingSites, showInterventions]);
+
+  // Only fit/zoom the map when the selected barangay changes
+  useEffect(() => {
+    if (!mapLoaded || !mergedBarangays.length || !searchQuery) return;
+    const map = mapInstanceRef.current;
+    if (!map) return;
+    const selectedNorm = normalizeBarangayName(searchQuery);
+    const selectedBarangay = mergedBarangays.find(
+      barangay => normalizeBarangayName(barangay.properties?.name) === selectedNorm
+    );
+    if (selectedBarangay && selectedBarangay.geometry?.coordinates) {
+      let bounds = new window.google.maps.LatLngBounds();
+      let coordsArray = [];
+      if (selectedBarangay.geometry.type === 'Polygon') {
+        coordsArray = [selectedBarangay.geometry.coordinates];
+      } else if (selectedBarangay.geometry.type === 'MultiPolygon') {
+        coordsArray = selectedBarangay.geometry.coordinates;
+      }
+      coordsArray.forEach((polygonCoords) => {
+        polygonCoords[0].forEach(([lng, lat]) => {
+          bounds.extend({ lat, lng });
+        });
+      });
+      map.fitBounds(bounds);
+    }
+  }, [mapLoaded, mergedBarangays, searchQuery]);
+
+  // Show InfoWindow when barangay is selected from Analytics (searchQuery changes)
+  useEffect(() => {
+    if (!mapLoaded || !mergedBarangays.length || !searchQuery) return;
+    const map = mapInstanceRef.current;
+    if (!map) return;
+    const selectedNorm = normalizeBarangayName(searchQuery);
+    const selectedBarangay = mergedBarangays.find(
+      barangay => normalizeBarangayName(barangay.properties?.name) === selectedNorm
+    );
+    if (selectedBarangay && selectedBarangay.geometry?.coordinates) {
+      // Calculate center of polygon
+      let latSum = 0, lngSum = 0, count = 0;
+      let coordsArray = [];
+      if (selectedBarangay.geometry.type === 'Polygon') {
+        coordsArray = [selectedBarangay.geometry.coordinates];
+      } else if (selectedBarangay.geometry.type === 'MultiPolygon') {
+        coordsArray = selectedBarangay.geometry.coordinates;
+      }
+      coordsArray.forEach((polygonCoords) => {
+        polygonCoords[0].forEach(([lng, lat]) => {
+          latSum += lat;
+          lngSum += lng;
+          count++;
+        });
+      });
+      const center = { lat: latSum / count, lng: lngSum / count };
+      // Compare by name and coordinates, not by object reference
+      const alreadySelected =
+        selectedBarangayFeature &&
+        normalizeBarangayName(selectedBarangayFeature.properties?.name) === selectedNorm;
+      const alreadyCentered =
+        infoWindowPosition &&
+        Math.abs(infoWindowPosition.lat - center.lat) < 1e-6 &&
+        Math.abs(infoWindowPosition.lng - center.lng) < 1e-6;
+      if (!alreadySelected || !alreadyCentered) {
+        setSelectedBarangayFeature(selectedBarangay);
+        setInfoWindowPosition(center);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mapLoaded, mergedBarangays, searchQuery]);
+
+  // Show InfoWindow for breeding site
+  useEffect(() => {
+    if (showInterventions || !selectedBreedingSite || !infoWindowPosition || !mapInstanceRef.current) return;
+    const site = selectedBreedingSite;
+    const content = document.createElement('div');
+    content.innerHTML = `
+      <div class="bg-white p-4 rounded-lg text-center h-auto" style="width: 40vw;">
+        <p class="font-extrabold text-2xl mb-2" style="color:#2563eb;">${site.report_type}</p>
+        <div class="mt-2 space-y-2">
+          <p><span class="font-bold">Barangay:</span> ${site.barangay}</p>
+          <p><span class="font-bold">Reported by:</span> ${site.user?.username || ''}</p>
+          <p><span class="font-bold">Date:</span> ${site.date_and_time ? new Date(site.date_and_time).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' }) : 'N/A'}</p>
+          <p><span class="font-bold">Description:</span> ${site.description}</p>
+          ${(site.images && site.images.length > 0) ? `<div class="flex justify-center gap-2">${site.images.map((img, idx) => `<img key="${idx}" src="${img}" alt="evidence-${idx + 1}" class="w-35 h-25 object-cover rounded" />`).join('')}</div>` : ''}
+        </div>
+      </div>
+    `;
+    if (!infoWindowRef.current) {
+      infoWindowRef.current = new window.google.maps.InfoWindow({ maxWidth: 500 });
+    }
+    const infoWindow = infoWindowRef.current;
+    infoWindow.setContent(content);
+    infoWindow.setPosition(infoWindowPosition);
+    infoWindow.open(mapInstanceRef.current);
+    infoWindow.addListener('closeclick', () => {
+      setSelectedBreedingSite(null);
+      setInfoWindowPosition(null);
+    });
+  }, [selectedBreedingSite, infoWindowPosition, showInterventions]);
+
+  // Show InfoWindow for intervention
+  useEffect(() => {
+    if (showInterventions || !selectedIntervention || !infoWindowPosition || !mapInstanceRef.current) return;
+    const intervention = selectedIntervention;
+    const content = document.createElement('div');
+    content.innerHTML = `
+      <div class="p-3 flex flex-col items-center gap-1 font-normal bg-white rounded-md shadow-md w-64 text-primary w-[50vw]">
+        <p class="text-4xl font-extrabold text-primary mb-2">${intervention.interventionType}</p>
+        <div class="text-lg flex items-center gap-2">
+          <span class="font-bold">Status:</span>
+          <span class="px-3 py-1 rounded-full text-white font-bold text-sm" style="background-color:#8b5cf6;box-shadow:0 1px 4px rgba(0,0,0,0.08);">${intervention.status}</span>
+        </div>
+        <p class="text-lg"><span class="font-bold">Barangay:</span> ${intervention.barangay}</p>
+        ${intervention.address ? `<p class="text-lg"><span class="font-bold">Address:</span> ${intervention.address}</p>` : ''}
+        <p class="text-lg"><span class="font-bold">Date:</span> ${new Date(intervention.date).toLocaleString('en-US', { year: 'numeric', month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true })}</p>
+        <p class="text-lg"><span class="font-bold">Personnel:</span> ${intervention.personnel || ''}</p>
+      </div>
+    `;
+    if (!infoWindowRef.current) {
+      infoWindowRef.current = new window.google.maps.InfoWindow({ maxWidth: 500 });
+    }
+    const infoWindow = infoWindowRef.current;
+    infoWindow.setContent(content);
+    infoWindow.setPosition(infoWindowPosition);
+    infoWindow.open(mapInstanceRef.current);
+    infoWindow.addListener('closeclick', () => {
+      setSelectedIntervention(null);
+      setInfoWindowPosition(null);
+    });
+  }, [selectedIntervention, infoWindowPosition, showInterventions]);
+
+  return (
+    <div className="relative w-full h-full">
+      {/* Toggle Buttons */}
+      <div className="absolute top-4 left-4 z-20 flex gap-2">
+        <button
+          onClick={() => setShowBreedingSites(v => !v)}
+          className={`px-4 py-2 rounded-lg font-medium transition-colors ${showBreedingSites ? 'bg-primary text-white' : 'bg-white/90 text-gray-600 hover:bg-gray-50'}`}
+        >{showBreedingSites ? 'Hide Breeding Sites' : 'Show Breeding Sites'}</button>
+        <button
+          onClick={() => setShowInterventions(v => !v)}
+          className={`px-4 py-2 rounded-lg font-medium transition-colors ${showInterventions ? 'bg-primary text-white' : 'bg-white/90 text-gray-600 hover:bg-gray-50'}`}
+        >{showInterventions ? 'Hide Interventions' : 'Show Interventions'}</button>
+      </div>
+      <div ref={mapRef} className="w-full h-full" />
+      {showLegends && (
+        <div className="absolute bottom-4 right-4 bg-white p-4 rounded-lg shadow-lg">
+          {showBreedingSites && (
+            <div className="flex items-center gap-2 mb-2">
+              <div className="w-4 h-4 rounded-full" style={{background:'#FF6347'}} />
+              <span>Breeding Site</span>
+            </div>
+          )}
+          {showInterventions && (
+            <div className="flex items-center gap-2 mb-2">
+              <div className="w-4 h-4 rounded-full" style={{background:'#1893F8'}} />
+              <span>Intervention</span>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+
 export default DengueMap;
