@@ -800,27 +800,22 @@ const Mapping = () => {
                   </div>
                 </div>
 
-                {/* Intervention Legend */}
-                {showInterventions && (
-                  <div className="bg-white rounded-md shadow px-4 py-3 border border-gray-200">
-                    <p className="font-semibold mb-2 text-primary">Intervention Status</p>
-                    <div className="flex items-center justify-around sm:justify-start gap-2 flex-wrap">
-                      {Object.entries(INTERVENTION_STATUS_COLORS)
-                        .filter(([key]) => key !== 'default' && key !== 'completed')
-                        .map(([status, color]) => (
-                          <div key={status} className="flex items-center gap-1">
-                            <span
-                              style={{ backgroundColor: color }}
-                              className="w-3 h-3 inline-block rounded-full"
-                            />
-                            <span className="text-xs text-primary">
-                              {status.charAt(0).toUpperCase() + status.slice(1)}
-                            </span>
-                          </div>
-                        ))}
+                {/* Marker Legend */}
+                <div className="bg-white rounded-md shadow px-4 py-3 border border-gray-200">
+                  <p className="font-semibold mb-2 text-primary">Marker Legend</p>
+                  <div className="flex items-center gap-4 flex-wrap">
+                    {/* Breeding Site Marker */}
+                    <div className="flex items-center gap-2">
+                      <MapPin size={22} weight="fill" color="#FF6347" />
+                      <span className="text-xs text-primary">Breeding Site</span>
+                    </div>
+                    {/* Intervention Marker */}
+                    <div className="flex items-center gap-2">
+                      <MapPin size={22} weight="fill" color="#1893F8" />
+                      <span className="text-xs text-primary">Intervention</span>
                     </div>
                   </div>
-                )}
+                </div>
               </div>
             </div>
           </div>
