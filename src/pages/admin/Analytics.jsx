@@ -110,10 +110,10 @@ const Analytics = () => {
   // Get filtered data for selected barangay
   const selectedNorm = selectedBarangay?.toLowerCase().replace(/[^a-z0-9]/g, '');
 
-  const filteredPosts = posts?.filter(post => {
+  const filteredPosts = Array.isArray(posts?.posts) ? posts.posts.filter(post => {
     const postBarangayNorm = post.barangay?.toLowerCase().replace(/[^a-z0-9]/g, '');
     return postBarangayNorm === selectedNorm;
-  }) || [];
+  }) : [];
 
   const filteredInterventions = allInterventionsData?.filter(intervention => {
     const interventionBarangayNorm = intervention.barangay?.toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -392,13 +392,11 @@ const Analytics = () => {
               const selectedNorm = normalize(selectedBarangay);
 
               // Reports analytics
-              const filteredPosts = Array.isArray(posts)
-                ? posts.filter(post => normalize(post.barangay) === selectedNorm)
-                : [];
+              const filteredPosts = Array.isArray(posts?.posts) ? posts.posts.filter(post => normalize(post.barangay) === selectedNorm) : [];
 
-              const validatedCount = filteredPosts.filter(p => p.status === 'Validated').length;
-              const pendingCount = filteredPosts.filter(p => p.status === 'Pending').length;
-              const rejectedCount = filteredPosts.filter(p => p.status === 'Rejected').length;
+              const validatedCount = Array.isArray(filteredPosts) ? filteredPosts.filter(p => p.status === 'Validated').length : 0;
+              const pendingCount = Array.isArray(filteredPosts) ? filteredPosts.filter(p => p.status === 'Pending').length : 0;
+              const rejectedCount = Array.isArray(filteredPosts) ? filteredPosts.filter(p => p.status === 'Rejected').length : 0;
 
               // Interventions analytics
               const filteredInterventions = Array.isArray(allInterventionsData)

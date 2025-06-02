@@ -105,7 +105,7 @@ const Community = () => {
   // Memoize the latest announcement
   const latestAnnouncement = useMemo(() => {
     if (!adminPosts) return null;
-    const announcements = adminPosts.filter(post => post.category === "announcement");
+    const announcements = Array.isArray(adminPosts?.posts) ? adminPosts.posts.filter(post => post.category === "announcement") : [];
     if (announcements.length === 0) return null;
     announcements.sort((a, b) => new Date(b.publishDate) - new Date(a.publishDate));
     return announcements[0];

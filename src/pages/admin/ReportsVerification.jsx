@@ -23,24 +23,23 @@ const ReportsVerification = () => {
   const [validatedPosts, setValidatedPosts] = useState([]);
 
   // Calculate summary stats
-  const totalReports = posts?.length || 0;
-  const totalValidated = posts?.filter(p => p.status === "Validated").length || 0;
-  const totalPending = posts?.filter(p => p.status === "Pending").length || 0;
-  const totalRejected = posts?.filter(p => p.status === "Rejected").length || 0;
+  const postArray = Array.isArray(posts?.posts) ? posts.posts : (Array.isArray(posts) ? posts : []);
+  const totalReports = postArray.length;
+  const totalValidated = postArray.filter(p => p.status === "Validated").length;
+  const totalPending = postArray.filter(p => p.status === "Pending").length;
+  const totalRejected = postArray.filter(p => p.status === "Rejected").length;
   const today = dayjs().format("YYYY-MM-DD");
-  const totalToday = posts?.filter(p => dayjs(p.date_and_time).format("YYYY-MM-DD") === today).length || 0;
+  const totalToday = postArray.filter(p => dayjs(p.date_and_time).format("YYYY-MM-DD") === today).length;
 
   // Most active barangay
   const barangayCounts = {};
-  posts?.forEach(p => {
+  postArray.forEach(p => {
     if (p.barangay) barangayCounts[p.barangay] = (barangayCounts[p.barangay] || 0) + 1;
   });
   const mostActiveBarangay = Object.entries(barangayCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || "N/A";
 
   useEffect(() => {
-    if (posts) {
-      setValidatedPosts(posts.filter((post) => post.status === "Validated"));
-    }
+    setValidatedPosts(postArray.filter((post) => post.status === "Validated"));
   }, [posts]);
 
   const handleVerificationSuccess = () => {
@@ -105,7 +104,7 @@ const ReportsVerification = () => {
           </p>
           <div className="h-[75vh]">
             <ReportTable2
-              posts={posts}
+              posts={postArray}
               onSelectReport={setSelectedReport}
             />
           </div>

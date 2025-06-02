@@ -102,7 +102,7 @@ const Landing = () => {
   };
 
   return (
-    <main className="flex flex-col overflow-hidden mt-12">
+    <main className="flex flex-col overflow-hidden mt-12 pt-10">
       {/* <StreetViewMap /> */}
       <div className="text-primary font-[Koulen] uppercase flex flex-col text-7xl  px-10 mb-14 lg:max-w-[80vw] lg:items-center lg:self-center text-center">
         <Heading

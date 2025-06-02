@@ -7,7 +7,10 @@ const LandingLayout = () => {
   return (
     <div className="min-h-screen relative">
       <Navbar />
-      <Outlet />
+      <div className="mt-19 ">  
+         <Outlet />
+      </div>
+   
     </div>
   );
 };

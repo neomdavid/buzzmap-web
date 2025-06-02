@@ -214,7 +214,7 @@ const Mapping = () => {
         }
         // Process breeding sites
         if (posts) {
-          const validPosts = Array.isArray(posts) ? posts : posts.posts || [];
+          const validPosts = Array.isArray(posts?.posts) ? posts.posts : (Array.isArray(posts) ? posts : []);
           const validatedSites = validPosts.filter(post => post.status === "Validated" && post.specific_location && Array.isArray(post.specific_location.coordinates) && post.specific_location.coordinates.length === 2);
           console.log('Valid breeding sites found:', validatedSites.length);
           if (isMountedRef.current) {
@@ -801,14 +801,14 @@ const Mapping = () => {
                 </div>
 
                 {/* Marker Legend */}
-                <div className="bg-white rounded-md shadow px-4 py-3 border border-gray-200">
+                  <div className="bg-white rounded-md shadow px-4 py-3 border border-gray-200">
                   <p className="font-semibold mb-2 text-primary">Marker Legend</p>
                   <div className="flex items-center gap-4 flex-wrap">
                     {/* Breeding Site Marker */}
                     <div className="flex items-center gap-2">
                       <MapPin size={22} weight="fill" color="#FF6347" />
                       <span className="text-xs text-primary">Breeding Site</span>
-                    </div>
+                          </div>
                     {/* Intervention Marker */}
                     <div className="flex items-center gap-2">
                       <MapPin size={22} weight="fill" color="#1893F8" />

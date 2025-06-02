@@ -70,9 +70,9 @@ const BuzzLine = () => {
       return [];
     }
     
-    const filteredNews = adminPosts.filter(post => {
+    const filteredNews = Array.isArray(adminPosts?.posts) ? adminPosts.posts.filter(post => {
       return post && post.category && post.category.toLowerCase() === 'news';
-    });
+    }) : [];
 
     return filteredNews.map(post => {
       if (!post) return null;

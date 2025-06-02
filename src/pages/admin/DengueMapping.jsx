@@ -54,7 +54,7 @@ const DengueMapping = () => {
     // Create a Set to track unique combinations
     const uniqueReports = new Set();
 
-    const filteredPosts = posts.filter(post => {
+    const filteredPosts = Array.isArray(posts?.posts) ? posts.posts.filter(post => {
       // Only include validated posts with coordinates
       if (post.status !== "Validated" || !post.specific_location?.coordinates) {
         console.log('Skipping post - Invalid status or no coordinates:', post);
@@ -81,7 +81,7 @@ const DengueMapping = () => {
       
       // Return posts within 2km radius
       return distance <= 2;
-    });
+    }) : [];
 
     console.log('Filtered Posts:', filteredPosts);
 

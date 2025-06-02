@@ -3,8 +3,8 @@ import {
   ReportCard,
   ReportTable2,
   DengueChartCard,
-  DengueMap,
 } from "../../components";
+import MapOnly from '../../components/Mapping/MapOnly';
 import {
   useGetPostsQuery,
   useGetAllInterventionsQuery,
@@ -58,7 +58,7 @@ const Dashboard = () => {
     return <div>Error fetching data...</div>;
 
   // Make sure posts and interventions are arrays
-  const safePosts = Array.isArray(posts) ? posts : [];
+  const safePosts = Array.isArray(posts?.posts) ? posts.posts : (Array.isArray(posts) ? posts : []);
   const safeInterventions = Array.isArray(interventions) ? interventions : [];
 
   // Calculate counts for reports
@@ -231,7 +231,7 @@ const Dashboard = () => {
         </div>
         <div className="flex  md:flex-row  gap-6 lg:flex-3">
           <div className="flex-1 min-w-[150px] shadow-sm rounded-2xl h-auto overflow-hidden  ">
-            <DengueMap hideTabs={true} handlePolygonClick={handleDashboardMapPolygonClick} />
+            <MapOnly style={{height: '300px', width: '100%'}} />
           </div>
           {/* <div className="flex flex-col ">
             <p className="text-3xl font-extrabold text-primary mb-3">

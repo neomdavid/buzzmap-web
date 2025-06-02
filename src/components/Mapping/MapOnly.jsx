@@ -85,6 +85,7 @@ const MapOnly = ({ showBreedingSites = true, showInterventions = false, style = 
   const [barangayData, setBarangayData] = useState(null);
   const [breedingSites, setBreedingSites] = useState([]);
   const [interventions, setInterventions] = useState([]);
+  const [mapLoaded, setMapLoaded] = useState(false);
   const { data: barangaysList } = useGetBarangaysQuery();
   const { data: posts } = useGetPostsQuery();
   const { data: allInterventionsData } = useGetAllInterventionsQuery ? useGetAllInterventionsQuery() : { data: [] };
@@ -115,7 +116,7 @@ const MapOnly = ({ showBreedingSites = true, showInterventions = false, style = 
           setBarangayData(barangayGeoJson);
         }
         if (posts) {
-          const validPosts = Array.isArray(posts) ? posts : posts.posts || [];
+          const validPosts = Array.isArray(posts?.posts) ? posts.posts : (Array.isArray(posts) ? posts : []);
           const validatedSites = validPosts.filter(post => post.status === "Validated" && post.specific_location && Array.isArray(post.specific_location.coordinates) && post.specific_location.coordinates.length === 2);
           if (isMountedRef.current) {
             setBreedingSites(validatedSites);
@@ -151,6 +152,7 @@ const MapOnly = ({ showBreedingSites = true, showInterventions = false, style = 
       return;
     }
     let map, overlays = [];
+    setMapLoaded(false);
     loadGoogleMapsScript(apiKey).then(() => {
       if (!isMountedRef.current) return;
       overlaysRef.current.forEach(o => o.setMap(null));
@@ -165,12 +167,19 @@ const MapOnly = ({ showBreedingSites = true, showInterventions = false, style = 
             streetViewControl: false,
             fullscreenControl: false,
           });
+          window.google.maps.event.addListenerOnce(mapInstance.current, 'tilesloaded', () => {
+            setMapLoaded(true);
+          });
         } catch (err) {
           if (isMountedRef.current) {
             setError('Failed to initialize map');
           }
           return;
         }
+      } else {
+        window.google.maps.event.addListenerOnce(mapInstance.current, 'tilesloaded', () => {
+          setMapLoaded(true);
+        });
       }
       map = mapInstance.current;
       barangayData.features.forEach((feature) => {
@@ -274,12 +283,18 @@ const MapOnly = ({ showBreedingSites = true, showInterventions = false, style = 
   if (error) return <ErrorMessage error={error} className="m-4" />;
 
   return (
-    <div
-      ref={mapRef}
-      className={className}
-      style={{ width: '100%', height: '100%', minHeight: 300, ...style }}
-      id="map-only"
-    />
+    <div style={{ position: 'relative', width: '100%', height: '100%', minHeight: 300, ...style }} className={className}>
+      <div
+        ref={mapRef}
+        style={{ width: '100%', height: '100%' }}
+        id="map-only"
+      />
+      {!mapLoaded && (
+        <div className="absolute inset-0 flex items-center justify-center bg-white/70 z-10">
+          <LoadingSpinner size={40} message="Loading map..." />
+        </div>
+      )}
+    </div>
   );
 };
 
