@@ -328,8 +328,12 @@ const Mapping = () => {
             zIndex: isSelected ? 2 : 1,
           });
           polygon.addListener('click', (e) => {
+            // Don't show barangay info if breeding sites or interventions are being displayed
+            if (showBreedingSites || showInterventions) {
+              return;
+            }
             // Center of polygon
-                    const center = turf.center(feature.geometry);
+            const center = turf.center(feature.geometry);
             const [lng, lat] = center.geometry.coordinates;
             if (mapInstance.current) {
               mapInstance.current.panTo({ lat, lng });
@@ -337,8 +341,8 @@ const Mapping = () => {
             }
             // Hide control panel on md screens and lower
             if (window.matchMedia && window.matchMedia('(max-width: 768px)').matches) {
-                      setShowControlPanel(false);
-                    }
+              setShowControlPanel(false);
+            }
             setSelectedBarangayFeature(feature); // highlight
             let barangayObj = barangaysList?.find(b => normalizeBarangayName(b.name) === normalizeBarangayName(feature.properties.name));
             let patternBased = barangayObj?.status_and_recommendation?.pattern_based;
@@ -422,6 +426,11 @@ const Mapping = () => {
             title: site.report_type || 'Breeding Site',
           });
           marker.addListener('click', () => {
+            // Close barangay info window if open
+            if (infoWindowRef.current) {
+              infoWindowRef.current.close();
+              setSelectedBarangayFeature(null);
+            }
             // Pan to marker position and zoom in
             if (mapInstance.current) {
               mapInstance.current.panTo({
@@ -506,6 +515,11 @@ const Mapping = () => {
             title: intervention.interventionType,
           });
           marker.addListener('click', () => {
+            // Close barangay info window if open
+            if (infoWindowRef.current) {
+              infoWindowRef.current.close();
+              setSelectedBarangayFeature(null);
+            }
             // Pan to marker position and zoom in
             if (mapInstance.current) {
               mapInstance.current.panTo({
@@ -516,8 +530,8 @@ const Mapping = () => {
             }
             // Hide control panel on md screens and lower
             if (window.matchMedia && window.matchMedia('(max-width: 768px)').matches) {
-                        setShowControlPanel(false);
-                      }
+              setShowControlPanel(false);
+            }
             // Use a div with Tailwind classes for InfoWindow content
             const content = document.createElement('div');
             content.innerHTML = `
