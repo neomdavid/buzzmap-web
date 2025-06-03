@@ -118,7 +118,7 @@ const Analytics = () => {
     return postBarangayNorm === selectedNorm;
   }) : [];
 
-  const filteredInterventions = allInterventionsData?.filter(intervention => {
+  const filteredInterventions = allInterventionsData?.interventions?.filter(intervention => {
     const interventionBarangayNorm = intervention.barangay?.toLowerCase().replace(/[^a-z0-9]/g, '');
     return interventionBarangayNorm === selectedNorm;
   }) || [];
@@ -402,8 +402,8 @@ const Analytics = () => {
               const rejectedCount = Array.isArray(filteredPosts) ? filteredPosts.filter(p => p.status === 'Rejected').length : 0;
 
               // Interventions analytics
-              const filteredInterventions = Array.isArray(allInterventionsData)
-                ? allInterventionsData.filter(i => normalize(i.barangay) === selectedNorm)
+              const filteredInterventions = Array.isArray(allInterventionsData?.interventions)
+                ? allInterventionsData.interventions.filter(i => normalize(i.barangay) === selectedNorm)
                 : [];
 
               const totalInterventions = filteredInterventions.length;

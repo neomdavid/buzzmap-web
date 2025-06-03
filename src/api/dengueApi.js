@@ -213,33 +213,23 @@ export const dengueApi = createApi({
         return url;
       },
       transformResponse: (response, meta, arg) => {
-        // If the response includes pagination info, return it along with the posts
-        if (response && response.data) {
+        // New paginated format: { meta: {...}, reports: [...] }
+        if (response && Array.isArray(response.reports) && response.meta) {
           return {
-            posts: response.data,
-            pagination: {
-              currentPage: response.currentPage,
-              totalPages: response.totalPages,
-              totalItems: response.totalItems,
-              hasMore: response.currentPage < response.totalPages
-            }
+            posts: response.reports,
+            meta: response.meta
           };
         }
-        // If no pagination info, return the response as is
+        // Fallback for old format
         return {
           posts: response,
-          pagination: {
-            currentPage: 1,
-            totalPages: 1,
-            totalItems: response.length,
-            hasMore: false
-          }
+          meta: {}
         };
       },
       providesTags: (result) => 
         result?.posts
           ? [
-              ...result.posts.map(({ id }) => ({ type: 'Post', id })),
+              ...result.posts.map(({ id, _id }) => ({ type: 'Post', id: id || _id })),
               { type: 'Post', id: 'LIST' },
             ]
           : [{ type: 'Post', id: 'LIST' }],
@@ -365,22 +355,38 @@ export const dengueApi = createApi({
       invalidatesTags: [{ type: "Intervention", id: "LIST" }],
     }),
 
-    // Get all interventions
+    // Get all interventions (paginated)
     getAllInterventions: builder.query({
-      query: () => "interventions", // The endpoint to get all interventions
-      providesTags: (result) => {
-        if (result) {
-          return [
-            ...result.map((intervention) => ({
-              type: "Intervention",
-              id: intervention._id,
-            })),
-            { type: "Intervention", id: "LIST" },
-          ];
-        } else {
-          return [{ type: "Intervention", id: "LIST" }];
+      query: ({ page = 1, limit = 10 } = {}) => `interventions?page=${page}&limit=${limit}`,
+      transformResponse: (response) => {
+        // New paginated format: { page, limit, count, interventions: [...] }
+        if (response && Array.isArray(response.interventions)) {
+          return {
+            interventions: response.interventions,
+            pagination: {
+              page: response.page,
+              limit: response.limit,
+              count: response.count
+            }
+          };
         }
+        // Fallback for old format
+        return {
+          interventions: response,
+          pagination: {
+            page: 1,
+            limit: Array.isArray(response) ? response.length : 0,
+            count: Array.isArray(response) ? response.length : 0
+          }
+        };
       },
+      providesTags: (result) =>
+        result?.interventions
+          ? [
+              ...result.interventions.map(({ id, _id }) => ({ type: 'Intervention', id: id || _id })),
+              { type: 'Intervention', id: 'LIST' },
+            ]
+          : [{ type: 'Intervention', id: 'LIST' }],
     }),
 
     // Get a single intervention by ID
@@ -459,10 +465,36 @@ export const dengueApi = createApi({
       invalidatesTags: [{ type: "Post", id: "LIST" }],
     }),
 
-    // Get all admin posts (requires token)
+    // Get all admin posts (paginated)
     getAllAdminPosts: builder.query({
-      query: () => "adminPosts",
-      providesTags: ["Post"],
+      query: ({ page = 1, limit = 10 } = {}) => `adminposts?page=${page}&limit=${limit}`,
+      transformResponse: (response) => {
+        if (response && Array.isArray(response.adminposts)) {
+          return {
+            adminposts: response.adminposts,
+            pagination: {
+              page: response.page,
+              limit: response.limit,
+              count: response.count
+            }
+          };
+        }
+        return {
+          adminposts: response,
+          pagination: {
+            page: 1,
+            limit: Array.isArray(response) ? response.length : 0,
+            count: Array.isArray(response) ? response.length : 0
+          }
+        };
+      },
+      providesTags: (result) =>
+        result?.adminposts
+          ? [
+              ...result.adminposts.map(({ id, _id }) => ({ type: 'Post', id: id || _id })),
+              { type: 'Post', id: 'LIST' },
+            ]
+          : [{ type: 'Post', id: 'LIST' }],
     }),
 
     // Update an admin post
@@ -484,10 +516,36 @@ export const dengueApi = createApi({
       invalidatesTags: ["Post"],
     }),
 
-    // Get all alerts
+    // Get all alerts (paginated)
     getAllAlerts: builder.query({
-      query: () => "alerts",
-      providesTags: ["Alert"],
+      query: ({ page = 1, limit = 10 } = {}) => `alerts?page=${page}&limit=${limit}`,
+      transformResponse: (response) => {
+        if (response && Array.isArray(response.alerts)) {
+          return {
+            alerts: response.alerts,
+            pagination: {
+              page: response.page,
+              limit: response.limit,
+              count: response.count
+            }
+          };
+        }
+        return {
+          alerts: response,
+          pagination: {
+            page: 1,
+            limit: Array.isArray(response) ? response.length : 0,
+            count: Array.isArray(response) ? response.length : 0
+          }
+        };
+      },
+      providesTags: (result) =>
+        result?.alerts
+          ? [
+              ...result.alerts.map(({ id, _id }) => ({ type: 'Alert', id: id || _id })),
+              { type: 'Alert', id: 'LIST' },
+            ]
+          : [{ type: 'Alert', id: 'LIST' }],
     }),
 
     // Update an alert
@@ -539,12 +597,36 @@ export const dengueApi = createApi({
       }),
     }),
 
+    // Get all accounts (paginated)
     getAccounts: builder.query({
-      query: () => ({
-        url: '/accounts',
-        method: 'GET',
-      }),
-      providesTags: ['Accounts'],
+      query: ({ page = 1, limit = 10 } = {}) => `accounts?page=${page}&limit=${limit}`,
+      transformResponse: (response) => {
+        if (response && Array.isArray(response.accounts)) {
+          return {
+            accounts: response.accounts,
+            pagination: {
+              page: response.page,
+              limit: response.limit,
+              count: response.count
+            }
+          };
+        }
+        return {
+          accounts: response,
+          pagination: {
+            page: 1,
+            limit: Array.isArray(response) ? response.length : 0,
+            count: Array.isArray(response) ? response.length : 0
+          }
+        };
+      },
+      providesTags: (result) =>
+        result?.accounts
+          ? [
+              ...result.accounts.map(({ id, _id }) => ({ type: 'Accounts', id: id || _id })),
+              { type: 'Accounts', id: 'LIST' },
+            ]
+          : [{ type: 'Accounts', id: 'LIST' }],
     }),
 
     // Add this new endpoint

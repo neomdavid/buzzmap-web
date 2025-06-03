@@ -18,29 +18,27 @@ import {
 } from "@tabler/icons-react";
 
 const ReportsVerification = () => {
-  const { data: posts, isLoading, isError, refetch } = useGetPostsQuery();
+  const [page, setPage] = useState(1);
+  const limit = 50;
+  const { data, isLoading, isError, refetch } = useGetPostsQuery({ page, limit });
+  const postArray = Array.isArray(data?.posts) ? data.posts : [];
+  const meta = data?.meta || {};
+
+  // Use meta for summary stats
+  const totalReports = meta.total || 0;
+  const totalValidated = meta.validated || 0;
+  const totalPending = meta.pending || 0;
+  const totalRejected = meta.rejected || 0;
+  const today = dayjs().format("YYYY-MM-DD");
+  const totalToday = meta.reportsToday || 0;
+  const mostActiveBarangay = meta.mostActiveBarangay || "N/A";
+
   const [selectedReport, setSelectedReport] = useState(null);
   const [validatedPosts, setValidatedPosts] = useState([]);
 
-  // Calculate summary stats
-  const postArray = Array.isArray(posts?.posts) ? posts.posts : (Array.isArray(posts) ? posts : []);
-  const totalReports = postArray.length;
-  const totalValidated = postArray.filter(p => p.status === "Validated").length;
-  const totalPending = postArray.filter(p => p.status === "Pending").length;
-  const totalRejected = postArray.filter(p => p.status === "Rejected").length;
-  const today = dayjs().format("YYYY-MM-DD");
-  const totalToday = postArray.filter(p => dayjs(p.date_and_time).format("YYYY-MM-DD") === today).length;
-
-  // Most active barangay
-  const barangayCounts = {};
-  postArray.forEach(p => {
-    if (p.barangay) barangayCounts[p.barangay] = (barangayCounts[p.barangay] || 0) + 1;
-  });
-  const mostActiveBarangay = Object.entries(barangayCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || "N/A";
-
   useEffect(() => {
     setValidatedPosts(postArray.filter((post) => post.status === "Validated"));
-  }, [posts]);
+  }, [data]);
 
   const handleVerificationSuccess = () => {
     refetch();
@@ -106,10 +104,34 @@ const ReportsVerification = () => {
             <ReportTable2
               posts={postArray}
               onSelectReport={setSelectedReport}
+              page={meta.page}
+              limit={meta.limit}
+              total={meta.total}
+              onPageChange={setPage}
             />
           </div>
         </section>
       </div>
+      {/* Simple Pagination Controls (if not in ReportTable2) */}
+      {meta.total > meta.limit && (
+        <div className="flex justify-center mt-4 gap-2">
+          <button
+            className="btn btn-sm"
+            onClick={() => setPage(page - 1)}
+            disabled={page <= 1}
+          >
+            Previous
+          </button>
+          <span className="px-2 py-1">Page {meta.page} of {Math.ceil(meta.total / meta.limit)}</span>
+          <button
+            className="btn btn-sm"
+            onClick={() => setPage(page + 1)}
+            disabled={page >= Math.ceil(meta.total / meta.limit)}
+          >
+            Next
+          </button>
+        </div>
+      )}
       {selectedReport && (
         <VerifyReportModal
           reportId={selectedReport._id}

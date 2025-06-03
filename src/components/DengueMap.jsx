@@ -1,5 +1,3 @@
-// This component previously used @react-google-maps/api and useGoogleMaps.
-// It must be rewritten to use the plain Google Maps JS API if needed.
 import { useEffect, useRef, useState } from 'react';
 import { useGetPostsQuery } from '../api/dengueApi';
 import stagnantIcon from "../assets/icons/stagnant_water.svg";
@@ -10,6 +8,7 @@ import foggingIcon from "../assets/icons/fogging.svg";
 import trappingIcon from "../assets/icons/trapping.svg";
 import cleanUpIcon from "../assets/icons/cleanup.svg";
 import educationIcon from "../assets/icons/education.svg";
+import * as turf from '@turf/turf';
 
 const DengueMap = ({
   showLegends = true,
@@ -162,6 +161,11 @@ const DengueMap = ({
   const mergedBarangays = geojsonBarangays.map(feature => {
     const geoName = normalizeBarangayName(feature.properties?.name);
     const apiBarangay = barangaysList.find(b => normalizeBarangayName(b.name) === geoName);
+    console.log('[DengueMap DEBUG] Merging barangay data:', {
+      geoName,
+      apiBarangay,
+      featureName: feature.properties?.name
+    });
     return {
       ...feature,
       patternType: apiBarangay?.status_and_recommendation?.pattern_based?.status || feature.properties?.patternType || 'none',
@@ -171,6 +175,9 @@ const DengueMap = ({
       apiBarangayName: apiBarangay?.name,
     };
   });
+
+  console.log('[DengueMap DEBUG] Full barangaysList:', barangaysList);
+  console.log('[DengueMap DEBUG] Merged Barangays:', mergedBarangays);
 
   // Draw polygons and markers
   useEffect(() => {
@@ -223,6 +230,21 @@ const DengueMap = ({
           map: map,
           zIndex: isSelected ? 6 : 1,
         });
+
+        // Create a feature object with all necessary properties
+        const feature = {
+          type: 'Feature',
+          geometry: barangay.geometry,
+          properties: {
+            ...barangay.properties,
+            patternType: patternType,
+            status_and_recommendation: barangay.status_and_recommendation,
+            risk_level: barangay.risk_level,
+            pattern_data: barangay.pattern_data,
+            displayName: barangay.properties?.name
+          }
+        };
+
         polygon.addListener('click', () => {
           // Calculate center of polygon
           let latSum = 0, lngSum = 0, count = 0;
@@ -234,11 +256,14 @@ const DengueMap = ({
           const center = { lat: latSum / count, lng: lngSum / count };
           if (showInterventions) {
             setSelectedIntervention(null);
-            setSelectedBarangayFeature(null);
+            setSelectedBarangayFeature(feature);
             setInfoWindowPosition(center);
           } else if (showBreedingSites) {
             setSelectedBreedingSite(null);
-            setSelectedBarangayFeature(null);
+            setSelectedBarangayFeature(feature);
+            setInfoWindowPosition(center);
+          } else {
+            setSelectedBarangayFeature(feature);
             setInfoWindowPosition(center);
           }
         });
@@ -341,18 +366,18 @@ const DengueMap = ({
       barangay => normalizeBarangayName(barangay.properties?.name) === selectedNorm
     );
     if (selectedBarangay && selectedBarangay.geometry?.coordinates) {
-      let bounds = new window.google.maps.LatLngBounds();
+    let bounds = new window.google.maps.LatLngBounds();
       let coordsArray = [];
       if (selectedBarangay.geometry.type === 'Polygon') {
         coordsArray = [selectedBarangay.geometry.coordinates];
       } else if (selectedBarangay.geometry.type === 'MultiPolygon') {
         coordsArray = selectedBarangay.geometry.coordinates;
       }
-      coordsArray.forEach((polygonCoords) => {
-        polygonCoords[0].forEach(([lng, lat]) => {
-          bounds.extend({ lat, lng });
-        });
+    coordsArray.forEach((polygonCoords) => {
+      polygonCoords[0].forEach(([lng, lat]) => {
+        bounds.extend({ lat, lng });
       });
+    });
       map.fitBounds(bounds);
     }
   }, [mapLoaded, mergedBarangays, searchQuery]);
@@ -362,10 +387,12 @@ const DengueMap = ({
     if (!mapLoaded || !mergedBarangays.length || !searchQuery) return;
     const map = mapInstanceRef.current;
     if (!map) return;
+
     const selectedNorm = normalizeBarangayName(searchQuery);
     const selectedBarangay = mergedBarangays.find(
       barangay => normalizeBarangayName(barangay.properties?.name) === selectedNorm
     );
+
     if (selectedBarangay && selectedBarangay.geometry?.coordinates) {
       // Calculate center of polygon
       let latSum = 0, lngSum = 0, count = 0;
@@ -383,21 +410,150 @@ const DengueMap = ({
         });
       });
       const center = { lat: latSum / count, lng: lngSum / count };
-      // Compare by name and coordinates, not by object reference
-      const alreadySelected =
-        selectedBarangayFeature &&
-        normalizeBarangayName(selectedBarangayFeature.properties?.name) === selectedNorm;
-      const alreadyCentered =
-        infoWindowPosition &&
-        Math.abs(infoWindowPosition.lat - center.lat) < 1e-6 &&
-        Math.abs(infoWindowPosition.lng - center.lng) < 1e-6;
-      if (!alreadySelected || !alreadyCentered) {
-        setSelectedBarangayFeature(selectedBarangay);
+      
+      // Create a feature object with all necessary properties
+      const feature = {
+        type: 'Feature',
+        geometry: selectedBarangay.geometry,
+        properties: {
+          ...selectedBarangay.properties,
+          patternType: selectedBarangay.patternType,
+          status_and_recommendation: selectedBarangay.status_and_recommendation,
+          risk_level: selectedBarangay.risk_level,
+          pattern_data: selectedBarangay.pattern_data,
+          displayName: selectedBarangay.properties?.name
+        }
+      };
+
+      // Only update if the selected barangay has changed
+      if (!selectedBarangayFeature || 
+          normalizeBarangayName(selectedBarangayFeature.properties?.name) !== selectedNorm) {
+        setSelectedBarangayFeature(feature);
         setInfoWindowPosition(center);
+        map.panTo(center);
+        map.setZoom(14);
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mapLoaded, mergedBarangays, searchQuery]);
+
+  // Show InfoWindow for selected barangay
+  useEffect(() => {
+    if (!selectedBarangayFeature || !infoWindowPosition || !mapInstanceRef.current) return;
+    
+    const props = selectedBarangayFeature.properties;
+    const patternType = props?.patternType?.toLowerCase() || "none";
+    const lastAnalysisTime = props?.lastAnalysisTime;
+    const patternBased = props?.status_and_recommendation?.pattern_based || {};
+    const reportBased = props?.status_and_recommendation?.report_based || {};
+    const deathPriority = props?.status_and_recommendation?.death_priority || {};
+
+    // Color for report-based alert
+    const reportStatus = (reportBased.status || "unknown").toLowerCase();
+    const REPORT_STATUS_COLORS = {
+      low: "border-success bg-success/5",
+      medium: "border-warning bg-warning/5",
+      high: "border-error bg-error/5",
+      unknown: "border-gray-400 bg-gray-100"
+    };
+    const reportCardColor = REPORT_STATUS_COLORS[reportStatus] || REPORT_STATUS_COLORS.unknown;
+
+    const content = document.createElement('div');
+    content.innerHTML = `
+      <div class="bg-white p-4 rounded-lg text-center h-auto" style="width: 50vw;">
+        <p class="text-4xl font-[900]" style="color: ${PATTERN_COLORS[patternType] || PATTERN_COLORS.default}">
+          Barangay ${props.displayName || props.name}
+        </p>
+        <div class="mt-3 flex flex-col gap-3 text-black">
+          <!-- Pattern Card -->
+          <div class="p-3 rounded-lg border-2 ${
+            patternType === 'spike'
+              ? 'border-error bg-error/5'
+              : patternType === 'gradual_rise'
+              ? 'border-warning bg-warning/5'
+              : patternType === 'decline'
+              ? 'border-success bg-success/5'
+              : patternType === 'stability'
+              ? 'border-info bg-info/5'
+              : 'border-gray-400 bg-gray-100'
+          }">
+            <div>
+              <p class="text-sm font-medium text-gray-600 uppercase">Pattern</p>
+              <p class="text-lg font-semibold">
+                ${patternType === 'none'
+                  ? 'No pattern detected'
+                  : patternType.charAt(0).toUpperCase() + patternType.slice(1).replace('_', ' ')}
+              </p>
+            </div>
+          </div>
+
+          <!-- Pattern-Based Alert Card -->
+          ${patternBased.alert && patternBased.alert !== "None" ? `
+            <div class="p-3 rounded-lg border-2 border-primary/30 bg-primary/5">
+              <div>
+                <p class="text-sm font-medium text-gray-600 uppercase">Pattern-Based Alert</p>
+                <p class="text-lg font-semibold">${patternBased.alert}</p>
+                ${patternBased.recommendation ? `
+                  <p class="text-base text-gray-700 mt-1">Recommendation: ${patternBased.recommendation}</p>
+                ` : ''}
+              </div>
+            </div>
+          ` : ''}
+
+          <!-- Report-Based Alert Card -->
+          ${reportBased.alert && reportBased.alert !== "None" ? `
+            <div class="p-3 rounded-lg border-2 ${reportCardColor}">
+              <div>
+                <p class="text-sm font-medium text-gray-600 uppercase">Report-Based Alert</p>
+                <p class="text-lg font-semibold">${reportBased.alert}</p>
+                ${reportBased.recommendation ? `
+                  <p class="text-base text-gray-700 mt-1">Recommendation: ${reportBased.recommendation}</p>
+                ` : ''}
+              </div>
+            </div>
+          ` : ''}
+
+          <!-- Death Priority Alert Card -->
+          ${deathPriority.alert && deathPriority.alert !== "None" ? `
+            <div class="p-3 rounded-lg border-2 border-primary/30 bg-primary/5">
+              <div>
+                <p class="text-sm font-medium text-gray-600 uppercase">Death Priority Alert</p>
+                <p class="text-lg font-semibold">${deathPriority.alert}</p>
+                ${deathPriority.recommendation ? `
+                  <p class="text-base text-gray-700 mt-1">Recommendation: ${deathPriority.recommendation}</p>
+                ` : ''}
+              </div>
+            </div>
+          ` : ''}
+
+          <!-- Last Analyzed Card -->
+          <div class="p-3 rounded-lg border-2 border-primary/20 bg-primary/5">
+            <div class="flex flex-col items-center">
+              <p class="text-sm font-medium text-gray-600">Last Analyzed</p>
+              <p class="text-lg font-semibold">
+                ${lastAnalysisTime
+                  ? (isNaN(new Date(lastAnalysisTime).getTime())
+                      ? 'Invalid date'
+                      : new Date(lastAnalysisTime).toLocaleString())
+                  : 'No recent analysis'}
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+
+    if (!infoWindowRef.current) {
+      infoWindowRef.current = new window.google.maps.InfoWindow({ maxWidth: 500 });
+    }
+    const infoWindow = infoWindowRef.current;
+    infoWindow.setContent(content);
+    infoWindow.setPosition(infoWindowPosition);
+    infoWindow.open(mapInstanceRef.current);
+    infoWindow.addListener('closeclick', () => {
+      setSelectedBarangayFeature(null);
+      setInfoWindowPosition(null);
+    });
+  }, [selectedBarangayFeature, infoWindowPosition]);
 
   // Show InfoWindow for breeding site
   useEffect(() => {
@@ -460,34 +616,48 @@ const DengueMap = ({
     });
   }, [selectedIntervention, infoWindowPosition, showInterventions]);
 
+  // Update the polygon click handler to include pattern data
+  const handlePolygonClick = (feature) => {
+    if (!mapInstanceRef.current) return;
+    const center = turf.center(feature.geometry);
+    const { coordinates } = center.geometry;
+    const [lng, lat] = coordinates;
+    if (lat && lng && !isNaN(lat) && !isNaN(lng)) {
+      mapInstanceRef.current.panTo({ lat, lng });
+      setSelectedBarangayFeature(feature);
+      setInfoWindowPosition({ lat, lng });
+      if (onBarangaySelect) onBarangaySelect(feature);
+    }
+  };
+
   return (
     <div className="relative w-full h-full">
       {/* Toggle Buttons */}
-      <div className="absolute top-4 left-4 z-20 flex gap-2">
-        <button
+        <div className="absolute top-4 left-4 z-20 flex gap-2">
+          <button
           onClick={() => setShowBreedingSites(v => !v)}
           className={`px-4 py-2 rounded-lg font-medium transition-colors ${showBreedingSites ? 'bg-primary text-white' : 'bg-white/90 text-gray-600 hover:bg-gray-50'}`}
         >{showBreedingSites ? 'Hide Breeding Sites' : 'Show Breeding Sites'}</button>
-        <button
+          <button
           onClick={() => setShowInterventions(v => !v)}
           className={`px-4 py-2 rounded-lg font-medium transition-colors ${showInterventions ? 'bg-primary text-white' : 'bg-white/90 text-gray-600 hover:bg-gray-50'}`}
         >{showInterventions ? 'Hide Interventions' : 'Show Interventions'}</button>
-      </div>
+        </div>
       <div ref={mapRef} className="w-full h-full" />
       {showLegends && (
         <div className="absolute bottom-4 right-4 bg-white p-4 rounded-lg shadow-lg">
           {showBreedingSites && (
-            <div className="flex items-center gap-2 mb-2">
+                  <div className="flex items-center gap-2 mb-2">
               <div className="w-4 h-4 rounded-full" style={{background:'#FF6347'}} />
               <span>Breeding Site</span>
-            </div>
-          )}
+        </div>
+      )}
           {showInterventions && (
             <div className="flex items-center gap-2 mb-2">
               <div className="w-4 h-4 rounded-full" style={{background:'#1893F8'}} />
               <span>Intervention</span>
-            </div>
-          )}
+        </div>
+      )}
         </div>
       )}
     </div>

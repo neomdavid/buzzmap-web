@@ -318,8 +318,8 @@ const NewPostModal = forwardRef(({ onSubmit, initialCoordinates = "", initialBar
                               onClick={() => {
                                 setBarangay(b.name);
                                 setSearchBarangay("");
-                                // Pan to the selected barangay
-                                if (mapPickerRef.current) {
+                                // Pan to the selected barangay and highlight it (no marker)
+                                if (mapPickerRef.current && mapPickerRef.current.panToBarangay) {
                                   mapPickerRef.current.panToBarangay(b.name);
                                 }
                               }}
