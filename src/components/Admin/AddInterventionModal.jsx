@@ -158,13 +158,15 @@ const AddInterventionModal = ({ isOpen, onClose }) => {
 
       setFormData(prev => {
         const newAddress = typeof pinData.formattedAddress === 'string' ? pinData.formattedAddress : prev.address;
+        // Only update barangay if it is empty or matches the pin's barangay
+        const shouldUpdateBarangay = !prev.barangay || prev.barangay === pinData.barangayName;
         return {
           ...prev,
           specific_location: {
             type: "Point",
             coordinates: pinData.coordinates,
           },
-          barangay: pinData.barangayName || prev.barangay,
+          barangay: shouldUpdateBarangay ? pinData.barangayName : prev.barangay,
           address: newAddress,
         };
       });

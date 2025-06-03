@@ -1,32 +1,55 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-// This component previously used @react-google-maps/api.
-// It must be rewritten to use the plain Google Maps JS API if needed.
-const InterventionLocationPicker = ({ onPinChange, initialPin, focusCommand }) => {
-  const { isLoaded, loadError } = useJsApiLoader({
-    googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY,
-    libraries: GOOGLE_MAPS_LIBRARIES,
-  });
+import * as turf from '@turf/turf';
 
+// --- Google Maps dynamic script loader (copied from MapPicker.jsx) ---
+let googleMapsScriptLoadingPromise = null;
+function loadGoogleMapsScript(apiKey) {
+  if (window.google && window.google.maps && window.google.maps.Map) {
+    return Promise.resolve();
+  }
+  if (googleMapsScriptLoadingPromise) {
+    return googleMapsScriptLoadingPromise;
+  }
+  googleMapsScriptLoadingPromise = new Promise((resolve, reject) => {
+    if (document.getElementById('google-maps-script')) {
+      const check = () => {
+        if (window.google && window.google.maps && window.google.maps.Map) {
+          resolve();
+        } else {
+          setTimeout(check, 50);
+        }
+      };
+      check();
+      return;
+    }
+    const script = document.createElement('script');
+    script.id = 'google-maps-script';
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}`;
+    script.onload = () => resolve();
+    script.onerror = (err) => reject(err);
+    document.body.appendChild(script);
+  });
+  return googleMapsScriptLoadingPromise;
+}
+// --- End loader ---
+
+const QC_DEFAULT_CENTER = { lat: 14.6488, lng: 121.0509 };
+const MAP_CONTAINER_STYLE = { width: '100%', height: '300px', borderRadius: '0.5rem', marginBottom: '1rem' };
+
+const InterventionLocationPicker = ({ onPinChange, initialPin, focusCommand }) => {
   const mapRef = useRef(null);
-  const [currentMarker, setCurrentMarker] = useState(null); // Internal state for the pin's {lat, lng}
-  const [currentPinDetail, setCurrentPinDetail] = useState({ barangayName: '', isValid: false });
+  const mapInstance = useRef(null);
+  const markerRef = useRef(null);
+  const overlaysRef = useRef([]);
   const [qcBoundaryFeatures, setQcBoundaryFeatures] = useState([]);
+  const [isBoundaryDataLoaded, setIsBoundaryDataLoaded] = useState(false);
+  const [currentMarker, setCurrentMarker] = useState(null);
+  const [currentPinDetail, setCurrentPinDetail] = useState({ barangayName: '', isValid: false });
   const [errorMessage, setErrorMessage] = useState('');
   const [highlightedBarangayName, setHighlightedBarangayName] = useState('');
-  const geocoderRef = useRef(null); // Ref for the geocoder instance
-  const [isBoundaryDataLoaded, setIsBoundaryDataLoaded] = useState(false);
 
-  const onPinChangeRef = useRef(onPinChange);
+  // Load barangay boundaries
   useEffect(() => {
-    onPinChangeRef.current = onPinChange;
-  }, [onPinChange]);
-
-  useEffect(() => {
-    console.log('[InterventionLocationPicker] API Loaded:', isLoaded, 'Load Error:', loadError);
-  }, [isLoaded, loadError]);
-
-  useEffect(() => {
-    console.log('[InterventionLocationPicker] Fetching boundary data...');
     fetch('/quezon_barangays_boundaries.geojson')
       .then((res) => res.json())
       .then((data) => {
@@ -35,287 +58,202 @@ const InterventionLocationPicker = ({ onPinChange, initialPin, focusCommand }) =
         );
         setQcBoundaryFeatures(filteredFeatures);
         setIsBoundaryDataLoaded(true);
-        console.log('[InterventionLocationPicker] QC Boundary data loaded. Features:', filteredFeatures.length);
       })
       .catch((error) => {
-        console.error('[InterventionLocationPicker] Error loading boundary data:', error);
         setIsBoundaryDataLoaded(false);
       });
   }, []);
 
-  // Effect 1: Synchronize initialPin prop to internal currentMarker state
-  useEffect(() => {
-    if (!isBoundaryDataLoaded) {
-      console.log('[Picker - initialPin Sync] Boundary data not loaded yet, skipping initialPin sync');
-      return;
+  // Helper: validate coordinates
+  const validateCoordinates = useCallback((latLng) => {
+    if (!isBoundaryDataLoaded || !qcBoundaryFeatures.length) {
+      return { barangayName: null, isValid: false, error: 'Boundary data not loaded' };
     }
+    const point = turf.point([latLng.lng, latLng.lat]);
+    let foundBarangayName = null;
+    let isWithinAnyBarangay = false;
+    for (const feature of qcBoundaryFeatures) {
+      if (feature.geometry) {
+        let isInside = false;
+        if (feature.geometry.type === 'Polygon') {
+          isInside = turf.booleanPointInPolygon(point, feature);
+        } else if (feature.geometry.type === 'MultiPolygon') {
+          for (const polygonCoords of feature.geometry.coordinates) {
+            const polygonFeature = turf.polygon(polygonCoords);
+            if (turf.booleanPointInPolygon(point, polygonFeature)) {
+              isInside = true;
+              break;
+            }
+          }
+        }
+        if (isInside) {
+          foundBarangayName = feature.properties.name || 'Unknown Barangay';
+          isWithinAnyBarangay = true;
+          break;
+        }
+      }
+    }
+    if (!isWithinAnyBarangay) {
+      return { barangayName: null, isValid: false, error: 'Pinned location is outside Quezon City boundaries.' };
+    }
+    return { barangayName: foundBarangayName, isValid: true, error: '' };
+  }, [qcBoundaryFeatures, isBoundaryDataLoaded]);
 
+  // Effect: handle initialPin
+  useEffect(() => {
+    if (!isBoundaryDataLoaded) return;
     if (initialPin) {
-      if (currentMarker === null || 
-          (currentMarker && (initialPin.lat !== currentMarker.lat || initialPin.lng !== currentMarker.lng))) {
-        console.log(`[Picker - initialPin Sync] Setting currentMarker from initialPin:`, initialPin);
+      // Only update if the marker is different
+      if (
+        !currentMarker ||
+        currentMarker.lat !== initialPin.lat ||
+        currentMarker.lng !== initialPin.lng
+      ) {
         setCurrentMarker({ lat: initialPin.lat, lng: initialPin.lng });
-        if (mapRef.current) {
-          mapRef.current.panTo({ lat: initialPin.lat, lng: initialPin.lng });
-          mapRef.current.setZoom(18);
+        if (mapInstance.current) {
+          mapInstance.current.panTo({ lat: initialPin.lat, lng: initialPin.lng });
+          mapInstance.current.setZoom(18);
         }
       }
     } else if (currentMarker !== null) {
-      console.log(`[Picker - initialPin Sync] Clearing currentMarker as initialPin is null`);
       setCurrentMarker(null);
     }
   }, [initialPin, isBoundaryDataLoaded]);
 
-  const validateCoordinates = useCallback((latLng) => {
-    if (!isBoundaryDataLoaded || !qcBoundaryFeatures.length) {
-      console.log('[Picker DEBUG] Boundary data not loaded yet, cannot validate coordinates');
-      return { barangayName: null, isValid: false, error: 'Boundary data not loaded' };
-    }
-
-    console.log('[Picker DEBUG] Validating coordinates:', latLng, 'against', qcBoundaryFeatures.length, 'boundary features');
-    
-    const point = turf.point([latLng.lng, latLng.lat]);
-    let foundBarangayName = null;
-    let isWithinAnyBarangay = false;
-
-    for (const feature of qcBoundaryFeatures) {
-      if (feature.geometry) {
-        try {
-          let isInside = false;
-          if (feature.geometry.type === 'Polygon') {
-            isInside = turf.booleanPointInPolygon(point, feature);
-          } else if (feature.geometry.type === 'MultiPolygon') {
-            for (const polygonCoords of feature.geometry.coordinates) {
-              const polygonFeature = turf.polygon(polygonCoords);
-              if (turf.booleanPointInPolygon(point, polygonFeature)) {
-                isInside = true;
-                break;
-              }
-            }
-          }
-          
-          if (isInside) {
-            foundBarangayName = feature.properties.name || 'Unknown Barangay';
-            isWithinAnyBarangay = true;
-            console.log('[Picker DEBUG] Point is inside barangay:', foundBarangayName);
-            break;
-          }
-        } catch (e) {
-          console.error('[Picker DEBUG] Error checking point in polygon:', e);
-        }
-      }
-    }
-
-    if (!isWithinAnyBarangay) {
-      console.log('[Picker DEBUG] Point is not within any barangay');
-      return { barangayName: null, isValid: false, error: 'Pinned location is outside Quezon City boundaries.' };
-    }
-
-    console.log('[Picker DEBUG] Validation successful for barangay:', foundBarangayName);
-    return { barangayName: foundBarangayName, isValid: true, error: '' };
-  }, [qcBoundaryFeatures, isBoundaryDataLoaded]);
-
-  // Effect 2: Validate currentMarker and report to parent via onPinChange
+  // Effect: validate currentMarker and emit to parent
   useEffect(() => {
-    if (!isBoundaryDataLoaded) {
-      console.log('[Picker DEBUG] Boundary data not loaded yet, skipping validation');
+    if (!isBoundaryDataLoaded) return;
+    if (!currentMarker) {
+      onPinChange(null);
+      setCurrentPinDetail({ barangayName: '', isValid: false });
+      setErrorMessage('');
       return;
     }
-
-    console.log(`[Picker DEBUG] Geocoding effect running. currentMarker:`, currentMarker, `isLoaded:`, isLoaded, `geocoderRef.current:`, geocoderRef.current);
-    
-    if (!isLoaded || !currentMarker) {
-      if (!currentMarker) {
-        console.log('[Picker DEBUG] No currentMarker in geocoding effect. Emitting null via onPinChange.');
-        onPinChangeRef.current(null);
-        setCurrentPinDetail({ barangayName: '', isValid: false });
-        setErrorMessage('');
-      }
-      return;
-    }
-
     const validation = validateCoordinates(currentMarker);
-    console.log('[Picker DEBUG] Validation result:', validation);
-    
     setCurrentPinDetail({ barangayName: validation.barangayName || '', isValid: validation.isValid });
     setErrorMessage(validation.error || '');
-
     if (validation.isValid && validation.barangayName) {
-      if (geocoderRef.current) {
-        console.log('[Picker DEBUG] Geocoder is available. Attempting geocode for:', currentMarker);
-        geocoderRef.current.geocode({ location: currentMarker }, (results, status) => {
-          console.log('[Picker DEBUG] Geocode callback. Status:', status, 'Results:', results);
-          
-          if (status === 'OK' && results && results[0]) {
-            const formattedAddress = results[0].formatted_address;
-            console.log('[Picker DEBUG] Geocoding successful. Formatted Address:', formattedAddress);
-            
-            const pinDataToEmit = {
-              coordinates: [currentMarker.lng, currentMarker.lat],
-              barangayName: validation.barangayName,
-              isWithinQC: true,
-              formattedAddress: formattedAddress,
-            };
-            console.log('[Picker DEBUG] Emitting valid pinData:', pinDataToEmit);
-            onPinChangeRef.current(pinDataToEmit);
-          } else {
-            console.warn('[Picker DEBUG] Geocoding failed or no results. Status:', status);
-            const pinDataToEmit = {
-              coordinates: [currentMarker.lng, currentMarker.lat],
-              barangayName: validation.barangayName,
-              isWithinQC: true,
-              formattedAddress: null,
-            };
-            console.log('[Picker DEBUG] Emitting pinData without address:', pinDataToEmit);
-            onPinChangeRef.current(pinDataToEmit);
-          }
+      // Geocode address if possible
+      if (window.google && window.google.maps && window.google.maps.Geocoder) {
+        const geocoder = new window.google.maps.Geocoder();
+        geocoder.geocode({ location: currentMarker }, (results, status) => {
+          const formattedAddress = (status === 'OK' && results && results[0]) ? results[0].formatted_address : null;
+          const pinDataToEmit = {
+            coordinates: [currentMarker.lng, currentMarker.lat],
+            barangayName: validation.barangayName,
+            isWithinQC: true,
+            formattedAddress,
+          };
+          onPinChange(pinDataToEmit);
         });
       } else {
-        console.warn('[Picker DEBUG] Geocoder not initialized. Emitting pinData without address.');
-        const pinDataToEmit = {
+        onPinChange({
           coordinates: [currentMarker.lng, currentMarker.lat],
           barangayName: validation.barangayName,
           isWithinQC: true,
           formattedAddress: null,
-        };
-        console.log('[Picker DEBUG] Emitting pinData without geocoding:', pinDataToEmit);
-        onPinChangeRef.current(pinDataToEmit);
+        });
       }
     } else {
-      console.log('[Picker DEBUG] Pin validation failed. Emitting null. Validation:', validation);
-      onPinChangeRef.current(null);
+      onPinChange(null);
     }
-  }, [currentMarker, validateCoordinates, isLoaded, isBoundaryDataLoaded]);
+  }, [currentMarker, validateCoordinates, isBoundaryDataLoaded]);
 
-  const onMapLoad = useCallback((map) => {
-    mapRef.current = map;
-    console.log("[Picker DEBUG] onMapLoad triggered. Map instance provided.");
-
-    // The fact that onMapLoad is called means the core map script part has loaded.
-    // We primarily need to check if the Geocoder service specifically is available on the window object.
-    if (window.google && window.google.maps && window.google.maps.Geocoder) {
-      try {
-        geocoderRef.current = new window.google.maps.Geocoder();
-        console.log('[Picker DEBUG] Google Maps Geocoder initialized successfully via onMapLoad.');
-      } catch (e) {
-        console.error('[Picker DEBUG] Error initializing Google Maps Geocoder in onMapLoad:', e);
-        geocoderRef.current = null; 
-      }
-    } else {
-      console.warn('[Picker DEBUG] Google Maps objects (window.google, window.google.maps, or window.google.maps.Geocoder) not available for Geocoder initialization immediately during onMapLoad. This might indicate a loading sequence issue.');
-      geocoderRef.current = null; 
-    }
-
-    // Initial map centering logic can still use isLoaded from the hook for general API readiness if preferred,
-    // or rely on initialPin/focusCommand as before.
-    if (initialPin && initialPin.lat && initialPin.lng) { 
-        map.panTo(initialPin);
-        map.setZoom(18);
-    } else if (currentMarker) { // Fallback if currentMarker exists but initialPin was not the trigger
-        map.panTo(currentMarker);
-        map.setZoom(18);
-    } else if (focusCommand && focusCommand.type === 'barangay' && focusCommand.center) {
-      map.panTo(focusCommand.center);
-      map.setZoom(focusCommand.zoom || 15);
-      // Highlight will be set by the focusCommand useEffect after mapRef is set
-    }
-  }, [initialPin, currentMarker, focusCommand]);
-
-  // Effect 3: Handle focus commands from parent (primary driver for highlighting and map movement)
+  // Effect: handle focusCommand
   useEffect(() => {
-    // Ensure map is loaded before trying to pan or zoom
-    if (!mapRef.current) return;
-
+    if (!mapInstance.current) return;
     if (focusCommand) {
       if (focusCommand.type === 'barangay' && focusCommand.center) {
-        console.log('[Picker] Executing focusCommand (barangay):', focusCommand.name);
-        mapRef.current.panTo(focusCommand.center);
-        mapRef.current.setZoom(focusCommand.zoom || 15);
-        setHighlightedBarangayName(focusCommand.name); // Set highlight based on dropdown
-
-        // When focusing on a barangay (e.g., from dropdown), any existing pin in the picker should be cleared.
-        // The modal is the source of truth for whether a pin is active via `initialPin`.
-        // If the modal wants to focus on a barangay, it implies no specific pin is the target.
+        mapInstance.current.panTo(focusCommand.center);
+        mapInstance.current.setZoom(focusCommand.zoom || 15);
+        setHighlightedBarangayName(focusCommand.name);
         if (currentMarker !== null) {
-            console.log(`[Picker] focusCommand (barangay) '${focusCommand.name}' received. Clearing currentMarker.`);
-            setCurrentMarker(null); // Clear picker's internal pin state.
+          setCurrentMarker(null);
         }
-
       } else if (focusCommand.type === 'pin' && focusCommand.lat && focusCommand.lng) {
-        console.log('[Picker] Executing focusCommand (pin):', focusCommand);
         const newPin = { lat: focusCommand.lat, lng: focusCommand.lng };
-        mapRef.current.panTo(newPin);
-        mapRef.current.setZoom(focusCommand.zoom || 18);
-        setCurrentMarker(newPin); // This will trigger validation and onPinChange
-        // Highlight is not changed by focusing on a pin. It remains tied to barangay dropdown selection.
+        mapInstance.current.panTo(newPin);
+        mapInstance.current.setZoom(focusCommand.zoom || 18);
+        setCurrentMarker(newPin);
       }
     } else {
-      // If focusCommand is null or undefined (e.g., parent clears selected barangay), clear highlight.
       setHighlightedBarangayName('');
     }
-  }, [focusCommand]); // Dependency primarily on focusCommand. currentMarker removed as its change is an outcome.
+  }, [focusCommand]);
 
-  const handleMapClick = useCallback((event) => {
-    const latLng = event.latLng;
-    const newMarker = { lat: latLng.lat(), lng: latLng.lng() };
-    console.log('[Picker] Map clicked, setting currentMarker:', newMarker);
-    setCurrentMarker(newMarker); // This will trigger Effect 2
-    
-    if (mapRef.current) {
-        mapRef.current.panTo(newMarker);
-        mapRef.current.setZoom(18);
+  // Map initialization
+  useEffect(() => {
+    if (!isBoundaryDataLoaded) return;
+    if (!mapRef.current || mapInstance.current) return;
+    const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+    loadGoogleMapsScript(apiKey).then(() => {
+      if (!(window.google && window.google.maps)) return;
+      mapInstance.current = new window.google.maps.Map(mapRef.current, {
+        center: QC_DEFAULT_CENTER,
+        zoom: 12,
+        mapTypeControl: false,
+        streetViewControl: false,
+        fullscreenControl: false,
+      });
+      // Draw polygons and marker
+      drawMapFeatures(mapInstance.current, qcBoundaryFeatures, highlightedBarangayName, currentMarker);
+      // Click handler
+      mapInstance.current.addListener('click', (e) => {
+        const coords = { lat: e.latLng.lat(), lng: e.latLng.lng() };
+        setCurrentMarker(coords);
+        mapInstance.current.panTo(coords);
+        mapInstance.current.setZoom(18);
+        drawMapFeatures(mapInstance.current, qcBoundaryFeatures, highlightedBarangayName, coords);
+      });
+    });
+  }, [isBoundaryDataLoaded]);
+
+  // Redraw polygons/marker when highlight or marker changes
+  useEffect(() => {
+    if (!isBoundaryDataLoaded || !mapInstance.current) return;
+    drawMapFeatures(mapInstance.current, qcBoundaryFeatures, highlightedBarangayName, currentMarker);
+  }, [highlightedBarangayName, currentMarker, isBoundaryDataLoaded, qcBoundaryFeatures]);
+
+  // Draw polygons and marker
+  function drawMapFeatures(map, features, highlightedBarangayName, markerPos) {
+    overlaysRef.current.forEach(o => o.setMap(null));
+    overlaysRef.current = [];
+    features.forEach((feature) => {
+      const geometry = feature.geometry;
+      const coordsArray = geometry.type === 'Polygon' ? [geometry.coordinates] : geometry.type === 'MultiPolygon' ? geometry.coordinates : [];
+      coordsArray.forEach((polygonCoords) => {
+        const path = polygonCoords[0].map(([lng, lat]) => ({ lat, lng }));
+        const isHighlighted = highlightedBarangayName && feature.properties.name === highlightedBarangayName;
+        const polygon = new window.google.maps.Polygon({
+          paths: path,
+          strokeColor: isHighlighted ? '#FF8C00' : '#276749',
+          strokeOpacity: isHighlighted ? 0.8 : 0.3,
+          strokeWeight: isHighlighted ? 2 : 1,
+          fillOpacity: 0.1,
+          fillColor: '#4A8D6E',
+          map,
+          zIndex: isHighlighted ? 10 : 1,
+          clickable: false,
+        });
+        overlaysRef.current.push(polygon);
+      });
+    });
+    // Draw marker
+    if (markerPos) {
+      if (markerRef.current) markerRef.current.setMap(null);
+      markerRef.current = new window.google.maps.Marker({
+        position: markerPos,
+        map,
+        title: 'Pinned Location',
+      });
+    } else {
+      if (markerRef.current) markerRef.current.setMap(null);
     }
-  }, []);
-
-  if (loadError) {
-    return <div>Error loading map...</div>;
-  }
-  if (!isLoaded) {
-    return <div>Loading Map...</div>;
   }
 
   return (
     <div className="flex flex-col space-y-3">
-      <GoogleMap
-        mapContainerStyle={MAP_CONTAINER_STYLE}
-        center={QC_DEFAULT_CENTER}
-        zoom={12}
-        onLoad={onMapLoad}
-        onClick={handleMapClick}
-        options={{
-            clickableIcons: false,
-            streetViewControl: false,
-            mapTypeControl: false,
-            fullscreenControl: false,
-        }}
-      >
-        {qcBoundaryFeatures.map((feature, index) => {
-          const featureName = feature.properties.name;
-          const isHighlighted = featureName === highlightedBarangayName;
-          let paths = [];
-          if (feature.geometry.type === 'Polygon') {
-            paths = feature.geometry.coordinates[0].map(coord => ({ lat: coord[1], lng: coord[0] }));
-          } else if (feature.geometry.type === 'MultiPolygon') {
-            paths = feature.geometry.coordinates[0][0].map(coord => ({ lat: coord[1], lng: coord[0] }));
-          }
-          return (
-            <Polygon
-              key={`${featureName}-${index}`}
-              paths={paths}
-              options={{
-                fillColor: '#4A8D6E', // Default fill color, does not change
-                fillOpacity: 0.1,    // Default fill opacity
-                strokeColor: isHighlighted ? '#FF8C00' : '#276749', // Highlighted border is orange
-                strokeWeight: isHighlighted ? 2 : 1,
-                strokeOpacity: isHighlighted ? 0.8 : 0.3,
-                clickable: false,
-              }}
-            />
-          );
-        })}
-        {currentMarker && <MarkerF position={currentMarker} />}
-      </GoogleMap>
-
+      <div ref={mapRef} style={MAP_CONTAINER_STYLE} className="w-full h-[300px] rounded-lg border border-gray-200" />
       {errorMessage && (
         <p className="text-sm text-error bg-error/10 p-2 rounded-md">{errorMessage}</p>
       )}
@@ -324,11 +262,11 @@ const InterventionLocationPicker = ({ onPinChange, initialPin, focusCommand }) =
           Pinned in Barangay: <strong>{currentPinDetail.barangayName}</strong>
         </p>
       )}
-       {currentMarker && (
-         <div className="text-xs text-gray-500">
-            Pinned Location - Lat: {currentMarker.lat.toFixed(6)}, Lng: {currentMarker.lng.toFixed(6)}
+      {currentMarker && (
+        <div className="text-xs text-gray-500">
+          Pinned Location - Lat: {currentMarker.lat.toFixed(6)}, Lng: {currentMarker.lng.toFixed(6)}
         </div>
-        )}
+      )}
     </div>
   );
 };
