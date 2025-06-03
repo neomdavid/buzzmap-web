@@ -113,7 +113,7 @@ function loadGoogleMapsScript(apiKey) {
         if (window.google && window.google.maps && window.google.maps.Map) {
           console.log('Google Maps loaded from existing script');
           resolve();
-            } else {
+        } else {
           console.log('Waiting for Google Maps to load...');
           setTimeout(check, 50);
         }
@@ -242,10 +242,22 @@ const Mapping = () => {
 
   // Fetch interventions (dummy fetch, replace with your API if needed)
   useEffect(() => {
+    console.log('[DEBUG] Processing interventions data:', allInterventionsData);
     if (allInterventionsData) {
-      setInterventions(
-        allInterventionsData.filter(i => i.specific_location && Array.isArray(i.specific_location.coordinates) && i.specific_location.coordinates.length === 2)
-      );
+      const validInterventions = allInterventionsData.filter(i => {
+        const isValid = i.specific_location && 
+                       Array.isArray(i.specific_location.coordinates) && 
+                       i.specific_location.coordinates.length === 2;
+        if (!isValid) {
+          console.log('[DEBUG] Invalid intervention:', i);
+        }
+        return isValid;
+      });
+      console.log('[DEBUG] Valid interventions:', validInterventions);
+      setInterventions(validInterventions);
+    } else {
+      console.log('[DEBUG] No interventions data available');
+      setInterventions([]);
     }
   }, [allInterventionsData]);
 
@@ -485,74 +497,97 @@ const Mapping = () => {
       }
 
       // --- Draw intervention markers ---
-      if (showInterventions && interventions.length > 0 && window.google.maps.marker) {
+      if (showInterventions && interventions.length > 0) {
+        console.log('[DEBUG] Drawing intervention markers:', interventions);
+        
+        // Check if marker library is available
+        if (!window.google?.maps?.marker) {
+          console.error('[DEBUG] Marker library not available');
+          return;
+        }
+
         const { AdvancedMarkerElement, PinElement } = window.google.maps.marker;
+        
         interventions.forEach((intervention) => {
-          const iconUrl = INTERVENTION_TYPE_ICONS[intervention.interventionType] || INTERVENTION_TYPE_ICONS.default;
-          const glyphImg = document.createElement("img");
-          glyphImg.src = iconUrl;
-          glyphImg.style.width = "28px";
-          glyphImg.style.height = "28px";
-          glyphImg.style.objectFit = "contain";
-          glyphImg.style.backgroundColor = "#FFFFFF";
-          glyphImg.style.borderRadius = "100%";
-          glyphImg.style.padding = "2px";
+          console.log('[DEBUG] Creating marker for intervention:', intervention);
+          try {
+            const iconUrl = INTERVENTION_TYPE_ICONS[intervention.interventionType] || INTERVENTION_TYPE_ICONS.default;
+            const glyphImg = document.createElement("img");
+            glyphImg.src = iconUrl;
+            glyphImg.style.width = "28px";
+            glyphImg.style.height = "28px";
+            glyphImg.style.objectFit = "contain";
+            glyphImg.style.backgroundColor = "#FFFFFF";
+            glyphImg.style.borderRadius = "100%";
+            glyphImg.style.padding = "2px";
 
-          const pin = new PinElement({
-            glyph: glyphImg,
-            background: "#1893F8", // intervention marker background is white
-            borderColor: "#1893F8",
-            scale: 1.5,
-          });
+            const pin = new PinElement({
+              glyph: glyphImg,
+              background: "#1893F8",
+              borderColor: "#1893F8",
+              scale: 1.5,
+            });
 
-          const marker = new AdvancedMarkerElement({
-            map,
-            position: {
-              lat: intervention.specific_location.coordinates[1],
-              lng: intervention.specific_location.coordinates[0],
-            },
-            content: pin.element,
-            title: intervention.interventionType,
-          });
-          marker.addListener('click', () => {
-            // Close barangay info window if open
-            if (infoWindowRef.current) {
-              infoWindowRef.current.close();
-              setSelectedBarangayFeature(null);
-            }
-            // Pan to marker position and zoom in
-            if (mapInstance.current) {
-              mapInstance.current.panTo({
+            const marker = new AdvancedMarkerElement({
+              map,
+              position: {
                 lat: intervention.specific_location.coordinates[1],
                 lng: intervention.specific_location.coordinates[0],
-              });
-              mapInstance.current.setZoom(17);
-            }
-            // Hide control panel on md screens and lower
-            if (window.matchMedia && window.matchMedia('(max-width: 768px)').matches) {
-              setShowControlPanel(false);
-            }
-            // Use a div with Tailwind classes for InfoWindow content
-            const content = document.createElement('div');
-            content.innerHTML = `
-              <div class="p-3 flex flex-col items-center gap-1 font-normal bg-white text-center rounded-md shadow-md text-primary">
-                <p class="text-4xl font-extrabold text-primary mb-2">${intervention.interventionType || 'Intervention'}</p>
-                <div class="text-lg flex items-center gap-2">
-                  <span class="font-bold">Status:</span>
-                  <span class="px-3 py-1 rounded-full text-white font-bold text-sm" style="background-color:#FF6347;box-shadow:0 1px 4px rgba(0,0,0,0.08);">
-                    ${intervention.status || ''}
-                  </span>
+              },
+              content: pin.element,
+              title: intervention.interventionType,
+            });
+            
+            console.log('[DEBUG] Marker created successfully:', marker);
+            
+            marker.addListener('click', () => {
+              // Close barangay info window if open
+              if (infoWindowRef.current) {
+                infoWindowRef.current.close();
+                setSelectedBarangayFeature(null);
+              }
+              // Pan to marker position and zoom in
+              if (mapInstance.current) {
+                mapInstance.current.panTo({
+                  lat: intervention.specific_location.coordinates[1],
+                  lng: intervention.specific_location.coordinates[0],
+                });
+                mapInstance.current.setZoom(17);
+              }
+              // Hide control panel on md screens and lower
+              if (window.matchMedia && window.matchMedia('(max-width: 768px)').matches) {
+                setShowControlPanel(false);
+              }
+              // Use a div with Tailwind classes for InfoWindow content
+              const content = document.createElement('div');
+              content.innerHTML = `
+                <div class="p-3 flex flex-col items-center gap-1 font-normal bg-white text-center rounded-md shadow-md text-primary">
+                  <p class="text-4xl font-extrabold text-primary mb-2">${intervention.interventionType || 'Intervention'}</p>
+                  <div class="text-lg flex items-center gap-2">
+                    <span class="font-bold">Status:</span>
+                    <span class="px-3 py-1 rounded-full text-white font-bold text-sm" style="background-color:#FF6347;box-shadow:0 1px 4px rgba(0,0,0,0.08);">
+                      ${intervention.status || ''}
+                    </span>
+                  </div>
+                  <p class="text-lg text-center"><span class="font-bold">Barangay:</span> ${intervention.barangay || ''}</p>
+                  ${intervention.address ? `<p class="text-lg text-center"><span class="font-bold text-center">Address:</span> ${intervention.address}</p>` : ''}
+                  <p class="text-lg"><span class="font-bold">Date:</span> ${intervention.date ? new Date(intervention.date).toLocaleString('en-US', { year: 'numeric', month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true }) : ''}</p>
+                  <p class="text-lg"><span class="font-bold">Personnel:</span> ${intervention.personnel || ''}</p>
                 </div>
-                <p class="text-lg text-center"><span class="font-bold">Barangay:</span> ${intervention.barangay || ''}</p>
-                ${intervention.address ? `<p class="text-lg text-center"><span class="font-bold text-center">Address:</span> ${intervention.address}</p>` : ''}
-                <p class="text-lg"><span class="font-bold">Date:</span> ${intervention.date ? new Date(intervention.date).toLocaleString('en-US', { year: 'numeric', month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true }) : ''}</p>
-                <p class="text-lg"><span class="font-bold">Personnel:</span> ${intervention.personnel || ''}</p>
-              </div>
-            `;
-            infoWindow.setContent(content);
-            infoWindow.open(map, marker);
-          });
-          overlays.push(marker);
+              `;
+              infoWindow.setContent(content);
+              infoWindow.open(map, marker);
+            });
+            overlays.push(marker);
+          } catch (error) {
+            console.error('[DEBUG] Error creating marker:', error);
+          }
+        });
+      } else {
+        console.log('[DEBUG] Not drawing intervention markers:', {
+          showInterventions,
+          interventionsLength: interventions.length,
+          hasGoogleMapsMarker: !!window.google?.maps?.marker
         });
       }
       overlaysRef.current = overlays;
