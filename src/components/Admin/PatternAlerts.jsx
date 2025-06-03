@@ -3,6 +3,7 @@ import { useGetBarangaysQuery } from "../../api/dengueApi";
 import { MagnifyingGlass } from "phosphor-react";
 
 export default function PatternAlerts({ selectedBarangay, selectedTab, onAlertSelect }) {
+  console.log('[PatternAlerts DEBUG] props.selectedTab:', selectedTab, 'props.selectedBarangay:', selectedBarangay);
   const [searchTerm, setSearchTerm] = useState("");
   const { data: barangaysData, isLoading, error } = useGetBarangaysQuery();
 
@@ -56,9 +57,10 @@ export default function PatternAlerts({ selectedBarangay, selectedTab, onAlertSe
         item.pattern_based?.status?.toLowerCase() === 'decreasing'
       );
     } else if (selectedTab === 'selected' && selectedBarangay) {
-      filtered = filtered.filter(item => 
-        item.name.toLowerCase() === selectedBarangay.toLowerCase()
-      );
+      const normalize = (name) => (name || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+      const selectedNorm = normalize(selectedBarangay);
+      filtered = filtered.filter(item => normalize(item.name) === selectedNorm);
+      console.log('[PatternAlerts DEBUG] selectedTab:', selectedTab, 'selectedBarangay:', selectedBarangay, 'selectedNorm:', selectedNorm, 'filteredData.length:', filtered.length, 'filteredData:', filtered);
     }
     return filtered;
   }, [patternData, searchTerm, selectedTab, selectedBarangay]);

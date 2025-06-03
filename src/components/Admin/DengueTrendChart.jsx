@@ -62,10 +62,13 @@ export default function DengueTrendChart({ selectedBarangay, onBarangayChange })
       })()
     : '';
 
-  const { data: trendsData, isLoading, error } = useGetBarangayWeeklyTrendsQuery({
-    barangay_name: selectedBarangay,
-    number_of_weeks: weeks
-  });
+  const skipTrends = !selectedBarangay;
+  const { data: trendsData, isLoading, error } = useGetBarangayWeeklyTrendsQuery(
+    skipTrends
+      ? { barangay_name: '', number_of_weeks: weeks }
+      : { barangay_name: selectedBarangay, number_of_weeks: weeks },
+    { skip: skipTrends }
+  );
 
   // Transform the API data to match the chart format
   const chartData = useMemo(() => {
@@ -139,6 +142,14 @@ export default function DengueTrendChart({ selectedBarangay, onBarangayChange })
     return (
       <div className="flex flex-col p-5 gap-4">
         <p className="text-error">Error loading chart data: {error.message || 'Unknown error'}</p>
+      </div>
+    );
+  }
+
+  if (!selectedBarangay) {
+    return (
+      <div className="flex flex-col p-5 gap-4">
+        <p className="text-warning">Please select a barangay to view trends.</p>
       </div>
     );
   }

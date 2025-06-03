@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useMemo } from 'react';
 import { useGetPostsQuery } from '../api/dengueApi';
 import stagnantIcon from "../assets/icons/stagnant_water.svg";
 import standingIcon from "../assets/icons/standing_water.svg";
@@ -15,10 +15,12 @@ const DengueMap = ({
   defaultTab = 'cases',
   initialFocusBarangayName = null,
   searchQuery = '',
+  selectedBarangay = null,
   activeInterventions = [],
   isLoadingInterventions = false,
   barangaysList = [],
   onBarangaySelect = () => {},
+  onInfoWindowClose = null,
 }) => {
   const mapRef = useRef(null);
   const mapInstanceRef = useRef(null);
@@ -72,7 +74,8 @@ const DengueMap = ({
               { featureType: 'poi.business', stylers: [{ visibility: 'off' }] },
               { featureType: 'poi.park', elementType: 'labels.text', stylers: [{ visibility: 'off' }] },
               { featureType: 'road', elementType: 'labels.icon', stylers: [{ visibility: 'off' }] }
-            ]
+            ],
+            mapTypeControl: false,
           });
           setMapLoaded(true);
         }
@@ -92,7 +95,8 @@ const DengueMap = ({
             { featureType: 'poi.business', stylers: [{ visibility: 'off' }] },
             { featureType: 'poi.park', elementType: 'labels.text', stylers: [{ visibility: 'off' }] },
             { featureType: 'road', elementType: 'labels.icon', stylers: [{ visibility: 'off' }] }
-          ]
+          ],
+          mapTypeControl: false,
         });
         setMapLoaded(true);
       }
@@ -158,23 +162,22 @@ const DengueMap = ({
   }
 
   // Merge pattern/status from barangaysList into geojsonBarangays
-  const mergedBarangays = geojsonBarangays.map(feature => {
-    const geoName = normalizeBarangayName(feature.properties?.name);
-    const apiBarangay = barangaysList.find(b => normalizeBarangayName(b.name) === geoName);
-    console.log('[DengueMap DEBUG] Merging barangay data:', {
-      geoName,
-      apiBarangay,
-      featureName: feature.properties?.name
+  const mergedBarangays = useMemo(() => {
+    return geojsonBarangays.map(feature => {
+      const geoName = normalizeBarangayName(feature.properties?.name);
+      const apiBarangay = barangaysList.find(b => normalizeBarangayName(b.name) === geoName);
+      // Optionally keep the debug log:
+      // console.log('[DengueMap DEBUG] Merging barangay data:', { geoName, apiBarangay, featureName: feature.properties?.name });
+      return {
+        ...feature,
+        patternType: apiBarangay?.status_and_recommendation?.pattern_based?.status || feature.properties?.patternType || 'none',
+        status_and_recommendation: apiBarangay?.status_and_recommendation,
+        risk_level: apiBarangay?.risk_level,
+        pattern_data: apiBarangay?.pattern_data,
+        apiBarangayName: apiBarangay?.name,
+      };
     });
-    return {
-      ...feature,
-      patternType: apiBarangay?.status_and_recommendation?.pattern_based?.status || feature.properties?.patternType || 'none',
-      status_and_recommendation: apiBarangay?.status_and_recommendation,
-      risk_level: apiBarangay?.risk_level,
-      pattern_data: apiBarangay?.pattern_data,
-      apiBarangayName: apiBarangay?.name,
-    };
-  });
+  }, [geojsonBarangays, barangaysList]);
 
   console.log('[DengueMap DEBUG] Full barangaysList:', barangaysList);
   console.log('[DengueMap DEBUG] Merged Barangays:', mergedBarangays);
@@ -266,6 +269,7 @@ const DengueMap = ({
             setSelectedBarangayFeature(feature);
             setInfoWindowPosition(center);
           }
+          handlePolygonClick(feature);
         });
         polygonsRef.current.push(polygon);
       });
@@ -389,18 +393,18 @@ const DengueMap = ({
     if (!map) return;
 
     const selectedNorm = normalizeBarangayName(searchQuery);
-    const selectedBarangay = mergedBarangays.find(
+    const selectedBarangayObj = mergedBarangays.find(
       barangay => normalizeBarangayName(barangay.properties?.name) === selectedNorm
     );
 
-    if (selectedBarangay && selectedBarangay.geometry?.coordinates) {
+    if (selectedBarangayObj && selectedBarangayObj.geometry?.coordinates) {
       // Calculate center of polygon
       let latSum = 0, lngSum = 0, count = 0;
       let coordsArray = [];
-      if (selectedBarangay.geometry.type === 'Polygon') {
-        coordsArray = [selectedBarangay.geometry.coordinates];
-      } else if (selectedBarangay.geometry.type === 'MultiPolygon') {
-        coordsArray = selectedBarangay.geometry.coordinates;
+      if (selectedBarangayObj.geometry.type === 'Polygon') {
+        coordsArray = [selectedBarangayObj.geometry.coordinates];
+      } else if (selectedBarangayObj.geometry.type === 'MultiPolygon') {
+        coordsArray = selectedBarangayObj.geometry.coordinates;
       }
       coordsArray.forEach((polygonCoords) => {
         polygonCoords[0].forEach(([lng, lat]) => {
@@ -414,14 +418,14 @@ const DengueMap = ({
       // Create a feature object with all necessary properties
       const feature = {
         type: 'Feature',
-        geometry: selectedBarangay.geometry,
+        geometry: selectedBarangayObj.geometry,
         properties: {
-          ...selectedBarangay.properties,
-          patternType: selectedBarangay.patternType,
-          status_and_recommendation: selectedBarangay.status_and_recommendation,
-          risk_level: selectedBarangay.risk_level,
-          pattern_data: selectedBarangay.pattern_data,
-          displayName: selectedBarangay.properties?.name
+          ...selectedBarangayObj.properties,
+          patternType: selectedBarangayObj.patternType,
+          status_and_recommendation: selectedBarangayObj.status_and_recommendation,
+          risk_level: selectedBarangayObj.risk_level,
+          pattern_data: selectedBarangayObj.pattern_data,
+          displayName: selectedBarangayObj.properties?.name
         }
       };
 
@@ -433,20 +437,60 @@ const DengueMap = ({
         map.panTo(center);
         map.setZoom(14);
       }
+      if (onBarangaySelect) onBarangaySelect(feature);
     }
   }, [mapLoaded, mergedBarangays, searchQuery]);
+
+  // When selectedBarangay changes (from map or programmatic), update InfoWindow
+  useEffect(() => {
+    if (!mapLoaded || !mergedBarangays.length || !selectedBarangay) return;
+    const selectedNorm = normalizeBarangayName(selectedBarangay);
+    const selectedBarangayObj = mergedBarangays.find(
+      barangay => normalizeBarangayName(barangay.properties?.name) === selectedNorm
+    );
+    if (selectedBarangayObj && selectedBarangayObj.geometry?.coordinates) {
+      let latSum = 0, lngSum = 0, count = 0;
+      let coordsArray = [];
+      if (selectedBarangayObj.geometry.type === 'Polygon') {
+        coordsArray = [selectedBarangayObj.geometry.coordinates];
+      } else if (selectedBarangayObj.geometry.type === 'MultiPolygon') {
+        coordsArray = selectedBarangayObj.geometry.coordinates;
+      }
+      coordsArray.forEach((polygonCoords) => {
+        polygonCoords[0].forEach(([lng, lat]) => {
+          latSum += lat;
+          lngSum += lng;
+          count++;
+        });
+      });
+      const center = { lat: latSum / count, lng: lngSum / count };
+      // Create a feature object with all necessary properties
+      const feature = {
+        type: 'Feature',
+        geometry: selectedBarangayObj.geometry,
+        properties: {
+          ...selectedBarangayObj.properties,
+          patternType: selectedBarangayObj.patternType,
+          status_and_recommendation: selectedBarangayObj.status_and_recommendation,
+          risk_level: selectedBarangayObj.risk_level,
+          pattern_data: selectedBarangayObj.pattern_data,
+          displayName: selectedBarangayObj.properties?.name
+        }
+      };
+      setSelectedBarangayFeature(feature);
+      setInfoWindowPosition(center);
+    }
+  }, [selectedBarangay, mapLoaded, mergedBarangays]);
 
   // Show InfoWindow for selected barangay
   useEffect(() => {
     if (!selectedBarangayFeature || !infoWindowPosition || !mapInstanceRef.current) return;
-    
     const props = selectedBarangayFeature.properties;
     const patternType = props?.patternType?.toLowerCase() || "none";
     const lastAnalysisTime = props?.lastAnalysisTime;
     const patternBased = props?.status_and_recommendation?.pattern_based || {};
     const reportBased = props?.status_and_recommendation?.report_based || {};
     const deathPriority = props?.status_and_recommendation?.death_priority || {};
-
     // Color for report-based alert
     const reportStatus = (reportBased.status || "unknown").toLowerCase();
     const REPORT_STATUS_COLORS = {
@@ -456,10 +500,9 @@ const DengueMap = ({
       unknown: "border-gray-400 bg-gray-100"
     };
     const reportCardColor = REPORT_STATUS_COLORS[reportStatus] || REPORT_STATUS_COLORS.unknown;
-
     const content = document.createElement('div');
     content.innerHTML = `
-      <div class="bg-white p-4 rounded-lg text-center h-auto" style="width: 50vw;">
+      <div class="bg-white p-4 rounded-lg text-center h-auto w-[50vw] max-w-[500px] min-w-[320px] break-words overflow-x-auto">
         <p class="text-4xl font-[900]" style="color: ${PATTERN_COLORS[patternType] || PATTERN_COLORS.default}">
           Barangay ${props.displayName || props.name}
         </p>
@@ -485,7 +528,6 @@ const DengueMap = ({
               </p>
             </div>
           </div>
-
           <!-- Pattern-Based Alert Card -->
           ${patternBased.alert && patternBased.alert !== "None" ? `
             <div class="p-3 rounded-lg border-2 border-primary/30 bg-primary/5">
@@ -498,7 +540,6 @@ const DengueMap = ({
               </div>
             </div>
           ` : ''}
-
           <!-- Report-Based Alert Card -->
           ${reportBased.alert && reportBased.alert !== "None" ? `
             <div class="p-3 rounded-lg border-2 ${reportCardColor}">
@@ -511,7 +552,6 @@ const DengueMap = ({
               </div>
             </div>
           ` : ''}
-
           <!-- Death Priority Alert Card -->
           ${deathPriority.alert && deathPriority.alert !== "None" ? `
             <div class="p-3 rounded-lg border-2 border-primary/30 bg-primary/5">
@@ -524,7 +564,6 @@ const DengueMap = ({
               </div>
             </div>
           ` : ''}
-
           <!-- Last Analyzed Card -->
           <div class="p-3 rounded-lg border-2 border-primary/20 bg-primary/5">
             <div class="flex flex-col items-center">
@@ -541,7 +580,6 @@ const DengueMap = ({
         </div>
       </div>
     `;
-
     if (!infoWindowRef.current) {
       infoWindowRef.current = new window.google.maps.InfoWindow({ maxWidth: 500 });
     }
@@ -552,8 +590,9 @@ const DengueMap = ({
     infoWindow.addListener('closeclick', () => {
       setSelectedBarangayFeature(null);
       setInfoWindowPosition(null);
+      if (onInfoWindowClose) onInfoWindowClose();
     });
-  }, [selectedBarangayFeature, infoWindowPosition]);
+  }, [selectedBarangayFeature, infoWindowPosition, onInfoWindowClose]);
 
   // Show InfoWindow for breeding site
   useEffect(() => {

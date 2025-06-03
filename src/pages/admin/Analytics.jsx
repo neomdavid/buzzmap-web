@@ -42,7 +42,8 @@ const TABS = [
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
 const Analytics = () => {
-  const [selectedBarangay, setSelectedBarangay] = useState(null);
+  const [searchBarangay, setSearchBarangay] = useState(null); // for programmatic search
+  const [mapSelectedBarangay, setMapSelectedBarangay] = useState(null); // for map selection
   const [initialBarangayNameForMap, setInitialBarangayNameForMap] = useState(null);
   const [selectedTab, setSelectedTab] = useState('selected');
   const [showImportModal, setShowImportModal] = useState(false);
@@ -93,25 +94,36 @@ const Analytics = () => {
           suggestedAction: patternInfo?.recommendation || 'No specific recommendation available.'
         };
 
-        setSelectedBarangay(targetBarangayName);
+        setSearchBarangay(targetBarangayName);
+        setMapSelectedBarangay(targetBarangayName);
         setInitialBarangayNameForMap(targetBarangayName);
         setSpikeRecommendationDetails(recommendationDetails);
       }
     }
   }, [patternResultsData, initialBarangayNameForMap]);
 
+  // Handle barangay selection from analytics UI (PatternAlerts, TrendChart, etc)
+  const handleAnalyticsBarangaySelect = (barangayName) => {
+    setSearchBarangay(barangayName);
+    setMapSelectedBarangay(barangayName);
+    setInitialBarangayNameForMap(barangayName);
+  };
+
   // Handle barangay selection from map
-  const handleBarangaySelect = (barangayFeature) => {
-    // Accept both string and object for safety
-    if (typeof barangayFeature === 'string') {
-      setSelectedBarangay(barangayFeature);
-    } else if (barangayFeature?.properties?.name) {
-      setSelectedBarangay(barangayFeature.properties.name);
+  const handleMapBarangaySelect = (feature) => {
+    if (feature?.properties?.name) {
+      setMapSelectedBarangay(feature.properties.name);
+      setSearchBarangay(null); // clear programmatic search
     }
   };
 
+  // When InfoWindow is closed
+  const handleMapInfoWindowClose = () => {
+    setMapSelectedBarangay(null);
+  };
+
   // Get filtered data for selected barangay
-  const selectedNorm = selectedBarangay?.toLowerCase().replace(/[^a-z0-9]/g, '');
+  const selectedNorm = mapSelectedBarangay?.toLowerCase().replace(/[^a-z0-9]/g, '');
 
   const filteredPosts = Array.isArray(posts?.posts) ? posts.posts.filter(post => {
     const postBarangayNorm = post.barangay?.toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -124,7 +136,7 @@ const Analytics = () => {
   }) || [];
 
   const patternInfo = patternResultsData?.data?.find(
-    item => item.name.toLowerCase() === selectedBarangay?.toLowerCase()
+    item => item.name.toLowerCase() === mapSelectedBarangay?.toLowerCase()
   );
 
   const handleFileChange = (event) => {
@@ -292,7 +304,7 @@ const Analytics = () => {
             />
           </div>
         )}
-        {!isLoadingPatterns && !spikeRecommendationDetails && selectedBarangay && (
+        {!isLoadingPatterns && !spikeRecommendationDetails && mapSelectedBarangay && (
           <div className="w-full shadow-sm shadow-lg p-6 py-8 rounded-lg mt-6">
             <p className="text-base-content text-xl font-semibold">No spike recommendation available.</p>
           </div>
@@ -314,11 +326,8 @@ const Analytics = () => {
 
             <div className="mt-[-14px] ml-[-12px]">
               <DengueTrendChart
-                selectedBarangay={selectedBarangay}
-                onBarangayChange={(barangayName) => {
-                  setSelectedBarangay(barangayName);
-                  setInitialBarangayNameForMap(barangayName);
-                }}
+                selectedBarangay={mapSelectedBarangay}
+                onBarangayChange={handleAnalyticsBarangaySelect}
                 key={dataVersion}
               />
             </div>
@@ -344,13 +353,11 @@ const Analytics = () => {
               ))}
             </div>
             <div className="flex flex-col gap-y-5 h-95 xl:h-120 2xl:h-125 mt-[-10px] py-3 overflow-y-scroll">
+              {console.log('[Analytics DEBUG] Rendering PatternAlerts with selectedTab:', selectedTab, 'searchBarangay:', searchBarangay)}
               <PatternAlerts
-                selectedBarangay={selectedBarangay}
+                selectedBarangay={mapSelectedBarangay}
                 selectedTab={selectedTab}
-                onAlertSelect={(barangayName) => {
-                  setSelectedBarangay(barangayName);
-                  setInitialBarangayNameForMap(barangayName);
-                }}
+                onAlertSelect={handleAnalyticsBarangaySelect}
                 key={dataVersion}
               />
             </div>
@@ -376,11 +383,13 @@ const Analytics = () => {
                 defaultTab="cases"
                 key={dataVersion}
                 initialFocusBarangayName={initialBarangayNameForMap}
-                searchQuery={selectedBarangay}
+                searchQuery={searchBarangay}
+                selectedBarangay={mapSelectedBarangay}
                 activeInterventions={allInterventionsData}
                 isLoadingInterventions={isLoadingAllInterventions}
                 barangaysList={barangaysList}
-                onBarangaySelect={handleBarangaySelect}
+                onBarangaySelect={handleMapBarangaySelect}
+                onInfoWindowClose={handleMapInfoWindowClose}
               />
             )}
           </div>
@@ -388,11 +397,11 @@ const Analytics = () => {
         {/* Selected Barangay Analytics Section */}
         <div className="w-full flex flex-col shadow-sm shadow-lg p-6 py-8 rounded-lg mt-6">
           <p className="mb-4 text-base-content text-3xl font-bold">Selected Barangay Analytics</p>
-          {selectedBarangay ? (
+          {mapSelectedBarangay ? (
             (() => {
               // Normalize barangay name for matching
               const normalize = (name) => (name || '').toLowerCase().replace(/[^a-z0-9]/g, '');
-              const selectedNorm = normalize(selectedBarangay);
+              const selectedNorm = normalize(mapSelectedBarangay);
 
               // Reports analytics
               const filteredPosts = Array.isArray(posts?.posts) ? posts.posts.filter(post => normalize(post.barangay) === selectedNorm) : [];
