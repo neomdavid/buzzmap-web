@@ -88,11 +88,6 @@ const AdminLayout = () => {
                 icon: <UsersThree weight="fill" size={30} />,
                 label: "Community Engagement & Awareness",
               },
-              {
-                to: "/admin/archives",
-                icon: <List weight="fill" size={20} />,
-                label: "Archives",
-              },
             ].map(({ to, icon, label }) => (
               <NavLink
                 key={to}

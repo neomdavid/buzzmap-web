@@ -317,7 +317,7 @@ const Community = () => {
         <p className="text-lg sm:text-xl sm:mt-0 text-center font-semibold text-primary mb-6">
           Real-Time Dengue Updates from the Community.
         </p>
-        <section className="bg-base-200 px-8 py-5 rounded-lg mb-4">
+        <section className="bg-base- 200px-8 py-5 rounded-lg mb-4">
           <p className="font-semibold text-lg text-center mb-3 lg:text-left">
             Report a breeding site to Quezon City Epidemiology and Surveillance
             Division.
@@ -370,13 +370,13 @@ const Community = () => {
       </article>
 
       <aside
-        className={`bg-base-200 shadow-2xl rounded-sm overflow-y-scroll transition-transform duration-300 ease-in-out 
+        className={`bg-base-300 shadow-2xl rounded-sm overflow-y-scroll transition-transform duration-300 ease-in-out 
         fixed inset-y-0 right-0 w-[80vw] top-[58px] sm:top-[65px] pb-4 max-w-170 z-10 lg:z-0 lg:sticky lg:top-19 lg:h-[calc(100vh-1.5rem)] 
         lg:w-[40vw] lg:max-w-[450px] lg:shadow-sm ${
           showAside ? "translate-x-0" : "translate-x-full"
         } lg:translate-x-0`}
       >
-        <div className="sticky top-0 bg-base-200  px-6 py-4 flex justify-between items-center z-100 border-b border-gray-300 pt-6 pb-4">
+        <div className="sticky top-0 bg-base-300  px-6 py-4 flex justify-between items-center z-100 border-b border-gray-300 pt-6 pb-4">
           <p className="text-3xl font-bold text-primary">Official Announcement</p>
           <button
             onClick={() => setShowAside(false)}

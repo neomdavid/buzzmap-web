@@ -83,11 +83,13 @@ const MapOnly = forwardRef(({
   selectedBarangay = null,
   onBarangaySelect = null,
   interventions = [],
+  onMarkerClick = null,
 }, ref) => {
   const mapRef = useRef(null);
   const mapInstance = useRef(null);
   const overlaysRef = useRef([]);
   const isMountedRef = useRef(true);
+  const infoWindowRef = useRef(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [barangayData, setBarangayData] = useState(null);
@@ -99,6 +101,7 @@ const MapOnly = forwardRef(({
   const mapId = import.meta.env.VITE_GOOGLE_MAPS_MAP_ID;
   console.log('[DEBUG] Google Maps API Key:', apiKey);
   console.log('[DEBUG] Google Maps Map ID:', mapId);
+  const [infoWindow, setInfoWindow] = useState(null);
 
   useEffect(() => {
     return () => {
@@ -157,6 +160,16 @@ const MapOnly = forwardRef(({
       if (mapInstance.current) {
         mapInstance.current.setZoom(zoom);
       }
+    },
+    showInfoWindow: (content, position) => {
+      if (!infoWindowRef.current) {
+        infoWindowRef.current = new window.google.maps.InfoWindow({
+          maxWidth: 500,
+        });
+      }
+      infoWindowRef.current.setContent(content);
+      infoWindowRef.current.setPosition(position);
+      infoWindowRef.current.open(mapInstance.current);
     }
   }), []);
 
@@ -251,12 +264,14 @@ const MapOnly = forwardRef(({
           glyphImg.style.backgroundColor = "#FFFFFF";
           glyphImg.style.borderRadius = "100%";
           glyphImg.style.padding = "2px";
+
           const pin = new PinElement({
             glyph: glyphImg,
             background: "#FF6347",
             borderColor: "#FF6347",
             scale: 1.5,
           });
+
           const marker = new AdvancedMarkerElement({
             map,
             position: {
@@ -266,14 +281,77 @@ const MapOnly = forwardRef(({
             content: pin.element,
             title: site.report_type || 'Breeding Site',
           });
+
+          marker.addListener('click', () => {
+            console.log('[DEBUG] Marker clicked:', {
+              type: 'report',
+              site: site,
+              coordinates: site.specific_location.coordinates
+            });
+            
+            // Close existing info window if open
+            if (infoWindow) {
+              console.log('[DEBUG] Closing existing info window');
+              infoWindow.close();
+            }
+
+            // Pan to marker position and zoom in
+            if (mapInstance.current) {
+              console.log('[DEBUG] Panning to marker position');
+              mapInstance.current.panTo({
+                lat: site.specific_location.coordinates[1],
+                lng: site.specific_location.coordinates[0],
+              });
+              mapInstance.current.setZoom(17);
+            }
+
+            // Use a div with Tailwind classes for InfoWindow content
+            const content = document.createElement('div');
+            content.innerHTML = `
+              <div class=\"bg-white p-4 rounded-lg text-primary text-center max-w-120 w-[50vw]\">
+                <p class=\"font-bold text-4xl font-extrabold mb-4 text-primary\">
+                  ${site.report_type || 'Breeding Site'}
+                </p>
+                <div class=\"flex flex-col items-center mt-2 space-y-1 font-normal text-center\">
+                  <p class=\"text-xl\">
+                    <span class=\"font-bold\">Barangay:</span> ${site.barangay || ''}
+                  </p>
+                  <p class=\"text-xl\">
+                    <span class=\"font-bold\">Reported by:</span> ${site.user?.username || ''}
+                  </p>
+                  <p class=\"text-xl\">
+                    <span class=\"font-bold\">Date:</span> ${site.date_and_time ? new Date(site.date_and_time).toLocaleDateString() : ''}
+                  </p>
+                  <p class=\"text-xl\">
+                    <span class=\"font-bold\">Description:</span> ${site.description || ''}
+                  </p>
+                  ${(site.images && site.images.length > 0) ? `<div class='mt-2 flex justify-center gap-2'>${site.images.map(img => `<img src='${img}' class='w-35 h-25 object-cover rounded border'/>`).join('')}</div>` : ''}
+                </div>
+                <button class=\"mt-4 px-4 py-2 bg-primary w-[40%] text-white rounded-lg shadow hover:bg-primary/80 hover:cursor-pointer font-bold\" onclick=\"window.location.href='/mapping/${site._id}'\">View Details</button>
+              </div>
+            `;
+            console.log('[DEBUG] Created info window content');
+
+            console.log('[DEBUG] Setting info window content and position');
+            infoWindow.setContent(content);
+            infoWindow.setPosition({
+              lat: site.specific_location.coordinates[1],
+              lng: site.specific_location.coordinates[0],
+            });
+
+            console.log('[DEBUG] Opening info window');
+            infoWindow.open(map, marker);
+          });
+
           return marker;
         });
-        breedingMarkers.forEach(m => m.setMap(map));
         overlays.push(...breedingMarkers);
       }
+
+      // Draw intervention markers
       if (showInterventions && interventions.length > 0 && window.google.maps.marker) {
         const { AdvancedMarkerElement, PinElement } = window.google.maps.marker;
-        interventions.forEach((intervention) => {
+        const interventionMarkers = interventions.map((intervention) => {
           const iconUrl = INTERVENTION_TYPE_ICONS[intervention.interventionType] || INTERVENTION_TYPE_ICONS.default;
           const glyphImg = document.createElement("img");
           glyphImg.src = iconUrl;
@@ -283,12 +361,14 @@ const MapOnly = forwardRef(({
           glyphImg.style.backgroundColor = "#FFFFFF";
           glyphImg.style.borderRadius = "100%";
           glyphImg.style.padding = "2px";
+
           const pin = new PinElement({
             glyph: glyphImg,
             background: "#1893F8",
             borderColor: "#1893F8",
             scale: 1.5,
           });
+
           const marker = new AdvancedMarkerElement({
             map,
             position: {
@@ -298,9 +378,65 @@ const MapOnly = forwardRef(({
             content: pin.element,
             title: intervention.interventionType,
           });
-          overlays.push(marker);
+
+          marker.addListener('click', () => {
+            console.log('[DEBUG] Intervention marker clicked:', {
+              type: 'intervention',
+              intervention: intervention,
+              coordinates: intervention.specific_location.coordinates
+            });
+
+            // Close existing info window if open
+            if (infoWindow) {
+              console.log('[DEBUG] Closing existing info window');
+              infoWindow.close();
+            }
+
+            // Pan to marker position and zoom in
+            if (mapInstance.current) {
+              console.log('[DEBUG] Panning to marker position');
+              mapInstance.current.panTo({
+                lat: intervention.specific_location.coordinates[1],
+                lng: intervention.specific_location.coordinates[0],
+              });
+              mapInstance.current.setZoom(17);
+            }
+
+            // Use a div with Tailwind classes for InfoWindow content
+            const content = document.createElement('div');
+            content.innerHTML = `
+              <div class="p-3 flex flex-col items-center gap-1 font-normal bg-white text-center rounded-md shadow-md text-primary">
+                <p class="text-4xl font-extrabold text-primary mb-2">${intervention.interventionType || 'Intervention'}</p>
+                <div class="text-lg flex items-center gap-2">
+                  <span class="font-bold">Status:</span>
+                  <span class="px-3 py-1 rounded-full text-white font-bold text-sm" style="background-color:#FF6347;box-shadow:0 1px 4px rgba(0,0,0,0.08);">
+                    ${intervention.status || ''}
+                  </span>
+                </div>
+                <p class="text-lg text-center"><span class="font-bold">Barangay:</span> ${intervention.barangay || ''}</p>
+                ${intervention.address ? `<p class="text-lg text-center"><span class="font-bold text-center">Address:</span> ${intervention.address}</p>` : ''}
+                <p class="text-lg"><span class="font-bold">Date:</span> ${intervention.date ? new Date(intervention.date).toLocaleString('en-US', { year: 'numeric', month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true }) : ''}</p>
+                <p class="text-lg"><span class="font-bold">Personnel:</span> ${intervention.personnel || ''}</p>
+              </div>
+            `;
+            console.log('[DEBUG] Created info window content');
+
+            console.log('[DEBUG] Setting info window content and position');
+            infoWindow.setContent(content);
+            infoWindow.setPosition({
+              lat: intervention.specific_location.coordinates[1],
+              lng: intervention.specific_location.coordinates[0],
+            });
+
+            console.log('[DEBUG] Opening info window');
+            infoWindow.open(map, marker);
+          });
+
+          return marker;
         });
+        overlays.push(...interventionMarkers);
       }
+
       overlaysRef.current = overlays;
     }).catch(err => {
       if (isMountedRef.current) {
@@ -313,7 +449,17 @@ const MapOnly = forwardRef(({
     };
   }, [loading, error, barangayData]);
 
-  // Add a separate effect for updating overlays
+  // Add this effect to initialize the info window
+  useEffect(() => {
+    if (window.google && window.google.maps) {
+      const newInfoWindow = new window.google.maps.InfoWindow({
+        maxWidth: 500,
+      });
+      setInfoWindow(newInfoWindow);
+    }
+  }, []);
+
+  // Add back the effect for updating overlays
   useEffect(() => {
     if (!mapInstance.current || !barangayData || !isMountedRef.current) return;
     
@@ -397,6 +543,66 @@ const MapOnly = forwardRef(({
           content: pin.element,
           title: site.report_type || 'Breeding Site',
         });
+        marker.addListener('click', () => {
+          console.log('[DEBUG] Marker clicked:', {
+            type: 'report',
+            site: site,
+            coordinates: site.specific_location.coordinates
+          });
+          
+          // Close existing info window if open
+          if (infoWindow) {
+            console.log('[DEBUG] Closing existing info window');
+            infoWindow.close();
+          }
+
+          // Pan to marker position and zoom in
+          if (mapInstance.current) {
+            console.log('[DEBUG] Panning to marker position');
+            mapInstance.current.panTo({
+              lat: site.specific_location.coordinates[1],
+              lng: site.specific_location.coordinates[0],
+            });
+            mapInstance.current.setZoom(17);
+          }
+
+          // Use a div with Tailwind classes for InfoWindow content
+          const content = document.createElement('div');
+          content.innerHTML = `
+            <div class=\"bg-white p-4 rounded-lg text-primary text-center max-w-120 w-[50vw]\">
+              <p class=\"font-bold text-4xl font-extrabold mb-4 text-primary\">
+                ${site.report_type || 'Breeding Site'}
+              </p>
+              <div class=\"flex flex-col items-center mt-2 space-y-1 font-normal text-center\">
+                <p class=\"text-xl\">
+                  <span class=\"font-bold\">Barangay:</span> ${site.barangay || ''}
+                </p>
+                <p class=\"text-xl\">
+                  <span class=\"font-bold\">Reported by:</span> ${site.user?.username || ''}
+                </p>
+                <p class=\"text-xl\">
+                  <span class=\"font-bold\">Date:</span> ${site.date_and_time ? new Date(site.date_and_time).toLocaleDateString() : ''}
+                </p>
+                <p class=\"text-xl\">
+                  <span class=\"font-bold\">Description:</span> ${site.description || ''}
+                </p>
+                ${(site.images && site.images.length > 0) ? `<div class='mt-2 flex justify-center gap-2'>${site.images.map(img => `<img src='${img}' class='w-35 h-25 object-cover rounded border'/>`).join('')}</div>` : ''}
+              </div>
+              <button class=\"mt-4 px-4 py-2 bg-primary w-[40%] text-white rounded-lg shadow hover:bg-primary/80 hover:cursor-pointer font-bold\" onclick=\"window.location.href='/mapping/${site._id}'\">View Details</button>
+            </div>
+          `;
+          console.log('[DEBUG] Created info window content');
+
+          console.log('[DEBUG] Setting info window content and position');
+          infoWindow.setContent(content);
+          infoWindow.setPosition({
+            lat: site.specific_location.coordinates[1],
+            lng: site.specific_location.coordinates[0],
+          });
+
+          console.log('[DEBUG] Opening info window');
+          infoWindow.open(map, marker);
+        });
         overlays.push(marker);
       });
     }
@@ -429,12 +635,64 @@ const MapOnly = forwardRef(({
           content: pin.element,
           title: intervention.interventionType,
         });
+        marker.addListener('click', () => {
+          console.log('[DEBUG] Intervention marker clicked:', {
+            type: 'intervention',
+            intervention: intervention,
+            coordinates: intervention.specific_location.coordinates
+          });
+
+          // Close existing info window if open
+          if (infoWindow) {
+            console.log('[DEBUG] Closing existing info window');
+            infoWindow.close();
+          }
+
+          // Pan to marker position and zoom in
+          if (mapInstance.current) {
+            console.log('[DEBUG] Panning to marker position');
+            mapInstance.current.panTo({
+              lat: intervention.specific_location.coordinates[1],
+              lng: intervention.specific_location.coordinates[0],
+            });
+            mapInstance.current.setZoom(17);
+          }
+
+          // Use a div with Tailwind classes for InfoWindow content
+          const content = document.createElement('div');
+          content.innerHTML = `
+            <div class="p-3 flex flex-col items-center gap-1 font-normal bg-white text-center rounded-md shadow-md text-primary">
+              <p class="text-4xl font-extrabold text-primary mb-2">${intervention.interventionType || 'Intervention'}</p>
+              <div class="text-lg flex items-center gap-2">
+                <span class="font-bold">Status:</span>
+                <span class="px-3 py-1 rounded-full text-white font-bold text-sm" style="background-color:#FF6347;box-shadow:0 1px 4px rgba(0,0,0,0.08);">
+                  ${intervention.status || ''}
+                </span>
+              </div>
+              <p class="text-lg text-center"><span class="font-bold">Barangay:</span> ${intervention.barangay || ''}</p>
+              ${intervention.address ? `<p class="text-lg text-center"><span class="font-bold text-center">Address:</span> ${intervention.address}</p>` : ''}
+              <p class="text-lg"><span class="font-bold">Date:</span> ${intervention.date ? new Date(intervention.date).toLocaleString('en-US', { year: 'numeric', month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true }) : ''}</p>
+              <p class="text-lg"><span class="font-bold">Personnel:</span> ${intervention.personnel || ''}</p>
+            </div>
+          `;
+          console.log('[DEBUG] Created info window content');
+
+          console.log('[DEBUG] Setting info window content and position');
+          infoWindow.setContent(content);
+          infoWindow.setPosition({
+            lat: intervention.specific_location.coordinates[1],
+            lng: intervention.specific_location.coordinates[0],
+          });
+
+          console.log('[DEBUG] Opening info window');
+          infoWindow.open(map, marker);
+        });
         overlays.push(marker);
       });
     }
 
     overlaysRef.current = overlays;
-  }, [barangayData, showBreedingSites, breedingSites, showInterventions, interventions, selectedBarangay, onBarangaySelect, barangaysList]);
+  }, [barangayData, showBreedingSites, breedingSites, showInterventions, interventions, selectedBarangay, onBarangaySelect, barangaysList, infoWindow]);
 
   if (loading) return <LoadingSpinner size={32} className="h-full" message="Loading map..." />;
   if (error) return <ErrorMessage error={error} className="m-4" />;
