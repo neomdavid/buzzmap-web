@@ -5,6 +5,21 @@ import { useGetInterventionsInProgressQuery, useGetPostsQuery, useGetAllInterven
 import * as turf from '@turf/turf';
 import MapOnly from '../../components/Mapping/MapOnly';
 
+// Define QC_CENTER constant for default map position
+const QC_CENTER = {
+  lat: 14.6760,  // Quezon City's approximate center latitude
+  lng: 121.0437  // Quezon City's approximate center longitude
+};
+
+// Add this helper function before the DengueMapping component
+const normalizeBarangayName = (name) => {
+  if (!name) return '';
+  return name.toLowerCase()
+    .replace(/barangay\s+/i, '') // Remove "Barangay" prefix
+    .replace(/\s+/g, '') // Remove all spaces
+    .replace(/[^a-z0-9]/g, ''); // Remove special characters
+};
+
 const DengueMapping = () => {
   const [selectedBarangay, setSelectedBarangay] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -28,6 +43,9 @@ const DengueMapping = () => {
   const { data: allInterventionsData, isLoading: isLoadingAllInterventions } = useGetAllInterventionsQuery();
   const { data: barangaysList, isLoading: isLoadingBarangays } = useGetBarangaysQuery();
 
+  // Add filtered barangays state
+  const [filteredBarangays, setFilteredBarangays] = useState([]);
+
   useEffect(() => {
     if(allInterventionsData) {
       console.log("[DengueMapping DEBUG] Raw allInterventionsData received:", JSON.stringify(allInterventionsData, null, 2));
@@ -35,7 +53,7 @@ const DengueMapping = () => {
   }, [allInterventionsData]);
 
   const { data: interventionsInProgress } = useGetInterventionsInProgressQuery(
-    selectedBarangay?.properties?.displayName?.toLowerCase().replace(/\s+/g, '') || '',
+    selectedBarangay?.name?.toLowerCase().replace(/\s+/g, '') || '',
     {
       skip: !selectedBarangay,
     }
@@ -48,17 +66,14 @@ const DengueMapping = () => {
 
   // Get nearby reports when a barangay is selected
   const nearbyReports = useMemo(() => {
-    console.log('Selected Barangay:', selectedBarangay);
-    console.log('All Posts:', posts);
+    console.log('[DEBUG] Calculating nearby reports');
+    console.log('[DEBUG] Selected Barangay:', selectedBarangay);
+    console.log('[DEBUG] All Posts:', posts);
 
     if (!selectedBarangay || !posts) {
-      console.log('No selected barangay or posts available');
+      console.log('[DEBUG] No selected barangay or posts available');
       return [];
     }
-
-    const selectedCenter = turf.center(selectedBarangay.geometry);
-    const selectedPoint = turf.point(selectedCenter.geometry.coordinates);
-    console.log('Selected Point:', selectedPoint);
 
     // Create a Set to track unique combinations
     const uniqueReports = new Set();
@@ -69,8 +84,8 @@ const DengueMapping = () => {
 
     const filteredPosts = allPostsArray.filter(post => {
       // Only include validated posts with coordinates
-      if (post.status !== "Validated" || !post.specific_location?.coordinates) {
-        console.log('Skipping post - Invalid status or no coordinates:', post);
+      if (!post || post.status !== "Validated" || !post.specific_location?.coordinates) {
+        console.log('[DEBUG] Skipping post - Invalid status or no coordinates:', post);
         return false;
       }
 
@@ -85,28 +100,60 @@ const DengueMapping = () => {
       // Add to our set of seen combinations
       uniqueReports.add(uniqueKey);
 
-      // Create a point for the post location
-      const postPoint = turf.point(post.specific_location.coordinates);
+      // If the barangay has coordinates, calculate distance
+      if (selectedBarangay.coordinates && Array.isArray(selectedBarangay.coordinates)) {
+        const [barangayLng, barangayLat] = selectedBarangay.coordinates;
+        const [postLng, postLat] = post.specific_location.coordinates;
+        
+        // Calculate distance using Haversine formula
+        const R = 6371; // Earth's radius in km
+        const dLat = (postLat - barangayLat) * Math.PI / 180;
+        const dLon = (postLng - barangayLng) * Math.PI / 180;
+        const a = 
+          Math.sin(dLat/2) * Math.sin(dLat/2) +
+          Math.cos(barangayLat * Math.PI / 180) * Math.cos(postLat * Math.PI / 180) * 
+          Math.sin(dLon/2) * Math.sin(dLon/2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+        const distance = R * c;
+        
+        // Return posts within 2km radius
+        return distance <= 2;
+      }
       
-      // Calculate distance in kilometers
-      const distance = turf.distance(selectedPoint, postPoint);
-      console.log(`Distance for ${post.barangay}:`, distance, 'km');
-      
-      // Return posts within 2km radius
-      return distance <= 2;
+      // If no coordinates, just check if the barangay names match
+      return post.barangay && selectedBarangay.name && 
+             post.barangay.toLowerCase() === selectedBarangay.name.toLowerCase();
     });
 
-    console.log('Filtered Posts:', filteredPosts);
+    console.log('[DEBUG] Filtered Posts:', filteredPosts);
 
     const nearbyReportsWithDistance = filteredPosts
-      .map(post => ({
-        ...post,
-        distance: turf.distance(selectedPoint, turf.point(post.specific_location.coordinates))
-      }))
+      .map(post => {
+        let distance = 0;
+        if (selectedBarangay.coordinates && Array.isArray(selectedBarangay.coordinates)) {
+          const [barangayLng, barangayLat] = selectedBarangay.coordinates;
+          const [postLng, postLat] = post.specific_location.coordinates;
+          
+          // Calculate distance using Haversine formula
+          const R = 6371; // Earth's radius in km
+          const dLat = (postLat - barangayLat) * Math.PI / 180;
+          const dLon = (postLng - barangayLng) * Math.PI / 180;
+          const a = 
+            Math.sin(dLat/2) * Math.sin(dLat/2) +
+            Math.cos(barangayLat * Math.PI / 180) * Math.cos(postLat * Math.PI / 180) * 
+            Math.sin(dLon/2) * Math.sin(dLon/2);
+          const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+          distance = R * c;
+        }
+        return {
+          ...post,
+          distance
+        };
+      })
       .sort((a, b) => a.distance - b.distance)
       .slice(0, 3); // Get top 3 nearest reports
 
-    console.log('Final Nearby Reports:', nearbyReportsWithDistance);
+    console.log('[DEBUG] Final Nearby Reports:', nearbyReportsWithDistance);
     return nearbyReportsWithDistance;
   }, [selectedBarangay, posts]);
 
@@ -149,12 +196,12 @@ const DengueMapping = () => {
 
   useEffect(() => {
     async function fetchRecentReports() {
-      if (!selectedBarangay?.properties?.displayName) {
+      if (!selectedBarangay?.name) {
         setRecentReports([]);
         return;
       }
       try {
-        const barangayName = selectedBarangay.properties.displayName.trim();
+        const barangayName = selectedBarangay.name.trim();
         const BASE_URL = import.meta.env.VITE_MODE === 'PROD' || import.meta.env.MODE === 'PROD'
           ? import.meta.env.VITE_API_BASE_URL 
           : 'http://localhost:4000/';
@@ -178,18 +225,101 @@ const DengueMapping = () => {
     fetchRecentReports();
   }, [selectedBarangay]);
 
-  const handleBarangaySelect = (barangay) => {
-    console.log('[DEBUG] handleBarangaySelect called with:', barangay);
-    setSelectedBarangay(barangay);
-  };
-
+  // Add search handler
   const handleSearch = (query) => {
     setSearchQuery(query);
+    if (!barangaysList) return;
+
+    const filtered = barangaysList.filter(barangay => 
+      barangay.name.toLowerCase().includes(query.toLowerCase()) ||
+      barangay.displayName?.toLowerCase().includes(query.toLowerCase())
+    );
+    setFilteredBarangays(filtered);
   };
 
-  const handleSearchClear = () => {
-    setSearchQuery("");
+  // Add debug logging for barangaysList
+  useEffect(() => {
+    console.log('[DEBUG] Current barangaysList:', barangaysList);
+  }, [barangaysList]);
+
+  const handleBarangaySelect = (barangay) => {
+    console.log('[DEBUG] handleBarangaySelect called with:', barangay);
+    
+    // If this is a GeoJSON feature (clicked on map)
+    if (barangay.type === 'Feature') {
+      // Find matching barangay from barangaysList
+      const matching = barangaysList?.find(b => 
+        normalizeBarangayName(b.name) === normalizeBarangayName(barangay.properties?.name)
+      );
+      
+      console.log('[DEBUG] Matching barangay from list:', matching);
+      
+      // Merge the data, ensuring all properties are properly set
+      const merged = {
+        ...barangay,
+        properties: {
+          ...barangay.properties,
+          name: barangay.properties?.name,
+          displayName: matching?.displayName || barangay.properties?.name,
+          patternType: matching?.patternType || barangay.properties?.patternType || 'none',
+          status_and_recommendation: matching?.status_and_recommendation || barangay.properties?.status_and_recommendation,
+          risk_level: matching?.risk_level || barangay.properties?.risk_level,
+          pattern_data: matching?.pattern_data || barangay.properties?.pattern_data
+        }
+      };
+      
+      console.log('[DEBUG] Merged barangay data:', merged);
+      setSelectedBarangay(merged);
+      
+      // Pan logic
+      if (mapOnlyRef.current && barangay.geometry?.coordinates) {
+        try {
+          const center = turf.center(barangay.geometry);
+          const [lng, lat] = center.geometry.coordinates;
+          if (lat && lng && !isNaN(lat) && !isNaN(lng)) {
+            mapOnlyRef.current.panTo({ lat, lng });
+            mapOnlyRef.current.setZoom(15);
+          }
+        } catch (error) {
+          mapOnlyRef.current.panTo(QC_CENTER);
+          mapOnlyRef.current.setZoom(13);
+        }
+      }
+      return;
+    }
+
+    // If this is from the dropdown, find the matching GeoJSON feature
+    fetch('/quezon_barangays_boundaries.geojson')
+      .then(res => res.json())
+      .then(geoData => {
+        const feature = geoData.features.find(f =>
+          normalizeBarangayName(f.properties.name) === normalizeBarangayName(barangay.name)
+        );
+        
+        if (feature) {
+          // Create a GeoJSON feature with the barangay data
+          const geoJSONFeature = {
+            type: 'Feature',
+            properties: {
+              ...feature.properties,
+              ...barangay  // Include all barangay data
+            },
+            geometry: feature.geometry
+          };
+          
+          // Call handleBarangaySelect again with the GeoJSON feature
+          handleBarangaySelect(geoJSONFeature);
+        }
+      })
+      .catch(error => {
+        console.error('[DEBUG] Error fetching GeoJSON:', error);
+      });
   };
+
+  // Add debug logging for selectedBarangay
+  useEffect(() => {
+    console.log('[DEBUG] Selected barangay updated:', selectedBarangay);
+  }, [selectedBarangay]);
 
   // Add debug for posts
   useEffect(() => {
@@ -375,6 +505,24 @@ const DengueMapping = () => {
             size={20} 
             className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
           />
+          {/* Search Results Dropdown */}
+          {searchQuery && filteredBarangays.length > 0 && (
+            <div className="absolute z-50 w-full mt-1 bg-white rounded-lg shadow-lg border border-gray-200 max-h-60 overflow-y-auto">
+              {filteredBarangays.map((barangay) => (
+                <div
+                  key={barangay._id}
+                  onClick={() => {
+                    handleBarangaySelect(barangay);
+                    setSearchQuery("");
+                    setFilteredBarangays([]);
+                  }}
+                  className="px-4 py-2 hover:bg-gray-100 cursor-pointer text-primary"
+                >
+                  {barangay.displayName || barangay.name}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
         
         {/* <button
@@ -451,11 +599,11 @@ const DengueMapping = () => {
         <div className={`col-span-4 border-2 ${getBorderColor(selectedBarangay?.properties?.patternType)} rounded-2xl flex flex-col p-4 gap-1`}>
           <p className="text-center font-semibold text-base-content">Selected Barangay - Dengue Overview</p>
           <p className={`text-center font-bold ${getPatternTextColor(selectedBarangay?.properties?.patternType)} text-4xl mb-2`}>
-            {selectedBarangay ? `Barangay ${selectedBarangay.properties.displayName}` : 'Select a Barangay'}
+            {selectedBarangay ? `Barangay ${selectedBarangay.properties?.displayName || selectedBarangay.properties?.name}` : 'Select a Barangay'}
           </p>
           <p className={`text-center font-semibold text-white text-lg uppercase mb-4 px-4 py-1 rounded-full inline-block mx-auto ${getPatternBgColor(selectedBarangay?.properties?.patternType)}`}>
             {selectedBarangay
-              ? selectedBarangay.properties.patternType
+              ? selectedBarangay.properties?.patternType
                 ? (selectedBarangay.properties.patternType.charAt(0).toUpperCase() + selectedBarangay.properties.patternType.slice(1).replace('_', ' '))
                 : 'NO PATTERN DETECTED'
               : 'NO BARANGAY SELECTED'
@@ -463,74 +611,74 @@ const DengueMapping = () => {
           </p>
           <div className="w-[90%] mx-auto flex flex-col text-black gap-2">
             {/* Pattern-Based */}
-            {selectedBarangay?.properties?.status_and_recommendation?.pattern_based &&
-              selectedBarangay.properties.status_and_recommendation.pattern_based.status &&
-              selectedBarangay.properties.status_and_recommendation.pattern_based.status.trim() !== "" && (
+            {selectedBarangay?.status_and_recommendation?.pattern_based &&
+              selectedBarangay.status_and_recommendation.pattern_based.status &&
+              selectedBarangay.status_and_recommendation.pattern_based.status.trim() !== "" && (
                 <>
                   <p className="font-bold text-lg text-primary mb-1">Pattern-Based</p>
-                  {selectedBarangay.properties.status_and_recommendation.pattern_based.alert && (
+                  {selectedBarangay.status_and_recommendation.pattern_based.alert && (
                     <p className=""><span className="font-bold">Alert: </span>
-                      {selectedBarangay.properties.status_and_recommendation.pattern_based.alert.replace(
-                        new RegExp(`^${selectedBarangay.properties.displayName}:?\\s*`, "i"),
+                      {selectedBarangay.status_and_recommendation.pattern_based.alert.replace(
+                        new RegExp(`^${selectedBarangay.properties?.displayName || selectedBarangay.properties?.name}:?\\s*`, "i"),
                         ""
                       )}
                     </p>
                   )}
-                  {selectedBarangay.properties.status_and_recommendation.pattern_based.recommendation && (
+                  {selectedBarangay.status_and_recommendation.pattern_based.recommendation && (
                     <p className=""><span className="font-bold">Recommendation: </span>
-                      {selectedBarangay.properties.status_and_recommendation.pattern_based.recommendation}
+                      {selectedBarangay.status_and_recommendation.pattern_based.recommendation}
                     </p>
                   )}
                   <hr className="border-t border-gray-200 my-2" />
                 </>
             )}
             {/* Report-Based */}
-            {selectedBarangay?.properties?.status_and_recommendation?.report_based &&
-              selectedBarangay.properties.status_and_recommendation.report_based.status &&
-              selectedBarangay.properties.status_and_recommendation.report_based.status.trim() !== "" && (
+            {selectedBarangay?.status_and_recommendation?.report_based &&
+              selectedBarangay.status_and_recommendation.report_based.status &&
+              selectedBarangay.status_and_recommendation.report_based.status.trim() !== "" && (
                 <>
                   <p className="font-bold text-lg text-primary mb-1">Report-Based</p>
                   {/* Status as badge with label */}
                   <div className="mb-2 flex items-center gap-2">
                     <span className="font-bold">Status:</span>
                     <span className={`inline-block px-3 py-1 rounded-full text-white text-md font-bold capitalize ${(() => {
-                      const status = selectedBarangay.properties.status_and_recommendation.report_based.status.toLowerCase();
+                      const status = selectedBarangay.status_and_recommendation.report_based.status.toLowerCase();
                       if (status === 'low') return 'bg-success';
                       if (status === 'medium') return 'bg-warning';
                       if (status === 'high') return 'bg-error';
                       return 'bg-gray-400';
-                    })()}`}>{selectedBarangay.properties.status_and_recommendation.report_based.status}</span>
+                    })()}`}>{selectedBarangay.status_and_recommendation.report_based.status}</span>
                   </div>
-                  {selectedBarangay.properties.status_and_recommendation.report_based.alert && (
+                  {selectedBarangay.status_and_recommendation.report_based.alert && (
                     <p className=""><span className="font-bold">Alert: </span>
-                      {selectedBarangay.properties.status_and_recommendation.report_based.alert}
+                      {selectedBarangay.status_and_recommendation.report_based.alert}
                     </p>
                   )}
-                  {selectedBarangay.properties.status_and_recommendation.report_based.recommendation && (
+                  {selectedBarangay.status_and_recommendation.report_based.recommendation && (
                     <p className=""><span className="font-bold">Recommendation: </span>
-                      {selectedBarangay.properties.status_and_recommendation.report_based.recommendation}
+                      {selectedBarangay.status_and_recommendation.report_based.recommendation}
                     </p>
                   )}
                   <hr className="border-t border-gray-200 my-2" />
                 </>
             )}
             {/* Death Priority */}
-            {selectedBarangay?.properties?.status_and_recommendation?.death_priority &&
-              selectedBarangay.properties.status_and_recommendation.death_priority.status &&
-              selectedBarangay.properties.status_and_recommendation.death_priority.status.trim() !== "" && (
+            {selectedBarangay?.status_and_recommendation?.death_priority &&
+              selectedBarangay.status_and_recommendation.death_priority.status &&
+              selectedBarangay.status_and_recommendation.death_priority.status.trim() !== "" && (
                 <>
                   <p className="font-bold text-primary mb-1 text-lg">Death Priority</p>
                   <p className=""><span className="font-bold">Status: </span>
-                    {selectedBarangay.properties.status_and_recommendation.death_priority.status}
+                    {selectedBarangay.status_and_recommendation.death_priority.status}
                   </p>
-                  {selectedBarangay.properties.status_and_recommendation.death_priority.alert && (
+                  {selectedBarangay.status_and_recommendation.death_priority.alert && (
                     <p className=""><span className="font-bold">Alert: </span>
-                      {selectedBarangay.properties.status_and_recommendation.death_priority.alert}
+                      {selectedBarangay.status_and_recommendation.death_priority.alert}
                     </p>
                   )}
-                  {selectedBarangay.properties.status_and_recommendation.death_priority.recommendation && (
+                  {selectedBarangay.status_and_recommendation.death_priority.recommendation && (
                     <p className=""><span className="font-bold">Recommendation: </span>
-                      {selectedBarangay.properties.status_and_recommendation.death_priority.recommendation}
+                      {selectedBarangay.status_and_recommendation.death_priority.recommendation}
                     </p>
                   )}
                   <hr className="border-t border-gray-200 my-2" />
@@ -550,9 +698,9 @@ const DengueMapping = () => {
                 ) : (
                   // Only show 'No recent reports' if there is no Report-Based section
                   !(
-                    selectedBarangay?.properties?.status_and_recommendation?.report_based &&
-                    selectedBarangay.properties.status_and_recommendation.report_based.status &&
-                    selectedBarangay.properties.status_and_recommendation.report_based.status.trim() !== ""
+                    selectedBarangay?.status_and_recommendation?.report_based &&
+                    selectedBarangay.status_and_recommendation.report_based.status &&
+                    selectedBarangay.status_and_recommendation.report_based.status.trim() !== ""
                   ) && (
                     <p className="text-gray-500 italic">No recent reports</p>
                   )

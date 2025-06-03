@@ -20,6 +20,17 @@ const PATTERN_COLORS = {
   none: "#718096",
   default: "#718096",
 };
+
+// Add darker versions of pattern colors
+const PATTERN_COLORS_DARK = {
+  spike: "#c53030",      // Darker red
+  gradual_rise: "#c05621", // Darker orange
+  decline: "#2f855a",    // Darker green
+  stability: "#2c5282",  // Darker blue
+  none: "#4a5568",      // Darker gray
+  default: "#4a5568",   // Darker gray
+};
+
 const INTERVENTION_TYPE_ICONS = {
   "Fogging": foggingIcon,
   "Ovicidal-Larvicidal Trapping": trappingIcon,
@@ -215,6 +226,7 @@ const MapOnly = forwardRef(({
         let patternType = (barangayObj?.status_and_recommendation?.pattern_based?.status || feature.properties.patternType || feature.properties.pattern_type || 'none').toLowerCase();
         if (!patternType || patternType === '') patternType = 'none';
         const patternColor = PATTERN_COLORS[patternType] || PATTERN_COLORS.default;
+        const patternColorDark = PATTERN_COLORS_DARK[patternType] || PATTERN_COLORS_DARK.default;
         const selectedDisplayName = selectedBarangay?.properties?.displayName || selectedBarangay?.properties?.name;
         const featureDisplayName = feature.properties?.displayName || feature.properties?.name;
         const isSelected = selectedBarangay && normalizeBarangayName(featureDisplayName) === normalizeBarangayName(selectedDisplayName);
@@ -222,7 +234,7 @@ const MapOnly = forwardRef(({
           const path = polygonCoords[0].map(([lng, lat]) => ({ lat, lng }));
           const polygon = new window.google.maps.Polygon({
             paths: path,
-            strokeColor: isSelected ? '#1893F8' : patternColor,
+            strokeColor: isSelected ? patternColorDark : patternColor,
             strokeOpacity: isSelected ? 1 : 0.7,
             strokeWeight: isSelected ? 6 : 1,
             fillOpacity: 0.5,
@@ -478,6 +490,7 @@ const MapOnly = forwardRef(({
       let patternType = (barangayObj?.status_and_recommendation?.pattern_based?.status || feature.properties.patternType || feature.properties.pattern_type || 'none').toLowerCase();
       if (!patternType || patternType === '') patternType = 'none';
       const patternColor = PATTERN_COLORS[patternType] || PATTERN_COLORS.default;
+      const patternColorDark = PATTERN_COLORS_DARK[patternType] || PATTERN_COLORS_DARK.default;
       const selectedDisplayName = selectedBarangay?.properties?.displayName || selectedBarangay?.properties?.name;
       const featureDisplayName = feature.properties?.displayName || feature.properties?.name;
       const isSelected = selectedBarangay && normalizeBarangayName(featureDisplayName) === normalizeBarangayName(selectedDisplayName);
@@ -486,7 +499,7 @@ const MapOnly = forwardRef(({
         const path = polygonCoords[0].map(([lng, lat]) => ({ lat, lng }));
         const polygon = new window.google.maps.Polygon({
           paths: path,
-          strokeColor: isSelected ? '#1893F8' : patternColor,
+          strokeColor: isSelected ? patternColorDark : patternColor,
           strokeOpacity: isSelected ? 1 : 0.7,
           strokeWeight: isSelected ? 6 : 1,
           fillOpacity: 0.5,
