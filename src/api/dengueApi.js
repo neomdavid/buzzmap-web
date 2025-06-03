@@ -198,9 +198,9 @@ export const dengueApi = createApi({
         if (username) params.append('username', username);
         if (description) params.append('description', description);
         
-        // Add pagination parameters
-        params.append('page', page);
-        params.append('limit', limit);
+        // Remove pagination params
+        // params.append('page', page);
+        // params.append('limit', limit);
 
         // Add the query string if we have any parameters
         const queryString = params.toString();
@@ -213,23 +213,13 @@ export const dengueApi = createApi({
         return url;
       },
       transformResponse: (response, meta, arg) => {
-        // New paginated format: { meta: {...}, reports: [...] }
-        if (response && Array.isArray(response.reports) && response.meta) {
-          return {
-            posts: response.reports,
-            meta: response.meta
-          };
-        }
-        // Fallback for old format
-        return {
-          posts: response,
-          meta: {}
-        };
+        // No more paginated format, just return the array directly
+        return response;
       },
       providesTags: (result) => 
-        result?.posts
+        Array.isArray(result)
           ? [
-              ...result.posts.map(({ id, _id }) => ({ type: 'Post', id: id || _id })),
+              ...result.map(({ id, _id }) => ({ type: 'Post', id: id || _id })),
               { type: 'Post', id: 'LIST' },
             ]
           : [{ type: 'Post', id: 'LIST' }],
@@ -357,33 +347,15 @@ export const dengueApi = createApi({
 
     // Get all interventions (paginated)
     getAllInterventions: builder.query({
-      query: ({ page = 1, limit = 10 } = {}) => `interventions?page=${page}&limit=${limit}`,
+      query: () => `interventions`,
       transformResponse: (response) => {
-        // New paginated format: { page, limit, count, interventions: [...] }
-        if (response && Array.isArray(response.interventions)) {
-          return {
-            interventions: response.interventions,
-            pagination: {
-              page: response.page,
-              limit: response.limit,
-              count: response.count
-            }
-          };
-        }
-        // Fallback for old format
-        return {
-          interventions: response,
-          pagination: {
-            page: 1,
-            limit: Array.isArray(response) ? response.length : 0,
-            count: Array.isArray(response) ? response.length : 0
-          }
-        };
+        // No more paginated format, just return the array directly
+        return response;
       },
       providesTags: (result) =>
-        result?.interventions
+        Array.isArray(result)
           ? [
-              ...result.interventions.map(({ id, _id }) => ({ type: 'Intervention', id: id || _id })),
+              ...result.map(({ id, _id }) => ({ type: 'Intervention', id: id || _id })),
               { type: 'Intervention', id: 'LIST' },
             ]
           : [{ type: 'Intervention', id: 'LIST' }],
@@ -467,31 +439,14 @@ export const dengueApi = createApi({
 
     // Get all admin posts (paginated)
     getAllAdminPosts: builder.query({
-      query: ({ page = 1, limit = 10 } = {}) => `adminposts?page=${page}&limit=${limit}`,
+      query: () => `adminposts`,
       transformResponse: (response) => {
-        if (response && Array.isArray(response.adminposts)) {
-          return {
-            adminposts: response.adminposts,
-            pagination: {
-              page: response.page,
-              limit: response.limit,
-              count: response.count
-            }
-          };
-        }
-        return {
-          adminposts: response,
-          pagination: {
-            page: 1,
-            limit: Array.isArray(response) ? response.length : 0,
-            count: Array.isArray(response) ? response.length : 0
-          }
-        };
+        return response;
       },
       providesTags: (result) =>
-        result?.adminposts
+        Array.isArray(result)
           ? [
-              ...result.adminposts.map(({ id, _id }) => ({ type: 'Post', id: id || _id })),
+              ...result.map(({ id, _id }) => ({ type: 'Post', id: id || _id })),
               { type: 'Post', id: 'LIST' },
             ]
           : [{ type: 'Post', id: 'LIST' }],
@@ -518,31 +473,14 @@ export const dengueApi = createApi({
 
     // Get all alerts (paginated)
     getAllAlerts: builder.query({
-      query: ({ page = 1, limit = 10 } = {}) => `alerts?page=${page}&limit=${limit}`,
+      query: () => `alerts`,
       transformResponse: (response) => {
-        if (response && Array.isArray(response.alerts)) {
-          return {
-            alerts: response.alerts,
-            pagination: {
-              page: response.page,
-              limit: response.limit,
-              count: response.count
-            }
-          };
-        }
-        return {
-          alerts: response,
-          pagination: {
-            page: 1,
-            limit: Array.isArray(response) ? response.length : 0,
-            count: Array.isArray(response) ? response.length : 0
-          }
-        };
+        return response;
       },
       providesTags: (result) =>
-        result?.alerts
+        Array.isArray(result)
           ? [
-              ...result.alerts.map(({ id, _id }) => ({ type: 'Alert', id: id || _id })),
+              ...result.map(({ id, _id }) => ({ type: 'Alert', id: id || _id })),
               { type: 'Alert', id: 'LIST' },
             ]
           : [{ type: 'Alert', id: 'LIST' }],
@@ -599,31 +537,14 @@ export const dengueApi = createApi({
 
     // Get all accounts (paginated)
     getAccounts: builder.query({
-      query: ({ page = 1, limit = 10 } = {}) => `accounts?page=${page}&limit=${limit}`,
+      query: () => `accounts`,
       transformResponse: (response) => {
-        if (response && Array.isArray(response.accounts)) {
-          return {
-            accounts: response.accounts,
-            pagination: {
-              page: response.page,
-              limit: response.limit,
-              count: response.count
-            }
-          };
-        }
-        return {
-          accounts: response,
-          pagination: {
-            page: 1,
-            limit: Array.isArray(response) ? response.length : 0,
-            count: Array.isArray(response) ? response.length : 0
-          }
-        };
+        return response;
       },
       providesTags: (result) =>
-        result?.accounts
+        Array.isArray(result)
           ? [
-              ...result.accounts.map(({ id, _id }) => ({ type: 'Accounts', id: id || _id })),
+              ...result.map(({ id, _id }) => ({ type: 'Accounts', id: id || _id })),
               { type: 'Accounts', id: 'LIST' },
             ]
           : [{ type: 'Accounts', id: 'LIST' }],

@@ -21,7 +21,6 @@ const VerifyReportModal = ({
   const [address, setAddress] = useState("");
   const [showConfirmation, setShowConfirmation] = useState(type === 'verify' || type === 'reject');
   const [actionType, setActionType] = useState(type === 'verify' || type === 'reject' ? type : null);
-  const { isLoaded } = useGoogleMaps();
   const [validatePost, { isLoading }] = useValidatePostMutation();
   // Store the previous status for undo
   const [undoTimeout, setUndoTimeout] = useState(null);
@@ -56,7 +55,8 @@ const VerifyReportModal = ({
   }, [undoTimeout]);
 
   useEffect(() => {
-    if (isLoaded && coordinates?.length === 2) {
+    // Only run if Google Maps JS API is loaded and coordinates are valid
+    if (window.google && window.google.maps && coordinates?.length === 2) {
       const geocoder = new window.google.maps.Geocoder();
       const latLng = new window.google.maps.LatLng(
         coordinates[1],
@@ -79,9 +79,8 @@ const VerifyReportModal = ({
         });
       }
     }
-
     modalRef.current?.showModal();
-  }, [isLoaded, coordinates]);
+  }, [coordinates]);
 
   const handleActionClick = (action) => {
     setActionType(action);
