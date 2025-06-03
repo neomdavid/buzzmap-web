@@ -41,6 +41,11 @@ const DengueMapping = () => {
     }
   );
 
+  // Add debug for raw posts data
+  useEffect(() => {
+    console.log('[DEBUG] Raw posts data:', posts);
+  }, [posts]);
+
   // Get nearby reports when a barangay is selected
   const nearbyReports = useMemo(() => {
     console.log('Selected Barangay:', selectedBarangay);
@@ -58,7 +63,11 @@ const DengueMapping = () => {
     // Create a Set to track unique combinations
     const uniqueReports = new Set();
 
-    const filteredPosts = Array.isArray(posts?.posts) ? posts.posts.filter(post => {
+    // Handle both possible API response shapes
+    const allPostsArray = Array.isArray(posts?.posts) ? posts.posts : (Array.isArray(posts) ? posts : []);
+    console.log('[DEBUG] Filtered allPostsArray:', allPostsArray);
+
+    const filteredPosts = allPostsArray.filter(post => {
       // Only include validated posts with coordinates
       if (post.status !== "Validated" || !post.specific_location?.coordinates) {
         console.log('Skipping post - Invalid status or no coordinates:', post);
@@ -85,7 +94,7 @@ const DengueMapping = () => {
       
       // Return posts within 2km radius
       return distance <= 2;
-    }) : [];
+    });
 
     console.log('Filtered Posts:', filteredPosts);
 
@@ -149,6 +158,7 @@ const DengueMapping = () => {
         const BASE_URL = import.meta.env.VITE_MODE === 'PROD' || import.meta.env.MODE === 'PROD'
           ? import.meta.env.VITE_API_BASE_URL 
           : 'http://localhost:4000/';
+        console.log('[DEBUG] Fetching recent reports for:', barangayName, 'from', BASE_URL);
         const response = await fetch(`${BASE_URL}api/v1/barangays/get-recent-reports-for-barangay`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -156,13 +166,12 @@ const DengueMapping = () => {
         });
         if (!response.ok) throw new Error("Failed to fetch recent reports");
         const data = await response.json();
-        console.log('[Recent Reports API Response]', data); // Debug log
+        console.log('[DEBUG] Recent Reports API Response:', data); // Debug log
         const caseCounts = data?.reports?.case_counts || {};
         const reportsArr = Object.entries(caseCounts).map(([date, count]) => ({ date, count }));
-        console.log('[Parsed Recent Reports]', reportsArr); // Debug log
         setRecentReports(reportsArr);
       } catch (err) {
-        console.error('[Recent Reports Fetch Error]', err); // Debug log
+        console.error('[DEBUG] Recent Reports Fetch Error:', err); // Debug log
         setRecentReports([]);
       }
     }
@@ -170,6 +179,7 @@ const DengueMapping = () => {
   }, [selectedBarangay]);
 
   const handleBarangaySelect = (barangay) => {
+    console.log('[DEBUG] handleBarangaySelect called with:', barangay);
     setSelectedBarangay(barangay);
   };
 
@@ -180,6 +190,16 @@ const DengueMapping = () => {
   const handleSearchClear = () => {
     setSearchQuery("");
   };
+
+  // Add debug for posts
+  useEffect(() => {
+    console.log('[DEBUG] posts data:', posts);
+  }, [posts]);
+
+  // Add debug for nearbyReports
+  useEffect(() => {
+    console.log('[DEBUG] nearbyReports:', nearbyReports);
+  }, [nearbyReports]);
 
   const handleShowOnMap = (item, type) => {
     setSelectedMapItem({ type, item });
@@ -372,7 +392,8 @@ const DengueMapping = () => {
           showBreedingSites={showBreedingSites}
           showInterventions={showInterventions}
           selectedBarangay={selectedBarangay}
-          onBarangaySelect={setSelectedBarangay}
+          onBarangaySelect={handleBarangaySelect}
+          interventions={showInterventions ? activeInterventions : []}
           style={{height: '100%', width: '100%'}}
         />
       </div>

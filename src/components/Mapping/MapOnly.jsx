@@ -97,6 +97,8 @@ const MapOnly = forwardRef(({
   const { data: posts } = useGetPostsQuery();
   const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
   const mapId = import.meta.env.VITE_GOOGLE_MAPS_MAP_ID;
+  console.log('[DEBUG] Google Maps API Key:', apiKey);
+  console.log('[DEBUG] Google Maps Map ID:', mapId);
 
   useEffect(() => {
     return () => {
@@ -200,18 +202,20 @@ const MapOnly = forwardRef(({
         let patternType = (barangayObj?.status_and_recommendation?.pattern_based?.status || feature.properties.patternType || feature.properties.pattern_type || 'none').toLowerCase();
         if (!patternType || patternType === '') patternType = 'none';
         const patternColor = PATTERN_COLORS[patternType] || PATTERN_COLORS.default;
-        const isSelected = selectedBarangay && (feature.properties.name === selectedBarangay.properties?.name || feature.properties.displayName === selectedBarangay.properties?.displayName);
+        const selectedDisplayName = selectedBarangay?.properties?.displayName || selectedBarangay?.properties?.name;
+        const featureDisplayName = feature.properties?.displayName || feature.properties?.name;
+        const isSelected = selectedBarangay && normalizeBarangayName(featureDisplayName) === normalizeBarangayName(selectedDisplayName);
         coordsArray.forEach((polygonCoords) => {
           const path = polygonCoords[0].map(([lng, lat]) => ({ lat, lng }));
           const polygon = new window.google.maps.Polygon({
             paths: path,
-            strokeColor: isSelected ? '#333' : patternColor,
+            strokeColor: isSelected ? '#1893F8' : patternColor,
             strokeOpacity: isSelected ? 1 : 0.7,
-            strokeWeight: isSelected ? 3 : 1,
+            strokeWeight: isSelected ? 6 : 1,
             fillOpacity: 0.5,
             fillColor: patternColor,
             map,
-            zIndex: isSelected ? 6 : 1,
+            zIndex: isSelected ? 10 : 1,
           });
           polygon.addListener('click', () => {
             if (onBarangaySelect) {
@@ -227,6 +231,7 @@ const MapOnly = forwardRef(({
                   pattern_data: barangayObj?.pattern_data
                 }
               };
+              console.log('Barangay selected:', selectedFeature);
               onBarangaySelect(selectedFeature);
             }
           });
@@ -306,7 +311,130 @@ const MapOnly = forwardRef(({
       overlaysRef.current.forEach(o => o.setMap(null));
       overlaysRef.current = [];
     };
-  }, [loading, error, barangayData, showBreedingSites, breedingSites, showInterventions, interventions, selectedBarangay, onBarangaySelect, barangaysList]);
+  }, [loading, error, barangayData]);
+
+  // Add a separate effect for updating overlays
+  useEffect(() => {
+    if (!mapInstance.current || !barangayData || !isMountedRef.current) return;
+    
+    const map = mapInstance.current;
+    let overlays = [];
+    
+    // Clear existing overlays
+    overlaysRef.current.forEach(o => o.setMap(null));
+    overlaysRef.current = [];
+
+    // Draw barangay polygons
+    barangayData.features.forEach((feature) => {
+      const geometry = feature.geometry;
+      const coordsArray = geometry.type === "Polygon" ? [geometry.coordinates] : geometry.type === "MultiPolygon" ? geometry.coordinates : [];
+      let barangayObj = barangaysList?.find(b => normalizeBarangayName(b.name) === normalizeBarangayName(feature.properties.name));
+      let patternType = (barangayObj?.status_and_recommendation?.pattern_based?.status || feature.properties.patternType || feature.properties.pattern_type || 'none').toLowerCase();
+      if (!patternType || patternType === '') patternType = 'none';
+      const patternColor = PATTERN_COLORS[patternType] || PATTERN_COLORS.default;
+      const selectedDisplayName = selectedBarangay?.properties?.displayName || selectedBarangay?.properties?.name;
+      const featureDisplayName = feature.properties?.displayName || feature.properties?.name;
+      const isSelected = selectedBarangay && normalizeBarangayName(featureDisplayName) === normalizeBarangayName(selectedDisplayName);
+      
+      coordsArray.forEach((polygonCoords) => {
+        const path = polygonCoords[0].map(([lng, lat]) => ({ lat, lng }));
+        const polygon = new window.google.maps.Polygon({
+          paths: path,
+          strokeColor: isSelected ? '#1893F8' : patternColor,
+          strokeOpacity: isSelected ? 1 : 0.7,
+          strokeWeight: isSelected ? 6 : 1,
+          fillOpacity: 0.5,
+          fillColor: patternColor,
+          map,
+          zIndex: isSelected ? 10 : 1,
+        });
+        polygon.addListener('click', () => {
+          if (onBarangaySelect) {
+            const selectedFeature = {
+              ...feature,
+              properties: {
+                ...feature.properties,
+                displayName: feature.properties.name,
+                patternType,
+                color: patternColor,
+                status_and_recommendation: barangayObj?.status_and_recommendation,
+                risk_level: barangayObj?.risk_level,
+                pattern_data: barangayObj?.pattern_data
+              }
+            };
+            onBarangaySelect(selectedFeature);
+          }
+        });
+        overlays.push(polygon);
+      });
+    });
+
+    // Add breeding site markers
+    if (showBreedingSites && breedingSites.length > 0 && window.google.maps.marker) {
+      const { AdvancedMarkerElement, PinElement } = window.google.maps.marker;
+      breedingSites.forEach((site) => {
+        const iconUrl = BREEDING_SITE_TYPE_ICONS[site.report_type] || BREEDING_SITE_TYPE_ICONS.default;
+        const glyphImg = document.createElement("img");
+        glyphImg.src = iconUrl;
+        glyphImg.style.width = "28px";
+        glyphImg.style.height = "28px";
+        glyphImg.style.objectFit = "contain";
+        glyphImg.style.backgroundColor = "#FFFFFF";
+        glyphImg.style.borderRadius = "100%";
+        glyphImg.style.padding = "2px";
+        const pin = new PinElement({
+          glyph: glyphImg,
+          background: "#FF6347",
+          borderColor: "#FF6347",
+          scale: 1.5,
+        });
+        const marker = new AdvancedMarkerElement({
+          map,
+          position: {
+            lat: site.specific_location.coordinates[1],
+            lng: site.specific_location.coordinates[0],
+          },
+          content: pin.element,
+          title: site.report_type || 'Breeding Site',
+        });
+        overlays.push(marker);
+      });
+    }
+
+    // Add intervention markers
+    if (showInterventions && interventions.length > 0 && window.google.maps.marker) {
+      const { AdvancedMarkerElement, PinElement } = window.google.maps.marker;
+      interventions.forEach((intervention) => {
+        const iconUrl = INTERVENTION_TYPE_ICONS[intervention.interventionType] || INTERVENTION_TYPE_ICONS.default;
+        const glyphImg = document.createElement("img");
+        glyphImg.src = iconUrl;
+        glyphImg.style.width = "28px";
+        glyphImg.style.height = "28px";
+        glyphImg.style.objectFit = "contain";
+        glyphImg.style.backgroundColor = "#FFFFFF";
+        glyphImg.style.borderRadius = "100%";
+        glyphImg.style.padding = "2px";
+        const pin = new PinElement({
+          glyph: glyphImg,
+          background: "#1893F8",
+          borderColor: "#1893F8",
+          scale: 1.5,
+        });
+        const marker = new AdvancedMarkerElement({
+          map,
+          position: {
+            lat: intervention.specific_location.coordinates[1],
+            lng: intervention.specific_location.coordinates[0],
+          },
+          content: pin.element,
+          title: intervention.interventionType,
+        });
+        overlays.push(marker);
+      });
+    }
+
+    overlaysRef.current = overlays;
+  }, [barangayData, showBreedingSites, breedingSites, showInterventions, interventions, selectedBarangay, onBarangaySelect, barangaysList]);
 
   if (loading) return <LoadingSpinner size={32} className="h-full" message="Loading map..." />;
   if (error) return <ErrorMessage error={error} className="m-4" />;
