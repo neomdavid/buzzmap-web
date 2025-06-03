@@ -66,12 +66,17 @@ const Community = () => {
   // Get posts with pagination
   const { data, isLoading, isError } = useGetPostsQuery({
     status: 'Validated',
-    page,
-    limit: 10,
     sortBy: searchParams.sortBy,
     sortOrder: searchParams.sortOrder,
     ...searchParams
   });
+
+  // Add debug logging for the API response
+  useEffect(() => {
+    console.log('[DEBUG] API Response:', data);
+    console.log('[DEBUG] Is Loading:', isLoading);
+    console.log('[DEBUG] Is Error:', isError);
+  }, [data, isLoading, isError]);
 
   // Intersection Observer for infinite scroll
   const observer = useRef();
@@ -90,9 +95,10 @@ const Community = () => {
 
   // Memoize filtered posts
   const filteredPosts = useMemo(() => {
-    if (!data?.posts) return [];
+    console.log('[DEBUG] Raw data:', data);
+    if (!data) return [];
     
-    let filtered = data.posts;
+    let filtered = Array.isArray(data) ? data : [];
     
     // Apply search filter if there's a search query
     if (searchQuery) {
@@ -105,8 +111,9 @@ const Community = () => {
       );
     }
     
+    console.log('[DEBUG] Filtered posts:', filtered);
     return filtered;
-  }, [data?.posts, searchQuery]);
+  }, [data, searchQuery]);
 
   // Memoize the latest admin post
   const latestAnnouncement = useMemo(() => {
@@ -317,7 +324,7 @@ const Community = () => {
         <p className="text-lg sm:text-xl sm:mt-0 text-center font-semibold text-primary mb-6">
           Real-Time Dengue Updates from the Community.
         </p>
-        <section className="bg-base- 200px-8 py-5 rounded-lg mb-4">
+        <section className="bg-base-200 px-8 py-5 rounded-lg mb-4">
           <p className="font-semibold text-lg text-center mb-3 lg:text-left">
             Report a breeding site to Quezon City Epidemiology and Surveillance
             Division.

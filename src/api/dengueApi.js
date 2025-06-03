@@ -771,8 +771,10 @@ export const dengueApi = createApi({
     getComments: builder.query({
       query: (postId) => {
         console.log('[DEBUG] Fetching comments for postId:', postId);
+        const url = `reports/${postId}/comments`;
+        console.log('[DEBUG] Comments API URL:', url);
         return {
-          url: `reports/${postId}/comments`,
+          url,
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
@@ -781,17 +783,22 @@ export const dengueApi = createApi({
       },
       transformResponse: (response, meta, arg) => {
         console.log('[DEBUG] Raw Comments API Response:', response);
+        console.log('[DEBUG] Response type:', typeof response);
+        console.log('[DEBUG] Is Array?', Array.isArray(response));
+        
         try {
           // If response is an array, return it directly
           if (Array.isArray(response)) {
             console.log('[DEBUG] Response is an array with length:', response.length);
             return response;
           }
+          
           // If response is an object with a data property, return that
           if (response && response.data) {
             console.log('[DEBUG] Response has data property with length:', response.data.length);
             return response.data;
           }
+          
           // If response is empty or null, return empty array
           console.log('[DEBUG] Response is empty or null');
           return [];
@@ -802,16 +809,16 @@ export const dengueApi = createApi({
       },
       transformErrorResponse: (response, meta, arg) => {
         console.error('[DEBUG] Comments API Error:', response);
+        console.error('[DEBUG] Error meta:', meta);
+        console.error('[DEBUG] Error arg:', arg);
         return response;
       },
       providesTags: (result, error, postId) => {
         console.log('[DEBUG] Comments cache tags for postId:', postId);
+        console.log('[DEBUG] Comments result:', result);
+        console.log('[DEBUG] Comments error:', error);
         return [{ type: "Comments", id: postId }];
       },
-      // Remove polling to prevent constant refetching
-      // pollingInterval: 5000,
-      // Add staleTime to prevent unnecessary refetches
-      keepUnusedDataFor: 60, // Keep data in cache for 60 seconds
     }),
 
     // Test endpoint to verify API connectivity

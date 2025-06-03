@@ -33,6 +33,7 @@ const CommentModal = forwardRef(({
   const [addComment, { isLoading }] = useAddCommentMutation();
   const { data: comments, isLoading: isLoadingComments, refetch, error } = useGetCommentsQuery(postId, {
     pollingInterval: 5000,
+    skip: !postId,
   });
   const { data: postData, isLoading: isLoadingPost } = useGetPostByIdQuery(postId);
   const navigate = useNavigate();
@@ -70,9 +71,25 @@ const CommentModal = forwardRef(({
     }
   }, [postData, currentImageIndex]);
 
+  // Add debug effect for comments
+  useEffect(() => {
+    console.log('[DEBUG] CommentModal - postId:', postId);
+    console.log('[DEBUG] CommentModal - Raw comments data:', comments);
+    console.log('[DEBUG] CommentModal - Is loading:', isLoadingComments);
+    console.log('[DEBUG] CommentModal - Error:', error);
+    
+    if (comments) {
+      console.log('[DEBUG] CommentModal - Number of comments:', comments.length);
+      console.log('[DEBUG] CommentModal - First comment:', comments[0]);
+      console.log('[DEBUG] CommentModal - Comments type:', typeof comments);
+      console.log('[DEBUG] CommentModal - Is array:', Array.isArray(comments));
+    }
+  }, [postId, comments, isLoadingComments, error]);
+
   // Update comment votes when comments change
   useEffect(() => {
-    if (comments) {
+    if (comments && Array.isArray(comments)) {
+      console.log('[DEBUG] Setting initial comment votes for comments:', comments);
       const initialCommentVotes = {};
       comments.forEach(comment => {
         initialCommentVotes[comment._id] = {
@@ -83,21 +100,6 @@ const CommentModal = forwardRef(({
       setLocalCommentVotes(initialCommentVotes);
     }
   }, [comments]);
-
-  // Add debug effect for comments
-  useEffect(() => {
-    console.log('[DEBUG] CommentModal - postId:', postId);
-    console.log('[DEBUG] CommentModal - Comments data:', comments);
-    console.log('[DEBUG] CommentModal - Is loading:', isLoadingComments);
-    console.log('[DEBUG] CommentModal - Error:', error);
-    console.log('[DEBUG] CommentModal - CommentsCount prop:', commentsCount);
-    if (comments) {
-      console.log('[DEBUG] CommentModal - Number of comments:', comments.length);
-      console.log('[DEBUG] CommentModal - First comment:', comments[0]);
-      console.log('[DEBUG] CommentModal - Comments type:', typeof comments);
-      console.log('[DEBUG] CommentModal - Is array:', Array.isArray(comments));
-    }
-  }, [postId, comments, isLoadingComments, error, commentsCount]);
 
   const handleCommentVoteUpdate = (commentId, newUpvotes, newDownvotes) => {
     setLocalCommentVotes(prev => ({

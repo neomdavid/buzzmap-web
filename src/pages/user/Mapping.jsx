@@ -95,8 +95,8 @@ let googleMapsScriptLoadingPromise = null;
 function loadGoogleMapsScript(apiKey) {
   console.log('loadGoogleMapsScript called with API key:', apiKey ? 'Present' : 'Missing');
   
-  if (window.google && window.google.maps && window.google.maps.Map) {
-    console.log('Google Maps already loaded');
+  if (window.google && window.google.maps && window.google.maps.Map && window.google.maps.marker) {
+    console.log('Google Maps and Marker library already loaded');
     return Promise.resolve();
   }
   
@@ -110,11 +110,11 @@ function loadGoogleMapsScript(apiKey) {
     if (document.getElementById('google-maps-script')) {
       console.log('Script element already exists, waiting for load...');
       const check = () => {
-        if (window.google && window.google.maps && window.google.maps.Map) {
-          console.log('Google Maps loaded from existing script');
+        if (window.google && window.google.maps && window.google.maps.Map && window.google.maps.marker) {
+          console.log('Google Maps and Marker library loaded from existing script');
           resolve();
         } else {
-          console.log('Waiting for Google Maps to load...');
+          console.log('Waiting for Google Maps and Marker library to load...');
           setTimeout(check, 50);
         }
       };
@@ -511,6 +511,11 @@ const Mapping = () => {
         interventions.forEach((intervention) => {
           console.log('[DEBUG] Creating marker for intervention:', intervention);
           try {
+            if (!intervention.specific_location?.coordinates || intervention.specific_location.coordinates.length !== 2) {
+              console.warn('[DEBUG] Invalid coordinates for intervention:', intervention);
+              return;
+            }
+
             const iconUrl = INTERVENTION_TYPE_ICONS[intervention.interventionType] || INTERVENTION_TYPE_ICONS.default;
             const glyphImg = document.createElement("img");
             glyphImg.src = iconUrl;
@@ -546,6 +551,7 @@ const Mapping = () => {
                 infoWindowRef.current.close();
                 setSelectedBarangayFeature(null);
               }
+
               // Pan to marker position and zoom in
               if (mapInstance.current) {
                 mapInstance.current.panTo({
@@ -554,10 +560,12 @@ const Mapping = () => {
                 });
                 mapInstance.current.setZoom(17);
               }
+
               // Hide control panel on md screens and lower
               if (window.matchMedia && window.matchMedia('(max-width: 768px)').matches) {
                 setShowControlPanel(false);
               }
+
               // Use a div with Tailwind classes for InfoWindow content
               const content = document.createElement('div');
               content.innerHTML = `
@@ -575,9 +583,19 @@ const Mapping = () => {
                   <p class="text-lg"><span class="font-bold">Personnel:</span> ${intervention.personnel || ''}</p>
                 </div>
               `;
+
+              if (!infoWindowRef.current) {
+                infoWindowRef.current = new window.google.maps.InfoWindow({ maxWidth: 500 });
+              }
+              const infoWindow = infoWindowRef.current;
               infoWindow.setContent(content);
+              infoWindow.setPosition({
+                lat: intervention.specific_location.coordinates[1],
+                lng: intervention.specific_location.coordinates[0],
+              });
               infoWindow.open(map, marker);
             });
+
             overlays.push(marker);
           } catch (error) {
             console.error('[DEBUG] Error creating marker:', error);
