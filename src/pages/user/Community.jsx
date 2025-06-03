@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef, useCallback } from "react";
+import { useState, useMemo, useRef, useCallback, useEffect } from "react";
 import { ArrowLeft, MagnifyingGlass, UserCircle } from "phosphor-react";
 import profile1 from "../../assets/profile1.png";
 import post1 from "../../assets/post1.jpg";
@@ -57,6 +57,12 @@ const Community = () => {
   // Fetch admin posts
   const { data: adminPosts, isLoading: isLoadingAdminPosts } = useGetAllAdminPostsQuery();
 
+  // Add debug logging
+  useEffect(() => {
+    console.log('[DEBUG] Admin Posts:', adminPosts);
+    console.log('[DEBUG] Is Loading Admin Posts:', isLoadingAdminPosts);
+  }, [adminPosts, isLoadingAdminPosts]);
+
   // Get posts with pagination
   const { data, isLoading, isError } = useGetPostsQuery({
     status: 'Validated',
@@ -102,13 +108,24 @@ const Community = () => {
     return filtered;
   }, [data?.posts, searchQuery]);
 
-  // Memoize the latest announcement
+  // Memoize the latest admin post
   const latestAnnouncement = useMemo(() => {
-    if (!adminPosts) return null;
-    const announcements = Array.isArray(adminPosts?.posts) ? adminPosts.posts.filter(post => post.category === "announcement") : [];
-    if (announcements.length === 0) return null;
-    announcements.sort((a, b) => new Date(b.publishDate) - new Date(a.publishDate));
-    return announcements[0];
+    console.log('[DEBUG] Getting latest admin post from:', adminPosts);
+    if (!adminPosts) {
+      console.log('[DEBUG] No admin posts available');
+      return null;
+    }
+    // Filter for active posts only
+    const activePosts = Array.isArray(adminPosts) ? adminPosts.filter(post => post.status === "active") : [];
+    console.log('[DEBUG] Active posts:', activePosts);
+    if (activePosts.length === 0) {
+      console.log('[DEBUG] No active posts found');
+      return null;
+    }
+    // Sort by publishDate to get the latest scheduled post
+    activePosts.sort((a, b) => new Date(b.publishDate) - new Date(a.publishDate));
+    console.log('[DEBUG] Latest admin post:', activePosts[0]);
+    return activePosts[0];
   }, [adminPosts]);
 
   // Memoize the post card render function
@@ -220,7 +237,7 @@ const Community = () => {
   }
 
   return (
-    <main className="pl-6 text-primary text-lg flex gap-x-6 max-w-[1350px] m-auto relative mt-12">
+    <main className="pl-6 pt-14 text-primary text-lg flex gap-x-6 max-w-[1350px] m-auto relative mt-12">
       <article className="flex-8 shadow-xl p-12 rounded-lg w-[90vw] max-w-500 lg:w-[30vw]">
         <form onSubmit={handleSearch} className="mb-6">
           <div className="relative">
@@ -353,13 +370,13 @@ const Community = () => {
       </article>
 
       <aside
-        className={`bg-base-300 shadow-2xl rounded-sm overflow-y-scroll transition-transform duration-300 ease-in-out 
-        fixed inset-y-0 right-0 w-[60vw] top-[58px] pb-4 max-w-[90vw] z-10 lg:z-0 lg:sticky lg:top-19 lg:h-[calc(100vh-1.5rem)] 
+        className={`bg-base-200 shadow-2xl rounded-sm overflow-y-scroll transition-transform duration-300 ease-in-out 
+        fixed inset-y-0 right-0 w-[80vw] top-[58px] sm:top-[65px] pb-4 max-w-170 z-10 lg:z-0 lg:sticky lg:top-19 lg:h-[calc(100vh-1.5rem)] 
         lg:w-[40vw] lg:max-w-[450px] lg:shadow-sm ${
           showAside ? "translate-x-0" : "translate-x-full"
         } lg:translate-x-0`}
       >
-        <div className="sticky top-0 bg-base-300 px-6 py-4 flex justify-between items-center z-100 border-b border-gray-200 pt-6 pb-4">
+        <div className="sticky top-0 bg-base-200  px-6 py-4 flex justify-between items-center z-100 border-b border-gray-300 pt-6 pb-4">
           <p className="text-3xl font-bold text-primary">Official Announcement</p>
           <button
             onClick={() => setShowAside(false)}

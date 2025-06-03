@@ -153,7 +153,11 @@ const NewPostModal = forwardRef(({ onSubmit, initialCoordinates = "", initialBar
         });
       }
 
-      console.log("📦 Final FormData body:", formData);
+      // Log FormData contents properly
+      console.log("📦 FormData contents:");
+      for (let pair of formData.entries()) {
+        console.log(pair[0] + ': ' + pair[1]);
+      }
 
       // Call createPost mutation with FormData
       const response = await createPostWithImage(formData).unwrap();
@@ -180,7 +184,8 @@ const NewPostModal = forwardRef(({ onSubmit, initialCoordinates = "", initialBar
     } catch (error) {
       // If backend error occurs, display the custom toast with error message
       console.error("❌ Failed to create post:", error);
-      showToast("Failed to create post", "error");
+      console.error("Error details:", error.data || error.message);
+      showToast(error.data?.message || "Failed to create post", "error");
     }
   };
 
@@ -455,8 +460,9 @@ const NewPostModal = forwardRef(({ onSubmit, initialCoordinates = "", initialBar
                       onChange={(e) => setReportType(e.target.value)}
                     >
                       <option value="">Choose Report Type</option>
-                      <option value="Standing Water">Standing Water</option>
-                      <option value="Breeding Site">Breeding Site</option>
+                      <option value="Stagnant Water">Stagnant Water</option>
+                      <option value="Uncollected Garbage or Trash">Uncollected Garbage or Trash</option>
+                      <option value="Others">Others</option>
                     </select>
                   </div>
                 </div>
