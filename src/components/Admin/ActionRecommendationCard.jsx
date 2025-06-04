@@ -41,6 +41,7 @@ const ActionRecommendationCard = ({
   suggestedAction,
   className = "",
   hideSharedInfo = false,
+  onApply,
 }) => {
   // Determine colors and urgency based on pattern type
   const styles = PATTERN_STYLES[patternType?.toLowerCase()] || PATTERN_STYLES.none;
@@ -79,10 +80,12 @@ const ActionRecommendationCard = ({
     }
   }
 
+  // Determine if the Apply button should be shown
+  const showApplyButton = ['spike', 'gradual_rise'].includes(patternType?.toLowerCase());
+
   return (
     <div
       className={`flex flex-col gap-1 border-2 ${styles.border} rounded-3xl p-6 ${className}`}
-   
     >
       <div className="flex items-center gap-2 mb-2 flex-wrap">
         <p className={`${styles.text} font-extrabold text-2xl`}>{barangay}</p>
@@ -135,6 +138,16 @@ const ActionRecommendationCard = ({
             </div>
           </div>
         </>
+      )}
+      {showApplyButton && (
+        <div className="flex justify-end mt-4">
+          <button
+            onClick={() => onApply && onApply(barangay, patternType)}
+            className="bg-primary text-white px-4 py-2 rounded-full shadow font-semibold hover:bg-primary/80 transition-all"
+          >
+            Apply
+          </button>
+        </div>
       )}
     </div>
   );

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { IconX, IconCheck } from "@tabler/icons-react";
+import { IconX, IconCheck, IconTrendingUp, IconTrendingUp2, IconChartLine } from "@tabler/icons-react";
 import { useCreateInterventionMutation } from "../../api/dengueApi"; // Import RTK query hook for create intervention
 import InterventionLocationPicker from "./InterventionLocationPicker"; // Import the new component
 import * as turf from '@turf/turf'; // Import turf for calculations
@@ -444,21 +444,6 @@ const AddInterventionModal = ({ isOpen, onClose, preselectedBarangay, patternTyp
             ✕
           </button>
 
-          {/* Badge for detected pattern, now inside modal content and centered */}
-          {patternType && patternUrgency && (
-            <div className="flex justify-center mb-4">
-              <div className={`px-6 py-2 rounded-full font-semibold shadow-lg border-2
-                ${patternType === 'spike' ? 'border-error bg-error/10 text-error' : ''}
-                ${patternType === 'gradual_rise' ? 'border-warning bg-warning/10 text-warning' : ''}
-                ${patternType === 'stability' ? 'border-info bg-info/10 text-info' : ''}
-                ${patternType === 'decline' ? 'border-success bg-success/10 text-success' : ''}
-                ${patternType === 'none' ? 'border-gray-300 bg-gray-100 text-gray-500' : ''}
-              `}>
-                {patternType.charAt(0).toUpperCase() + patternType.slice(1).replace('_', ' ')} detected: {patternUrgency}
-              </div>
-            </div>
-          )}
-
           <p className="text-center text-3xl font-bold mb-6">
             Add New Intervention
           </p>
@@ -467,9 +452,37 @@ const AddInterventionModal = ({ isOpen, onClose, preselectedBarangay, patternTyp
           <div className="space-y-6 text-lg">
             {!showConfirmation ? (
               <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-5"> {/* Adjusted gap */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-5">
                   {/* Left Column: Form Fields */}
                   <div className="flex flex-col gap-5">
+                    {/* Pattern Tag */}
+                    {patternType && patternUrgency && (
+                      <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium w-fit
+                        ${patternType === 'spike' ? 'bg-error/10 text-error border border-error/20' : ''}
+                        ${patternType === 'gradual_rise' ? 'bg-warning/10 text-warning border border-warning/20' : ''}
+                        ${patternType === 'stability' ? 'bg-info/10 text-info border border-info/20' : ''}
+                        ${patternType === 'decline' ? 'bg-success/10 text-success border border-success/20' : ''}
+                        ${patternType === 'none' ? 'bg-gray-100 text-gray-500 border border-gray-200' : ''}
+                      `}>
+                        {patternType === 'spike' ? (
+                          <IconTrendingUp size={18} className="text-error" />
+                        ) : patternType === 'gradual_rise' ? (
+                          <IconTrendingUp2 size={18} className="text-warning" />
+                        ) : (
+                          <IconChartLine size={18} className={
+                            patternType === 'stability' ? 'text-info' :
+                            patternType === 'decline' ? 'text-success' :
+                            'text-gray-500'
+                          } />
+                        )}
+                        <span className="font-semibold">
+                          {patternType.charAt(0).toUpperCase() + patternType.slice(1).replace('_', ' ')}
+                        </span>
+                        <span className="text-gray-500">•</span>
+                        <span className="text-gray-600">{patternUrgency}</span>
+                      </div>
+                    )}
+
                     {/* Location (Barangay & Address) */}
                     <div className="form-control">
                       <label className="label text-primary text-lg font-bold mb-1">

@@ -392,20 +392,13 @@ const Interventions = () => {
                           issueDetected={item.issueDetected}
                           suggestedAction={item.suggestedAction}
                           hideSharedInfo={true}
+                          onApply={(barangay, patternType) => {
+                            setSelectedBarangay(barangay);
+                            setSelectedPattern(patternType);
+                            setSelectedUrgency(patternUrgencyMap[patternType] || 'Action Required');
+                            setShowAddModal(true);
+                          }}
                         />
-                        {(['spike', 'gradual_rise', 'stability'].includes(item.patternType)) && (
-                          <button
-                            className="mt-4 bg-primary text-white px-4 py-2 rounded-full shadow font-semibold hover:bg-primary/80 transition-all"
-                            onClick={() => {
-                              setSelectedBarangay(item.name);
-                              setSelectedPattern(item.patternType);
-                              setSelectedUrgency(patternUrgencyMap[item.patternType] || 'Action Required');
-                              setShowAddModal(true);
-                            }}
-                          >
-                            Apply
-                          </button>
-                        )}
                       </div>
                     ))}
                   </div>

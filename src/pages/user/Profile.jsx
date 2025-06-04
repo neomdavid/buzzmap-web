@@ -199,7 +199,7 @@ function Profile(){
                                 onClick={() => setActiveTab('rejected')}
                                 className={`px-4 py-2 rounded-lg font-medium transition-all duration-300 ${
                                     activeTab === 'rejected' 
-                                    ? 'bg-gray-100 text-gray-800' 
+                                    ? 'bg-gray-200 text-gray-900 border-2 border-gray-300' 
                                     : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                                 }`}
                             >
