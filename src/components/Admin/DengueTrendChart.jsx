@@ -9,6 +9,7 @@ import {
   Tooltip,
   ResponsiveContainer,
   Legend,
+  ReferenceLine,
 } from "recharts";
 import { ChartContainer } from "../ui/chart";
 import { useGetBarangayWeeklyTrendsQuery, useGetBarangaysQuery, useGetPatternRecognitionResultsQuery } from "../../api/dengueApi";
@@ -84,12 +85,17 @@ export default function DengueTrendChart({ selectedBarangay, onBarangayChange })
 
       // Transform complete weeks
       const weekEntries = Object.entries(completeWeeks)
-        .map(([week, info]) => ({
-          week: formatDateRange(info.date_range),
-          cases: info.count,
-          dateRange: info.date_range,
-          patternType: selectedBarangayPattern
-        }))
+        .map(([week, info], index, array) => {
+          const entry = {
+            week: formatDateRange(info.date_range),
+            cases: info.count,
+            dateRange: info.date_range,
+            patternType: selectedBarangayPattern,
+            color: index >= array.length - 4 ? getPatternColor(selectedBarangayPattern) : "#9ca3af"
+          };
+          console.log('[DEBUG] Created week entry:', entry);
+          return entry;
+        })
         .sort((a, b) => {
           // Sort by the start date of the range
           const dateA = new Date(a.dateRange[0]);
@@ -97,7 +103,7 @@ export default function DengueTrendChart({ selectedBarangay, onBarangayChange })
           return dateA - dateB;
         });
 
-      console.log('[DEBUG] Transformed chart data:', weekEntries);
+      console.log('[DEBUG] Final chart data:', weekEntries);
       return weekEntries;
     } catch (error) {
       console.error('[DEBUG] Error transforming chart data:', error);
@@ -237,6 +243,57 @@ export default function DengueTrendChart({ selectedBarangay, onBarangayChange })
               }}
               align="left"
             />
+            <ReferenceLine
+              x={chartData[chartData.length - 4]?.week}
+              stroke="#4B5563"
+              strokeDasharray="5 5"
+              strokeWidth={1}
+              segment={[
+                { x: chartData[chartData.length - 4]?.week, y: 0 },
+                { x: chartData[chartData.length - 1]?.week, y: 0 }
+              ]}
+              label={({ viewBox }) => {
+                const { x, y } = viewBox;
+                return (
+                  <g transform={`translate(${x},${y + 100})`}>
+                    <rect
+                      x={-60}
+                      y={-10}
+                      width={120}
+                      height={20}
+                      fill="oklch(0.98 0.0035 219.53)"
+                      rx={4}
+                    />
+                    <text
+                      x={0}
+                      y={2}
+                      textAnchor="middle"
+                      dominantBaseline="middle"
+                      fill="#4B5563"
+                      fontSize={11}
+                      fontWeight={500}
+                    >
+                      Start of {selectedBarangayPattern?.replace('_', ' ') || 'pattern'}
+                    </text>
+                  </g>
+                );
+              }}
+            />
+            <Tooltip
+              content={({ active, payload }) => {
+                if (active && payload && payload.length > 0) {
+                  const dataPoint = payload[0].payload;
+                  if (dataPoint.week === chartData[chartData.length - 4]?.week) {
+                    return (
+                      <div className="bg-white p-2 border border-gray-200 rounded shadow-sm">
+                        <p className="text-sm text-gray-700">Start of {selectedBarangayPattern || 'pattern'}</p>
+                      </div>
+                    );
+                  }
+                }
+                return null;
+              }}
+            />
             <Line
               type="monotone"
               dataKey="cases"
@@ -244,15 +301,15 @@ export default function DengueTrendChart({ selectedBarangay, onBarangayChange })
               strokeWidth={3}
               dot={{
                 r: 5,
-                stroke: getPatternColor(selectedBarangayPattern),
                 strokeWidth: 2,
                 fill: getPatternColor(selectedBarangayPattern),
+                stroke: getPatternColor(selectedBarangayPattern)
               }}
               activeDot={{
                 r: 7,
-                stroke: getPatternColor(selectedBarangayPattern),
                 strokeWidth: 2,
                 fill: getPatternColor(selectedBarangayPattern),
+                stroke: getPatternColor(selectedBarangayPattern)
               }}
               label={({ x, y, value }) => (
                 <text

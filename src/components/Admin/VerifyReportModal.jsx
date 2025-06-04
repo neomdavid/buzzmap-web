@@ -235,14 +235,22 @@ const VerifyReportModal = ({
                   onClick={handleConfirm}
                   className={`${
                     actionType === "verify" ? "bg-success" : "bg-error"
-                  } text-white font-semibold px-8 py-3 rounded-xl hover:opacity-80 transition-all duration-200`}
+                  } text-white font-semibold px-8 py-3 rounded-xl hover:opacity-80 transition-all duration-200 flex items-center gap-2`}
                   disabled={isLoading}
                 >
-                  {isLoading ? "Processing..." : "Confirm"}
+                  {isLoading ? (
+                    <>
+                      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      Processing...
+                    </>
+                  ) : (
+                    "Confirm"
+                  )}
                 </button>
                 <button
                   onClick={handleCancel}
                   className="bg-gray-300 text-gray-700 font-semibold px-8 py-3 rounded-xl hover:opacity-80 transition-all duration-200"
+                  disabled={isLoading}
                 >
                   Cancel
                 </button>
