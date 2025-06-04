@@ -40,6 +40,7 @@ const ActionRecommendationCard = ({
   issueDetected,
   suggestedAction,
   className = "",
+  hideSharedInfo = false,
 }) => {
   // Determine colors and urgency based on pattern type
   const styles = PATTERN_STYLES[patternType?.toLowerCase()] || PATTERN_STYLES.none;
@@ -81,26 +82,20 @@ const ActionRecommendationCard = ({
   return (
     <div
       className={`flex flex-col gap-1 border-2 ${styles.border} rounded-3xl p-6 ${className}`}
+   
     >
       <div className="flex items-center gap-2 mb-2 flex-wrap">
         <p className={`${styles.text} font-extrabold text-2xl`}>{barangay}</p>
-        <p
-          className={`${styles.bg} text-center text-white py-1 px-4 rounded-xl text-sm`}
-        >
-          {urgencyLevelToDisplay} 
-        </p>
+        {!hideSharedInfo && (
+          <p
+            className={`${styles.bg} text-center text-white py-1 px-4 rounded-xl text-sm`}
+          >
+            {urgencyLevelToDisplay}
+          </p>
+        )}
       </div>
-      <div className="flex items-center gap-3">
-        <div className={styles.text}>
-          <Circle weight="fill" size={16} />
-        </div>
-        <p className={`${styles.text} font-bold`}>
-          <span className="font-semibold text-black">Pattern: </span>
-          {patternType.charAt(0).toUpperCase() + patternType.slice(1).replace('_', ' ')}
-        </p>
-      </div>
-      <div className="flex items-center gap-3">
-        <div className="text-primary">
+      <div className="flex items-start gap-3">
+        <div className="text-primary pt-0.5">
           <MagnifyingGlass size={16} />
         </div>
         <p className="text-black">
@@ -108,26 +103,39 @@ const ActionRecommendationCard = ({
           {issueDetected}
         </p>
       </div>
-      <div className="flex items-start gap-3">
-        <div className="text-primary pt-1">
-          <Lightbulb weight="fill" size={16} />
-        </div>
-        <div className="text-black">
-          <span className="font-semibold">Suggested Action: </span>
-          {primarySuggestion && <span>{primarySuggestion}</span>}
-          {actionListItems.length > 0 && (
-            <ul className={`list-disc list-inside ml-4 ${primarySuggestion ? 'mt-1' : ''}`}>
-              {actionListItems.map((item, index) => (
-                <li key={index}>{item}</li>
-              ))}
-            </ul>
-          )}
-          {/* Fallback if suggestedAction had content but parsing yielded nothing */}
-          {!primarySuggestion && actionListItems.length === 0 && rawAction.trim() && (
-            <span>{rawAction.trim()}</span>
-          )}
-        </div>
-      </div>
+      {!hideSharedInfo && (
+        <>
+          <div className="flex items-center gap-3">
+            <div className={styles.text}>
+              <Circle weight="fill" size={16} />
+            </div>
+            <p className={`${styles.text} font-bold`}>
+              <span className="font-semibold text-black">Pattern: </span>
+              {patternType.charAt(0).toUpperCase() + patternType.slice(1).replace('_', ' ')}
+            </p>
+          </div>
+          <div className="flex items-start gap-3">
+            <div className="text-primary pt-1">
+              <Lightbulb weight="fill" size={16} />
+            </div>
+            <div className="text-black">
+              <span className="font-semibold">Suggested Action: </span>
+              {primarySuggestion && <span>{primarySuggestion}</span>}
+              {actionListItems.length > 0 && (
+                <ul className={`list-disc list-inside ml-4 ${primarySuggestion ? 'mt-1' : ''}`}>
+                  {actionListItems.map((item, index) => (
+                    <li key={index}>{item}</li>
+                  ))}
+                </ul>
+              )}
+              {/* Fallback if suggestedAction had content but parsing yielded nothing */}
+              {!primarySuggestion && actionListItems.length === 0 && rawAction.trim() && (
+                <span>{rawAction.trim()}</span>
+              )}
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 };

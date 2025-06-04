@@ -15,7 +15,8 @@ import {
   Tooltip,
   Legend
 } from 'chart.js';
-import { IconChecks, IconMapPins, IconTag, IconListDetails } from "@tabler/icons-react"; // Replaced IconFileDescription with IconListDetails
+import { IconChecks, IconMapPins, IconTag, IconListDetails, IconChevronRight, IconChevronLeft } from "@tabler/icons-react"; // Replaced IconFileDescription with IconListDetails
+import { Circle, Lightbulb } from "phosphor-react";
 import dayjs from 'dayjs'; // Import dayjs
 import { useEffect, useState } from 'react'; // Import useState
 import React from 'react';
@@ -161,13 +162,20 @@ const Interventions = () => {
   // Log what is being rendered in ActionRecommendationCard for debugging
   console.log('ActionRecommendationCard data:', filteredRecommendations);
 
-  if (isLoadingInterventions || isLoadingPosts || isLoadingBarangays) {
-    return <div>Loading...</div>;
-  }
+  // Tab state hooks at the top level
+  const [activeTab, setActiveTab] = useState('spike');
+  const [showAllTabs, setShowAllTabs] = useState(false);
 
-  if (errorInterventions || errorPosts || errorBarangays) {
-    return <div>Error loading data: {errorInterventions?.message || errorPosts?.message || errorBarangays?.message}</div>;
-  }
+  // Carousel state for recommendations
+  const [cardStartIndex, setCardStartIndex] = useState(0);
+  const cardsPerPage = 3;
+  const cards = filteredRecommendations.filter(item => item.patternType === activeTab);
+  const visibleCards = cards.slice(cardStartIndex, cardStartIndex + cardsPerPage);
+
+  // Extract shared info for the current pattern (if any cards exist)
+  const sharedPattern = cards[0]?.patternType;
+  const sharedSuggestedAction = cards[0]?.suggestedAction;
+  const sharedIssueDetected = cards[0]?.issueDetected;
 
   // Helper function to find recommendation for a specific barangay
   const findRecommendationForBarangay = (barangayName) => {
@@ -182,6 +190,40 @@ const Interventions = () => {
   const commonwealthData = findRecommendationForBarangay("Commonwealth");
   const fairviewData = findRecommendationForBarangay("Fairview");
   // const holySpiritData = findRecommendationForBarangay("Holy Spirit"); // Will be replaced by dynamic rendering
+
+  // Tab logic
+  const tabOrder = ['spike', 'gradual_rise', 'stability', 'decline', 'none'];
+  const patternMeta = {
+    spike: { label: 'Spike', color: 'text-error', border: 'border-error' },
+    gradual_rise: { label: 'Gradual Rise', color: 'text-warning', border: 'border-warning' },
+    stability: { label: 'Stability', color: 'text-info', border: 'border-info' },
+    decline: { label: 'Decline', color: 'text-success', border: 'border-success' },
+    none: { label: 'No Pattern', color: 'text-gray-500', border: 'border-gray-300' },
+  };
+  // Only include patterns that exist in the recommendations
+  const availablePatterns = tabOrder.filter(p => filteredRecommendations.some(item => item.patternType === p));
+  const tabOptions = availablePatterns.map(p => ({
+    value: p,
+    label: patternMeta[p]?.label || p.charAt(0).toUpperCase() + p.slice(1).replace('_', ' '),
+    color: patternMeta[p]?.color || 'text-gray-500',
+    border: patternMeta[p]?.border || 'border-gray-300',
+  }));
+  // Tabs to show initially and when expanded
+  const initialTabs = tabOptions.slice(0, 2);
+  const extraTabs = tabOptions.slice(2);
+
+  // Reset cardStartIndex when activeTab changes
+  useEffect(() => {
+    setCardStartIndex(0);
+  }, [activeTab]);
+
+  if (isLoadingInterventions || isLoadingPosts || isLoadingBarangays) {
+    return <div>Loading...</div>;
+  }
+
+  if (errorInterventions || errorPosts || errorBarangays) {
+    return <div>Error loading data: {errorInterventions?.message || errorPosts?.message || errorBarangays?.message}</div>;
+  }
 
   return (
     <main className="flex flex-col w-full ">
@@ -220,6 +262,130 @@ const Interventions = () => {
       {/* END DASHBOARD SECTION */}
 
       <section className="flex flex-col gap-16">
+        <div className="flex flex-col w-full gap-6">
+          <p className="text-base-content text-4xl font-bold mb-2">Prescriptive Action Recommendations</p>
+          <div className="flex gap-4 mb-2 flex-wrap items-center">
+            {initialTabs.map(tab => (
+              <button
+                key={tab.value}
+                className={`px-6 py-2 rounded-full font-semibold border-2 transition-colors duration-200 ${activeTab === tab.value ? `${tab.color} ${tab.border} bg-white` : 'text-gray-500 border-transparent bg-gray-100 hover:bg-white'}`}
+                onClick={() => setActiveTab(tab.value)}
+              >
+                {tab.label}
+              </button>
+            ))}
+            <div className="flex items-center">
+              <div className={`flex flex-row items-center overflow-hidden transition-all duration-300 ease-in-out ${showAllTabs ? 'max-w-2xl ml-2' : 'max-w-0'}`} style={{gap: '1rem'}}>
+                {extraTabs.map(tab => (
+                  <button
+                    key={tab.value}
+                    className={`px-6 py-2 rounded-full font-semibold border-2 transition-colors duration-200 ${activeTab === tab.value ? `${tab.color} ${tab.border} bg-white` : 'text-gray-500 border-transparent bg-gray-100 hover:bg-white'}`}
+                    onClick={() => setActiveTab(tab.value)}
+                    style={{transition: 'all 0.3s cubic-bezier(0.4,0,0.2,1)'}}>
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
+              {extraTabs.length > 0 && (
+                <button
+                  className="px-2 py-2 rounded-full border-2 border-gray-300 bg-gray-100 hover:bg-white flex items-center justify-center ml-2 transition-all duration-300 ease-in-out"
+                  onClick={() => setShowAllTabs(v => !v)}
+                  title={showAllTabs ? "Hide extra patterns" : "Show more patterns"}
+                >
+                  {showAllTabs ? <IconChevronLeft size={20} /> : <IconChevronRight size={20} />}
+                </button>
+              )}
+            </div>
+          </div>
+          <div className=" rounded-xl shadow p-4">
+            {cards.length > 0 ? (
+              <>
+                {/* Centered, colored shared info box for the current pattern */}
+                <div
+                  className={` flex flex-col items-center justify-center text-center rounded-2xl  px-6 py-4 w-full mx-auto
+                    ${sharedPattern === 'spike' ? 'border-error' : ''}
+                    ${sharedPattern === 'gradual_rise' ? 'border-warning' : ''}
+                    ${sharedPattern === 'stability' ? 'border-info' : ''}
+                    ${sharedPattern === 'decline' ? 'border-success' : ''}
+                    ${sharedPattern === 'none' ? 'border-gray-300' : ''}
+                  `}
+                  style={{ maxWidth: 600 }}
+                >
+                  {/* Action Required label with bg color */}
+                  <p className={`text-lg font-bold mb-3 px-4 py-1 rounded-xl inline-block
+                    ${sharedPattern === 'spike' ? 'bg-error text-white' : ''}
+                    ${sharedPattern === 'gradual_rise' ? 'bg-warning text-white' : ''}
+                    ${sharedPattern === 'stability' ? 'bg-info text-white' : ''}
+                    ${sharedPattern === 'decline' ? 'bg-success text-white' : ''}
+                    ${sharedPattern === 'none' ? 'bg-gray-300 text-gray-700' : ''}
+                  `}>
+                    {/* Use urgency text from pattern styles */}
+                    {(() => {
+                      const patternUrgency = {
+                        spike: 'Immediate Action Required',
+                        gradual_rise: 'Action Required Soon',
+                        stability: 'Monitor Situation',
+                        decline: 'Continue Monitoring',
+                        none: 'No Specific Pattern',
+                      };
+                      return patternUrgency[sharedPattern] || 'Action Required';
+                    })()}
+                  </p>
+                  {sharedPattern && (
+                    <p className="text-base font-semibold mb-1 flex items-center justify-center gap-2">
+                      <span className="inline-flex items-center"><Circle weight="fill" size={16} className={
+                        sharedPattern === 'spike' ? 'text-error' :
+                        sharedPattern === 'gradual_rise' ? 'text-warning' :
+                        sharedPattern === 'stability' ? 'text-info' :
+                        sharedPattern === 'decline' ? 'text-success' :
+                        'text-gray-400'} /></span>
+                      <span>Pattern:</span> <span className="capitalize">{sharedPattern.replace('_', ' ')}</span>
+                    </p>
+                  )}
+                  {sharedSuggestedAction && (
+                    <p className="text-base mb-1 flex items-center justify-center gap-2 flex-wrap">
+                      <span className="inline-flex items-center whitespace-nowrap"><Lightbulb weight="fill" size={16} className="text-primary" /></span>
+                      <span className="whitespace-nowrap">Suggested Action:</span>
+                      <span className="font-medium break-words text-left">{sharedSuggestedAction}</span>
+                    </p>
+                  )}
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {visibleCards.map(item => (
+                    <ActionRecommendationCard
+                      key={item.name + item.patternType}
+                      barangay={item.name}
+                      patternType={item.patternType}
+                      issueDetected={item.issueDetected}
+                      suggestedAction={item.suggestedAction}
+                      hideSharedInfo={true}
+                    />
+                  ))}
+                </div>
+                <div className="flex justify-center gap-2 mt-4">
+                  <button
+                    className="btn btn-sm"
+                    onClick={() => setCardStartIndex(i => Math.max(0, i - cardsPerPage))}
+                    disabled={cardStartIndex === 0}
+                  >
+                    Back
+                  </button>
+                  <button
+                    className="btn btn-sm"
+                    onClick={() => setCardStartIndex(i => Math.min(cards.length - cardsPerPage, i + cardsPerPage))}
+                    disabled={cardStartIndex + cardsPerPage >= cards.length}
+                  >
+                    Next
+                  </button>
+                </div>
+              </>
+            ) : (
+              <p className="text-gray-500 p-4 text-center">No {tabOptions.find(t => t.value === activeTab)?.label?.toLowerCase() || activeTab} recommendations available.</p>
+            )}
+          </div>
+        </div>
+
+        {/* Recent Intervention Records */}
         <div className="flex justify-between items-center mb-[-35px]">
           <p className="text-base-content text-4xl font-bold ">
             Recent Intervention Records
@@ -235,55 +401,6 @@ const Interventions = () => {
         <div className="h-135">
           {/* Pass the interventions data to the table */}
           <InterventionsTable interventions={interventions} onlyRecent={true} />
-        </div>
-
-        <div className="flex flex-col w-full gap-10 lg:flex-row">
-          {/* <div className="lg:flex-21">
-            <FormCoordinationRequest />
-          </div> */}
-          <div className="flex flex-col lg:flex-23 gap-4">
-            <p className="text-base-content text-4xl font-bold mb-1">
-              Prescriptive Action Recommendations
-            </p>
-
-            {/* Search and Filter UI for Recommendations */}
-            <div className="flex flex-col sm:flex-row gap-4 mb-4 p-4 bg-base-200 rounded-lg">
-              <input 
-                type="text"
-                placeholder="Search recommendations (barangay, alert, pattern...)"
-                value={recommendationSearchQuery}
-                onChange={(e) => setRecommendationSearchQuery(e.target.value)}
-                className="input input-bordered w-full sm:flex-1 bg-white"
-              />
-              <select 
-                value={patternFilter}
-                onChange={(e) => setPatternFilter(e.target.value)}
-                className="select select-bordered w-full sm:w-auto bg-white"
-              >
-                <option value="">All Patterns</option>
-                {uniquePatternTypes.map(pattern => (
-                  <option key={pattern} value={pattern}>
-                    {pattern.charAt(0).toUpperCase() + pattern.slice(1).replace('_', ' ')}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Dynamically render ActionRecommendationCards based on filteredRecommendations */}
-            {filteredRecommendations.length > 0 ? (
-              filteredRecommendations.map(item => (
-                <ActionRecommendationCard
-                  key={item.name + item.patternType}
-                  barangay={item.name}
-                  patternType={item.patternType}
-                  issueDetected={item.issueDetected}
-                  suggestedAction={item.suggestedAction}
-                />
-              ))
-            ) : (
-              <p className="text-gray-500 p-4 text-center">No recommendations match your criteria.</p>
-            )}
-          </div>
         </div>
       </section>
     </main>
