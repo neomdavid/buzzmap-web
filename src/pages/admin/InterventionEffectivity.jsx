@@ -1,6 +1,8 @@
 import React, { useState, useMemo } from 'react';
 import { InterventionAnalysisChart } from '../../components';
 import { useGetAllInterventionsQuery } from '../../api/dengueApi';
+import { MagnifyingGlass, Users, TrendUp, TrendDown, MinusCircle } from 'phosphor-react';
+import { IconUserCheck, IconClipboardList } from '@tabler/icons-react';
 
 function getDaysSince(dateStr) {
   const now = new Date();
@@ -72,33 +74,41 @@ const InterventionEffectivity = () => {
   }
 
   return (
-    <div className="max-w-5xl mx-auto mt-8">
-      <p className="text-center sm:text-left text-5xl font-extrabold mb-10 text-primary">Intervention Effectivity Dashboard</p>
-      <div className="mb-4 flex flex-col md:flex-row gap-2 md:items-end">
-        <div className="flex gap-2 flex-wrap">
-          <select
-            className="px-2 py-2 border rounded"
-            value={barangayFilter}
-            onChange={e => setBarangayFilter(e.target.value)}
-          >
-            <option value="">All Barangays</option>
-            {barangayOptions.map(b => <option key={b} value={b}>{b}</option>)}
-          </select>
-          <select
-            className="px-2 py-2 border rounded"
-            value={typeFilter}
-            onChange={e => setTypeFilter(e.target.value)}
-          >
-            <option value="">All Types</option>
-            {typeOptions.map(t => <option key={t} value={t}>{t}</option>)}
-          </select>
+    <main className="flex flex-col w-full ">
+      <p className="flex justify-center text-5xl font-extrabold mb-12 text-center md:justify-start md:text-left md:w-[48%]">
+        Intervention Effectivity Dashboard</p>
+      <div className="mb-4 flex flex-col md:flex-row gap-2 md:items-end w-full">
+        <div className="flex flex-row gap-2 w-full">
+          <div className="flex-1">
+            <select
+              className="w-full px-2 py-2 border-2 rounded-full hover:cursor-pointer"
+              value={barangayFilter}
+              onChange={e => setBarangayFilter(e.target.value)}
+            >
+              <option value="">All Barangays</option>
+              {barangayOptions.map(b => <option key={b} value={b}>{b}</option>)}
+            </select>
+          </div>
+          <div className="flex-1">
+            <select
+              className="w-full px-2 py-2 border-2 rounded-full hover:cursor-pointer"
+              value={typeFilter}
+              onChange={e => setTypeFilter(e.target.value)}
+            >
+              <option value="">All Types</option>
+              {typeOptions.map(t => <option key={t} value={t}>{t}</option>)}
+            </select>
+          </div>
         </div>
-        <input
-          className="w-full md:w-auto px-4 py-2 border rounded mb-2 md:mb-0 md:ml-2"
-          placeholder="Search by barangay, type, personnel, or date..."
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-        />
+        <div className="relative w-full md:mt-0 md:w-auto flex items-center">
+          <MagnifyingGlass size={16} className="absolute left-4 sm:left-6 top-5.5 sm:top-1/2 -translate-y-1/2 text-primary pointer-events-none" />
+          <input
+            className="w-full pl-10 sm:pl-12 pr-4 py-2 border-2 rounded-full mb-2 md:mb-0 md:ml-2"
+            placeholder="Search by barangay, type, personnel, or date..."
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+          />
+        </div>
       </div>
       <div className="max-h-48 overflow-y-auto border rounded bg-white mb-4">
         {isLoading && <div className="p-2 text-gray-500">Loading interventions...</div>}
@@ -117,28 +127,48 @@ const InterventionEffectivity = () => {
         ))}
       </div>
       {selected && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-          {/* Intervention Details Card */}
-          {/* <div className="bg-white rounded shadow p-4 flex flex-col gap-2 border">
-            <p className="font-bold text-lg text-primary mb-2">Intervention Details</p>
-            <div><span className="font-semibold">Type:</span> {selected.interventionType}</div>
-            <div><span className="font-semibold">Barangay:</span> {selected.barangay}</div>
-            <div><span className="font-semibold">Date:</span> {new Date(selected.date).toLocaleDateString()}</div>
-            <div><span className="font-semibold">Personnel:</span> {selected.personnel}</div>
-            {selected.status && <div><span className="font-semibold">Status:</span> {selected.status}</div>}
-            {selected.description && <div><span className="font-semibold">Description:</span> {selected.description}</div>}
-            {selected.notes && <div><span className="font-semibold">Notes:</span> {selected.notes}</div>}
-          </div> */}
+        <div className="flex flex-col md:flex-row gap-6 w-full mb-8">
+       
+          
           {/* Summary Statistics Card */}
-          <div className="bg-white rounded shadow p-4 flex flex-col gap-2 border">
-            <p className="font-bold text-lg text-primary mb-2">Summary Statistics</p>
-            <div><span className="font-semibold">Total Before:</span> <span className="text-blue-600">{stats.totalBefore}</span></div>
-            <div><span className="font-semibold">Total After:</span> <span className={stats.percentChange < 0 ? 'text-green-600' : stats.percentChange > 0 ? 'text-red-600' : 'text-gray-600'}>{stats.totalAfter}</span></div>
-            <div><span className="font-semibold">% Change:</span> <span className={typeof stats.percentChange === 'number' && stats.percentChange < 0 ? 'text-green-600' : stats.percentChange > 0 ? 'text-red-600' : 'text-gray-600'}>{stats.percentChange}%</span></div>
+          <div className="flex-1 min-w-0 w-full bg-neutral-content rounded-lg shadow-sm p-8 flex flex-col items-center gap-6 border border-neutral-200">
+            <p className="text-base-content text-3xl font-bold text-left w-full mb-2 tracking-tight">Summary Statistics</p>
+            <div className="flex flex-col md:flex-row gap-6 w-full">
+              {/* Total Before */}
+              <div className="flex-1 min-w-0 w-full flex flex-col items-center bg-white shadow-sm p-8 rounded-2xl transition-transform hover:scale-[1.025]">
+                <div className="mb-2 flex items-center justify-center w-14 h-14 rounded-full bg-primary/10">
+                  <Users size={32} className="text-primary" />
+                </div>
+                <div className="text-4xl font-extrabold text-primary mb-1">{stats.totalBefore}</div>
+                <div className="text-base font-medium text-gray-500 tracking-wide">Total Before</div>
+              </div>
+              {/* Total After */}
+              <div className="flex-1 min-w-0 w-full flex flex-col items-center bg-white shadow-sm p-8 rounded-2xl transition-transform hover:scale-[1.025]">
+                <div className="mb-2 flex items-center justify-center w-14 h-14 rounded-full bg-green-100">
+                  <IconUserCheck size={32} className="text-green-600" />
+                </div>
+                <div className={stats.percentChange < 0 ? 'text-green-600 text-4xl font-extrabold mb-1' : stats.percentChange > 0 ? 'text-red-600 text-4xl font-extrabold mb-1' : 'text-gray-600 text-4xl font-extrabold mb-1'}>{stats.totalAfter}</div>
+                <div className="text-base font-medium text-gray-500 tracking-wide">Total After</div>
+              </div>
+              {/* Percentage Change */}
+              <div className="flex-1 min-w-0 w-full flex flex-col items-center bg-white shadow-sm p-8 rounded-2xl transition-transform hover:scale-[1.025]">
+                <div className={`mb-2 flex items-center justify-center w-14 h-14 rounded-full ${typeof stats.percentChange === 'number' && stats.percentChange < 0 ? 'bg-green-100' : stats.percentChange > 0 ? 'bg-red-100' : 'bg-gray-200'}`}>
+                  {typeof stats.percentChange === 'number' && stats.percentChange < 0 ? (
+                    <TrendDown size={32} className="text-green-600" />
+                  ) : stats.percentChange > 0 ? (
+                    <TrendUp size={32} className="text-red-600" />
+                  ) : (
+                    <MinusCircle size={32} className="text-gray-400" />
+                  )}
+                </div>
+                <div className={typeof stats.percentChange === 'number' && stats.percentChange < 0 ? 'text-green-600 text-4xl font-extrabold mb-1' : stats.percentChange > 0 ? 'text-red-600 text-4xl font-extrabold mb-1' : 'text-gray-600 text-4xl font-extrabold mb-1'}>{stats.percentChange}%</div>
+                <div className="text-base font-medium text-gray-500 tracking-wide">Percentage Change</div>
+              </div>
+            </div>
           </div>
         </div>
       )}
-      <div className="mt-8">
+      <div className="">
         {selectedId ? (
           <InterventionAnalysisChart interventionId={selectedId} onStats={setStats} percentChange={stats.percentChange} />
         ) : (
@@ -148,7 +178,7 @@ const InterventionEffectivity = () => {
           </div>
         )}
       </div>
-    </div>
+    </main>
   );
 };
 

@@ -237,29 +237,6 @@ const Interventions = () => {
           <InterventionsTable interventions={interventions} onlyRecent={true} />
         </div>
 
-        {/* New Intervention Effectivity Glimpse Section */}
-        <div className="mt-8">
-          <p className="text-base-content text-4xl font-bold mb-4">
-            Intervention Effectivity
-          </p>
-          <Link
-            to="/admin/interventions/e"
-            className="block p-6 bg-white rounded-2xl shadow-md hover:shadow-lg transition-shadow duration-200"
-          >
-            <p className="text-2xl font-bold text-primary mb-2">
-              Analyze Intervention Impact
-            </p>
-            <p className="text-gray-600 text-lg mb-3">
-              Review the effectiveness of past interventions. Click here to view detailed analysis and charts comparing dengue cases before and after specific interventions.
-            </p>
-            <div className="text-right">
-              <span className="text-primary font-semibold hover:underline">
-                View Full Analysis &rarr;
-              </span>
-            </div>
-          </Link>
-        </div>
-
         <div className="flex flex-col w-full gap-10 lg:flex-row">
           {/* <div className="lg:flex-21">
             <FormCoordinationRequest />

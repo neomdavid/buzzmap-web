@@ -84,6 +84,11 @@ const AdminLayout = () => {
                 label: "Interventions",
               },
               {
+                to: "/admin/intervention-effectivity",
+                icon: <ChartBar weight="fill" size={20} />,
+                label: "Intervention Effectivity",
+              },
+              {
                 to: "/admin/cea",
                 icon: <UsersThree weight="fill" size={30} />,
                 label: "Community Engagement & Awareness",

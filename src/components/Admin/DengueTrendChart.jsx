@@ -245,7 +245,7 @@ export default function DengueTrendChart({ selectedBarangay, onBarangayChange })
             />
             <ReferenceLine
               x={chartData[chartData.length - 4]?.week}
-              stroke="#4B5563"
+              stroke="#9ca3af"
               strokeDasharray="5 5"
               strokeWidth={1}
               segment={[
@@ -269,7 +269,7 @@ export default function DengueTrendChart({ selectedBarangay, onBarangayChange })
                       y={2}
                       textAnchor="middle"
                       dominantBaseline="middle"
-                      fill="#4B5563"
+                      fill="#9ca3af"
                       fontSize={11}
                       fontWeight={500}
                     >

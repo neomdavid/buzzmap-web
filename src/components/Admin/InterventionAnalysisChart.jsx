@@ -13,6 +13,7 @@ import annotationPlugin from 'chartjs-plugin-annotation';
 import { Line } from 'react-chartjs-2';
 import { useAnalyzeInterventionEffectivityMutation } from '../../api/dengueApi';
 import { formatDateWithRelativeTime } from '../../utils';
+import { IconClipboardList } from '@tabler/icons-react';
 
 // Helper to format week range label
 function formatWeekRange(startDate) {
@@ -258,12 +259,7 @@ const InterventionAnalysisChart = ({ interventionId, onStats, percentChange }) =
         display: false // We'll use a custom legend below
       },
       title: {
-        display: true,
-        text: `Dengue Cases Analysis - ${analysisData.intervention.barangay}`,
-        font: {
-          size: 18,
-          weight: 'bold'
-        }
+        display: false
       },
       tooltip: {
         callbacks: {
@@ -335,19 +331,35 @@ const InterventionAnalysisChart = ({ interventionId, onStats, percentChange }) =
   );
 
   return (
-    <div className="w-full p-6 bg-white rounded-lg shadow-sm">
-      <div className="mb-4">
-        <p className="text-3xl font-bold text-primary">
-          Intervention Details
-        </p>
-        <div className="mt-2 text-sm text-primary">
-          <p className='text-lg'><span className="font-bold">Type:</span> {analysisData.intervention.type}</p>
-          <p className='text-lg'><span className="font-bold">Date:</span> {formatDateWithRelativeTime(analysisData.intervention.date)}</p>
-          <p className='text-lg'><span className="font-bold">Personnel:</span> {analysisData.intervention.personnel}</p>
-          <p className='text-lg'><span className="font-bold">Address:</span> {analysisData.intervention.address}</p>
+    <div className="w-full bg-neutral-content rounded-lg shadow-lg p-12 flex flex-col items-center gap-6 max-w-none border border-neutral-200 font-inter">
+      {/* Icon and Title */}
+      <div className="flex flex-col w-full mb-2">
+        <p className="font-bold text-3xl text-base-content text-left w-full tracking-tight font-inter">Intervention Analysis</p>
+      </div>
+      {/* Details */}
+      <div className="w-full flex flex-col gap-2 mb-6 font-inter">
+        <div className="flex flex-row gap-2">
+          <span className="text-gray-500 font-medium w-28 font-inter">Type:</span>
+          <span className="font-semibold text-primary font-inter">{analysisData.intervention.type}</span>
+        </div>
+        <div className="flex flex-row gap-2">
+          <span className="text-gray-500 font-medium w-28 font-inter">Date:</span>
+          <span className="font-semibold text-primary font-inter">{formatDateWithRelativeTime(analysisData.intervention.date)}</span>
+        </div>
+        <div className="flex flex-row gap-2">
+          <span className="text-gray-500 font-medium w-28 font-inter">Personnel:</span>
+          <span className="font-semibold text-primary font-inter">{analysisData.intervention.personnel}</span>
+        </div>
+        <div className="flex flex-row gap-2">
+          <span className="text-gray-500 font-medium w-28 font-inter">Address:</span>
+          <span className="font-semibold text-primary font-inter">{analysisData.intervention.address}</span>
         </div>
       </div>
-
+      {/* Chart Title */}
+      <p className="text-base-content font-bold text-xl mb-[-14px] text-center font-inter">
+        Dengue Cases Analysis - {analysisData.intervention.barangay}
+      </p>
+      {/* Chart */}
       <div className="w-full h-[250px] sm:h-[300px] md:h-[350px] lg:h-[400px] xl:h-[450px]">
         <Line key={JSON.stringify(chartData)} data={chartData} options={options} />
       </div>
