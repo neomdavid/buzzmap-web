@@ -363,89 +363,94 @@ const MapOnly = forwardRef(({
       // Draw intervention markers
       if (showInterventions && interventions.length > 0 && window.google.maps.marker) {
         const { AdvancedMarkerElement, PinElement } = window.google.maps.marker;
-        const interventionMarkers = interventions.map((intervention) => {
-          const iconUrl = INTERVENTION_TYPE_ICONS[intervention.interventionType] || INTERVENTION_TYPE_ICONS.default;
-          const glyphImg = document.createElement("img");
-          glyphImg.src = iconUrl;
-          glyphImg.style.width = "28px";
-          glyphImg.style.height = "28px";
-          glyphImg.style.objectFit = "contain";
-          glyphImg.style.backgroundColor = "#FFFFFF";
-          glyphImg.style.borderRadius = "100%";
-          glyphImg.style.padding = "2px";
+        const interventionMarkers = interventions
+          .filter(intervention => {
+            const status = intervention.status?.toLowerCase();
+            return status === 'ongoing' || status === 'scheduled';
+          })
+          .map((intervention) => {
+            const iconUrl = INTERVENTION_TYPE_ICONS[intervention.interventionType] || INTERVENTION_TYPE_ICONS.default;
+            const glyphImg = document.createElement("img");
+            glyphImg.src = iconUrl;
+            glyphImg.style.width = "28px";
+            glyphImg.style.height = "28px";
+            glyphImg.style.objectFit = "contain";
+            glyphImg.style.backgroundColor = "#FFFFFF";
+            glyphImg.style.borderRadius = "100%";
+            glyphImg.style.padding = "2px";
 
-          const pin = new PinElement({
-            glyph: glyphImg,
-            background: "#1893F8",
-            borderColor: "#1893F8",
-            scale: 1.5,
-          });
-
-          const marker = new AdvancedMarkerElement({
-            map,
-            position: {
-              lat: intervention.specific_location.coordinates[1],
-              lng: intervention.specific_location.coordinates[0],
-            },
-            content: pin.element,
-            title: intervention.interventionType,
-          });
-
-          marker.addListener('click', () => {
-            console.log('[DEBUG] Intervention marker clicked:', {
-              type: 'intervention',
-              intervention: intervention,
-              coordinates: intervention.specific_location.coordinates
+            const pin = new PinElement({
+              glyph: glyphImg,
+              background: "#1893F8",
+              borderColor: "#1893F8",
+              scale: 1.5,
             });
 
-            // Close existing info window if open
-            if (infoWindow) {
-              console.log('[DEBUG] Closing existing info window');
-              infoWindow.close();
-            }
+            const marker = new AdvancedMarkerElement({
+              map,
+              position: {
+                lat: intervention.specific_location.coordinates[1],
+                lng: intervention.specific_location.coordinates[0],
+              },
+              content: pin.element,
+              title: intervention.interventionType,
+            });
 
-            // Pan to marker position and zoom in
-            if (mapInstance.current) {
-              console.log('[DEBUG] Panning to marker position');
-              mapInstance.current.panTo({
+            marker.addListener('click', () => {
+              console.log('[DEBUG] Intervention marker clicked:', {
+                type: 'intervention',
+                intervention: intervention,
+                coordinates: intervention.specific_location.coordinates
+              });
+
+              // Close existing info window if open
+              if (infoWindow) {
+                console.log('[DEBUG] Closing existing info window');
+                infoWindow.close();
+              }
+
+              // Pan to marker position and zoom in
+              if (mapInstance.current) {
+                console.log('[DEBUG] Panning to marker position');
+                mapInstance.current.panTo({
+                  lat: intervention.specific_location.coordinates[1],
+                  lng: intervention.specific_location.coordinates[0],
+                });
+                mapInstance.current.setZoom(17);
+              }
+
+              // Use a div with Tailwind classes for InfoWindow content
+              const content = document.createElement('div');
+              content.innerHTML = `
+                <div class="p-3 flex flex-col items-center gap-1 font-normal bg-white text-center rounded-md shadow-md text-primary">
+                  <p class="text-4xl font-extrabold text-primary mb-2">${intervention.interventionType || 'Intervention'}</p>
+                  <div class="text-lg flex items-center gap-2">
+                    <span class="font-bold">Status:</span>
+                    <span class="px-3 py-1 rounded-full text-white font-bold text-sm" style="background-color:#FF6347;box-shadow:0 1px 4px rgba(0,0,0,0.08);">
+                      ${intervention.status || ''}
+                    </span>
+                  </div>
+                  <p class="text-lg text-center"><span class="font-bold">Barangay:</span> ${intervention.barangay || ''}</p>
+                  ${intervention.address ? `<p class="text-lg text-center"><span class="font-bold text-center">Address:</span> ${intervention.address}</p>` : ''}
+                  <p class="text-lg"><span class="font-bold">Date:</span> ${intervention.date ? new Date(intervention.date).toLocaleString('en-US', { year: 'numeric', month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true }) : ''}</p>
+                  <p class="text-lg"><span class="font-bold">Personnel:</span> ${intervention.personnel || ''}</p>
+                </div>
+              `;
+              console.log('[DEBUG] Created info window content');
+
+              console.log('[DEBUG] Setting info window content and position');
+              infoWindow.setContent(content);
+              infoWindow.setPosition({
                 lat: intervention.specific_location.coordinates[1],
                 lng: intervention.specific_location.coordinates[0],
               });
-              mapInstance.current.setZoom(17);
-            }
 
-            // Use a div with Tailwind classes for InfoWindow content
-            const content = document.createElement('div');
-            content.innerHTML = `
-              <div class="p-3 flex flex-col items-center gap-1 font-normal bg-white text-center rounded-md shadow-md text-primary">
-                <p class="text-4xl font-extrabold text-primary mb-2">${intervention.interventionType || 'Intervention'}</p>
-                <div class="text-lg flex items-center gap-2">
-                  <span class="font-bold">Status:</span>
-                  <span class="px-3 py-1 rounded-full text-white font-bold text-sm" style="background-color:#FF6347;box-shadow:0 1px 4px rgba(0,0,0,0.08);">
-                    ${intervention.status || ''}
-                  </span>
-                </div>
-                <p class="text-lg text-center"><span class="font-bold">Barangay:</span> ${intervention.barangay || ''}</p>
-                ${intervention.address ? `<p class="text-lg text-center"><span class="font-bold text-center">Address:</span> ${intervention.address}</p>` : ''}
-                <p class="text-lg"><span class="font-bold">Date:</span> ${intervention.date ? new Date(intervention.date).toLocaleString('en-US', { year: 'numeric', month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true }) : ''}</p>
-                <p class="text-lg"><span class="font-bold">Personnel:</span> ${intervention.personnel || ''}</p>
-              </div>
-            `;
-            console.log('[DEBUG] Created info window content');
-
-            console.log('[DEBUG] Setting info window content and position');
-            infoWindow.setContent(content);
-            infoWindow.setPosition({
-              lat: intervention.specific_location.coordinates[1],
-              lng: intervention.specific_location.coordinates[0],
+              console.log('[DEBUG] Opening info window');
+              infoWindow.open(map, marker);
             });
 
-            console.log('[DEBUG] Opening info window');
-            infoWindow.open(map, marker);
+            return marker;
           });
-
-          return marker;
-        });
         overlays.push(...interventionMarkers);
       }
 

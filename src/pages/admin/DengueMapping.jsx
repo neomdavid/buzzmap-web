@@ -52,10 +52,13 @@ const DengueMapping = () => {
     }
   }, [allInterventionsData]);
 
-  const { data: interventionsInProgress } = useGetInterventionsInProgressQuery(
-    selectedBarangay?.name?.toLowerCase().replace(/\s+/g, '') || '',
+  const { data: interventionsInProgress, error: interventionsError } = useGetInterventionsInProgressQuery(
+    selectedBarangay?.properties?.name?.toLowerCase().replace(/\s+/g, '') || '',
     {
       skip: !selectedBarangay,
+      onError: (error) => {
+        console.error('[DEBUG] Error fetching interventions:', error);
+      }
     }
   );
 
@@ -83,6 +86,15 @@ const DengueMapping = () => {
     console.log('[DEBUG] Filtered allPostsArray:', allPostsArray);
 
     const filteredPosts = allPostsArray.filter(post => {
+      // Debug each post's properties
+      console.log('[DEBUG] Checking post:', {
+        id: post._id,
+        status: post.status,
+        hasCoordinates: !!post.specific_location?.coordinates,
+        coordinates: post.specific_location?.coordinates,
+        barangay: post.barangay
+      });
+
       // Only include validated posts with coordinates
       if (!post || post.status !== "Validated" || !post.specific_location?.coordinates) {
         console.log('[DEBUG] Skipping post - Invalid status or no coordinates:', post);
@@ -101,8 +113,9 @@ const DengueMapping = () => {
       uniqueReports.add(uniqueKey);
 
       // If the barangay has coordinates, calculate distance
-      if (selectedBarangay.coordinates && Array.isArray(selectedBarangay.coordinates)) {
-        const [barangayLng, barangayLat] = selectedBarangay.coordinates;
+      if (selectedBarangay.geometry?.coordinates) {
+        const center = turf.center(selectedBarangay.geometry);
+        const [barangayLng, barangayLat] = center.geometry.coordinates;
         const [postLng, postLat] = post.specific_location.coordinates;
         
         // Calculate distance using Haversine formula
@@ -121,8 +134,8 @@ const DengueMapping = () => {
       }
       
       // If no coordinates, just check if the barangay names match
-      return post.barangay && selectedBarangay.name && 
-             post.barangay.toLowerCase() === selectedBarangay.name.toLowerCase();
+      return post.barangay && selectedBarangay.properties?.name && 
+             normalizeBarangayName(post.barangay) === normalizeBarangayName(selectedBarangay.properties.name);
     });
 
     console.log('[DEBUG] Filtered Posts:', filteredPosts);
@@ -130,8 +143,9 @@ const DengueMapping = () => {
     const nearbyReportsWithDistance = filteredPosts
       .map(post => {
         let distance = 0;
-        if (selectedBarangay.coordinates && Array.isArray(selectedBarangay.coordinates)) {
-          const [barangayLng, barangayLat] = selectedBarangay.coordinates;
+        if (selectedBarangay.geometry?.coordinates) {
+          const center = turf.center(selectedBarangay.geometry);
+          const [barangayLng, barangayLat] = center.geometry.coordinates;
           const [postLng, postLat] = post.specific_location.coordinates;
           
           // Calculate distance using Haversine formula
@@ -261,7 +275,7 @@ const DengueMapping = () => {
           ...barangay.properties,
           name: barangay.properties?.name,
           displayName: matching?.displayName || barangay.properties?.name,
-          patternType: matching?.patternType || barangay.properties?.patternType || 'none',
+          patternType: matching?.status_and_recommendation?.pattern_based?.status || barangay.properties?.patternType || 'none',
           status_and_recommendation: matching?.status_and_recommendation || barangay.properties?.status_and_recommendation,
           risk_level: matching?.risk_level || barangay.properties?.risk_level,
           pattern_data: matching?.pattern_data || barangay.properties?.pattern_data
@@ -302,7 +316,12 @@ const DengueMapping = () => {
             type: 'Feature',
             properties: {
               ...feature.properties,
-              ...barangay  // Include all barangay data
+              name: barangay.name,
+              displayName: barangay.displayName || barangay.name,
+              patternType: barangay.status_and_recommendation?.pattern_based?.status || 'none',
+              status_and_recommendation: barangay.status_and_recommendation,
+              risk_level: barangay.risk_level,
+              pattern_data: barangay.pattern_data
             },
             geometry: feature.geometry
           };
@@ -486,6 +505,13 @@ const DengueMapping = () => {
     }
   };
 
+  // Add debug logging for interventions error
+  useEffect(() => {
+    if (interventionsError) {
+      console.error('[DEBUG] Interventions API Error:', interventionsError);
+    }
+  }, [interventionsError]);
+
   return (
     <main className="flex flex-col w-full">
       <p className="flex justify-center text-5xl font-extrabold mb-12 text-center md:justify-start md:text-left md:w-[78%]">
@@ -525,13 +551,28 @@ const DengueMapping = () => {
           )}
         </div>
         
-        {/* <button
-          onClick={() => setShowImportModal(true)}
-          className="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors"
-        >
-          <Upload size={20} />
-          Import CSV
-        </button> */}
+        <div className="flex gap-2">
+          <button
+            onClick={() => setShowBreedingSites((prev) => !prev)}
+            className={`px-4 py-2 rounded-lg shadow-lg transition-all duration-200 ${
+              showBreedingSites 
+                ? 'bg-primary text-white hover:bg-primary/90' 
+                : 'bg-white text-primary hover:bg-gray-50'
+            }`}
+          >
+            {showBreedingSites ? 'Hide Breeding Sites' : 'Show Breeding Sites'}
+          </button>
+          <button
+            onClick={() => setShowInterventions((prev) => !prev)}
+            className={`px-4 py-2 rounded-lg shadow-lg transition-all duration-200 ${
+              showInterventions 
+                ? 'bg-primary text-white hover:bg-primary/90' 
+                : 'bg-white text-primary hover:bg-gray-50'
+            }`}
+          >
+            {showInterventions ? 'Hide Interventions' : 'Show Interventions'}
+          </button>
+        </div>
       </div>
 
       <div className="flex h-[50vh] mb-4" ref={mapContainerRef}>
@@ -575,88 +616,74 @@ const DengueMapping = () => {
           }}
         />
       </div>
-      <div className="flex gap-2 mb-4">
-        <button
-          onClick={() => setShowBreedingSites((prev) => !prev)}
-          className={`px-4 py-2 rounded ${showBreedingSites ? 'bg-primary text-white' : 'bg-gray-200 text-primary'}`}
-        >
-          {showBreedingSites ? 'Hide Breeding Sites' : 'Show Breeding Sites'}
-        </button>
-        <button
-          onClick={() => setShowInterventions((prev) => !prev)}
-          className={`px-4 py-2 rounded ${showInterventions ? 'bg-primary text-white' : 'bg-gray-200 text-primary'}`}
-        >
-          {showInterventions ? 'Hide Interventions' : 'Show Interventions'}
-        </button>
-      </div>
       <p className="text-left text-primary text-lg font-extrabold flex items-center gap-2 mb-8">
         <div className="text-success">
           <MapPinLine  size={16} />
         </div>
         Click on a Barangay to view details
       </p>
-      <div className="grid grid-cols-10 gap-10">
-        <div className={`col-span-4 border-2 ${getBorderColor(selectedBarangay?.properties?.patternType)} rounded-2xl flex flex-col p-4 gap-1`}>
-          <p className="text-center font-semibold text-base-content">Selected Barangay - Dengue Overview</p>
-          <p className={`text-center font-bold ${getPatternTextColor(selectedBarangay?.properties?.patternType)} text-4xl mb-2`}>
-            {selectedBarangay ? `Barangay ${selectedBarangay.properties?.displayName || selectedBarangay.properties?.name}` : 'Select a Barangay'}
-          </p>
-          <p className={`text-center font-semibold text-white text-lg uppercase mb-4 px-4 py-1 rounded-full inline-block mx-auto ${getPatternBgColor(selectedBarangay?.properties?.patternType)}`}>
-            {selectedBarangay
-              ? selectedBarangay.properties?.patternType
-                ? (selectedBarangay.properties.patternType.charAt(0).toUpperCase() + selectedBarangay.properties.patternType.slice(1).replace('_', ' '))
-                : 'NO PATTERN DETECTED'
-              : 'NO BARANGAY SELECTED'
-            }
-          </p>
-          <div className="w-[90%] mx-auto flex flex-col text-black gap-2">
-            {/* Pattern-Based */}
-            {selectedBarangay?.status_and_recommendation?.pattern_based &&
-              selectedBarangay.status_and_recommendation.pattern_based.status &&
-              selectedBarangay.status_and_recommendation.pattern_based.status.trim() !== "" && (
-                <>
-                  <p className="font-bold text-lg text-primary mb-1">Pattern-Based</p>
-                  {selectedBarangay.status_and_recommendation.pattern_based.alert && (
-                    <p className=""><span className="font-bold">Alert: </span>
-                      {selectedBarangay.status_and_recommendation.pattern_based.alert.replace(
-                        new RegExp(`^${selectedBarangay.properties?.displayName || selectedBarangay.properties?.name}:?\\s*`, "i"),
-                        ""
-                      )}
-                    </p>
-                  )}
-                  {selectedBarangay.status_and_recommendation.pattern_based.recommendation && (
-                    <p className=""><span className="font-bold">Recommendation: </span>
-                      {selectedBarangay.status_and_recommendation.pattern_based.recommendation}
-                    </p>
-                  )}
-                  <hr className="border-t border-gray-200 my-2" />
-                </>
-            )}
-            {/* Report-Based */}
-            {selectedBarangay?.status_and_recommendation?.report_based &&
-              selectedBarangay.status_and_recommendation.report_based.status &&
-              selectedBarangay.status_and_recommendation.report_based.status.trim() !== "" && (
-                <>
-                  <p className="font-bold text-lg text-primary mb-1">Report-Based</p>
-                  {/* Status as badge with label */}
-                  <div className="mb-2 flex items-center gap-2">
-                    <span className="font-bold">Status:</span>
-                    <span className={`inline-block px-3 py-1 rounded-full text-white text-md font-bold capitalize ${(() => {
-                      const status = selectedBarangay.status_and_recommendation.report_based.status.toLowerCase();
-                      if (status === 'low') return 'bg-success';
-                      if (status === 'medium') return 'bg-warning';
-                      if (status === 'high') return 'bg-error';
-                      return 'bg-gray-400';
-                    })()}`}>{selectedBarangay.status_and_recommendation.report_based.status}</span>
-                  </div>
-                  {selectedBarangay.status_and_recommendation.report_based.alert && (
-                    <p className=""><span className="font-bold">Alert: </span>
-                      {selectedBarangay.status_and_recommendation.report_based.alert}
-                    </p>
-                  )}
-                  {selectedBarangay.status_and_recommendation.report_based.recommendation && (
-                    <p className=""><span className="font-bold">Recommendation: </span>
-                      {selectedBarangay.status_and_recommendation.report_based.recommendation}
+        <div className="grid grid-cols-10 gap-10">
+          <div className={`col-span-4 border-2 ${getBorderColor(selectedBarangay?.properties?.patternType)} rounded-2xl flex flex-col p-4 gap-1`}>
+            <p className="text-center font-semibold text-base-content">Selected Barangay - Dengue Overview</p>
+            <p className={`text-center font-bold ${getPatternTextColor(selectedBarangay?.properties?.patternType)} text-4xl mb-2`}>
+              {selectedBarangay ? `Barangay ${selectedBarangay.properties?.displayName || selectedBarangay.properties?.name}` : 'Select a Barangay'}
+            </p>
+            <p className={`text-center font-semibold text-white text-lg uppercase mb-4 px-4 py-1 rounded-full inline-block mx-auto ${getPatternBgColor(selectedBarangay?.properties?.patternType)}`}>
+              {selectedBarangay
+                ? selectedBarangay.properties?.patternType
+                  ? (selectedBarangay.properties.patternType.charAt(0).toUpperCase() + selectedBarangay.properties.patternType.slice(1).replace('_', ' '))
+                  : 'NO PATTERN DETECTED'
+                : 'NO BARANGAY SELECTED'
+              }
+            </p>
+            <div className="w-[90%] mx-auto flex flex-col text-black gap-2">
+              {/* Pattern-Based */}
+              {selectedBarangay?.status_and_recommendation?.pattern_based &&
+                selectedBarangay.status_and_recommendation.pattern_based.status &&
+                selectedBarangay.status_and_recommendation.pattern_based.status.trim() !== "" && (
+                  <>
+                    <p className="font-bold text-lg text-primary mb-1">Pattern-Based</p>
+                    {selectedBarangay.status_and_recommendation.pattern_based.alert && (
+                      <p className=""><span className="font-bold">Alert: </span>
+                        {selectedBarangay.status_and_recommendation.pattern_based.alert.replace(
+                          new RegExp(`^${selectedBarangay.properties?.displayName || selectedBarangay.properties?.name}:?\\s*`, "i"),
+                          ""
+                        )}
+                      </p>
+                    )}
+                    {selectedBarangay.status_and_recommendation.pattern_based.recommendation && (
+                      <p className=""><span className="font-bold">Recommendation: </span>
+                        {selectedBarangay.status_and_recommendation.pattern_based.recommendation}
+                      </p>
+                    )}
+                    <hr className="border-t border-gray-200 my-2" />
+                  </>
+              )}
+              {/* Report-Based */}
+              {selectedBarangay?.status_and_recommendation?.report_based &&
+                selectedBarangay.status_and_recommendation.report_based.status &&
+                selectedBarangay.status_and_recommendation.report_based.status.trim() !== "" && (
+                  <>
+                    <p className="font-bold text-lg text-primary mb-1">Report-Based</p>
+                    {/* Status as badge with label */}
+                    <div className="mb-2 flex items-center gap-2">
+                      <span className="font-bold">Status:</span>
+                      <span className={`inline-block px-3 py-1 rounded-full text-white text-md font-bold capitalize ${(() => {
+                        const status = selectedBarangay.status_and_recommendation.report_based.status.toLowerCase();
+                        if (status === 'low') return 'bg-success';
+                        if (status === 'medium') return 'bg-warning';
+                        if (status === 'high') return 'bg-error';
+                        return 'bg-gray-400';
+                      })()}`}>{selectedBarangay.status_and_recommendation.report_based.status}</span>
+                    </div>
+                    {selectedBarangay.status_and_recommendation.report_based.alert && (
+                      <p className=""><span className="font-bold">Alert: </span>
+                        {selectedBarangay.status_and_recommendation.report_based.alert}
+                      </p>
+                    )}
+                    {selectedBarangay.status_and_recommendation.report_based.recommendation && (
+                      <p className=""><span className="font-bold">Recommendation: </span>
+                        {selectedBarangay.status_and_recommendation.report_based.recommendation}
                     </p>
                   )}
                   <hr className="border-t border-gray-200 my-2" />
@@ -708,35 +735,78 @@ const DengueMapping = () => {
               </div>
             </div>
             <hr className="border-t border-gray-200 my-2" />
-            {/* Interventions in Progress */}
-            <p className=""><span className="text-primary font-bold text-lg">Interventions in Progress: </span>  </p>
-            <div className="w-[80%] mx-auto mt-1">
-              {interventionsInProgress && interventionsInProgress.length > 0 ? (
-                interventionsInProgress.map((intervention) => (
-                  <div key={intervention._id} className="flex gap-2 items-start mb-2">
-                    <div className="text-success mt-[2px]">
-                      <CheckCircle size={16} />
-                    </div>
-                    <div>
-                      <p>
-                        <span className="font-semibold">
-                          {new Date(intervention.date).toLocaleDateString('en-US', {
-                            month: 'long',
-                            day: 'numeric'
-                          })}: 
-                        </span> 
-                        {' '+intervention.interventionType}
-                      </p>
-                      <p className="text-sm text-gray-600">
-                        Personnel: {intervention.personnel}
-                      </p>
-                    </div>
+            {/* Interventions Section */}
+            {interventionsInProgress && (interventionsInProgress.some(i => i.status?.toLowerCase() === 'ongoing') || 
+                                       interventionsInProgress.some(i => i.status?.toLowerCase() === 'scheduled')) && (
+              <>
+                <p className=""><span className="text-primary font-bold text-lg">Interventions: </span>  </p>
+                <div className="w-[80%] mx-auto mt-1">
+                  {/* Ongoing Interventions */}
+                  <div className="mb-4">
+                    <p className="font-semibold text-gray-700 mb-2">Ongoing:</p>
+                    {interventionsInProgress.filter(i => i.status?.toLowerCase() === 'ongoing').length > 0 ? (
+                      interventionsInProgress
+                        .filter(i => i.status?.toLowerCase() === 'ongoing')
+                        .map((intervention) => (
+                          <div key={intervention._id} className="flex gap-2 items-start mb-2">
+                            <div className="text-success mt-[2px]">
+                              <CheckCircle size={16} />
+                            </div>
+                            <div>
+                              <p>
+                                <span className="font-semibold">
+                                  {new Date(intervention.date).toLocaleDateString('en-US', {
+                                    month: 'long',
+                                    day: 'numeric'
+                                  })}: 
+                                </span> 
+                                {' '+intervention.interventionType}
+                              </p>
+                              <p className="text-sm text-gray-600">
+                                Personnel: {intervention.personnel}
+                              </p>
+                            </div>
+                          </div>
+                        ))
+                    ) : (
+                      <p className="text-gray-500 italic">No ongoing interventions</p>
+                    )}
                   </div>
-                ))
-              ) : (
-                <p className="text-gray-500 italic text-lg">No interventions in progress</p>
-              )}
-            </div>
+
+                  {/* Scheduled Interventions */}
+                  <div>
+                    <p className="font-semibold text-gray-700 mb-2">Scheduled:</p>
+                    {interventionsInProgress.filter(i => i.status?.toLowerCase() === 'scheduled').length > 0 ? (
+                      interventionsInProgress
+                        .filter(i => i.status?.toLowerCase() === 'scheduled')
+                        .map((intervention) => (
+                          <div key={intervention._id} className="flex gap-2 items-start mb-2">
+                            <div className="text-warning mt-[2px]">
+                              <Hourglass size={16} />
+                            </div>
+                            <div>
+                              <p>
+                                <span className="font-semibold">
+                                  {new Date(intervention.date).toLocaleDateString('en-US', {
+                                    month: 'long',
+                                    day: 'numeric'
+                                  })}: 
+                                </span> 
+                                {' '+intervention.interventionType}
+                              </p>
+                              <p className="text-sm text-gray-600">
+                                Personnel: {intervention.personnel}
+                              </p>
+                            </div>
+                          </div>
+                        ))
+                    ) : (
+                      <p className="text-gray-500 italic">No scheduled interventions</p>
+                    )}
+                  </div>
+                </div>
+              </>
+            )}
           </div>
           <div className="flex justify-end">
             {/* <button className="bg-primary rounded-full text-white px-4 py-1 text-[11px] hover:bg-primary/80 hover:scale-105 transition-all duration-200 active:scale-95 cursor-pointer">
