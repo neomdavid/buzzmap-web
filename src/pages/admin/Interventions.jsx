@@ -169,9 +169,25 @@ const Interventions = () => {
 
   // Carousel state for recommendations
   const [cardStartIndex, setCardStartIndex] = useState(0);
-  const cardsPerPage = 3;
+  const [cardsPerPage, setCardsPerPage] = useState(3);
   const cards = filteredRecommendations.filter(item => item.patternType === activeTab);
   const visibleCards = cards.slice(cardStartIndex, cardStartIndex + cardsPerPage);
+
+  // Responsive cardsPerPage
+  useEffect(() => {
+    function handleResize() {
+      if (window.innerWidth < 640) { // sm
+        setCardsPerPage(1);
+      } else if (window.innerWidth < 1024) { // md
+        setCardsPerPage(2);
+      } else {
+        setCardsPerPage(3);
+      }
+    }
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // Extract shared info for the current pattern (if any cards exist)
   const sharedPattern = cards[0]?.patternType;
@@ -366,31 +382,33 @@ const Interventions = () => {
                     </p>
                   )}
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {visibleCards.map(item => (
-                    <div key={item.name + item.patternType} className="flex flex-col items-center">
-                      <ActionRecommendationCard
-                        barangay={item.name}
-                        patternType={item.patternType}
-                        issueDetected={item.issueDetected}
-                        suggestedAction={item.suggestedAction}
-                        hideSharedInfo={true}
-                      />
-                      {(['spike', 'gradual_rise', 'stability'].includes(item.patternType)) && (
-                        <button
-                          className="mt-4 bg-primary text-white px-4 py-2 rounded-full shadow font-semibold hover:bg-primary/80 transition-all"
-                          onClick={() => {
-                            setSelectedBarangay(item.name);
-                            setSelectedPattern(item.patternType);
-                            setSelectedUrgency(patternUrgencyMap[item.patternType] || 'Action Required');
-                            setShowAddModal(true);
-                          }}
-                        >
-                          Apply
-                        </button>
-                      )}
-                    </div>
-                  ))}
+                <div className="overflow-y-auto max-h-[500px]">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {visibleCards.map(item => (
+                      <div key={item.name + item.patternType} className="flex flex-col items-center">
+                        <ActionRecommendationCard
+                          barangay={item.name}
+                          patternType={item.patternType}
+                          issueDetected={item.issueDetected}
+                          suggestedAction={item.suggestedAction}
+                          hideSharedInfo={true}
+                        />
+                        {(['spike', 'gradual_rise', 'stability'].includes(item.patternType)) && (
+                          <button
+                            className="mt-4 bg-primary text-white px-4 py-2 rounded-full shadow font-semibold hover:bg-primary/80 transition-all"
+                            onClick={() => {
+                              setSelectedBarangay(item.name);
+                              setSelectedPattern(item.patternType);
+                              setSelectedUrgency(patternUrgencyMap[item.patternType] || 'Action Required');
+                              setShowAddModal(true);
+                            }}
+                          >
+                            Apply
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
                 </div>
                 <div className="flex justify-center gap-2 mt-4">
                   <button
@@ -420,7 +438,6 @@ const Interventions = () => {
           <p className="text-base-content text-4xl font-bold ">
             Recent Intervention Records
           </p>
-          {/* Link to View All Records */}
           <Link
             to="/admin/interventions/all"
             className="bg-primary text-center text-nowrap font-semibold text-white py-1 px-3 rounded-full text-sm hover:bg-primary/80 transition-all duration-200"
@@ -429,9 +446,10 @@ const Interventions = () => {
           </Link>
         </div>
         <div className="h-135">
-          {/* Pass the interventions data to the table */}
+         
           <InterventionsTable interventions={interventions} onlyRecent={true} />
         </div>
+       
       </section>
 
       {/* AddInterventionModal for Apply button */}

@@ -184,11 +184,11 @@ function InterventionsTable({
   };
 
   return (
-    <div className="flex flex-col h-full gap-6">
+    <div className="flex flex-col h-full min-h-0 gap-6">
       <div
-        className="ag-theme-quartz flex-grow"
+        className="ag-theme-quartz flex-1 min-h-0"
         ref={gridRef}
-        style={{ height: "100%", width: "100%" }}
+        style={{ height: "100%", width: "100%", minHeight: 0 }}
       >
         <AgGridReact
           ref={gridRef}
