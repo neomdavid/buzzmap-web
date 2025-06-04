@@ -19,7 +19,7 @@ const mapContainerStyle = {
   marginBottom: "1rem",
 };
 
-const AddInterventionModal = ({ isOpen, onClose }) => {
+const AddInterventionModal = ({ isOpen, onClose, preselectedBarangay, patternType, patternUrgency }) => {
   const modalRef = useRef(null);
   const [formData, setFormData] = useState({
     barangay: "",
@@ -84,6 +84,44 @@ const AddInterventionModal = ({ isOpen, onClose }) => {
         setSubmissionError("Failed to load boundary data. Please refresh the page.");
       });
   }, []);
+
+  // Set preselected barangay when modal opens
+  useEffect(() => {
+    if (isOpen && preselectedBarangay && barangayGeoJsonData && barangayGeoJsonData.features && isBoundaryDataLoaded) {
+      setFormData((prev) => ({ ...prev, barangay: preselectedBarangay }));
+      // Set focusCommand to highlight the barangay on the map
+      console.log('[AddInterventionModal] useEffect: isOpen:', isOpen, 'preselectedBarangay:', preselectedBarangay);
+      const selectedFeature = barangayGeoJsonData.features.find(
+        (feature) => feature.properties.name === preselectedBarangay
+      );
+      if (selectedFeature && selectedFeature.geometry) {
+        try {
+          const center = turf.centerOfMass(selectedFeature);
+          if (center && center.geometry && center.geometry.coordinates) {
+            const [lng, lat] = center.geometry.coordinates;
+            console.log('[AddInterventionModal] Found center for', preselectedBarangay, 'at', lat, lng);
+            setFocusCommand({
+              type: 'barangay',
+              name: preselectedBarangay,
+              center: { lat, lng },
+              zoomLevel: 15,
+            });
+          } else {
+            console.log('[AddInterventionModal] No center found for', preselectedBarangay);
+          }
+        } catch (err) {
+          console.log('[AddInterventionModal] Error calculating center for', preselectedBarangay, err);
+        }
+      } else {
+        console.log('[AddInterventionModal] No feature/geometry found for', preselectedBarangay);
+      }
+    } else {
+      if (!isOpen) console.log('[AddInterventionModal] Modal not open');
+      if (!preselectedBarangay) console.log('[AddInterventionModal] No preselectedBarangay');
+      if (!barangayGeoJsonData) console.log('[AddInterventionModal] barangayGeoJsonData not loaded');
+      if (!isBoundaryDataLoaded) console.log('[AddInterventionModal] Boundary data not loaded');
+    }
+  }, [isOpen, preselectedBarangay, barangayGeoJsonData, isBoundaryDataLoaded]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -398,13 +436,28 @@ const AddInterventionModal = ({ isOpen, onClose }) => {
         className="modal transition-transform duration-300 ease-in-out"
         onClick={(e) => e.target === e.currentTarget && onClose()}
       >
-        <div className="modal-box bg-white rounded-3xl shadow-3xl w-11/12 max-w-5xl p-12 relative"> {/* Increased width */}
+        <div className="modal-box bg-white rounded-3xl shadow-3xl w-11/12 max-w-5xl p-12 pt-12 relative"> {/* Increased width and top padding for badge */}
           <button
             className="absolute top-10 right-10 text-2xl font-semibold hover:text-gray-500 transition-colors duration-200 hover:cursor-pointer"
             onClick={onClose}
           >
             ✕
           </button>
+
+          {/* Badge for detected pattern, now inside modal content and centered */}
+          {patternType && patternUrgency && (
+            <div className="flex justify-center mb-4">
+              <div className={`px-6 py-2 rounded-full font-semibold shadow-lg border-2
+                ${patternType === 'spike' ? 'border-error bg-error/10 text-error' : ''}
+                ${patternType === 'gradual_rise' ? 'border-warning bg-warning/10 text-warning' : ''}
+                ${patternType === 'stability' ? 'border-info bg-info/10 text-info' : ''}
+                ${patternType === 'decline' ? 'border-success bg-success/10 text-success' : ''}
+                ${patternType === 'none' ? 'border-gray-300 bg-gray-100 text-gray-500' : ''}
+              `}>
+                {patternType.charAt(0).toUpperCase() + patternType.slice(1).replace('_', ' ')} detected: {patternUrgency}
+              </div>
+            </div>
+          )}
 
           <p className="text-center text-3xl font-bold mb-6">
             Add New Intervention
@@ -530,9 +583,10 @@ const AddInterventionModal = ({ isOpen, onClose }) => {
                       Pin Intervention Location on Map 
                     </label>
                     <InterventionLocationPicker 
-                      onPinChange={handlePinChange} // Renamed from onLocationSelect
-                      initialPin={formData.specific_location ? { lat: formData.specific_location.coordinates[1], lng: formData.specific_location.coordinates[0] } : null} // Renamed from initialPosition
-                      focusCommand={focusCommand} // Renamed from focusBarangay
+                      onPinChange={handlePinChange}
+                      initialPin={formData.specific_location ? { lat: formData.specific_location.coordinates[1], lng: formData.specific_location.coordinates[0] } : null}
+                      focusCommand={focusCommand}
+                      patternType={patternType}
                     />
                     {/* Error for picker is handled by submissionError or picker's internal messages */}
                   </div>

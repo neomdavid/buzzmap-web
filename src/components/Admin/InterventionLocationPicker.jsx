@@ -36,7 +36,7 @@ function loadGoogleMapsScript(apiKey) {
 const QC_DEFAULT_CENTER = { lat: 14.6488, lng: 121.0509 };
 const MAP_CONTAINER_STYLE = { width: '100%', height: '300px', borderRadius: '0.5rem', marginBottom: '1rem' };
 
-const InterventionLocationPicker = ({ onPinChange, initialPin, focusCommand }) => {
+const InterventionLocationPicker = ({ onPinChange, initialPin, focusCommand, patternType }) => {
   const mapRef = useRef(null);
   const mapInstance = useRef(null);
   const markerRef = useRef(null);
@@ -218,6 +218,15 @@ const InterventionLocationPicker = ({ onPinChange, initialPin, focusCommand }) =
   function drawMapFeatures(map, features, highlightedBarangayName, markerPos) {
     overlaysRef.current.forEach(o => o.setMap(null));
     overlaysRef.current = [];
+    // Pattern color map
+    const patternColors = {
+      spike: { stroke: '#ef4444', fill: '#fee2e2' }, // red
+      gradual_rise: { stroke: '#f59e42', fill: '#fef3c7' }, // yellow/orange
+      stability: { stroke: '#3b82f6', fill: '#dbeafe' }, // blue
+      decline: { stroke: '#22c55e', fill: '#bbf7d0' }, // green
+      none: { stroke: '#6b7280', fill: '#f3f4f6' }, // gray
+    };
+    const highlightColor = patternColors[patternType] || patternColors.none;
     features.forEach((feature) => {
       const geometry = feature.geometry;
       const coordsArray = geometry.type === 'Polygon' ? [geometry.coordinates] : geometry.type === 'MultiPolygon' ? geometry.coordinates : [];

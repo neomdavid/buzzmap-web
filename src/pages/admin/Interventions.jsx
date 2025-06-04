@@ -20,6 +20,7 @@ import { Circle, Lightbulb } from "phosphor-react";
 import dayjs from 'dayjs'; // Import dayjs
 import { useEffect, useState } from 'react'; // Import useState
 import React from 'react';
+import AddInterventionModal from "../../components/Admin/AddInterventionModal";
 
 ChartJS.register(ArcElement, BarElement, CategoryScale, LinearScale, Tooltip, Legend);
 
@@ -217,6 +218,21 @@ const Interventions = () => {
     setCardStartIndex(0);
   }, [activeTab]);
 
+  // State for AddInterventionModal
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [selectedBarangay, setSelectedBarangay] = useState(null);
+  const [selectedPattern, setSelectedPattern] = useState(null);
+  const [selectedUrgency, setSelectedUrgency] = useState(null);
+
+  // Pattern urgency map (should match ActionRecommendationCard)
+  const patternUrgencyMap = {
+    spike: 'Immediate Action Required',
+    gradual_rise: 'Action Required Soon',
+    stability: 'Monitor Situation',
+    decline: 'Continue Monitoring',
+    none: 'No Specific Pattern',
+  };
+
   if (isLoadingInterventions || isLoadingPosts || isLoadingBarangays) {
     return <div>Loading...</div>;
   }
@@ -352,14 +368,28 @@ const Interventions = () => {
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {visibleCards.map(item => (
-                    <ActionRecommendationCard
-                      key={item.name + item.patternType}
-                      barangay={item.name}
-                      patternType={item.patternType}
-                      issueDetected={item.issueDetected}
-                      suggestedAction={item.suggestedAction}
-                      hideSharedInfo={true}
-                    />
+                    <div key={item.name + item.patternType} className="flex flex-col items-center">
+                      <ActionRecommendationCard
+                        barangay={item.name}
+                        patternType={item.patternType}
+                        issueDetected={item.issueDetected}
+                        suggestedAction={item.suggestedAction}
+                        hideSharedInfo={true}
+                      />
+                      {(['spike', 'gradual_rise', 'stability'].includes(item.patternType)) && (
+                        <button
+                          className="mt-4 bg-primary text-white px-4 py-2 rounded-full shadow font-semibold hover:bg-primary/80 transition-all"
+                          onClick={() => {
+                            setSelectedBarangay(item.name);
+                            setSelectedPattern(item.patternType);
+                            setSelectedUrgency(patternUrgencyMap[item.patternType] || 'Action Required');
+                            setShowAddModal(true);
+                          }}
+                        >
+                          Apply
+                        </button>
+                      )}
+                    </div>
                   ))}
                 </div>
                 <div className="flex justify-center gap-2 mt-4">
@@ -403,6 +433,17 @@ const Interventions = () => {
           <InterventionsTable interventions={interventions} onlyRecent={true} />
         </div>
       </section>
+
+      {/* AddInterventionModal for Apply button */}
+      {showAddModal && (
+        <AddInterventionModal
+          isOpen={showAddModal}
+          onClose={() => setShowAddModal(false)}
+          preselectedBarangay={selectedBarangay}
+          patternType={selectedPattern}
+          patternUrgency={selectedUrgency}
+        />
+      )}
     </main>
   );
 };
