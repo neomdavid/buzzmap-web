@@ -5,6 +5,7 @@ import { UserDetailsTab } from "../";
 import { useSelector } from "react-redux";
 import CommentModal from "./CommentModal";
 import { toastInfo } from "../../utils.jsx";
+import axios from "axios";
 
 const PostCard = ({
   profileImage,
@@ -26,14 +27,32 @@ const PostCard = ({
   upvotesArray = [],
   downvotesArray = [],
   _commentCount = 0, // Add this prop with default value
+  userId, // Add userId prop
 }) => {
   const userFromStore = useSelector((state) => state.auth?.user);
   const commentModalRef = useRef(null);
+  const [userProfile, setUserProfile] = useState({ username, profilePhotoUrl: profileImage });
   
   // Initialize local state with props
   const [localUpvotes, setLocalUpvotes] = useState(upvotesArray);
   const [localDownvotes, setLocalDownvotes] = useState(downvotesArray);
   const [localCommentCount, setLocalCommentCount] = useState(_commentCount);
+
+  // Fetch user profile data
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      if (userId) {
+        try {
+          const response = await axios.get(`http://localhost:4000/api/v1/accounts/basic/${userId}`);
+          setUserProfile(response.data);
+        } catch (error) {
+          console.error('Error fetching user profile:', error);
+        }
+      }
+    };
+
+    fetchUserProfile();
+  }, [userId]);
 
   // Only update local state when props change and they're different
   useEffect(() => {
@@ -57,8 +76,8 @@ const PostCard = ({
   return (
     <div className="shadow-sm bg-white rounded-lg px-6 pt-6 pb-4">
       <UserDetailsTab
-        profileImage={profileImage}
-        username={username}
+        profileImage={userProfile.profilePhotoUrl}
+        username={userProfile.username}
         timestamp={timestamp}
       />
       <div className="text-primary flex flex-col gap-2">

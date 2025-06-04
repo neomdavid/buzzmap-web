@@ -142,7 +142,7 @@ const Community = () => {
       ref={index === filteredPosts.length - 1 ? lastPostElementRef : null}
     >
       <PostCard
-        profileImage={profile1}
+        profileImage={post.user?.profilePhotoUrl || 'https://i.ibb.co/0VvffYVH/a1c820a6453b.png'}
         username={post.anonymous ? "Anonymous" : post.user?.username || "User"}
         timestamp={formatDistanceToNow(new Date(post.createdAt), { addSuffix: true })}
         barangay={post.barangay}
@@ -161,6 +161,7 @@ const Community = () => {
         upvotesArray={post.upvotes}
         downvotesArray={post.downvotes}
         _commentCount={post.commentsCount}
+        userId={post.user?._id}
       />
     </div>
   ), [lastPostElementRef]);
@@ -339,7 +340,7 @@ const Community = () => {
             className="w-full hover:cursor-pointer"
           >
             <CustomInput 
-              profileSrc={profile1} 
+              profileSrc={userFromStore?.profilePhotoUrl || 'https://i.ibb.co/0VvffYVH/a1c820a6453b.png'} 
               showImagePicker={true} 
               className="hover:cursor-pointer" 
               readOnly

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import announcementImg from "../../assets/announcementimg.png"; // Default image
+import defaultProfile from "../../assets/default_profile.png";
 import profile1 from "../../assets/profile1.png";
 
 import { DotsThree, PaperPlaneRight, ArrowLeft } from "phosphor-react";
@@ -198,7 +199,11 @@ const AnnouncementCard = ({ announcement }) => {
           />
           <hr className="text-white opacity-35 mb-4" />
           <form onSubmit={handleCommentSubmit} className="flex">
-            <img src={profile1} className="h-11 w-11 rounded-full mr-3" />
+            <img 
+              src={userFromStore?.profilePhotoUrl || defaultProfile} 
+              className="h-11 w-11 rounded-full mr-3 object-cover" 
+              alt="profile"
+            />
             <div className="flex-1 flex items-center">
               <input
                 className="bg-white opacity-93 rounded-2xl placeholder-primary/70 px-4 w-full h-full text-primary focus:outline-none"

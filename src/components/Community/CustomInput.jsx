@@ -1,5 +1,7 @@
 import React from "react";
 import { Image } from "phosphor-react";
+import defaultProfile from "../../assets/default_profile.png";
+import { useSelector } from "react-redux";
 
 const CustomInput = ({
   placeholder = "Is there anything you'd like to share?",
@@ -7,11 +9,15 @@ const CustomInput = ({
   showImagePicker = false,
   readOnly = false,
 }) => {
+  const userFromStore = useSelector((state) => state.auth?.user);
+
   return (
     <div className="flex items-center gap-4">
-      {profileSrc && (
-        <img src={profileSrc} className="h-11 w-11 rounded-full" />
-      )}
+      <img 
+        src={userFromStore ? profileSrc : defaultProfile} 
+        className="h-11 w-11 rounded-full object-cover" 
+        alt="profile"
+      />
       <div className="relative flex-1">
         <input
           type="text"

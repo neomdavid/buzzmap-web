@@ -43,7 +43,7 @@ const Navbar = () => {
                   ? "text-secondary"
                   : "text-accent"
                 : currentRoute.startsWith("/mapping") ||
-                  /^\/buzzline\/\w+/.test(currentRoute)
+                  /^\/buzzline\/\w+/.test(currentRoute) || currentRoute === "/profile"
                 ? "text-white"
                 : "text-primary"
             } font-semibold text-lg`
@@ -60,8 +60,14 @@ const Navbar = () => {
       <div
         tabIndex="0"
         role="button"
-        className="flex border-1 border-gray-300 rounded-full p-3 gap-1 items-center hover:cursor-pointer hover:border-2 hover:border-gray-200 transition-all duration-200"
+        className="flex items-center gap-2 hover:cursor-pointer"
+        onClick={() => navigate('/profile')}
       >
+        <img 
+          src={user.profilePhotoUrl || 'https://i.ibb.co/0VvffYVH/a1c820a6453b.png'} 
+          alt="profile" 
+          className="w-10 h-10 rounded-full object-cover border-2 border-white"
+        />
         <span
           className={`text-lg font-semibold ${
             darkMode ? "text-white" : "text-primary"
@@ -77,7 +83,15 @@ const Navbar = () => {
       >
         <div className="p-6 flex flex-col gap-1">
           <div className="w-full flex justify-center mb-3">
-            <IconUserCircle size={63} className="text-white" />
+            <img 
+              src={user.profilePhotoUrl || 'https://i.ibb.co/0VvffYVH/a1c820a6453b.png'} 
+              alt="profile" 
+              className="w-16 h-16 rounded-full object-cover border-2 border-white hover:cursor-pointer hover:opacity-80 transition-all duration-300"
+              onClick={() => {
+                navigate('/profile');
+                setIsOpen(false);
+              }}
+            />
           </div>
           <p className="text-center font-bold text-2xl">{user.name}</p>
           <p className="text-center font-light text-white text-xl">
@@ -115,7 +129,7 @@ const Navbar = () => {
   const baseClass =
     "z-50 fixed top-0 left-0 right-0 flex justify-between items-center px-6 py-4 lg:px-10";
 
-  if (currentRoute === "/mapping" || /^\/buzzline\/\w+/.test(currentRoute)) {
+  if (currentRoute === "/mapping" || /^\/buzzline\/\w+/.test(currentRoute) || currentRoute === "/profile") {
     return (
       <nav className={`${baseClass} bg-primary text-white`}>
         <LogoNamed theme="dark" />

@@ -21,6 +21,7 @@ import {
   Updates,
   Articles,
   ForgotPassword,
+  Profile,
 } from "./pages/user";
 import {
   AdminLayout,
@@ -168,6 +169,14 @@ function App() {
         { path: "/buzzline/articles", element: <Articles /> },
         { path: "/buzzline/:id", element: <SingleArticle /> },
         { path: "/about", element: <About /> },
+        {
+          path: "/profile",
+          element: (
+            <PrivateRoute requiredRole="user">
+              <Profile />
+            </PrivateRoute>
+          ),
+        },
       ],
     },
     // Auth routes

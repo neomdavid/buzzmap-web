@@ -20,7 +20,7 @@ const QC_BOUNDS = {
   east: 121.2,
 };
 
-const NewPostModal = forwardRef(({ onSubmit, initialCoordinates = "", initialBarangay = "" }, ref) => {
+const NewPostModal = forwardRef(({ onSubmit, initialCoordinates = "", initialBarangay = "", profilePhoto }, ref) => {
   const [barangay, setBarangay] = useState(initialBarangay);
   const [coordinates, setCoordinates] = useState(initialCoordinates);
   const [date, setDate] = useState("");
@@ -282,7 +282,7 @@ const NewPostModal = forwardRef(({ onSubmit, initialCoordinates = "", initialBar
                   <IconUserCircle size={48} className="text-gray-400 mr-2" />
                 ) : (
                 <img
-                  src={profile1}
+                  src={profilePhoto || profile1}
                   className="h-15 w-15 rounded-full mr-4"
                   alt="Profile"
                 />
