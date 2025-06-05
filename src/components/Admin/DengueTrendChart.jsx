@@ -46,6 +46,7 @@ const patternLevels = [
 
 export default function DengueTrendChart({ selectedBarangay, onBarangayChange }) {
   const [weeks, setWeeks] = useState(6);
+  const [intervalType, setIntervalType] = useState('weekly');
 
   // Fetch barangays
   const { data: barangaysData, isLoading: barangaysLoading } = useGetBarangaysQuery();
@@ -84,14 +85,15 @@ export default function DengueTrendChart({ selectedBarangay, onBarangayChange })
       const completeWeeks = trendsData.data.weekly_counts.complete_weeks || {};
 
       // Transform complete weeks
-      const weekEntries = Object.entries(completeWeeks)
+      let weekEntries = Object.entries(completeWeeks)
         .map(([week, info], index, array) => {
           const entry = {
             week: formatDateRange(info.date_range),
             cases: info.count,
             dateRange: info.date_range,
             patternType: selectedBarangayPattern,
-            color: index >= array.length - 4 ? getPatternColor(selectedBarangayPattern) : "#9ca3af"
+            color: index >= array.length - 4 ? getPatternColor(selectedBarangayPattern) : "#9ca3af",
+            weekNumber: index // Add week number for reference line calculation
           };
           console.log('[DEBUG] Created week entry:', entry);
           return entry;
@@ -103,13 +105,51 @@ export default function DengueTrendChart({ selectedBarangay, onBarangayChange })
           return dateA - dateB;
         });
 
+      // If interval type is biweekly, combine every two weeks
+      if (intervalType === 'biweekly') {
+        const biweeklyEntries = [];
+        for (let i = 0; i < weekEntries.length; i += 2) {
+          if (i + 1 < weekEntries.length) {
+            // Combine two weeks
+            const firstWeek = weekEntries[i];
+            const secondWeek = weekEntries[i + 1];
+            biweeklyEntries.push({
+              week: `${formatDateRange(firstWeek.dateRange)} - ${formatDateRange(secondWeek.dateRange).split(' - ')[1]}`,
+              cases: firstWeek.cases + secondWeek.cases,
+              dateRange: [firstWeek.dateRange[0], secondWeek.dateRange[1]],
+              patternType: selectedBarangayPattern,
+              color: i >= weekEntries.length - 4 ? getPatternColor(selectedBarangayPattern) : "#9ca3af",
+              weekNumber: firstWeek.weekNumber // Keep the first week's number for reference
+            });
+          } else {
+            // If there's an odd number of weeks, add the last week as is
+            biweeklyEntries.push(weekEntries[i]);
+          }
+        }
+        weekEntries = biweeklyEntries;
+      }
+
       console.log('[DEBUG] Final chart data:', weekEntries);
       return weekEntries;
     } catch (error) {
       console.error('[DEBUG] Error transforming chart data:', error);
       return [];
     }
-  }, [trendsData, selectedBarangayPattern]);
+  }, [trendsData, selectedBarangayPattern, intervalType]);
+
+  // Find the reference line position based on weeks
+  const referenceLinePosition = useMemo(() => {
+    if (!chartData.length) return null;
+    
+    // For biweekly, we want the 2nd-to-last point (representing 4 weeks)
+    // For weekly, we want the 4th-to-last point
+    const index = intervalType === 'biweekly' ? chartData.length - 2 : chartData.length - 4;
+    
+    // Ensure we don't go out of bounds
+    if (index < 0) return chartData[0]?.week;
+    
+    return chartData[index]?.week;
+  }, [chartData, intervalType]);
 
   // Helper to format date range
   function formatDateRange(dateRange) {
@@ -128,12 +168,23 @@ export default function DengueTrendChart({ selectedBarangay, onBarangayChange })
   // Find the max cases for the current chartData (for consistent Y axis)
   const maxCases = useMemo(() => {
     try {
-      return Math.max(5, ...chartData.map(d => d.cases || 0));
+      const max = Math.max(...chartData.map(d => d.cases || 0));
+      // If max is greater than 10, round up to the next multiple of 2
+      return max > 10 ? Math.ceil(max / 2) * 2 : 10;
     } catch (error) {
       console.error('[DEBUG] Error calculating max cases:', error);
-      return 5;
+      return 10;
     }
   }, [chartData]);
+
+  // Generate ticks based on max value
+  const yAxisTicks = useMemo(() => {
+    const ticks = [];
+    for (let i = 0; i <= maxCases; i += 2) {
+      ticks.push(i);
+    }
+    return ticks;
+  }, [maxCases]);
 
   if (isLoading || barangaysLoading) {
     return (
@@ -203,6 +254,14 @@ export default function DengueTrendChart({ selectedBarangay, onBarangayChange })
             )}
           </select>
           <select
+            value={intervalType}
+            onChange={(e) => setIntervalType(e.target.value)}
+            className="select select-bordered w-full max-w-xs bg-white/10 text-base-content border-base-content/20 [&>option]:text-black"
+          >
+            <option value="weekly">Weekly</option>
+            <option value="biweekly">Bi-weekly</option>
+          </select>
+          <select
             value={weeks}
             onChange={(e) => setWeeks(Number(e.target.value))}
             className="select select-bordered w-full max-w-xs bg-white/10 text-base-content border-base-content/20 [&>option]:text-black"
@@ -231,6 +290,7 @@ export default function DengueTrendChart({ selectedBarangay, onBarangayChange })
               tick={{ fontSize: 11, fontFamily: "Inter", fill: "#000000" }}
               allowDecimals={false}
               domain={[0, maxCases]}
+              ticks={yAxisTicks}
             />
             <Tooltip />
             <Legend 
@@ -244,12 +304,12 @@ export default function DengueTrendChart({ selectedBarangay, onBarangayChange })
               align="left"
             />
             <ReferenceLine
-              x={chartData[chartData.length - 4]?.week}
+              x={referenceLinePosition}
               stroke="#9ca3af"
               strokeDasharray="5 5"
               strokeWidth={1}
               segment={[
-                { x: chartData[chartData.length - 4]?.week, y: 0 },
+                { x: referenceLinePosition, y: 0 },
                 { x: chartData[chartData.length - 1]?.week, y: 0 }
               ]}
               label={({ viewBox }) => {

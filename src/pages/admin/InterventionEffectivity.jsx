@@ -15,8 +15,8 @@ const InterventionEffectivity = () => {
   const [search, setSearch] = useState('');
   const [selectedId, setSelectedId] = useState(null);
   const [stats, setStats] = useState({ totalBefore: '-', totalAfter: '-', percentChange: '-' });
-  const [barangayFilter, setBarangayFilter] = useState('');
   const [typeFilter, setTypeFilter] = useState('');
+  const [barangayFilter, setBarangayFilter] = useState('');
 
   const selected = interventions?.find(i => i._id === selectedId);
 
@@ -31,19 +31,20 @@ const InterventionEffectivity = () => {
     [interventions]
   );
 
-  const barangayOptions = useMemo(() =>
-    Array.from(new Set(validInterventions.map(i => i.barangay))).sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' })),
-    [validInterventions]
-  );
   const typeOptions = useMemo(() =>
     interventions ? Array.from(new Set(interventions.map(i => i.interventionType))).sort() : [],
+    [interventions]
+  );
+
+  const barangayOptions = useMemo(() =>
+    interventions ? Array.from(new Set(interventions.map(i => i.barangay))).sort() : [],
     [interventions]
   );
 
   // Debug: log interventions and filtered results
   if (interventions) {
     console.log('Loaded interventions:', interventions);
-    console.log('Barangay filter:', barangayFilter, 'Type filter:', typeFilter);
+    console.log('Type filter:', typeFilter);
     interventions.forEach(i => console.log('Intervention:', i._id, 'status:', i.status));
   }
 
@@ -62,9 +63,9 @@ const InterventionEffectivity = () => {
             i.interventionType?.toLowerCase().includes(s) ||
             (i.personnel && i.personnel.toLowerCase().includes(s)) ||
             (i.date && new Date(i.date).toLocaleDateString().includes(s));
-          const matchesBarangay = !barangayFilter || i.barangay === barangayFilter;
           const matchesType = !typeFilter || i.interventionType === typeFilter;
-          return matchesSearch && matchesBarangay && matchesType;
+          const matchesBarangay = !barangayFilter || i.barangay === barangayFilter;
+          return matchesSearch && matchesType && matchesBarangay;
         })
         .sort((a, b) => new Date(b.date) - new Date(a.date))
     : [];
@@ -99,15 +100,6 @@ const InterventionEffectivity = () => {
               {typeOptions.map(t => <option key={t} value={t}>{t}</option>)}
             </select>
           </div>
-        </div>
-        <div className="relative w-full md:mt-0 md:w-auto flex items-center">
-          <MagnifyingGlass size={16} className="absolute left-4 sm:left-6 top-5.5 sm:top-1/2 -translate-y-1/2 text-primary pointer-events-none" />
-          <input
-            className="w-full pl-10 sm:pl-12 pr-4 py-2 border-2 rounded-full mb-2 md:mb-0 md:ml-2"
-            placeholder="Search by barangay, type, personnel, or date..."
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-          />
         </div>
       </div>
       <div className="max-h-48 overflow-y-auto border rounded bg-white mb-4">
