@@ -18,35 +18,30 @@ import {
 } from "@tabler/icons-react";
 
 const ReportsVerification = () => {
-  const { data, isLoading, isError, refetch } = useGetPostsQuery();
-  console.log('[ReportsVerification DEBUG] useGetPostsQuery data:', data);
-  const postArray = Array.isArray(data) ? data : [];
-  console.log('[ReportsVerification DEBUG] postArray:', postArray);
-
-  // Remove meta and pagination logic
-  // Use summary stats as 0 or N/A since meta is gone
-  const totalReports = postArray.length;
-  const totalValidated = postArray.filter(post => post.status === 'Validated').length;
-  const totalPending = postArray.filter(post => post.status === 'Pending').length;
-  const totalRejected = postArray.filter(post => post.status === 'Rejected').length;
-  const today = dayjs().format("YYYY-MM-DD");
-  const totalToday = postArray.filter(post => dayjs(post.date_and_time).format("YYYY-MM-DD") === today).length;
-  const mostActiveBarangay = (() => {
-    if (!postArray.length) return 'N/A';
-    const counts = {};
-    postArray.forEach(post => {
-      if (post.barangay) counts[post.barangay] = (counts[post.barangay] || 0) + 1;
-    });
-    const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]);
-    return sorted.length ? sorted[0][0] : 'N/A';
-  })();
-
+  const { data: posts, isLoading, isError, refetch } = useGetPostsQuery();
   const [selectedReport, setSelectedReport] = useState(null);
   const [validatedPosts, setValidatedPosts] = useState([]);
 
+  // Calculate summary stats
+  const totalReports = posts?.length || 0;
+  const totalValidated = posts?.filter(p => p.status === "Validated").length || 0;
+  const totalPending = posts?.filter(p => p.status === "Pending").length || 0;
+  const totalRejected = posts?.filter(p => p.status === "Rejected").length || 0;
+  const today = dayjs().format("YYYY-MM-DD");
+  const totalToday = posts?.filter(p => dayjs(p.date_and_time).format("YYYY-MM-DD") === today).length || 0;
+
+  // Most active barangay
+  const barangayCounts = {};
+  posts?.forEach(p => {
+    if (p.barangay) barangayCounts[p.barangay] = (barangayCounts[p.barangay] || 0) + 1;
+  });
+  const mostActiveBarangay = Object.entries(barangayCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || "N/A";
+
   useEffect(() => {
-    setValidatedPosts(postArray.filter((post) => post.status === "Validated"));
-  }, [data]);
+    if (posts) {
+      setValidatedPosts(posts.filter((post) => post.status === "Validated"));
+    }
+  }, [posts]);
 
   const handleVerificationSuccess = () => {
     refetch();
@@ -110,7 +105,7 @@ const ReportsVerification = () => {
           </p>
           <div className="h-[75vh]">
             <ReportTable2
-              posts={postArray}
+              posts={posts}
               onSelectReport={setSelectedReport}
             />
           </div>

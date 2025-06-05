@@ -45,8 +45,8 @@ const patternLevels = [
 ];
 
 export default function DengueTrendChart({ selectedBarangay, onBarangayChange }) {
-  const [weeks, setWeeks] = useState(6);
-  const [intervalType, setIntervalType] = useState('weekly');
+  const [weeks, setWeeks] = useState(12);
+  const [intervalType, setIntervalType] = useState('biweekly');
 
   // Fetch barangays
   const { data: barangaysData, isLoading: barangaysLoading } = useGetBarangaysQuery();
@@ -333,7 +333,7 @@ export default function DengueTrendChart({ selectedBarangay, onBarangayChange })
                       fontSize={11}
                       fontWeight={500}
                     >
-                      Start of {selectedBarangayPattern?.replace('_', ' ') || 'pattern'}
+                      Assessment Period
                     </text>
                   </g>
                 );
