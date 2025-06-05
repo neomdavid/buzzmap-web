@@ -88,8 +88,7 @@ const VerifyReportModal = ({
   };
 
   const handleCancel = () => {
-    setShowConfirmation(false);
-    setActionType(null);
+    if (typeof onClose === 'function') onClose();
   };
 
   return (
@@ -97,7 +96,7 @@ const VerifyReportModal = ({
       ref={modalRef}
       className="modal transition-transform duration-300 ease-in-out"
     >
-      <div className="modal-box bg-white rounded-3xl shadow-2xl w-11/12 max-w-5xl p-6 py-14 relative">
+      <div className={`modal-box border-t-10 ${actionType === 'reject' ? 'border-t-error' : 'border-t-success'} bg-white rounded-3xl shadow-2xl w-6/12 max-w-4xl p-6 py-14 relative`}>
         <button
           className="absolute top-4 right-4 text-2xl font-semibold hover:text-gray-500 transition-colors duration-200 hover:cursor-pointer"
           onClick={onClose}
@@ -224,10 +223,30 @@ const VerifyReportModal = ({
                 Confirm {actionType === "verify" ? "Verification" : "Rejection"}
               </span>
             </p>
+            <hr className="border-gray-300 border-"/>
 
-            <div className="text-center py-8">
-              <p className="text-xl font-semibold mb-8">
-                Are you sure you want to {actionType} report #{reportId}?
+            {/* Basic Report Details */}
+            <div className="flex justify-center text-primary text-lg">
+              <div className="bg-white rounded-2xl  px-6 py-4 flex flex-col gap-2">
+                <div className="flex flex-row gap-4 items-center">
+                  <span className="w-28  font-semibold">Username:</span>
+                  <span className=" font-medium">{username}</span>
+                </div>
+                <div className="flex flex-row gap-4 items-center">
+                  <span className="w-28  font-semibold">Barangay:</span>
+                  <span className=" font-medium">{barangay}</span>
+                </div>
+                <div className="flex flex-row gap-4 items-start">
+                  <span className="w-28  font-semibold mt-1">Description:</span>
+                  <span className=" font-normal whitespace-pre-line">{description}</span>
+                </div>
+              </div>
+            </div>
+
+            <hr className="border-gray-300 border-"/>
+            <div className="text-center ">
+              <p className="text-xl  mb-8">
+                Are you sure you want to {actionType} this report?
               </p>
 
               <div className="flex justify-center gap-6">
@@ -235,7 +254,7 @@ const VerifyReportModal = ({
                   onClick={handleConfirm}
                   className={`${
                     actionType === "verify" ? "bg-success" : "bg-error"
-                  } text-white font-semibold px-8 py-3 rounded-xl hover:opacity-80 transition-all duration-200 flex items-center gap-2`}
+                  } text-white font-semibold px-8 py-3 rounded-xl hover:opacity-80 transition-all duration-200 flex items-center gap-2 hover:cursor-pointer hover:bg-opacity-80 transition-all duration-200`}
                   disabled={isLoading}
                 >
                   {isLoading ? (
@@ -249,7 +268,7 @@ const VerifyReportModal = ({
                 </button>
                 <button
                   onClick={handleCancel}
-                  className="bg-gray-300 text-gray-700 font-semibold px-8 py-3 rounded-xl hover:opacity-80 transition-all duration-200"
+                  className="bg-gray-300 text-gray-700 font-semibold px-8 py-3 rounded-xl hover:opacity-80 transition-all duration-200 hover:cursor-pointer hover:bg-opacity-80 transition-all duration-200"
                   disabled={isLoading}
                 >
                   Cancel

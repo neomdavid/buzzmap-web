@@ -100,12 +100,6 @@ const ReportDetailsModal = ({
           <div className="space-y-6">
             {/* Report Info */}
             <div className="space-y-2 text-lg rounded-lg">
-              <p className="font-semibold">
-                <span className="text-gray-500 font-normal mr-1">
-                  Report ID:
-                </span>{" "}
-                {reportId}
-              </p>
               <div className="flex items-center gap-1">
                 <p className="text-gray-500 font-normal mr-1">Status:</p>
                 <p
