@@ -25,11 +25,14 @@ const getPatternColor = (patternType) => {
   if (patternTypeLower === 'gradual_rise') {
     return "#f97316"; // Orange
   }
-  if (patternTypeLower === 'stable' || patternTypeLower === 'stability') {
-    return "#3b82f6"; // Blue
+  if (patternTypeLower === 'stability') {
+    return "#3b82f6"; // Blue (info)
   }
-  if (patternTypeLower === 'decline' || patternTypeLower === 'decreasing') {
+  if (patternTypeLower === 'decline') {
     return "#22c55e"; // Green
+  }
+  if (patternTypeLower === 'low_level_activity') {
+    return "#9ca3af"; // Gray
   }
   
   // Default color if no pattern type
@@ -42,7 +45,22 @@ const patternLevels = [
   { label: "Gradual Rise", color: "#f97316" }, // warning/orange
   { label: "Stability", color: "#3b82f6" },    // info/blue
   { label: "Decline", color: "#22c55e" },      // success/green
+  { label: "Low Level Activity", color: "#9ca3af" },    // gray
 ];
+
+// Helper function to format pattern type for display
+const formatPatternType = (patternType) => {
+  if (!patternType) return 'No pattern detected';
+  
+  const patternTypeLower = patternType.toLowerCase();
+  if (patternTypeLower === 'spike') return 'Spike';
+  if (patternTypeLower === 'gradual_rise') return 'Gradual Rise';
+  if (patternTypeLower === 'stability') return 'Stability';
+  if (patternTypeLower === 'decline') return 'Decline';
+  if (patternTypeLower === 'low_level_activity') return 'Low Level Activity';
+  
+  return patternType.charAt(0).toUpperCase() + patternType.slice(1).replace(/_/g, ' ');
+};
 
 export default function DengueTrendChart({ selectedBarangay, onBarangayChange }) {
   const [weeks, setWeeks] = useState(12);
@@ -80,7 +98,6 @@ export default function DengueTrendChart({ selectedBarangay, onBarangayChange })
         return [];
       }
 
-      console.log('[DEBUG] Raw weekly counts data:', trendsData.data.weekly_counts);
 
       const completeWeeks = trendsData.data.weekly_counts.complete_weeks || {};
 
@@ -95,7 +112,6 @@ export default function DengueTrendChart({ selectedBarangay, onBarangayChange })
             color: index >= array.length - 4 ? getPatternColor(selectedBarangayPattern) : "#9ca3af",
             weekNumber: index // Add week number for reference line calculation
           };
-          console.log('[DEBUG] Created week entry:', entry);
           return entry;
         })
         .sort((a, b) => {
@@ -129,7 +145,6 @@ export default function DengueTrendChart({ selectedBarangay, onBarangayChange })
         weekEntries = biweeklyEntries;
       }
 
-      console.log('[DEBUG] Final chart data:', weekEntries);
       return weekEntries;
     } catch (error) {
       console.error('[DEBUG] Error transforming chart data:', error);
@@ -231,7 +246,7 @@ export default function DengueTrendChart({ selectedBarangay, onBarangayChange })
               color: getPatternColor(selectedBarangayPattern),
               fontWeight: 'bold'
             }}>
-              {selectedBarangayPattern || 'No pattern detected'}
+              {formatPatternType(selectedBarangayPattern)}
             </span>
           </p>
         </div>
@@ -285,17 +300,12 @@ export default function DengueTrendChart({ selectedBarangay, onBarangayChange })
               tick={{ fontSize: 11, fontFamily: "Inter", fill: "#000000" }}
             />
             <YAxis
-              axisLine={false}
-              tickLine={false}
               tick={{ fontSize: 11, fontFamily: "Inter", fill: "#000000" }}
-              allowDecimals={false}
-              domain={[0, maxCases]}
-              ticks={yAxisTicks}
             />
             <Tooltip />
-            <Legend 
+            <Legend
               formatter={(value) => "Number of Cases"}
-              wrapperStyle={{ 
+              wrapperStyle={{
                 color: "#000000",
                 fontSize: "14px",
                 marginLeft: "45px",
@@ -386,22 +396,36 @@ export default function DengueTrendChart({ selectedBarangay, onBarangayChange })
                 </text>
               )}
             />
+            {selectedBarangay && patternData && (
+              <ReferenceLine
+                x={patternData.start_date}
+                stroke={getPatternColor(patternData.pattern)}
+                strokeWidth={2}
+                label={{
+                  value: formatPatternType(patternData.pattern),
+                  position: 'insideTopRight',
+                  fill: getPatternColor(patternData.pattern),
+                  fontSize: 12,
+                  fontWeight: 'bold'
+                }}
+              />
+            )}
           </LineChart>
         </ResponsiveContainer>
-
-        {/* Custom Legend */}
-        <div className="mt-[8px] flex justify-start gap-14 ml-3">
-          {patternLevels.map(({ label, color }) => (
-            <div key={label} className="flex items-center gap-2">
-              <div
-                className="w-4 h-4 rounded-full"
-                style={{ backgroundColor: color }}
-              />
-              <span className="text-lg text-primary">{label}</span>
-            </div>
-          ))}
-        </div>
       </ChartContainer>
+
+      {/* Custom Legend - Moved outside the chart container */}
+      <div className="flex  flex-wrap  justify-start gap-3 ml-3 ">
+        {patternLevels.map(({ label, color }) => (
+          <div key={label} className="flex items-center gap-2">
+            <div
+              className="w-4 h-4 rounded-full"
+              style={{ backgroundColor: color }}
+            />
+            <span className="text-lg text-primary">{label}</span>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

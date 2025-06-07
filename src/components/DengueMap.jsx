@@ -113,25 +113,20 @@ const DengueMap = ({
 
   // Initialize breeding sites from posts
   useEffect(() => {
-    console.log('[DengueMap DEBUG] ===== POSTS DATA DEBUG =====');
-    console.log('[DengueMap DEBUG] Posts data type:', typeof posts);
-    console.log('[DengueMap DEBUG] Is posts an array?', Array.isArray(posts));
-    console.log('[DengueMap DEBUG] Posts object keys:', posts ? Object.keys(posts) : 'null');
-    console.log('[DengueMap DEBUG] Raw posts data:', JSON.stringify(posts, null, 2));
+   
 
     if (posts) {
       const postsArray = Array.isArray(posts.posts) ? posts.posts : (Array.isArray(posts) ? posts : []);
-      console.log('[DengueMap DEBUG] Posts array length:', postsArray.length);
-      console.log('[DengueMap DEBUG] First few posts:', postsArray.slice(0, 3));
+    
       
       const breedingSitesFromPosts = postsArray.filter(post => {
-        console.log('[DengueMap DEBUG] Checking post:', {
-          id: post._id,
-          status: post.status,
-          report_type: post.report_type,
-          hasCoordinates: !!post.specific_location?.coordinates,
-          coordinates: post.specific_location?.coordinates
-        });
+        // console.log('[DengueMap DEBUG] Checking post:', {
+        //   id: post._id,
+        //   status: post.status,
+        //   report_type: post.report_type,
+        //   hasCoordinates: !!post.specific_location?.coordinates,
+        //   coordinates: post.specific_location?.coordinates
+        // });
         
         const isValid = post.status === "Validated" && 
           post.specific_location?.coordinates &&
@@ -141,29 +136,26 @@ const DengueMap = ({
            post.report_type === "Others");
         
         if (!isValid) {
-          console.log('[DengueMap DEBUG] Invalid breeding site post:', {
-            id: post._id,
-            status: post.status,
-            report_type: post.report_type,
-            hasCoordinates: !!post.specific_location?.coordinates,
-            coordinates: post.specific_location?.coordinates
-          });
+          // console.log('[DengueMap DEBUG] Invalid breeding site post:', {
+          //   id: post._id,
+          //   status: post.status,
+          //   report_type: post.report_type,
+          //   hasCoordinates: !!post.specific_location?.coordinates,
+          //   coordinates: post.specific_location?.coordinates
+          // });
         }
         return isValid;
       });
       
-      console.log('[DengueMap DEBUG] Filtered breeding sites:', breedingSitesFromPosts);
       setBreedingSites(breedingSitesFromPosts);
     } else {
-      console.log('[DengueMap DEBUG] No posts data available');
       setBreedingSites([]);
     }
   }, [posts]);
 
   // Add debug for showBreedingSites state changes
   useEffect(() => {
-    console.log('[DengueMap DEBUG] showBreedingSites changed:', showBreedingSites);
-    console.log('[DengueMap DEBUG] Current breeding sites:', breedingSites);
+   
   }, [showBreedingSites, breedingSites]);
 
   // Pattern color mapping
@@ -220,8 +212,7 @@ const DengueMap = ({
     });
   }, [geojsonBarangays, barangaysList]);
 
-  console.log('[DengueMap DEBUG] Full barangaysList:', barangaysList);
-  console.log('[DengueMap DEBUG] Merged Barangays:', mergedBarangays);
+
 
   // Draw polygons and markers
   useEffect(() => {
@@ -229,11 +220,11 @@ const DengueMap = ({
     const map = mapInstanceRef.current;
     if (!map) return;
 
-    console.log('[DengueMap DEBUG] Drawing markers:', {
-      showBreedingSites,
-      breedingSitesCount: breedingSites.length,
-      hasMarkerLibrary: !!window.google?.maps?.marker
-    });
+    // console.log('[DengueMap DEBUG] Drawing markers:', {
+    //   showBreedingSites,
+    //   breedingSitesCount: breedingSites.length,
+    //   hasMarkerLibrary: !!window.google?.maps?.marker
+    // });
 
     // Clear existing polygons and markers
     polygonsRef.current.forEach(polygon => polygon.setMap(null));
@@ -329,20 +320,20 @@ const DengueMap = ({
 
     // Add markers based on toggles
     if (showBreedingSites && breedingSites.length > 0 && window.google.maps.marker) {
-      console.log('[DengueMap DEBUG] Drawing breeding site markers:', {
-        count: breedingSites.length,
-        sites: breedingSites
-      });
+      // console.log('[DengueMap DEBUG] Drawing breeding site markers:', {
+      //   count: breedingSites.length,
+      //   sites: breedingSites
+      // });
 
       const { AdvancedMarkerElement, PinElement } = window.google.maps.marker;
 
       breedingSites.forEach(site => {
         if (site.specific_location?.coordinates) {
-          console.log('[DengueMap DEBUG] Creating marker for site:', {
-            id: site._id,
-            type: site.report_type,
-            coordinates: site.specific_location.coordinates
-          });
+          // console.log('[DengueMap DEBUG] Creating marker for site:', {
+          //   id: site._id,
+          //   type: site.report_type,
+          //   coordinates: site.specific_location.coordinates
+          // });
 
           const iconUrl = BREEDING_SITE_TYPE_ICONS[site.report_type] || BREEDING_SITE_TYPE_ICONS.default;
           const glyphImg = document.createElement("img");
@@ -760,6 +751,25 @@ const DengueMap = ({
       if (onBarangaySelect) onBarangaySelect(enhancedFeature);
     }
   };
+
+  const getPatternColor = (patternType) => {
+    const patternTypeLower = patternType?.toLowerCase();
+    if (patternTypeLower === 'spike') return "#ef4444"; // red
+    if (patternTypeLower === 'gradual_rise') return "#f97316"; // orange
+    if (patternTypeLower === 'stability') return "#3b82f6"; // blue (info)
+    if (patternTypeLower === 'decline') return "#22c55e"; // green
+    if (patternTypeLower === 'low_level_activity') return "#9ca3af"; // gray
+    return "#9ca3af"; // gray
+  };
+
+  // Update the pattern levels in the legend
+  const patternLevels = [
+    { label: "Spike", color: "#ef4444" },
+    { label: "Gradual Rise", color: "#f97316" },
+    { label: "Stability", color: "#3b82f6" },
+    { label: "Decline", color: "#22c55e" },
+    { label: "Low Level Activity", color: "#9ca3af" }
+  ];
 
   return (
     <div className="relative w-full h-full">

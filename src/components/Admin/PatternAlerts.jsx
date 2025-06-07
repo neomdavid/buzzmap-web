@@ -1,19 +1,32 @@
 import { useState, useMemo } from "react";
-import { useGetBarangaysQuery } from "../../api/dengueApi";
+import { useGetBarangaysQuery, useGetPatternRecognitionResultsQuery } from "../../api/dengueApi";
 import { MagnifyingGlass } from "phosphor-react";
 
 export default function PatternAlerts({ selectedBarangay, selectedTab, onAlertSelect }) {
-  console.log('[PatternAlerts DEBUG] props.selectedTab:', selectedTab, 'props.selectedBarangay:', selectedBarangay);
-  const [searchTerm, setSearchTerm] = useState("");
   const { data: barangaysData, isLoading, error } = useGetBarangaysQuery();
+  const { data: patternResultsData, isLoading: patternResultsLoading } = useGetPatternRecognitionResultsQuery();
+
+  console.log('[PatternAlerts DEBUG] Raw barangaysData:', barangaysData);
+  console.log('[PatternAlerts DEBUG] Raw patternResultsData:', patternResultsData);
 
   // Merge pattern data with barangay data (now only barangaysData)
   const patternData = useMemo(() => {
     if (!barangaysData) return [];
-    return barangaysData.map(barangay => {
+    console.log('[PatternAlerts DEBUG] Processing barangaysData:', barangaysData);
+    
+    const processedData = barangaysData.map(barangay => {
       const patternBased = barangay.status_and_recommendation?.pattern_based;
       const reportBased = barangay.status_and_recommendation?.report_based;
       const deathPriority = barangay.status_and_recommendation?.death_priority;
+      
+      console.log('[PatternAlerts DEBUG] Processing barangay:', {
+        name: barangay.name,
+        patternBased,
+        reportBased,
+        deathPriority,
+        pattern_data: barangay.pattern_data
+      });
+
       return {
         _id: barangay._id,
         name: barangay.name,
@@ -24,53 +37,78 @@ export default function PatternAlerts({ selectedBarangay, selectedTab, onAlertSe
         last_analysis_time: barangay.last_analysis_time
       };
     });
+
+    console.log('[PatternAlerts DEBUG] Processed pattern data:', processedData);
+    return processedData;
   }, [barangaysData]);
 
-  // Filter data based on search term and selected tab
-  const filteredData = useMemo(() => {
-    if (!patternData) return [];
-    let filtered = patternData;
-    // Apply search filter if search term exists
-    if (searchTerm) {
-      const searchLower = searchTerm.toLowerCase();
-      filtered = filtered.filter(item => 
-        item.name.toLowerCase().includes(searchLower)
-      );
+  // Filter alerts based on selected tab
+  const filteredAlerts = useMemo(() => {
+    if (!patternResultsData?.data) {
+      console.log('[PatternAlerts DEBUG] No pattern results data available');
+      return [];
     }
-    // Apply tab filter using pattern_based.status
-    if (selectedTab === 'spikes') {
-      filtered = filtered.filter(item => 
-        item.pattern_based?.status?.toLowerCase() === 'spike'
-      );
-    } else if (selectedTab === 'gradual') {
-      filtered = filtered.filter(item => 
-        item.pattern_based?.status?.toLowerCase() === 'gradual_rise'
-      );
-    } else if (selectedTab === 'stability') {
-      filtered = filtered.filter(item => 
-        item.pattern_based?.status?.toLowerCase() === 'stability' || 
-        item.pattern_based?.status?.toLowerCase() === 'stable'
-      );
-    } else if (selectedTab === 'decline') {
-      filtered = filtered.filter(item => 
-        item.pattern_based?.status?.toLowerCase() === 'decline' || 
-        item.pattern_based?.status?.toLowerCase() === 'decreasing'
-      );
-    } else if (selectedTab === 'selected' && selectedBarangay) {
-      const normalize = (name) => (name || '').toLowerCase().replace(/[^a-z0-9]/g, '');
-      const selectedNorm = normalize(selectedBarangay);
-      filtered = filtered.filter(item => normalize(item.name) === selectedNorm);
-      console.log('[PatternAlerts DEBUG] selectedTab:', selectedTab, 'selectedBarangay:', selectedBarangay, 'selectedNorm:', selectedNorm, 'filteredData.length:', filtered.length, 'filteredData:', filtered);
-    }
+
+    console.log('[PatternAlerts DEBUG] Filtering alerts with:', {
+      selectedTab,
+      selectedBarangay,
+      patternResultsData: patternResultsData.data
+    });
+
+    const filtered = patternResultsData.data.filter(item => {
+      const pattern = item.pattern?.toLowerCase();
+      
+      let shouldInclude = false;
+      switch (selectedTab) {
+        case 'selected':
+          shouldInclude = item.name.toLowerCase() === selectedBarangay?.toLowerCase();
+          break;
+        case 'all':
+          shouldInclude = true;
+          break;
+        case 'spikes':
+          shouldInclude = pattern === 'spike';
+          break;
+        case 'gradual':
+          shouldInclude = pattern === 'gradual_rise';
+          break;
+        case 'stability':
+          shouldInclude = pattern === 'stability';
+          break;
+        case 'decline':
+          shouldInclude = pattern === 'decline';
+          break;
+        case 'no_pattern':
+          shouldInclude = pattern === 'low_level_activity' || !pattern;
+          break;
+        default:
+          shouldInclude = true;
+      }
+     
+      return shouldInclude;
+    });
+
+    console.log('[PatternAlerts DEBUG] Filtered alerts:', filtered);
     return filtered;
-  }, [patternData, searchTerm, selectedTab, selectedBarangay]);
+  }, [patternResultsData, selectedTab, selectedBarangay]);
 
   if (isLoading) {
-    return <div>Loading...</div>;
+    console.log('[PatternAlerts DEBUG] Loading barangays data...');
+    return (
+      <div className="flex items-center justify-center h-full">
+        <span className="loading loading-spinner loading-lg text-primary"></span>
+      </div>
+    );
   }
-  if (error) {
-    return <div>Error loading data.</div>;
+
+  if (!patternResultsData?.data) {
+    console.log('[PatternAlerts DEBUG] No pattern data available');
+    return (
+      <div className="text-gray-500">No pattern data available.</div>
+    );
   }
+
+  console.log('[PatternAlerts DEBUG] Rendering with filtered alerts:', filteredAlerts);
 
   return (
     <div className="flex flex-col gap-4 w-full px-4">
@@ -79,8 +117,8 @@ export default function PatternAlerts({ selectedBarangay, selectedTab, onAlertSe
         <input
           type="text"
           placeholder="Search barangay..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
+          value={selectedBarangay || ''}
+          onChange={(e) => onAlertSelect(e.target.value)}
           className="w-full px-4 py-2 pl-10 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent bg-white"
         />
         <MagnifyingGlass
@@ -88,45 +126,28 @@ export default function PatternAlerts({ selectedBarangay, selectedTab, onAlertSe
           size={20}
         />
       </div>
-      {filteredData.length === 0 ? (
+      {filteredAlerts.length === 0 ? (
         <div className="text-gray-500">No alerts found.</div>
       ) : (
-        filteredData.map(item => {
-          let borderColor, bgColor;
-          let patternType = item.pattern_based?.status || '';
-          if (!patternType || patternType.trim() === '') {
-            borderColor = "border-gray-300";
-            bgColor = "bg-gray-300";
-          } else {
-            const patternTypeLower = patternType.toLowerCase();
-            if (patternTypeLower === 'spike') {
-              borderColor = "border-error";
-              bgColor = "bg-error";
-            } else if (patternTypeLower === 'gradual_rise') {
-              borderColor = "border-warning";
-              bgColor = "bg-warning";
-            } else if (patternTypeLower === 'stability' || patternTypeLower === 'stable') {
-              borderColor = "border-info";
-              bgColor = "bg-info";
-            } else if (patternTypeLower === 'decline' || patternTypeLower === 'decreasing') {
-              borderColor = "border-success";
-              bgColor = "bg-success";
-            } else {
-              borderColor = "border-gray-300";
-              bgColor = "bg-gray-300";
-            }
-          }
+        filteredAlerts.map(item => {
+          console.log('[PatternAlerts DEBUG] Rendering alert card for:', item);
+          // Find the corresponding barangay data
+          const barangayData = barangaysData?.find(b => b.name === item.name);
+          console.log('[PatternAlerts DEBUG] Found barangay data:', barangayData);
+          
           return (
             <AlertCard
-              key={item._id}
+              key={item.name}
               title={item.name}
-              borderColor={borderColor}
-              bgColor={bgColor}
-              pattern_based={item.pattern_based}
-              report_based={item.report_based}
-              death_priority={item.death_priority}
-              pattern_data={item.pattern_data}
-              last_analysis_time={item.last_analysis_time}
+              pattern_based={barangayData?.status_and_recommendation?.pattern_based}
+              report_based={barangayData?.status_and_recommendation?.report_based}
+              death_priority={barangayData?.status_and_recommendation?.death_priority}
+              pattern_data={{
+                pattern: item.pattern,
+                alert: item.alert,
+                recommendation: item.recommendation
+              }}
+              last_analysis_time={barangayData?.last_analysis_time}
               barangayName={item.name}
               onSelect={onAlertSelect}
             />
@@ -143,6 +164,7 @@ const PATTERN_COLORS = {
   gradual_rise: { border: 'border-warning', badge: 'bg-warning' },
   stability: { border: 'border-info', badge: 'bg-info' },
   decline: { border: 'border-success', badge: 'bg-success' },
+  low_level_activity: { border: 'border-gray-400', badge: 'bg-gray-400' },
   default: { border: 'border-gray-400', badge: 'bg-gray-400' }
 };
 
@@ -151,8 +173,9 @@ const getPatternKey = (pattern) => {
   const p = pattern.trim().toLowerCase();
   if (p === 'spike') return 'spike';
   if (p === 'gradual_rise') return 'gradual_rise';
-  if (p === 'stability' || p === 'stable') return 'stability';
-  if (p === 'decline' || p === 'decreasing') return 'decline';
+  if (p === 'stability') return 'stability';
+  if (p === 'decline') return 'decline';
+  if (p === 'low_level_activity') return 'low_level_activity';
   return 'default';
 };
 
@@ -167,109 +190,217 @@ const AlertCard = ({
   barangayName,
   onSelect,
 }) => {
-  // Helper to check if a section has meaningful content
   const hasContent = (obj, extraCheck = null) => {
     if (!obj) return false;
-    const fields = [obj.status, obj.alert, obj.recommendation];
-    const hasString = fields.some(
-      v => v && typeof v === 'string' && v.trim() !== '' && v.trim().toLowerCase() !== 'none'
-    );
-    if (extraCheck) return hasString || extraCheck(obj);
-    return hasString;
+    if (extraCheck && !extraCheck(obj)) return false;
+    return Object.values(obj).some(val => val !== null && val !== undefined && val !== '');
   };
-  const hasReportBased = hasContent(report_based, (rb) => typeof rb.count === 'number' && rb.count > 0);
-  const hasDeathPriority = hasContent(death_priority);
-  // Only show pattern-based if status is non-empty, non-null, non-'none'
-  const showPatternBased = pattern_based && pattern_based.status && pattern_based.status.trim() !== '' && pattern_based.status.trim().toLowerCase() !== 'none';
 
   const getPatternBadgeColor = (pattern) => {
-    if (!pattern) return '#a0aec0'; // gray
-    const p = pattern.trim().toLowerCase();
-    if (p === 'spike') return '#e53e3e'; // red
-    if (p === 'gradual_rise') return '#f59e42'; // orange
-    if (p === 'stability' || p === 'stable') return '#3b82f6'; // blue
-    if (p === 'decline' || p === 'decreasing') return '#22c55e'; // green
-    return '#a0aec0'; // gray
+    if (!pattern) return 'border-gray-300';
+    switch (pattern.toLowerCase()) {
+      case 'spike':
+        return 'border-error';
+      case 'gradual_rise':
+        return 'border-warning';
+      case 'stability':
+        return 'border-info';
+      case 'decline':
+        return 'border-success';
+      case 'low_level_activity':
+        return 'border-gray-300';
+      default:
+        return 'border-gray-300';
+    }
   };
 
-  // Human-readable pattern label
   const getPatternLabel = (pattern) => {
-    if (!pattern) return '';
-    const p = pattern.trim().toLowerCase();
-    if (p === 'spike') return 'Spike';
-    if (p === 'gradual_rise') return 'Gradual Rise';
-    if (p === 'stability' || p === 'stable') return 'Stability';
-    if (p === 'decline' || p === 'decreasing') return 'Decline';
-    return pattern.charAt(0).toUpperCase() + pattern.slice(1).replace(/_/g, ' ');
+    if (!pattern) return 'No Pattern';
+    switch (pattern.toLowerCase()) {
+      case 'spike':
+        return 'Spike';
+      case 'gradual_rise':
+        return 'Gradual Rise';
+      case 'stability':
+        return 'Stability';
+      case 'decline':
+        return 'Decline';
+      case 'low_level_activity':
+        return 'Low Level Activity';
+      default:
+        return 'No Pattern';
+    }
   };
 
-  // Get pattern from pattern_based.status
-  const patternKey = getPatternKey(pattern_based?.status);
-  const borderColor = PATTERN_COLORS[patternKey].border;
-  const badgeBgClass = PATTERN_COLORS[patternKey].badge;
+  const borderColor = getPatternBadgeColor(pattern_data?.pattern);
+  const badgeBgClass = borderColor.replace('border-', 'bg-');
 
   return (
-    <div
-      className={`relative border-[2px] ${borderColor} rounded-4xl p-4 pt-10 text-black`}
-    >
-      <p
-        className={`absolute text-lg left-[-2px] top-[-6px] text-nowrap ${borderColor.replace('border-', 'bg-')} rounded-2xl font-semibold text-white p-1 px-4`}
-      >
+    <div className={`relative border-[2px] ${borderColor} rounded-4xl p-4 pt-10 text-black`}>
+      <p className={`absolute text-lg left-[-2px] top-[-6px] text-nowrap ${badgeBgClass} rounded-2xl font-semibold text-white p-1 px-4`}>
         {title}
       </p>
-      {/* Pattern display using pattern_based.status */}
-      {pattern_based?.status && pattern_based.status.trim() !== '' && (
-        <div className="mb-2 flex items-center gap-2">
-          <span className="font-bold mb-1 text-base-content text-lg">Pattern:</span>
-          <span
-            className={`px-3 py-1 rounded-full text-white text-sm font-semibold ${badgeBgClass}`}
-          >
-            {getPatternLabel(pattern_based.status)}
-          </span>
+
+      {/* Pattern display */}
+      {pattern_data?.pattern && (
+        <div className="mb-2">
+          <span className="font-bold">Pattern:</span> {getPatternLabel(pattern_data.pattern)}
         </div>
       )}
-      {/* Pattern-based section (only if status is non-empty) */}
-      {showPatternBased && (
+
+      {/* Pattern-based section */}
+      {hasContent(pattern_based) && (
         <div className="mb-2 pt-2 border-t border-gray-200">
           <div className="font-bold mb-1 text-base-content text-lg">Pattern-Based</div>
-          {pattern_based.status && pattern_based.status.trim().toLowerCase() !== 'none' && <div><span className="font-bold">Status:</span> {pattern_based.status}</div>}
-          {pattern_based.alert && pattern_based.alert.trim().toLowerCase() !== 'none' && <div><span className="font-bold">Alert:</span> {pattern_based.alert}</div>}
-          {pattern_based.recommendation && pattern_based.recommendation.trim().toLowerCase() !== 'none' && <div><span className="font-bold">Recommendation:</span> {pattern_based.recommendation}</div>}
+          {pattern_based.alert && (
+            <div className="mb-2">
+              <span className="font-bold">Alert:</span> {pattern_based.alert}
+            </div>
+          )}
         </div>
       )}
+
       {/* Report-based section */}
-      {report_based && hasReportBased && (
+      {report_based && hasContent(report_based) && (
         <div className="mb-2 pt-2 border-t border-gray-200">
           <div className="font-bold mb-1 text-base-content text-lg">Report-Based</div>
-          {typeof report_based.count === 'number' && report_based.count > 0 && <div><span className="font-bold">Reports:</span> {report_based.count}</div>}
-          {report_based.status && report_based.status.trim().toLowerCase() !== 'none' && <div><span className="font-bold">Status:</span> {report_based.status}</div>}
-          {report_based.alert && report_based.alert.trim().toLowerCase() !== 'none' && <div><span className="font-bold">Alert:</span> {report_based.alert}</div>}
-          {report_based.recommendation && report_based.recommendation.trim().toLowerCase() !== 'none' && <div><span className="font-bold">Recommendation:</span> {report_based.recommendation}</div>}
+          {typeof report_based.count === 'number' && report_based.count > 0 && (
+            <div className="mb-2">
+              <span className="font-bold">Reports:</span> {report_based.count}
+            </div>
+          )}
+          {report_based.alert && (
+            <div className="mb-2">
+              <span className="font-bold">Alert:</span> {report_based.alert}
+            </div>
+          )}
+          {report_based.admin_recommendation && (
+            <div className="mb-2">
+              <span className="font-bold">Recommendation:</span>
+              <ul className="list-disc list-inside ml-2 mt-1">
+                {report_based.admin_recommendation.split('\n').map((rec, index) => (
+                  rec.trim() && <li key={index}>{rec.trim()}</li>
+                ))}
+              </ul>
+            </div>
+          )}
         </div>
       )}
-      {/* Death-priority section */}
-      {death_priority && hasDeathPriority && (
+
+      {/* Death-based section */}
+      {death_priority && hasContent(death_priority) && (
         <div className="mb-2 pt-2 border-t border-gray-200">
-          <div className="font-bold mb-1">Death Priority</div>
-          {death_priority.status && death_priority.status.trim().toLowerCase() !== 'none' && <div><span className="font-bold">Status:</span> {death_priority.status}</div>}
-          {death_priority.alert && death_priority.alert.trim().toLowerCase() !== 'none' && <div><span className="font-bold">Alert:</span> {death_priority.alert}</div>}
-          {death_priority.recommendation && death_priority.recommendation.trim().toLowerCase() !== 'none' && <div><span className="font-bold">Recommendation:</span> {death_priority.recommendation}</div>}
+          <div className="font-bold mb-1 text-base-content text-lg">Death-Based</div>
+          {typeof death_priority.count === 'number' && death_priority.count > 0 && (
+            <div className="mb-2">
+              <span className="font-bold">Death Cases:</span> {death_priority.count}
+            </div>
+          )}
+          {death_priority.alert && (
+            <div className="mb-2">
+              <span className="font-bold">Alert:</span> {death_priority.alert}
+            </div>
+          )}
         </div>
       )}
+
       {/* Last analysis time */}
       {last_analysis_time && (
         <div className="mb-2 pt-2 border-t border-gray-200">
           <span className="font-bold mb-1 text-base-content text-lg">Last Analyzed:</span> {new Date(last_analysis_time).toLocaleString()}
         </div>
       )}
-      <div className="flex justify-end mt-1">
+
+      <div className="flex justify-end gap-2 mt-1">
+        {pattern_based?.admin_recommendation && (
+          <button
+            onClick={() => document.getElementById(`recommendations_modal_${barangayName}`).showModal()}
+            className="px-3 py-1.5 bg-white border border-primary text-primary rounded-full hover:bg-primary/5 transition-colors text-sm cursor-pointer"
+          >
+            View Recommendations
+          </button>
+        )}
         <button 
-          onClick={() => onSelect && onSelect(barangayName)}
-          className="text-xs text-nowrap bg-base-content text-white font-light px-4 hover:cursor-pointer py-2 rounded-full transition-all duration-200 hover:brightness-110 active:scale-95"
+          onClick={() => onSelect(title)}
+          className="px-3 py-1.5 bg-primary text-white rounded-full hover:bg-primary/90 transition-colors text-sm cursor-pointer"
         >
           Select
         </button>
       </div>
+
+      {/* Recommendations Modal */}
+      <dialog id={`recommendations_modal_${barangayName}`} className="modal">
+        <div className={`modal-box bg-white rounded-4xl shadow-2xl w-11/12 max-w-5xl p-12 relative border-3 ${PATTERN_COLORS[getPatternKey(pattern_based.status)].border}`}>
+          <button
+            className="absolute top-10 right-10 text-2xl font-semibold hover:text-gray-500 transition-colors duration-200 hover:cursor-pointer"
+            onClick={() => document.getElementById(`recommendations_modal_${barangayName}`).close()}
+          >
+            ✕
+          </button>
+
+          <p className="text-center text-3xl font-bold mb-6 text-primary">Recommendations</p>
+          <p className="text-left text-2xl font-bold mb-6">For <span className={`text-white px-4 py-1 font-normal text-xl font-semibold ml-1 rounded-full ${PATTERN_COLORS[getPatternKey(pattern_based.status)].badge}`}>{barangayName}</span></p>
+          <hr className="text-accent/50 mb-[-2px]" />
+
+          {/* Pattern and Alert Section */}
+          <div className="mb-4">
+            <span className={`px-4 py-1 rounded-full text-white text-sm font-semibold ${getPatternBadgeColor(pattern_based.status)}`}>
+              {getPatternLabel(pattern_based.status)}
+            </span>
+      
+            {pattern_based.alert && (
+              <div className="bg-base-200 p-4 rounded-lg">
+                <span className="font-semibold">Alert:</span> {pattern_based.alert}
+              </div>
+            )}
+          </div>
+
+          {/* Death Priority Section */}
+          {death_priority && death_priority.count > 0 && (
+            <div className="mb-6  p-4 rounded-lg text-lg border border-error">
+              <p 
+                className="text-error mb-3"
+                dangerouslySetInnerHTML={{
+                  __html: death_priority.alert.replace(
+                    `${death_priority.count} death(s)`,
+                    `<span class="bg-error text-white px-2 py-0.5 rounded-full text-sm font-semibold mx-1">${death_priority.count} ${death_priority.count === 1 ? 'death' : 'deaths'}</span>`
+                  )
+                }}
+              />
+              {death_priority.recommendation && (
+                <div className="mt-3 pt-3 border-t border-error/20">
+                  <p className="text-error/90">
+                    <span className="font-semibold">Recommendation:</span> {death_priority.recommendation}
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+
+          <div className="max-h-[60vh] overflow-y-auto">
+            <p className="text-xl font-semibold mb-4">Recommendations:</p>
+            <ul className="list-disc list-inside space-y-4">
+              {pattern_based?.admin_recommendation ? (
+                pattern_based.admin_recommendation.split('\n')
+                  .filter(rec => rec.trim())
+                  .map((rec, index) => (
+                    <li key={index} className="text-gray-700 text-lg">
+                      {rec.trim().replace(/^- /, '')}
+                    </li>
+                  ))
+              ) : (
+                <li className="text-gray-700 text-lg">No recommendations available.</li>
+              )}
+            </ul>
+          </div>
+
+          <div className="modal-action mt-8">
+            <form method="dialog">
+              <button className="btn btn-primary text-white">Close</button>
+            </form>
+          </div>
+        </div>
+      </dialog>
     </div>
   );
 };

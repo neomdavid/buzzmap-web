@@ -37,6 +37,7 @@ const TABS = [
   { label: "Gradual Rise", value: "gradual" },
   { label: "Stability", value: "stability" },
   { label: "Decline", value: "decline" },
+  { label: "No Pattern", value: "no_pattern" },
 ];
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
@@ -114,6 +115,7 @@ const Analytics = () => {
   // Handle barangay selection from map
   const handleMapBarangaySelect = (feature) => {
     if (feature?.properties?.name) {
+    
       setMapSelectedBarangay(feature.properties.name);
       setSearchBarangay(null); // clear programmatic search
     }
@@ -355,7 +357,6 @@ const Analytics = () => {
               ))}
             </div>
             <div className="flex flex-col gap-y-5 h-95 xl:h-120 2xl:h-125 mt-[-10px] py-3 overflow-y-scroll">
-              {console.log('[Analytics DEBUG] Rendering PatternAlerts with selectedTab:', selectedTab, 'searchBarangay:', searchBarangay)}
               <PatternAlerts
                 selectedBarangay={mapSelectedBarangay}
                 selectedTab={selectedTab}
@@ -408,7 +409,6 @@ const Analytics = () => {
               // Normalize barangay name for matching
               const normalize = (name) => (name || '').toLowerCase().replace(/[^a-z0-9]/g, '');
               const selectedNorm = normalize(mapSelectedBarangay);
-
               // Reports analytics
               const filteredPosts = Array.isArray(posts?.posts) ? posts.posts.filter(post => normalize(post.barangay) === selectedNorm) : [];
 
