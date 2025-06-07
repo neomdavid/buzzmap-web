@@ -9,6 +9,7 @@ const RecentReportCard = ({
   time,
   reportType,
   description,
+  onViewClick,
 }) => {
   return (
     <div className="bg-white rounded-xl shadow-md p-5 w-[300px] flex-shrink-0">
@@ -34,7 +35,10 @@ const RecentReportCard = ({
           <span className="font-semibold">📝 Description: </span>
           {description}
         </p>
-        <div className="absolute right-0.5 bg-primary text-white bottom-0 p-1 rounded-full hover:bg-gray-200 hover:text-primary transition-all duration-300 cursor-pointer">
+        <div 
+          className="absolute right-0.5 bg-primary text-white bottom-0 p-1 rounded-full hover:bg-gray-200 hover:text-primary transition-all duration-300 cursor-pointer"
+          onClick={onViewClick}
+        >
           <ArrowRight size={15} />
         </div>
       </div>

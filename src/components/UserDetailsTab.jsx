@@ -20,7 +20,7 @@ const UserDetailsTab = ({ profileImage, username, timestamp }) => {
         </div>
       </div>
       {/* Right Side: Dots Icon */}
-      <DotsThree size={28} />
+      {/* <DotsThree size={28} /> */}
     </div>
   );
 };

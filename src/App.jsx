@@ -6,6 +6,7 @@ import {
   Routes,
   Route,
 } from "react-router-dom";
+import { GoogleMapsProvider } from "./components/GoogleMapsProvider";
 import {
   About,
   Community,
@@ -151,12 +152,17 @@ const PrivateRoute = ({ children, requiredRole }) => {
   return children;
 };
 
-function App() {
+// Create a wrapper component that provides the GoogleMaps context
+const AppWithProviders = () => {
   const router = createBrowserRouter([
     // Public routes
     {
       path: "/",
-      element: <LandingLayout />,
+      element: (
+        <GoogleMapsProvider>
+          <LandingLayout />
+        </GoogleMapsProvider>
+      ),
       errorElement: <ErrorPage />,
       children: [
         { index: true, element: <Navigate to="/home" replace /> },
@@ -272,6 +278,10 @@ function App() {
   ]);
 
   return <RouterProvider router={router} />;
+};
+
+function App() {
+  return <AppWithProviders />;
 }
 
 export default App;

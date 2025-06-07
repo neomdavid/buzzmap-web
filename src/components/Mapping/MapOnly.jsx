@@ -41,7 +41,7 @@ const INTERVENTION_TYPE_ICONS = {
 const BREEDING_SITE_TYPE_ICONS = {
   "Stagnant Water": stagnantIcon,
   "Standing Water": standingIcon,
-  "Garbage": garbageIcon,
+  "Uncollected Garbage or Trash": garbageIcon,
   "Others": othersIcon,
   "default": stagnantIcon
 };

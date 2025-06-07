@@ -22,7 +22,15 @@ function getDistanceMeters(lat1, lng1, lat2, lng2) {
   return R * c;
 }
 
-const SideNavDetails = ({ report, nearbyCount, nearbyReports = [], radius = 2, onReportBreedingSite }) => {
+const SideNavDetails = ({ 
+  report, 
+  nearbyCount, 
+  nearbyReports = [], 
+  radius = 2, 
+  onReportBreedingSite,
+  onViewCommunityClick,
+  onPreventionTipsClick 
+}) => {
   console.log("SideNavDetails nearbyReports prop:", nearbyReports);
   console.log("SideNavDetails report prop:", report);
 
@@ -261,6 +269,7 @@ md:w-[35vw]   max-w-[370px] "
         </button>
         <button
           type="button"
+          onClick={onViewCommunityClick}
           className={`
             flex items-center text-center gap-2 p-4 px-8 justify-center shadow-lg rounded-xl font-semibold 
             hover:cursor-pointer hover:scale-105 transition-transform duration-300 active:opacity-70 
@@ -272,6 +281,7 @@ md:w-[35vw]   max-w-[370px] "
         </button>
         <button
           type="button"
+          onClick={onPreventionTipsClick}
           className={`
             flex items-center text-center gap-2 p-4 px-8 justify-center shadow-lg rounded-xl font-semibold 
             hover:cursor-pointer hover:scale-105 transition-transform duration-300 active:opacity-70 

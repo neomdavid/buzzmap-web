@@ -581,6 +581,15 @@ export const dengueApi = createApi({
       providesTags: ['Accounts'],
     }),
 
+    // Add this new endpoint
+    getBasicProfiles: builder.query({
+      query: () => ({
+        url: '/accounts/basic',
+        method: 'GET',
+      }),
+      providesTags: ['Accounts'],
+    }),
+
     // Create admin account
     createAdmin: builder.mutation({
       query: (adminData) => ({
@@ -1348,4 +1357,7 @@ export const {
 
   // Add this new endpoint
   useGetDeletedAccountsQuery,
+
+  // Add this new endpoint
+  useGetBasicProfilesQuery,
 } = dengueApi;
