@@ -23,6 +23,7 @@ const QC_BOUNDS = {
 const NewPostModal = forwardRef(({ onSubmit, initialCoordinates = "", initialBarangay = "" }, ref) => {
   const [barangay, setBarangay] = useState(initialBarangay);
   const [coordinates, setCoordinates] = useState(initialCoordinates);
+  const [address, setAddress] = useState(""); // Add state for geocoded address
   const [date, setDate] = useState("");
   const [time, setTime] = useState("");
   const [reportType, setReportType] = useState("");
@@ -230,6 +231,25 @@ const NewPostModal = forwardRef(({ onSubmit, initialCoordinates = "", initialBar
     setCoordinates(coords);
     setBarangay(barangayName || ""); // Always set barangay, even if empty
     
+    // Geocode the coordinates
+    const [lat, lng] = coords.split(",").map(coord => parseFloat(coord.trim()));
+    const geocoder = new window.google.maps.Geocoder();
+    
+    geocoder.geocode({ location: { lat, lng } }, (results, status) => {
+      if (status === "OK" && results[0]) {
+        // Get the street address without the city and country
+        const addressComponents = results[0].address_components;
+        const streetAddress = results[0].formatted_address
+          .split(',')
+          .slice(0, -2) // Remove city and country
+          .join(',')
+          .trim();
+        setAddress(streetAddress);
+      } else {
+        setAddress("Address not found");
+      }
+    });
+    
     // Debug log to verify state updates
     console.log('Updated state:', {
       coordinates: coords,
@@ -376,14 +396,14 @@ const NewPostModal = forwardRef(({ onSubmit, initialCoordinates = "", initialBar
 
                       <div>
                         <label className="label">
-                          <span className="label-text text-primary font-bold mb-1">Coordinates</span>
+                          <span className="label-text text-primary font-bold mb-1">Location</span>
                         </label>
                         <input
                           type="text"
                           className="input input-bordered py-6 w-full text-lg"
-                          value={coordinates}
+                          value={address}
                           readOnly
-                          placeholder="Select on map"
+                          placeholder="Select location on map"
                         />
                       </div>
                     </div>
@@ -484,8 +504,8 @@ const NewPostModal = forwardRef(({ onSubmit, initialCoordinates = "", initialBar
 
             <div className="flex justify-end mt-6">
               <SecondaryButton
-                text="Share"
-                loadingText="Sharing..."
+                text="Report"
+                loadingText="Reporting..."
                 className="h-11 w-[20%]"
                 type="submit"
                 isLoading={isLoading}

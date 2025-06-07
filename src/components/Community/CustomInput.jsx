@@ -4,7 +4,7 @@ import defaultProfile from "../../assets/default_profile.png";
 import { useSelector } from "react-redux";
 
 const CustomInput = ({
-  placeholder = "Is there anything you'd like to share?",
+  placeholder = "Spotted potential dengue breeding sites? Report them here",
   profileSrc,
   showImagePicker = false,
   readOnly = false,

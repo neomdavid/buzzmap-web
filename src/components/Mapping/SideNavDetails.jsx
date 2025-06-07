@@ -236,9 +236,9 @@ md:w-[35vw]   max-w-[370px] "
               </span>
             </p>
             {showTooltip && barangayList.length > 0 && (
-              <div className="absolute left-1/2 -translate-x-1/2 mt-2 bg-white text-primary text-md rounded shadow-lg px-3 py-2 z-50 min-w-[120px] max-w-[200px]">
+              <div className="absolute left-2/3 -translate-x-1/2 mt-2 bg-white text-primary text-md rounded shadow-lg px-3 py-2 z-50 min-w-[120px] max-w-[200px]">
                 <div className="font-semibold mb-1">Nearby Barangays:</div>
-                <ul className="text-left">
+                <ul className="text-center">
                   {barangayList.map((b, i) => (
                     <li key={i}>• {b}</li>
                   ))}
@@ -316,9 +316,9 @@ md:w-[35vw]   max-w-[370px] "
           >
             ✕
           </button>
-          <h3 className="font-bold text-lg mb-2">Barangays Represented Nearby</h3>
+          <p className="font-extrabold text-xl mb-3">Barangays Represented Nearby</p>
           {barangayList.length > 0 ? (
-            <ul className="text-left text-base">
+            <ul className="text-left text-lg text-base">
               {barangayList.map((b, i) => (
                 <li key={i}>• {b}</li>
               ))}

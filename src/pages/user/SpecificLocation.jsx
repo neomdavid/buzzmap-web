@@ -318,17 +318,13 @@ const SpecificLocation = () => {
           </p>
           <div class="flex flex-col items-center mt-2 space-y-1 font-normal text-center">
             <p class="text-xl">
-              <span class="font-bold">Status:</span> 
-              <span class="${getStatusColorClass(report.status)}">${report.status}</span>
-            </p>
-            <p class="text-xl">
               <span class="font-bold">Barangay:</span> ${report.barangay}
             </p>
             <p class="text-xl">
               <span class="font-bold">Reported by:</span> ${report.isAnonymous ? "Anonymous" : report.user?.username || "Unknown"}
             </p>
             <p class="text-xl">
-              <span class="font-bold">Date:</span> ${new Date(report.date_and_time).toLocaleDateString()}
+              <span class="font-bold">Reported:</span> ${getRelativeTime(report.date_and_time)}
             </p>
             <p class="text-xl">
               <span class="font-bold">Description:</span> ${report.description}
@@ -387,17 +383,13 @@ const SpecificLocation = () => {
             </p>
             <div class="flex flex-col items-center mt-2 space-y-1 font-normal text-center">
               <p class="text-xl">
-                <span class="font-bold">Status:</span> 
-                <span class="${getStatusColorClass(r.status)}">${r.status}</span>
-              </p>
-              <p class="text-xl">
                 <span class="font-bold">Barangay:</span> ${r.barangay}
               </p>
               <p class="text-xl">
                 <span class="font-bold">Reported by:</span> ${r.isAnonymous ? "Anonymous" : r.user?.username || "Unknown"}
               </p>
               <p class="text-xl">
-                <span class="font-bold">Date:</span> ${new Date(r.date_and_time).toLocaleDateString()}
+                <span class="font-bold">Reported:</span> ${getRelativeTime(r.date_and_time)}
               </p>
               <p class="text-xl">
                 <span class="font-bold">Description:</span> ${r.description}
