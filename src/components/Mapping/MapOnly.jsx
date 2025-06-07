@@ -58,21 +58,16 @@ function normalizeBarangayName(name) {
 const QC_CENTER = { lat: 14.676, lng: 121.0437 };
 let googleMapsScriptLoadingPromise = null;
 function loadGoogleMapsScript(apiKey) {
-  console.log('[DEBUG] Loading Google Maps script...');
   if (window.google && window.google.maps && window.google.maps.Map) {
-    console.log('[DEBUG] Google Maps already loaded');
     return Promise.resolve();
   }
   if (googleMapsScriptLoadingPromise) {
-    console.log('[DEBUG] Google Maps script already loading');
     return googleMapsScriptLoadingPromise;
   }
   googleMapsScriptLoadingPromise = new Promise((resolve, reject) => {
     if (document.getElementById('google-maps-script')) {
-      console.log('[DEBUG] Google Maps script tag exists, waiting for load...');
       const check = () => {
         if (window.google && window.google.maps && window.google.maps.Map) {
-          console.log('[DEBUG] Google Maps loaded from existing script');
           resolve();
         } else {
           setTimeout(check, 50);
@@ -81,27 +76,11 @@ function loadGoogleMapsScript(apiKey) {
       check();
       return;
     }
-    console.log('[DEBUG] Creating new Google Maps script tag');
     const script = document.createElement('script');
     script.id = 'google-maps-script';
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=marker&v=beta`;
-    script.onload = () => {
-      console.log('[DEBUG] Google Maps script loaded successfully');
-      const checkMarkerLibrary = () => {
-        if (window.google?.maps?.marker) {
-          console.log('[DEBUG] Marker library is available');
-          resolve();
-        } else {
-          console.log('[DEBUG] Waiting for marker library...');
-          setTimeout(checkMarkerLibrary, 50);
-        }
-      };
-      checkMarkerLibrary();
-    };
-    script.onerror = (err) => {
-      console.error('[DEBUG] Error loading Google Maps script:', err);
-      reject(err);
-    };
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=marker`;
+    script.onload = () => resolve();
+    script.onerror = (err) => reject(err);
     document.body.appendChild(script);
   });
   return googleMapsScriptLoadingPromise;
@@ -152,45 +131,24 @@ const MapOnly = forwardRef(({
       try {
         setLoading(true);
         setError(null);
-        console.log('[DEBUG] Fetching barangay data...');
         const barangayResponse = await fetch("/quezon_barangays_boundaries.geojson");
         if (!barangayResponse.ok) throw new Error('Failed to load barangay data');
         const barangayGeoJson = await barangayResponse.json();
         if (isMountedRef.current) {
-          console.log('[DEBUG] Barangay data loaded successfully');
           setBarangayData(barangayGeoJson);
         }
         if (posts) {
-          console.log('[DEBUG] Processing posts data:', posts);
           const validPosts = Array.isArray(posts?.posts) ? posts.posts : (Array.isArray(posts) ? posts : []);
-          console.log('[DEBUG] Valid posts array:', validPosts);
-          const validatedSites = validPosts.filter(post => {
-            const isValid = post.status === "Validated" && 
-                           post.specific_location && 
-                           Array.isArray(post.specific_location.coordinates) && 
-                           post.specific_location.coordinates.length === 2;
-            if (!isValid) {
-              console.log('[DEBUG] Invalid post:', {
-                id: post._id,
-                status: post.status,
-                hasLocation: !!post.specific_location,
-                coordinates: post.specific_location?.coordinates
-              });
-            }
-            return isValid;
-          });
-          console.log('[DEBUG] Validated breeding sites:', validatedSites);
+          const validatedSites = validPosts.filter(post => post.status === "Validated" && post.specific_location && Array.isArray(post.specific_location.coordinates) && post.specific_location.coordinates.length === 2);
           if (isMountedRef.current) {
             setBreedingSites(validatedSites);
           }
         } else {
-          console.log('[DEBUG] No posts data available');
           if (isMountedRef.current) {
             setBreedingSites([]);
           }
         }
       } catch (err) {
-        console.error('[DEBUG] Error fetching data:', err);
         if (isMountedRef.current) {
           setError(err.message);
         }
@@ -232,36 +190,27 @@ const MapOnly = forwardRef(({
     }
     let map, overlays = [];
     setMapLoaded(false);
-    console.log('[DEBUG] Starting map initialization...');
-    console.log('[DEBUG] Current props:', {
-      showBreedingSites,
-      showInterventions,
-      breedingSitesCount: breedingSites.length,
-      interventionsCount: interventions.length
-    });
     loadGoogleMapsScript(apiKey).then(() => {
       if (!isMountedRef.current) return;
-      console.log('[DEBUG] Google Maps script loaded, initializing map...');
-      console.log('[DEBUG] Marker library available:', !!window.google?.maps?.marker);
       overlaysRef.current.forEach(o => o.setMap(null));
       overlaysRef.current = [];
       if (!mapInstance.current) {
         try {
           mapInstance.current = new window.google.maps.Map(mapRef.current, {
             center: QC_CENTER,
-            zoom: 12,
-            mapId: mapId,
+            zoom: 13,
+            mapId: mapId || undefined,
             mapTypeControl: false,
             streetViewControl: false,
             fullscreenControl: false,
           });
-          console.log('[DEBUG] Map instance created successfully');
           window.google.maps.event.addListenerOnce(mapInstance.current, 'tilesloaded', () => {
             setMapLoaded(true);
           });
-        } catch (error) {
-          console.error('[DEBUG] Error creating map instance:', error);
-          setError('Failed to initialize map');
+        } catch (err) {
+          if (isMountedRef.current) {
+            setError('Failed to initialize map');
+          }
           return;
         }
       } else {
@@ -316,7 +265,6 @@ const MapOnly = forwardRef(({
       });
       let breedingMarkers = [];
       if (showBreedingSites && breedingSites.length > 0 && window.google.maps.marker) {
-        console.log('[DEBUG] Creating breeding site markers...');
         const { AdvancedMarkerElement, PinElement } = window.google.maps.marker;
         breedingMarkers = breedingSites.map((site) => {
           const iconUrl = BREEDING_SITE_TYPE_ICONS[site.report_type] || BREEDING_SITE_TYPE_ICONS.default;
@@ -336,16 +284,12 @@ const MapOnly = forwardRef(({
             scale: 1.5,
           });
 
-          const position = {
-            lat: parseFloat(site.latitude || site.specific_location?.coordinates[1]),
-            lng: parseFloat(site.longitude || site.specific_location?.coordinates[0]),
-          };
-
-          console.log('[DEBUG] Creating marker at position:', position);
-
           const marker = new AdvancedMarkerElement({
             map,
-            position,
+            position: {
+              lat: site.specific_location.coordinates[1],
+              lng: site.specific_location.coordinates[0],
+            },
             content: pin.element,
             title: site.report_type || 'Breeding Site',
           });
@@ -354,172 +298,173 @@ const MapOnly = forwardRef(({
             console.log('[DEBUG] Marker clicked:', {
               type: 'report',
               site: site,
-              position: position
+              coordinates: site.specific_location.coordinates
             });
             
             // Close existing info window if open
-            if (infoWindowRef.current) {
+            if (infoWindow) {
               console.log('[DEBUG] Closing existing info window');
-              infoWindowRef.current.close();
+              infoWindow.close();
             }
-
-            // Create new info window
-            infoWindowRef.current = new window.google.maps.InfoWindow({
-              maxWidth: 500,
-            });
 
             // Pan to marker position and zoom in
             if (mapInstance.current) {
               console.log('[DEBUG] Panning to marker position');
-              mapInstance.current.panTo(position);
+              mapInstance.current.panTo({
+                lat: site.specific_location.coordinates[1],
+                lng: site.specific_location.coordinates[0],
+              });
               mapInstance.current.setZoom(17);
             }
 
             // Use a div with Tailwind classes for InfoWindow content
             const content = document.createElement('div');
             content.innerHTML = `
-              <div class="bg-white p-4 rounded-lg text-primary text-center max-w-120 w-[50vw]">
-                <p class="font-bold text-4xl font-extrabold mb-4 text-primary">
+              <div class=\"bg-white p-4 rounded-lg text-primary text-center max-w-120 w-[50vw]\">
+                <p class=\"font-bold text-4xl font-extrabold mb-4 text-primary\">
                   ${site.report_type || 'Breeding Site'}
                 </p>
-                <div class="flex flex-col items-center mt-2 space-y-1 font-normal text-center">
-                  <p class="text-xl">
-                    <span class="font-bold">Barangay:</span> ${site.barangay || ''}
+                <div class=\"flex flex-col items-center mt-2 space-y-1 font-normal text-center\">
+                  <p class=\"text-xl\">
+                    <span class=\"font-bold\">Barangay:</span> ${site.barangay || ''}
                   </p>
-                  <p class="text-xl">
-                    <span class="font-bold">Reported by:</span> ${site.user?.username || ''}
+                  <p class=\"text-xl\">
+                    <span class=\"font-bold\">Reported by:</span> ${site.user?.username || ''}
                   </p>
-                  <p class="text-xl">
-                    <span class="font-bold">Date:</span> ${site.date_and_time ? new Date(site.date_and_time).toLocaleDateString() : ''}
+                  <p class=\"text-xl\">
+                    <span class=\"font-bold\">Date:</span> ${site.date_and_time ? new Date(site.date_and_time).toLocaleDateString() : ''}
                   </p>
-                  <p class="text-xl">
-                    <span class="font-bold">Description:</span> ${site.description || ''}
+                  <p class=\"text-xl\">
+                    <span class=\"font-bold\">Description:</span> ${site.description || ''}
                   </p>
                   ${(site.images && site.images.length > 0) ? `<div class='mt-2 flex justify-center gap-2'>${site.images.map(img => `<img src='${img}' class='w-35 h-25 object-cover rounded border'/>`).join('')}</div>` : ''}
                 </div>
-                <button class="mt-4 px-4 py-2 bg-primary w-[40%] text-white rounded-lg shadow hover:bg-primary/80 hover:cursor-pointer font-bold" onclick="window.location.href='/mapping/${site._id}'">View Details</button>
+                <button class=\"mt-4 px-4 py-2 bg-primary w-[40%] text-white rounded-lg shadow hover:bg-primary/80 hover:cursor-pointer font-bold\" onclick=\"window.location.href='/mapping/${site._id}'\">View Details</button>
               </div>
             `;
+            console.log('[DEBUG] Created info window content');
 
-            infoWindowRef.current.setContent(content);
-            infoWindowRef.current.setPosition(position);
-            infoWindowRef.current.open(mapInstance.current);
+            console.log('[DEBUG] Setting info window content and position');
+            infoWindow.setContent(content);
+            infoWindow.setPosition({
+              lat: site.specific_location.coordinates[1],
+              lng: site.specific_location.coordinates[0],
+            });
+
+            console.log('[DEBUG] Opening info window');
+            infoWindow.open(map, marker);
           });
 
           return marker;
         });
+        overlays.push(...breedingMarkers);
       }
 
-      let interventionMarkers = [];
+      // Draw intervention markers
       if (showInterventions && interventions.length > 0 && window.google.maps.marker) {
-        console.log('[DEBUG] Creating intervention markers...');
         const { AdvancedMarkerElement, PinElement } = window.google.maps.marker;
-        interventionMarkers = interventions.map((intervention) => {
-          const iconUrl = INTERVENTION_TYPE_ICONS[intervention.intervention_type] || INTERVENTION_TYPE_ICONS.default;
-          const glyphImg = document.createElement("img");
-          glyphImg.src = iconUrl;
-          glyphImg.style.width = "28px";
-          glyphImg.style.height = "28px";
-          glyphImg.style.objectFit = "contain";
-          glyphImg.style.backgroundColor = "#FFFFFF";
-          glyphImg.style.borderRadius = "100%";
-          glyphImg.style.padding = "2px";
+        const interventionMarkers = interventions
+          .filter(intervention => {
+            const status = intervention.status?.toLowerCase();
+            return status === 'ongoing' || status === 'scheduled';
+          })
+          .map((intervention) => {
+            const iconUrl = INTERVENTION_TYPE_ICONS[intervention.interventionType] || INTERVENTION_TYPE_ICONS.default;
+            const glyphImg = document.createElement("img");
+            glyphImg.src = iconUrl;
+            glyphImg.style.width = "28px";
+            glyphImg.style.height = "28px";
+            glyphImg.style.objectFit = "contain";
+            glyphImg.style.backgroundColor = "#FFFFFF";
+            glyphImg.style.borderRadius = "100%";
+            glyphImg.style.padding = "2px";
 
-          const pin = new PinElement({
-            glyph: glyphImg,
-            background: "#4CAF50",
-            borderColor: "#4CAF50",
-            scale: 1.5,
-          });
-
-          const position = {
-            lat: parseFloat(intervention.latitude || intervention.specific_location?.coordinates[1]),
-            lng: parseFloat(intervention.longitude || intervention.specific_location?.coordinates[0]),
-          };
-
-          console.log('[DEBUG] Creating intervention marker at position:', position);
-
-          const marker = new AdvancedMarkerElement({
-            map,
-            position,
-            content: pin.element,
-            title: intervention.intervention_type || 'Intervention',
-          });
-
-          marker.addListener('click', () => {
-            console.log('[DEBUG] Intervention marker clicked:', {
-              type: 'intervention',
-              intervention: intervention,
-              position: position
-            });
-            
-            // Close existing info window if open
-            if (infoWindowRef.current) {
-              console.log('[DEBUG] Closing existing info window');
-              infoWindowRef.current.close();
-            }
-
-            // Create new info window
-            infoWindowRef.current = new window.google.maps.InfoWindow({
-              maxWidth: 500,
+            const pin = new PinElement({
+              glyph: glyphImg,
+              background: "#1893F8",
+              borderColor: "#1893F8",
+              scale: 1.5,
             });
 
-            // Pan to marker position and zoom in
-            if (mapInstance.current) {
-              console.log('[DEBUG] Panning to marker position');
-              mapInstance.current.panTo(position);
-              mapInstance.current.setZoom(17);
-            }
+            const marker = new AdvancedMarkerElement({
+              map,
+              position: {
+                lat: intervention.specific_location.coordinates[1],
+                lng: intervention.specific_location.coordinates[0],
+              },
+              content: pin.element,
+              title: intervention.interventionType,
+            });
 
-            // Use a div with Tailwind classes for InfoWindow content
-            const content = document.createElement('div');
-            content.innerHTML = `
-              <div class="bg-white p-4 rounded-lg text-primary text-center max-w-120 w-[50vw]">
-                <p class="font-bold text-4xl font-extrabold mb-4 text-primary">
-                  ${intervention.intervention_type || 'Intervention'}
-                </p>
-                <div class="flex flex-col items-center mt-2 space-y-1 font-normal text-center">
-                  <p class="text-xl">
-                    <span class="font-bold">Barangay:</span> ${intervention.barangay || ''}
-                  </p>
-                  <p class="text-xl">
-                    <span class="font-bold">Conducted by:</span> ${intervention.user?.username || ''}
-                  </p>
-                  <p class="text-xl">
-                    <span class="font-bold">Date:</span> ${intervention.date_and_time ? new Date(intervention.date_and_time).toLocaleDateString() : ''}
-                  </p>
-                  <p class="text-xl">
-                    <span class="font-bold">Description:</span> ${intervention.description || ''}
-                  </p>
-                  ${(intervention.images && intervention.images.length > 0) ? `<div class='mt-2 flex justify-center gap-2'>${intervention.images.map(img => `<img src='${img}' class='w-35 h-25 object-cover rounded border'/>`).join('')}</div>` : ''}
+            marker.addListener('click', () => {
+              console.log('[DEBUG] Intervention marker clicked:', {
+                type: 'intervention',
+                intervention: intervention,
+                coordinates: intervention.specific_location.coordinates
+              });
+
+              // Close existing info window if open
+              if (infoWindow) {
+                console.log('[DEBUG] Closing existing info window');
+                infoWindow.close();
+              }
+
+              // Pan to marker position and zoom in
+              if (mapInstance.current) {
+                console.log('[DEBUG] Panning to marker position');
+                mapInstance.current.panTo({
+                  lat: intervention.specific_location.coordinates[1],
+                  lng: intervention.specific_location.coordinates[0],
+                });
+                mapInstance.current.setZoom(17);
+              }
+
+              // Use a div with Tailwind classes for InfoWindow content
+              const content = document.createElement('div');
+              content.innerHTML = `
+                <div class="p-3 flex flex-col items-center gap-1 font-normal bg-white text-center rounded-md shadow-md text-primary">
+                  <p class="text-4xl font-extrabold text-primary mb-2">${intervention.interventionType || 'Intervention'}</p>
+                  <div class="text-lg flex items-center gap-2">
+                    <span class="font-bold">Status:</span>
+                    <span class="px-3 py-1 rounded-full text-white font-bold text-sm" style="background-color:#FF6347;box-shadow:0 1px 4px rgba(0,0,0,0.08);">
+                      ${intervention.status || ''}
+                    </span>
+                  </div>
+                  <p class="text-lg text-center"><span class="font-bold">Barangay:</span> ${intervention.barangay || ''}</p>
+                  ${intervention.address ? `<p class="text-lg text-center"><span class="font-bold text-center">Address:</span> ${intervention.address}</p>` : ''}
+                  <p class="text-lg"><span class="font-bold">Date:</span> ${intervention.date ? new Date(intervention.date).toLocaleString('en-US', { year: 'numeric', month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true }) : ''}</p>
+                  <p class="text-lg"><span class="font-bold">Personnel:</span> ${intervention.personnel || ''}</p>
                 </div>
-                <button class="mt-4 px-4 py-2 bg-primary w-[40%] text-white rounded-lg shadow hover:bg-primary/80 hover:cursor-pointer font-bold" onclick="window.location.href='/mapping/${intervention._id}'">View Details</button>
-              </div>
-            `;
+              `;
+              console.log('[DEBUG] Created info window content');
 
-            infoWindowRef.current.setContent(content);
-            infoWindowRef.current.setPosition(position);
-            infoWindowRef.current.open(mapInstance.current);
+              console.log('[DEBUG] Setting info window content and position');
+              infoWindow.setContent(content);
+              infoWindow.setPosition({
+                lat: intervention.specific_location.coordinates[1],
+                lng: intervention.specific_location.coordinates[0],
+              });
+
+              console.log('[DEBUG] Opening info window');
+              infoWindow.open(map, marker);
+            });
+
+            return marker;
           });
-
-          return marker;
-        });
+        overlays.push(...interventionMarkers);
       }
 
-      overlaysRef.current = [...overlays, ...breedingMarkers, ...interventionMarkers];
-      setMapLoaded(true);
-    }).catch((error) => {
-      console.error('[DEBUG] Error loading Google Maps:', error);
-      setError('Failed to load Google Maps');
+      overlaysRef.current = overlays;
+    }).catch(err => {
+      if (isMountedRef.current) {
+        setError('Failed to load Google Maps');
+      }
     });
-
     return () => {
-      if (overlaysRef.current) {
-        overlaysRef.current.forEach(o => o.setMap(null));
-        overlaysRef.current = [];
-      }
+      overlaysRef.current.forEach(o => o.setMap(null));
+      overlaysRef.current = [];
     };
-  }, [loading, error, barangayData, showBreedingSites, showInterventions, breedingSites, interventions, selectedBarangay, onBarangaySelect]);
+  }, [loading, error, barangayData]);
 
   // Add this effect to initialize the info window
   useEffect(() => {
@@ -684,7 +629,7 @@ const MapOnly = forwardRef(({
     if (showInterventions && interventions.length > 0 && window.google.maps.marker) {
       const { AdvancedMarkerElement, PinElement } = window.google.maps.marker;
       interventions.forEach((intervention) => {
-        const iconUrl = INTERVENTION_TYPE_ICONS[intervention.intervention_type] || INTERVENTION_TYPE_ICONS.default;
+        const iconUrl = INTERVENTION_TYPE_ICONS[intervention.interventionType] || INTERVENTION_TYPE_ICONS.default;
         const glyphImg = document.createElement("img");
         glyphImg.src = iconUrl;
         glyphImg.style.width = "28px";
@@ -706,7 +651,7 @@ const MapOnly = forwardRef(({
             lng: intervention.specific_location.coordinates[0],
           },
           content: pin.element,
-          title: intervention.intervention_type || 'Intervention',
+          title: intervention.interventionType,
         });
         marker.addListener('click', () => {
           console.log('[DEBUG] Intervention marker clicked:', {
@@ -735,17 +680,17 @@ const MapOnly = forwardRef(({
           const content = document.createElement('div');
           content.innerHTML = `
             <div class="p-3 flex flex-col items-center gap-1 font-normal bg-white text-center rounded-md shadow-md text-primary">
-              <p class="text-4xl font-extrabold text-primary mb-2">${intervention.intervention_type || 'Intervention'}</p>
+              <p class="text-4xl font-extrabold text-primary mb-2">${intervention.interventionType || 'Intervention'}</p>
               <div class="text-lg flex items-center gap-2">
-                <span class="font-bold">Barangay:</span>
+                <span class="font-bold">Status:</span>
                 <span class="px-3 py-1 rounded-full text-white font-bold text-sm" style="background-color:#FF6347;box-shadow:0 1px 4px rgba(0,0,0,0.08);">
-                  ${intervention.barangay || ''}
+                  ${intervention.status || ''}
                 </span>
               </div>
-              <p class="text-lg text-center"><span class="font-bold">Conducted by:</span> ${intervention.user?.username || ''}</p>
+              <p class="text-lg text-center"><span class="font-bold">Barangay:</span> ${intervention.barangay || ''}</p>
               ${intervention.address ? `<p class="text-lg text-center"><span class="font-bold text-center">Address:</span> ${intervention.address}</p>` : ''}
               <p class="text-lg"><span class="font-bold">Date:</span> ${intervention.date ? new Date(intervention.date).toLocaleString('en-US', { year: 'numeric', month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true }) : ''}</p>
-              <p class="text-lg"><span class="font-bold">Description:</span> ${intervention.description || ''}</p>
+              <p class="text-lg"><span class="font-bold">Personnel:</span> ${intervention.personnel || ''}</p>
             </div>
           `;
           console.log('[DEBUG] Created info window content');

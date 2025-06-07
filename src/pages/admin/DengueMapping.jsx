@@ -4,22 +4,6 @@ import { useState, useMemo, useRef, useEffect } from "react";
 import { useGetInterventionsInProgressQuery, useGetPostsQuery, useGetAllInterventionsQuery, useGetBarangaysQuery } from "@/api/dengueApi";
 import * as turf from '@turf/turf';
 import MapOnly from '../../components/Mapping/MapOnly';
-import DengueMap from '@/components/DengueMap';
-
-// Import breeding site icons
-import stagnantIcon from "../../assets/icons/stagnant_water.svg";
-import standingIcon from '../../assets/icons/standing_water.svg';
-import garbageIcon from '../../assets/icons/garbage.svg';
-import othersIcon from '../../assets/icons/others.svg';
-
-// Breeding site type icon mapping
-const BREEDING_SITE_TYPE_ICONS = {
-  "Stagnant Water": stagnantIcon,
-  "Standing Water": standingIcon,
-  "Garbage": garbageIcon,
-  "Others": othersIcon,
-  "default": stagnantIcon // fallback
-};
 
 // Define QC_CENTER constant for default map position
 const QC_CENTER = {
@@ -48,7 +32,7 @@ const DengueMapping = () => {
   const [isImporting, setIsImporting] = useState(false);
   const [recentReports, setRecentReports] = useState([]);
   const [showBreedingSites, setShowBreedingSites] = useState(true);
-  const [showInterventions, setShowInterventions] = useState(true);
+  const [showInterventions, setShowInterventions] = useState(false);
   const mapOnlyRef = useRef(null);
   const mapRef = useRef(null);
   const modalRef = useRef(null);
@@ -528,656 +512,428 @@ const DengueMapping = () => {
     }
   }, [interventionsError]);
 
-  // Process breeding sites from posts
-  useEffect(() => {
-    console.log('[DEBUG] Processing posts data:', posts);
-    if (posts) {
-      const validPosts = Array.isArray(posts?.posts) ? posts.posts : (Array.isArray(posts) ? posts : []);
-      console.log('[DEBUG] Valid posts array:', validPosts);
-      const validatedSites = validPosts.filter(post => {
-        const isValid = post.status === "Validated" && 
-          post.specific_location && 
-          Array.isArray(post.specific_location.coordinates) && 
-          post.specific_location.coordinates.length === 2;
-        if (!isValid) {
-          console.log('[DEBUG] Invalid post:', post);
-        }
-        return isValid;
-      });
-      console.log('[DEBUG] Valid breeding sites found:', validatedSites.length);
-      console.log('[DEBUG] Breeding sites data:', validatedSites);
-      setBreedingSites(validatedSites);
-    } else {
-      console.log('[DEBUG] No posts data available');
-      setBreedingSites([]);
-    }
-  }, [posts]);
-
-  // Add debug for showBreedingSites state changes
-  useEffect(() => {
-    console.log('[DEBUG] showBreedingSites changed:', showBreedingSites);
-    console.log('[DEBUG] Current breeding sites:', breedingSites);
-  }, [showBreedingSites, breedingSites]);
-
-  // Initialize map and draw polygons/markers after script is loaded
-  useEffect(() => {
-    console.log('[DEBUG] Map initialization effect triggered:', {
-      loading,
-      error,
-      hasBarangayData: !!barangayData,
-      isMounted: isMountedRef.current,
-      showBreedingSites,
-      breedingSitesCount: breedingSites.length
-    });
-
-    if (loading || error || !barangayData || !isMountedRef.current) {
-      console.log('Skipping map initialization:', { 
-        loading, 
-        error: error?.message, 
-        hasBarangayData: !!barangayData,
-        isMounted: isMountedRef.current 
-      });
-      return;
-    }
-
-    console.log('Starting map initialization...');
-    let map, overlays = [];
-    loadGoogleMapsScript(apiKey).then(() => {
-      if (!isMountedRef.current) return;
-      
-      console.log('[DEBUG] Google Maps script loaded');
-      console.log('[DEBUG] Marker library available:', !!window.google?.maps?.marker);
-      
-      // Clean up previous overlays
-      overlaysRef.current.forEach(o => o.setMap(null));
-      overlaysRef.current = [];
-      
-      // Only create map if not already created
-      if (!mapInstance.current) {
-        console.log('Creating new map instance...');
-        try {
-          mapInstance.current = new window.google.maps.Map(mapRef.current, {
-            center: QC_CENTER,
-            zoom: 13,
-            mapId: mapId || undefined,
-            mapTypeControl: false,
-            streetViewControl: false,
-            fullscreenControl: false,
-          });
-          console.log('Map instance created successfully');
-        } catch (err) {
-          console.error('Error creating map instance:', err);
-          if (isMountedRef.current) {
-            setError('Failed to initialize map');
-          }
-          return;
-        }
-      }
-      
-      map = mapInstance.current;
-
-      // --- Draw breeding site markers with clustering ---
-      let breedingMarkers = [];
-      console.log('[DEBUG] Attempting to draw breeding sites:', {
-        showBreedingSites,
-        breedingSitesCount: breedingSites.length,
-        hasMarkerLibrary: !!window.google?.maps?.marker
-      });
-
-      if (showBreedingSites && breedingSites.length > 0 && window.google.maps.marker) {
-        console.log('[DEBUG] Creating breeding site markers');
-        const { AdvancedMarkerElement, PinElement } = window.google.maps.marker;
-        breedingMarkers = breedingSites.map((site) => {
-          console.log('[DEBUG] Creating marker for site:', site);
-          // Use the correct SVG icon for the breeding site type
-          const iconUrl = BREEDING_SITE_TYPE_ICONS[site.report_type] || BREEDING_SITE_TYPE_ICONS.default;
-          console.log('[DEBUG] Using icon URL:', iconUrl);
-          const glyphImg = document.createElement("img");
-          glyphImg.src = iconUrl;
-          glyphImg.style.width = "28px";
-          glyphImg.style.height = "28px";
-          glyphImg.style.objectFit = "contain";
-          glyphImg.style.backgroundColor = "#FFFFFF";
-          glyphImg.style.borderRadius = "100%";
-          glyphImg.style.padding = "2px";
-
-          const pin = new PinElement({
-            glyph: glyphImg,
-            background: "#FF6347", 
-            borderColor: "#FF6347",
-            scale: 1.5,
-          });
-          const marker = new AdvancedMarkerElement({
-            map,
-            position: {
-              lat: site.specific_location.coordinates[1],
-              lng: site.specific_location.coordinates[0],
-            },
-            content: pin.element,
-            title: site.report_type || 'Breeding Site',
-          });
-          marker.addListener('click', () => {
-            // Close barangay info window if open
-            if (infoWindowRef.current) {
-              infoWindowRef.current.close();
-              setSelectedBarangayFeature(null);
-            }
-            // Pan to marker position and zoom in
-            if (mapInstance.current) {
-              mapInstance.current.panTo({
-                lat: site.specific_location.coordinates[1],
-                lng: site.specific_location.coordinates[0],
-              });
-              mapInstance.current.setZoom(17);
-            }
-            // Hide control panel on md screens and lower
-            if (window.matchMedia && window.matchMedia('(max-width: 768px)').matches) {
-              setShowControlPanel(false);
-            }
-            // Use a div with Tailwind classes for InfoWindow content
-            const content = document.createElement('div');
-            content.innerHTML = `
-              <div class="bg-white p-4 rounded-lg text-primary text-center max-w-120 w-[50vw]">
-                <p class="font-bold text-4xl font-extrabold mb-4 text-primary">
-                  ${site.report_type || 'Breeding Site'}
-                </p>
-                <div class="flex flex-col items-center mt-2 space-y-1 font-normal text-center">
-                  <p class="text-xl">
-                    <span class="font-bold">Barangay:</span> ${site.barangay || ''}
-                  </p>
-                  <p class="text-xl">
-                    <span class="font-bold">Reported by:</span> ${site.user?.username || ''}
-                  </p>
-                  <p class="text-xl">
-                    <span class="font-bold">Date:</span> ${site.date_and_time ? new Date(site.date_and_time).toLocaleDateString() : ''}
-                  </p>
-                  <p class="text-xl">
-                    <span class="font-bold">Description:</span> ${site.description || ''}
-                  </p>
-                  ${(site.images && site.images.length > 0) ? `<div class='mt-2 flex justify-center gap-2'>${site.images.map(img => `<img src='${img}' class='w-35 h-25 object-cover rounded border'/>`).join('')}</div>` : ''}
-                </div>
-                <button class="mt-4 px-4 py-2 bg-primary w-[40%] text-white rounded-lg shadow hover:bg-primary/80 hover:cursor-pointer font-bold" onclick="window.location.href='/mapping/${site._id}'">View Details</button>
-              </div>
-            `;
-            infoWindow.setContent(content);
-            infoWindow.open(map, marker);
-          });
-          return marker;
-        });
-        console.log('[DEBUG] Created breeding site markers:', breedingMarkers.length);
-        // Cluster the markers
-        if (window.markerClusterer && window.markerClusterer.MarkerClusterer) {
-          if (markerClusterRef.current) markerClusterRef.current.setMap(null);
-          markerClusterRef.current = new window.markerClusterer.MarkerClusterer({ markers: breedingMarkers, map });
-        } else {
-          // fallback: just show markers
-          breedingMarkers.forEach(m => m.setMap(map));
-        }
-        overlays.push(...breedingMarkers);
-      }
-    });
-  }, [showBreedingSites, breedingSites, loading, error, barangayData, isMountedRef, mapId]);
-
   return (
-    <main className="flex-1 overflow-hidden">
-      <div className="h-full flex flex-col">
-        <p className="flex justify-center text-5xl font-extrabold mb-12 text-center md:justify-start md:text-left md:w-[78%]">
-          Dengue Mapping
-        </p>
-        
-        <div className="relative mb-4 flex justify-between items-center">
-          <div className="relative">
-            <input
-              type="text"
-              placeholder="Search barangay..."
-              value={searchQuery}
-              onChange={(e) => handleSearch(e.target.value)}
-              className="w-full md:w-[300px] pl-10 pr-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-            />
-            <MagnifyingGlass 
-              size={20} 
-              className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
-            />
-            {/* Search Results Dropdown */}
-            {searchQuery && filteredBarangays.length > 0 && (
-              <div className="absolute z-50 w-full mt-1 bg-white rounded-lg shadow-lg border border-gray-200 max-h-60 overflow-y-auto">
-                {filteredBarangays.map((barangay) => (
-                  <div
-                    key={barangay._id}
-                    onClick={() => {
-                      handleBarangaySelect(barangay);
-                      setSearchQuery("");
-                      setFilteredBarangays([]);
-                    }}
-                    className="px-4 py-2 hover:bg-gray-100 cursor-pointer text-primary"
-                  >
-                    {barangay.displayName || barangay.name}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-          
-          <div className="flex gap-2">
-            <button
-              onClick={() => setShowBreedingSites((prev) => !prev)}
-              className={`px-4 py-2 rounded-lg shadow-lg transition-all duration-200 ${
-                showBreedingSites 
-                  ? 'bg-primary text-white hover:bg-primary/90' 
-                  : 'bg-white text-primary hover:bg-gray-50'
-              }`}
-            >
-              {showBreedingSites ? 'Hide Breeding Sites' : 'Show Breeding Sites'}
-            </button>
-            <button
-              onClick={() => setShowInterventions((prev) => !prev)}
-              className={`px-4 py-2 rounded-lg shadow-lg transition-all duration-200 ${
-                showInterventions 
-                  ? 'bg-primary text-white hover:bg-primary/90' 
-                  : 'bg-white text-primary hover:bg-gray-50'
-              }`}
-            >
-              {showInterventions ? 'Hide Interventions' : 'Show Interventions'}
-            </button>
-          </div>
-        </div>
-
-        <div className="flex h-[50vh] mb-4" ref={mapContainerRef}>
-          <DengueMap
-            showLegends={true}
-            defaultTab="cases"
-            key={dataVersion}
-            initialFocusBarangayName={initialBarangayNameForMap}
-            searchQuery={searchBarangay}
-            selectedBarangay={selectedBarangay}
-            activeInterventions={activeInterventions}
-            isLoadingInterventions={isLoadingAllInterventions}
-            barangaysList={barangaysList}
-            onBarangaySelect={handleBarangaySelect}
-            onInfoWindowClose={handleMapInfoWindowClose}
-            showBreedingSites={showBreedingSites}
-            showInterventions={showInterventions}
-            onToggleBreedingSites={() => setShowBreedingSites(!showBreedingSites)}
-            onToggleInterventions={() => setShowInterventions(!showInterventions)}
+    <main className="flex flex-col w-full">
+      <p className="flex justify-center text-5xl font-extrabold mb-12 text-center md:justify-start md:text-left md:w-[78%]">
+        Dengue Mapping
+      </p>
+      
+      <div className="relative mb-4 flex justify-between items-center">
+        <div className="relative">
+          <input
+            type="text"
+            placeholder="Search barangay..."
+            value={searchQuery}
+            onChange={(e) => handleSearch(e.target.value)}
+            className="w-full md:w-[300px] pl-10 pr-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
           />
+          <MagnifyingGlass 
+            size={20} 
+            className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+          />
+          {/* Search Results Dropdown */}
+          {searchQuery && filteredBarangays.length > 0 && (
+            <div className="absolute z-50 w-full mt-1 bg-white rounded-lg shadow-lg border border-gray-200 max-h-60 overflow-y-auto">
+              {filteredBarangays.map((barangay) => (
+                <div
+                  key={barangay._id}
+                  onClick={() => {
+                    handleBarangaySelect(barangay);
+                    setSearchQuery("");
+                    setFilteredBarangays([]);
+                  }}
+                  className="px-4 py-2 hover:bg-gray-100 cursor-pointer text-primary"
+                >
+                  {barangay.displayName || barangay.name}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
-        <p className="text-left text-primary text-lg font-extrabold flex items-center gap-2 mb-8">
-          <div className="text-success">
-            <MapPinLine  size={16} />
-          </div>
-          Click on a Barangay to view details
-        </p>
-          <div className="grid grid-cols-10 gap-10">
-            <div className={`col-span-4 border-2 ${getBorderColor(selectedBarangay?.properties?.patternType)} rounded-2xl flex flex-col p-4 gap-1`}>
-              <p className="text-center font-semibold text-base-content">Selected Barangay - Dengue Overview</p>
-              <p className={`text-center font-bold ${getPatternTextColor(selectedBarangay?.properties?.patternType)} text-4xl mb-2`}>
-                {selectedBarangay ? `Barangay ${selectedBarangay.properties?.displayName || selectedBarangay.properties?.name}` : 'Select a Barangay'}
-              </p>
-              <p className={`text-center font-semibold text-white text-lg uppercase mb-4 px-4 py-1 rounded-full inline-block mx-auto ${getPatternBgColor(selectedBarangay?.properties?.patternType)}`}>
-                {selectedBarangay
-                  ? selectedBarangay.properties?.patternType
-                    ? (selectedBarangay.properties.patternType.charAt(0).toUpperCase() + selectedBarangay.properties.patternType.slice(1).replace('_', ' '))
-                    : 'NO PATTERN DETECTED'
-                  : 'NO BARANGAY SELECTED'
-                }
-              </p>
-              <div className="w-[90%] mx-auto flex flex-col text-black gap-2">
-                {/* Pattern-Based */}
-                {selectedBarangay?.status_and_recommendation?.pattern_based &&
-                  selectedBarangay.status_and_recommendation.pattern_based.status &&
-                  selectedBarangay.status_and_recommendation.pattern_based.status.trim() !== "" && (
-                    <>
-                      <p className="font-bold text-lg text-primary mb-1">Pattern-Based</p>
-                      {selectedBarangay.status_and_recommendation.pattern_based.alert && (
-                        <p className=""><span className="font-bold">Alert: </span>
-                          {selectedBarangay.status_and_recommendation.pattern_based.alert.replace(
-                            new RegExp(`^${selectedBarangay.properties?.displayName || selectedBarangay.properties?.name}:?\\s*`, "i"),
-                            ""
-                          )}
-                        </p>
-                      )}
-                      {selectedBarangay.status_and_recommendation.pattern_based.recommendation && (
-                        <p className=""><span className="font-bold">Recommendation: </span>
-                          {selectedBarangay.status_and_recommendation.pattern_based.recommendation}
-                        </p>
-                      )}
-                      <hr className="border-t border-gray-200 my-2" />
-                    </>
-                )}
-                {/* Report-Based */}
-                {selectedBarangay?.status_and_recommendation?.report_based &&
-                  selectedBarangay.status_and_recommendation.report_based.status &&
-                  selectedBarangay.status_and_recommendation.report_based.status.trim() !== "" && (
-                    <>
-                      <p className="font-bold text-lg text-primary mb-1">Report-Based</p>
-                      {/* Status as badge with label */}
-                      <div className="mb-2 flex items-center gap-2">
-                        <span className="font-bold">Status:</span>
-                        <span className={`inline-block px-3 py-1 rounded-full text-white text-md font-bold capitalize ${(() => {
-                          const status = selectedBarangay.status_and_recommendation.report_based.status.toLowerCase();
-                          if (status === 'low') return 'bg-success';
-                          if (status === 'medium') return 'bg-warning';
-                          if (status === 'high') return 'bg-error';
-                          return 'bg-gray-400';
-                        })()}`}>{selectedBarangay.status_and_recommendation.report_based.status}</span>
-                      </div>
-                      {selectedBarangay.status_and_recommendation.report_based.alert && (
-                        <p className=""><span className="font-bold">Alert: </span>
-                          {selectedBarangay.status_and_recommendation.report_based.alert}
-                        </p>
-                      )}
-                      {selectedBarangay.status_and_recommendation.report_based.recommendation && (
-                        <p className=""><span className="font-bold">Recommendation: </span>
-                          {selectedBarangay.status_and_recommendation.report_based.recommendation}
-                      </p>
-                    )}
-                    <hr className="border-t border-gray-200 my-2" />
-                  </>
-              )}
-              {/* Death Priority */}
-              {selectedBarangay?.status_and_recommendation?.death_priority &&
-                selectedBarangay.status_and_recommendation.death_priority.status &&
-                selectedBarangay.status_and_recommendation.death_priority.status.trim() !== "" && (
-                  <>
-                    <p className="font-bold text-primary mb-1 text-lg">Death Priority</p>
-                    <p className=""><span className="font-bold">Status: </span>
-                      {selectedBarangay.status_and_recommendation.death_priority.status}
-                    </p>
-                    {selectedBarangay.status_and_recommendation.death_priority.alert && (
-                      <p className=""><span className="font-bold">Alert: </span>
-                        {selectedBarangay.status_and_recommendation.death_priority.alert}
-                      </p>
-                    )}
-                    {selectedBarangay.status_and_recommendation.death_priority.recommendation && (
-                      <p className=""><span className="font-bold">Recommendation: </span>
-                        {selectedBarangay.status_and_recommendation.death_priority.recommendation}
-                      </p>
-                    )}
-                    <hr className="border-t border-gray-200 my-2" />
-                  </>
-              )}
-              {/* Recent Reports */}
-              <div>
-                <p className="mt-1"><span className="font-bold">Recent Reports: </span></p>
-                <div className="w-[80%] mx-auto mt-1">
-                  {recentReports.length > 0 ? (
-                    recentReports.map((r, idx) => (
-                      <div key={idx} className="flex gap-2 items-center">
-                        <div><Circle size={16} color="red" weight="fill" /></div>
-                        <p><span className="font-semibold">{r.date}: </span> {r.count} new case{r.count > 1 ? 's' : ''}</p>
-                      </div>
-                    ))
-                  ) : (
-                    // Only show 'No recent reports' if there is no Report-Based section
-                    !(
-                      selectedBarangay?.status_and_recommendation?.report_based &&
-                      selectedBarangay.status_and_recommendation.report_based.status &&
-                      selectedBarangay.status_and_recommendation.report_based.status.trim() !== ""
-                    ) && (
-                      <p className="text-gray-500 italic">No recent reports</p>
-                    )
-                  )}
-                </div>
-              </div>
-              <hr className="border-t border-gray-200 my-2" />
-              {/* Interventions Section */}
-              {interventionsInProgress && (interventionsInProgress.some(i => i.status?.toLowerCase() === 'ongoing') || 
-                                         interventionsInProgress.some(i => i.status?.toLowerCase() === 'scheduled')) && (
-                <>
-                  <p className=""><span className="text-primary font-bold text-lg">Interventions: </span>  </p>
-                  <div className="w-[80%] mx-auto mt-1">
-                    {/* Ongoing Interventions */}
-                    <div className="mb-4">
-                      <p className="font-semibold text-gray-700 mb-2">Ongoing:</p>
-                      {interventionsInProgress.filter(i => i.status?.toLowerCase() === 'ongoing').length > 0 ? (
-                        interventionsInProgress
-                          .filter(i => i.status?.toLowerCase() === 'ongoing')
-                          .map((intervention) => (
-                            <div key={intervention._id} className="flex gap-2 items-start mb-2">
-                              <div className="text-success mt-[2px]">
-                                <CheckCircle size={16} />
-                              </div>
-                              <div>
-                                <p>
-                                  <span className="font-semibold">
-                                    {new Date(intervention.date).toLocaleDateString('en-US', {
-                                      month: 'long',
-                                      day: 'numeric'
-                                    })}: 
-                                  </span> 
-                                  {' '+intervention.interventionType}
-                                </p>
-                                <p className="text-sm text-gray-600">
-                                  Personnel: {intervention.personnel}
-                                </p>
-                              </div>
-                            </div>
-                          ))
-                      ) : (
-                        <p className="text-gray-500 italic">No ongoing interventions</p>
-                      )}
-                    </div>
+        
+        <div className="flex gap-2">
+          <button
+            onClick={() => setShowBreedingSites((prev) => !prev)}
+            className={`px-4 py-2 rounded-lg shadow-lg transition-all duration-200 ${
+              showBreedingSites 
+                ? 'bg-primary text-white hover:bg-primary/90' 
+                : 'bg-white text-primary hover:bg-gray-50'
+            }`}
+          >
+            {showBreedingSites ? 'Hide Breeding Sites' : 'Show Breeding Sites'}
+          </button>
+          <button
+            onClick={() => setShowInterventions((prev) => !prev)}
+            className={`px-4 py-2 rounded-lg shadow-lg transition-all duration-200 ${
+              showInterventions 
+                ? 'bg-primary text-white hover:bg-primary/90' 
+                : 'bg-white text-primary hover:bg-gray-50'
+            }`}
+          >
+            {showInterventions ? 'Hide Interventions' : 'Show Interventions'}
+          </button>
+        </div>
+      </div>
 
-                    {/* Scheduled Interventions */}
-                    <div>
-                      <p className="font-semibold text-gray-700 mb-2">Scheduled:</p>
-                      {interventionsInProgress.filter(i => i.status?.toLowerCase() === 'scheduled').length > 0 ? (
-                        interventionsInProgress
-                          .filter(i => i.status?.toLowerCase() === 'scheduled')
-                          .map((intervention) => (
-                            <div key={intervention._id} className="flex gap-2 items-start mb-2">
-                              <div className="text-warning mt-[2px]">
-                                <Hourglass size={16} />
-                              </div>
-                              <div>
-                                <p>
-                                  <span className="font-semibold">
-                                    {new Date(intervention.date).toLocaleDateString('en-US', {
-                                      month: 'long',
-                                      day: 'numeric'
-                                    })}: 
-                                  </span> 
-                                  {' '+intervention.interventionType}
-                                </p>
-                                <p className="text-sm text-gray-600">
-                                  Personnel: {intervention.personnel}
-                                </p>
-                              </div>
-                            </div>
-                          ))
-                      ) : (
-                        <p className="text-gray-500 italic">No scheduled interventions</p>
-                      )}
-                    </div>
+      <div className="flex h-[50vh] mb-4" ref={mapContainerRef}>
+        <MapOnly
+          ref={mapOnlyRef}
+          showBreedingSites={showBreedingSites}
+          showInterventions={showInterventions}
+          selectedBarangay={selectedBarangay}
+          onBarangaySelect={handleBarangaySelect}
+          interventions={showInterventions ? activeInterventions : []}
+          style={{height: '100%', width: '100%'}}
+          onMarkerClick={(item, type) => {
+            if (type === 'report') {
+              setSelectedFullReport(item);
+              setShowFullReport(true);
+            } else if (type === 'intervention') {
+              // Create and show info window for intervention
+              const content = document.createElement('div');
+              content.innerHTML = `
+                <div class="p-3 flex flex-col items-center gap-1 font-normal bg-white text-center rounded-md shadow-md text-primary">
+                  <p class="text-4xl font-extrabold text-primary mb-2">${item.interventionType || 'Intervention'}</p>
+                  <div class="text-lg flex items-center gap-2">
+                    <span class="font-bold">Status:</span>
+                    <span class="px-3 py-1 rounded-full text-white font-bold text-sm" style="background-color:#FF6347;box-shadow:0 1px 4px rgba(0,0,0,0.08);">
+                      ${item.status || ''}
+                    </span>
                   </div>
-                </>
+                  <p class="text-lg text-center"><span class="font-bold">Barangay:</span> ${item.barangay || ''}</p>
+                  ${item.address ? `<p class="text-lg text-center"><span class="font-bold text-center">Address:</span> ${item.address}</p>` : ''}
+                  <p class="text-lg"><span class="font-bold">Date:</span> ${item.date ? new Date(item.date).toLocaleString('en-US', { year: 'numeric', month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true }) : ''}</p>
+                  <p class="text-lg"><span class="font-bold">Personnel:</span> ${item.personnel || ''}</p>
+                </div>
+              `;
+              if (mapOnlyRef.current) {
+                mapOnlyRef.current.showInfoWindow(content, {
+                  lat: item.specific_location.coordinates[1],
+                  lng: item.specific_location.coordinates[0]
+                });
+              }
+            }
+          }}
+        />
+      </div>
+      <p className="text-left text-primary text-lg font-extrabold flex items-center gap-2 mb-8">
+        <div className="text-success">
+          <MapPinLine  size={16} />
+        </div>
+        Click on a Barangay to view details
+      </p>
+        <div className="grid grid-cols-10 gap-10">
+          <div className={`col-span-4 border-2 ${getBorderColor(selectedBarangay?.properties?.patternType)} rounded-2xl flex flex-col p-4 gap-1`}>
+            <p className="text-center font-semibold text-base-content">Selected Barangay - Dengue Overview</p>
+            <p className={`text-center font-bold ${getPatternTextColor(selectedBarangay?.properties?.patternType)} text-4xl mb-2`}>
+              {selectedBarangay ? `Barangay ${selectedBarangay.properties?.displayName || selectedBarangay.properties?.name}` : 'Select a Barangay'}
+            </p>
+            <p className={`text-center font-semibold text-white text-lg uppercase mb-4 px-4 py-1 rounded-full inline-block mx-auto ${getPatternBgColor(selectedBarangay?.properties?.patternType)}`}>
+              {selectedBarangay
+                ? selectedBarangay.properties?.patternType
+                  ? (selectedBarangay.properties.patternType.charAt(0).toUpperCase() + selectedBarangay.properties.patternType.slice(1).replace('_', ' '))
+                  : 'NO PATTERN DETECTED'
+                : 'NO BARANGAY SELECTED'
+              }
+            </p>
+            <div className="w-[90%] mx-auto flex flex-col text-black gap-2">
+              {/* Pattern-Based */}
+              {selectedBarangay?.status_and_recommendation?.pattern_based &&
+                selectedBarangay.status_and_recommendation.pattern_based.status &&
+                selectedBarangay.status_and_recommendation.pattern_based.status.trim() !== "" && (
+                  <>
+                    <p className="font-bold text-lg text-primary mb-1">Pattern-Based</p>
+                    {selectedBarangay.status_and_recommendation.pattern_based.alert && (
+                      <p className=""><span className="font-bold">Alert: </span>
+                        {selectedBarangay.status_and_recommendation.pattern_based.alert.replace(
+                          new RegExp(`^${selectedBarangay.properties?.displayName || selectedBarangay.properties?.name}:?\\s*`, "i"),
+                          ""
+                        )}
+                      </p>
+                    )}
+                    {selectedBarangay.status_and_recommendation.pattern_based.recommendation && (
+                      <p className=""><span className="font-bold">Recommendation: </span>
+                        {selectedBarangay.status_and_recommendation.pattern_based.recommendation}
+                      </p>
+                    )}
+                    <hr className="border-t border-gray-200 my-2" />
+                  </>
               )}
-            </div>
-            <div className="flex justify-end">
-              {/* <button className="bg-primary rounded-full text-white px-4 py-1 text-[11px] hover:bg-primary/80 hover:scale-105 transition-all duration-200 active:scale-95 cursor-pointer">
-                View Full Report
-              </button> */}
-            </div>
-          </div>
-          <div className="col-span-6 flex flex-col gap-2">
-            <p className="text-[30px] text-base-content font-bold">Reports nearby</p>
-            {nearbyReports.length > 0 ? (
-              nearbyReports.map((report, index) => (
-                <div key={index} className="flex flex-col items-start bg-white rounded-2xl p-4 text-black gap-2 w-full">
-                  <p className={`${
-                    report.report_type === "Breeding Site" ? "bg-info" :
-                    report.report_type === "Standing Water" ? "bg-warning" :
-                    "bg-error"
-                  } rounded-2xl px-3 py-2 font-semibold text-white mb-1`}>
-                    {report.barangay} - {report.report_type}
-                  </p>
-                  <p>
-                    <span className="font-bold ml-1.5">Distance: </span>
-                    {(report.distance * 1000).toFixed(0)}m away
-                  </p>
-                  <p>
-                    <span className="font-bold ml-1.5">Reported: </span>
-                    {new Date(report.date_and_time).toLocaleDateString('en-US', {
-                      month: 'long',
-                      day: 'numeric'
-                    })}
-                  </p>
-                  <div className="flex gap-2 items-start w-full">
-                    <div className={`shrink-0 mt-1 ${
-                      report.report_type === "Breeding Site" ? "text-info" :
-                      report.report_type === "Standing Water" ? "text-warning" :
-                      "text-error"
-                    }`}>
-                      <Circle size={16} weight="fill" />
+              {/* Report-Based */}
+              {selectedBarangay?.status_and_recommendation?.report_based &&
+                selectedBarangay.status_and_recommendation.report_based.status &&
+                selectedBarangay.status_and_recommendation.report_based.status.trim() !== "" && (
+                  <>
+                    <p className="font-bold text-lg text-primary mb-1">Report-Based</p>
+                    {/* Status as badge with label */}
+                    <div className="mb-2 flex items-center gap-2">
+                      <span className="font-bold">Status:</span>
+                      <span className={`inline-block px-3 py-1 rounded-full text-white text-md font-bold capitalize ${(() => {
+                        const status = selectedBarangay.status_and_recommendation.report_based.status.toLowerCase();
+                        if (status === 'low') return 'bg-success';
+                        if (status === 'medium') return 'bg-warning';
+                        if (status === 'high') return 'bg-error';
+                        return 'bg-gray-400';
+                      })()}`}>{selectedBarangay.status_and_recommendation.report_based.status}</span>
                     </div>
-                    <p
-                      className="flex-1 min-w-0 overflow-hidden break-words"
-                      style={{
-                        display: '-webkit-box',
-                        WebkitLineClamp: 2,
-                        WebkitBoxOrient: 'vertical',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        wordBreak: 'break-word',
-                      }}
-                    >
-                      {report.description}
+                    {selectedBarangay.status_and_recommendation.report_based.alert && (
+                      <p className=""><span className="font-bold">Alert: </span>
+                        {selectedBarangay.status_and_recommendation.report_based.alert}
+                      </p>
+                    )}
+                    {selectedBarangay.status_and_recommendation.report_based.recommendation && (
+                      <p className=""><span className="font-bold">Recommendation: </span>
+                        {selectedBarangay.status_and_recommendation.report_based.recommendation}
                     </p>
+                  )}
+                  <hr className="border-t border-gray-200 my-2" />
+                </>
+            )}
+            {/* Death Priority */}
+            {selectedBarangay?.status_and_recommendation?.death_priority &&
+              selectedBarangay.status_and_recommendation.death_priority.status &&
+              selectedBarangay.status_and_recommendation.death_priority.status.trim() !== "" && (
+                <>
+                  <p className="font-bold text-primary mb-1 text-lg">Death Priority</p>
+                  <p className=""><span className="font-bold">Status: </span>
+                    {selectedBarangay.status_and_recommendation.death_priority.status}
+                  </p>
+                  {selectedBarangay.status_and_recommendation.death_priority.alert && (
+                    <p className=""><span className="font-bold">Alert: </span>
+                      {selectedBarangay.status_and_recommendation.death_priority.alert}
+                    </p>
+                  )}
+                  {selectedBarangay.status_and_recommendation.death_priority.recommendation && (
+                    <p className=""><span className="font-bold">Recommendation: </span>
+                      {selectedBarangay.status_and_recommendation.death_priority.recommendation}
+                    </p>
+                  )}
+                  <hr className="border-t border-gray-200 my-2" />
+                </>
+            )}
+            {/* Recent Reports */}
+            <div>
+              <p className="mt-1"><span className="font-bold">Recent Reports: </span></p>
+              <div className="w-[80%] mx-auto mt-1">
+                {recentReports.length > 0 ? (
+                  recentReports.map((r, idx) => (
+                    <div key={idx} className="flex gap-2 items-center">
+                      <div><Circle size={16} color="red" weight="fill" /></div>
+                      <p><span className="font-semibold">{r.date}: </span> {r.count} new case{r.count > 1 ? 's' : ''}</p>
+                    </div>
+                  ))
+                ) : (
+                  // Only show 'No recent reports' if there is no Report-Based section
+                  !(
+                    selectedBarangay?.status_and_recommendation?.report_based &&
+                    selectedBarangay.status_and_recommendation.report_based.status &&
+                    selectedBarangay.status_and_recommendation.report_based.status.trim() !== ""
+                  ) && (
+                    <p className="text-gray-500 italic">No recent reports</p>
+                  )
+                )}
+              </div>
+            </div>
+            <hr className="border-t border-gray-200 my-2" />
+            {/* Interventions Section */}
+            {interventionsInProgress && (interventionsInProgress.some(i => i.status?.toLowerCase() === 'ongoing') || 
+                                       interventionsInProgress.some(i => i.status?.toLowerCase() === 'scheduled')) && (
+              <>
+                <p className=""><span className="text-primary font-bold text-lg">Interventions: </span>  </p>
+                <div className="w-[80%] mx-auto mt-1">
+                  {/* Ongoing Interventions */}
+                  <div className="mb-4">
+                    <p className="font-semibold text-gray-700 mb-2">Ongoing:</p>
+                    {interventionsInProgress.filter(i => i.status?.toLowerCase() === 'ongoing').length > 0 ? (
+                      interventionsInProgress
+                        .filter(i => i.status?.toLowerCase() === 'ongoing')
+                        .map((intervention) => (
+                          <div key={intervention._id} className="flex gap-2 items-start mb-2">
+                            <div className="text-success mt-[2px]">
+                              <CheckCircle size={16} />
+                            </div>
+                            <div>
+                              <p>
+                                <span className="font-semibold">
+                                  {new Date(intervention.date).toLocaleDateString('en-US', {
+                                    month: 'long',
+                                    day: 'numeric'
+                                  })}: 
+                                </span> 
+                                {' '+intervention.interventionType}
+                              </p>
+                              <p className="text-sm text-gray-600">
+                                Personnel: {intervention.personnel}
+                              </p>
+                            </div>
+                          </div>
+                        ))
+                    ) : (
+                      <p className="text-gray-500 italic">No ongoing interventions</p>
+                    )}
                   </div>
-                  <div className="flex justify-end w-full gap-2">
-                    <button 
-                      onClick={() => handleShowOnMap(report, 'report')}
-                      className="bg-info rounded-full text-white px-4 py-1 text-[11px] hover:bg-info/80 hover:scale-105 transition-all duration-200 active:scale-95 cursor-pointer"
-                    >
-                      Show on Map
-                    </button>
-                    <button 
-                      onClick={() => handleViewFullReport(report)}
-                      className="bg-primary rounded-full text-white px-4 py-1 text-[11px] hover:bg-primary/80 hover:scale-105 transition-all duration-200 active:scale-95 cursor-pointer"
-                    >
-                      View Full Report
-                    </button>
+
+                  {/* Scheduled Interventions */}
+                  <div>
+                    <p className="font-semibold text-gray-700 mb-2">Scheduled:</p>
+                    {interventionsInProgress.filter(i => i.status?.toLowerCase() === 'scheduled').length > 0 ? (
+                      interventionsInProgress
+                        .filter(i => i.status?.toLowerCase() === 'scheduled')
+                        .map((intervention) => (
+                          <div key={intervention._id} className="flex gap-2 items-start mb-2">
+                            <div className="text-warning mt-[2px]">
+                              <Hourglass size={16} />
+                            </div>
+                            <div>
+                              <p>
+                                <span className="font-semibold">
+                                  {new Date(intervention.date).toLocaleDateString('en-US', {
+                                    month: 'long',
+                                    day: 'numeric'
+                                  })}: 
+                                </span> 
+                                {' '+intervention.interventionType}
+                              </p>
+                              <p className="text-sm text-gray-600">
+                                Personnel: {intervention.personnel}
+                              </p>
+                            </div>
+                          </div>
+                        ))
+                    ) : (
+                      <p className="text-gray-500 italic">No scheduled interventions</p>
+                    )}
                   </div>
                 </div>
-              ))
-            ) : (
-              <div className="flex flex-col items-start bg-white rounded-2xl p-4 text-black gap-2">
-                <p className="text-gray-500 italic">No nearby reports found</p>
-              </div>
+              </>
             )}
           </div>
+          <div className="flex justify-end">
+            {/* <button className="bg-primary rounded-full text-white px-4 py-1 text-[11px] hover:bg-primary/80 hover:scale-105 transition-all duration-200 active:scale-95 cursor-pointer">
+              View Full Report
+            </button> */}
+          </div>
         </div>
-
-        {/* Main Report Modal */}
-        <dialog ref={modalRef} className="modal transition-transform duration-300 ease-in-out">
-          <div className="modal-box bg-white rounded-3xl shadow-2xl w-9/12 max-w-4xl p-12 relative">
-            <button
-              className="absolute top-10 right-10 text-2xl font-semibold hover:text-gray-500 transition-colors duration-200 hover:cursor-pointer"
-              onClick={() => setShowFullReport(false)}
-            >
-              ✕
-            </button>
-
-            <p className="text-center text-3xl font-bold mb-6">Full Report Details</p>
-            <p className="text-left text-2xl font-bold mb-6">Report Details</p>
-            <hr className="text-accent/50 mb-6" />
-
-            <div className="space-y-2">
-              {/* Report Type Badge */}
-              <div className={`inline-block rounded-full px-4 py-2 text-white ${
-                selectedFullReport?.report_type === "Breeding Site" ? "bg-info" :
-                selectedFullReport?.report_type === "Standing Water" ? "bg-warning" :
-                "bg-error"
-              }`}>
-                {selectedFullReport?.report_type}
-              </div>
-
-              {/* Location Details */}
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <p className="font-bold mb-2 text-xl">Location Details</p>
-                <p><span className="font-medium">Barangay:</span> {selectedFullReport?.barangay}</p>
-                <p><span className="font-medium">Coordinates:</span> {selectedFullReport?.specific_location.coordinates.join(', ')}</p>
-              </div>
-
-              {/* Report Details */}
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <p className="font-bold mb-2 text-xl">Report Details</p>
-                <p><span className="font-medium">Reported by:</span> {selectedFullReport?.user?.username}</p>
-                <p><span className="font-medium">Date and Time:</span> {new Date(selectedFullReport?.date_and_time).toLocaleString()}</p>
-                <p><span className="font-medium">Status:</span> {selectedFullReport?.status}</p>
-                <p><span className="font-medium">Description:</span> {selectedFullReport?.description}</p>
-              </div>
-
-              {/* Images Section */}
-              {selectedFullReport?.images && selectedFullReport.images.length > 0 && (
-                <div className="bg-gray-50 p-4 rounded-lg">
-                  <p className="font-bold mb-2 text-xl">Evidence Images</p>
-                  <div className="grid grid-cols-2 gap-4">
-                    {selectedFullReport.images.map((img, idx) => (
-                      <div key={idx} className="relative">
-                        <img 
-                          src={img} 
-                          alt={`Evidence ${idx + 1}`}
-                          className="w-full h-48 object-cover rounded-lg"
-                        />
-                      </div>
-                    ))}
+        <div className="col-span-6 flex flex-col gap-2">
+          <p className="text-[30px] text-base-content font-bold">Reports nearby</p>
+          {nearbyReports.length > 0 ? (
+            nearbyReports.map((report, index) => (
+              <div key={index} className="flex flex-col items-start bg-white rounded-2xl p-4 text-black gap-2 w-full">
+                <p className={`${
+                  report.report_type === "Breeding Site" ? "bg-info" :
+                  report.report_type === "Standing Water" ? "bg-warning" :
+                  "bg-error"
+                } rounded-2xl px-3 py-2 font-semibold text-white mb-1`}>
+                  {report.barangay} - {report.report_type}
+                </p>
+                <p>
+                  <span className="font-bold ml-1.5">Distance: </span>
+                  {(report.distance * 1000).toFixed(0)}m away
+                </p>
+                <p>
+                  <span className="font-bold ml-1.5">Reported: </span>
+                  {new Date(report.date_and_time).toLocaleDateString('en-US', {
+                    month: 'long',
+                    day: 'numeric'
+                  })}
+                </p>
+                <div className="flex gap-2 items-start w-full">
+                  <div className={`shrink-0 mt-1 ${
+                    report.report_type === "Breeding Site" ? "text-info" :
+                    report.report_type === "Standing Water" ? "text-warning" :
+                    "text-error"
+                  }`}>
+                    <Circle size={16} weight="fill" />
                   </div>
-                </div>
-              )}
-
-              {/* Action Buttons */}
-              <div className="flex justify-between items-center mt-6">
-                <button
-                  onClick={openStreetViewModal}
-                  className="btn bg-primary text-white hover:bg-primary/80 transition-colors"
-                >
-                  View Street View
-                </button>
-                
-                <div className="flex gap-2">
-                  <button 
-                    onClick={() => setShowFullReport(false)}
-                    className="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 transition-colors"
-                  >
-                    Close
-                  </button>
-                  <button 
-                    onClick={() => {
-                      handleShowOnMap(selectedFullReport, 'report');
-                      setShowFullReport(false);
+                  <p
+                    className="flex-1 min-w-0 overflow-hidden break-words"
+                    style={{
+                      display: '-webkit-box',
+                      WebkitLineClamp: 2,
+                      WebkitBoxOrient: 'vertical',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      wordBreak: 'break-word',
                     }}
-                    className="bg-info text-white px-4 py-2 rounded-lg hover:bg-info/80 transition-colors"
+                  >
+                    {report.description}
+                  </p>
+                </div>
+                <div className="flex justify-end w-full gap-2">
+                  <button 
+                    onClick={() => handleShowOnMap(report, 'report')}
+                    className="bg-info rounded-full text-white px-4 py-1 text-[11px] hover:bg-info/80 hover:scale-105 transition-all duration-200 active:scale-95 cursor-pointer"
                   >
                     Show on Map
                   </button>
+                  <button 
+                    onClick={() => handleViewFullReport(report)}
+                    className="bg-primary rounded-full text-white px-4 py-1 text-[11px] hover:bg-primary/80 hover:scale-105 transition-all duration-200 active:scale-95 cursor-pointer"
+                  >
+                    View Full Report
+                  </button>
                 </div>
               </div>
+            ))
+          ) : (
+            <div className="flex flex-col items-start bg-white rounded-2xl p-4 text-black gap-2">
+              <p className="text-gray-500 italic">No nearby reports found</p>
             </div>
-          </div>
-        </dialog>
+          )}
+        </div>
+      </div>
 
-        {/* StreetView Modal */}
-        <dialog ref={streetViewModalRef} className="modal">
-          <div className="modal-box bg-white rounded-3xl shadow-2xl w-11/12 max-w-5xl p-6 py-14 relative max-h-[85vh] overflow-y-auto">
-            <button
-              className="absolute top-4 right-4 text-2xl font-semibold hover:text-gray-500 transition-colors duration-200 hover:cursor-pointer"
-              onClick={() => streetViewModalRef.current.close()}
-            >
-              ✕
-            </button>
+      {/* Main Report Modal */}
+      <dialog ref={modalRef} className="modal transition-transform duration-300 ease-in-out">
+        <div className="modal-box bg-white rounded-3xl shadow-2xl w-9/12 max-w-4xl p-12 relative">
+          <button
+            className="absolute top-10 right-10 text-2xl font-semibold hover:text-gray-500 transition-colors duration-200 hover:cursor-pointer"
+            onClick={() => setShowFullReport(false)}
+          >
+            ✕
+          </button>
 
-            {/* Reported Photos Section */}
+          <p className="text-center text-3xl font-bold mb-6">Full Report Details</p>
+          <p className="text-left text-2xl font-bold mb-6">Report Details</p>
+          <hr className="text-accent/50 mb-6" />
+
+          <div className="space-y-2">
+            {/* Report Type Badge */}
+            <div className={`inline-block rounded-full px-4 py-2 text-white ${
+              selectedFullReport?.report_type === "Breeding Site" ? "bg-info" :
+              selectedFullReport?.report_type === "Standing Water" ? "bg-warning" :
+              "bg-error"
+            }`}>
+              {selectedFullReport?.report_type}
+            </div>
+
+            {/* Location Details */}
+            <div className="bg-gray-50 p-4 rounded-lg">
+              <p className="font-bold mb-2 text-xl">Location Details</p>
+              <p><span className="font-medium">Barangay:</span> {selectedFullReport?.barangay}</p>
+              <p><span className="font-medium">Coordinates:</span> {selectedFullReport?.specific_location.coordinates.join(', ')}</p>
+            </div>
+
+            {/* Report Details */}
+            <div className="bg-gray-50 p-4 rounded-lg">
+              <p className="font-bold mb-2 text-xl">Report Details</p>
+              <p><span className="font-medium">Reported by:</span> {selectedFullReport?.user?.username}</p>
+              <p><span className="font-medium">Date and Time:</span> {new Date(selectedFullReport?.date_and_time).toLocaleString()}</p>
+              <p><span className="font-medium">Status:</span> {selectedFullReport?.status}</p>
+              <p><span className="font-medium">Description:</span> {selectedFullReport?.description}</p>
+            </div>
+
+            {/* Images Section */}
             {selectedFullReport?.images && selectedFullReport.images.length > 0 && (
-              <div className="mb-6">
-                <p className="text-xl font-bold mb-4">Reported Photos</p>
-                <div className="grid grid-cols-3 gap-4">
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <p className="font-bold mb-2 text-xl">Evidence Images</p>
+                <div className="grid grid-cols-2 gap-4">
                   {selectedFullReport.images.map((img, idx) => (
                     <div key={idx} className="relative">
                       <img 
                         src={img} 
-                        alt={`Reported Photo ${idx + 1}`}
-                        className="w-full h-48 object-cover rounded-lg shadow-md"
+                        alt={`Evidence ${idx + 1}`}
+                        className="w-full h-48 object-cover rounded-lg"
                       />
                     </div>
                   ))}
@@ -1185,74 +941,131 @@ const DengueMapping = () => {
               </div>
             )}
 
-            {/* StreetView Container */}
-            <div className="space-y-4">
-              <p className="text-xl font-bold">Street View</p>
-              <div
-                id="street-view-container"
-                className="w-full h-[400px] rounded-lg overflow-hidden shadow-lg"
-              />
+            {/* Action Buttons */}
+            <div className="flex justify-between items-center mt-6">
+              <button
+                onClick={openStreetViewModal}
+                className="btn bg-primary text-white hover:bg-primary/80 transition-colors"
+              >
+                View Street View
+              </button>
+              
+              <div className="flex gap-2">
+                <button 
+                  onClick={() => setShowFullReport(false)}
+                  className="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 transition-colors"
+                >
+                  Close
+                </button>
+                <button 
+                  onClick={() => {
+                    handleShowOnMap(selectedFullReport, 'report');
+                    setShowFullReport(false);
+                  }}
+                  className="bg-info text-white px-4 py-2 rounded-lg hover:bg-info/80 transition-colors"
+                >
+                  Show on Map
+                </button>
+              </div>
             </div>
           </div>
-        </dialog>
+        </div>
+      </dialog>
 
-        {/* Import Modal */}
-        <dialog ref={importModalRef} className="modal" open={showImportModal}>
-          <div className="modal-box bg-white rounded-3xl shadow-3xl w-9/12 max-w-2xl p-8">
-            <h3 className="text-2xl font-bold mb-4">Import Dengue Cases</h3>
+      {/* StreetView Modal */}
+      <dialog ref={streetViewModalRef} className="modal">
+        <div className="modal-box bg-white rounded-3xl shadow-2xl w-11/12 max-w-5xl p-6 py-14 relative max-h-[85vh] overflow-y-auto">
+          <button
+            className="absolute top-4 right-4 text-2xl font-semibold hover:text-gray-500 transition-colors duration-200 hover:cursor-pointer"
+            onClick={() => streetViewModalRef.current.close()}
+          >
+            ✕
+          </button>
+
+          {/* Reported Photos Section */}
+          {selectedFullReport?.images && selectedFullReport.images.length > 0 && (
+            <div className="mb-6">
+              <p className="text-xl font-bold mb-4">Reported Photos</p>
+              <div className="grid grid-cols-3 gap-4">
+                {selectedFullReport.images.map((img, idx) => (
+                  <div key={idx} className="relative">
+                    <img 
+                      src={img} 
+                      alt={`Reported Photo ${idx + 1}`}
+                      className="w-full h-48 object-cover rounded-lg shadow-md"
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* StreetView Container */}
+          <div className="space-y-4">
+            <p className="text-xl font-bold">Street View</p>
+            <div
+              id="street-view-container"
+              className="w-full h-[400px] rounded-lg overflow-hidden shadow-lg"
+            />
+          </div>
+        </div>
+      </dialog>
+
+      {/* Import Modal */}
+      <dialog ref={importModalRef} className="modal" open={showImportModal}>
+        <div className="modal-box bg-white rounded-3xl shadow-3xl w-9/12 max-w-2xl p-8">
+          <h3 className="text-2xl font-bold mb-4">Import Dengue Cases</h3>
+          
+          <div className="mb-4">
+            <p className="text-gray-600 mb-2">Upload a CSV file containing dengue case data.</p>
+            <p className="text-sm text-gray-500 mb-4">
+              The CSV should include the following columns:
+              <br />- Barangay
+              <br />- Date
+              <br />- Number of Cases
+              <br />- Location (optional)
+            </p>
             
-            <div className="mb-4">
-              <p className="text-gray-600 mb-2">Upload a CSV file containing dengue case data.</p>
-              <p className="text-sm text-gray-500 mb-4">
-                The CSV should include the following columns:
-                <br />- Barangay
-                <br />- Date
-                <br />- Number of Cases
-                <br />- Location (optional)
-              </p>
-              
-              <input
-                type="file"
-                accept=".csv"
-                onChange={handleFileChange}
-                className="file-input file-input-bordered w-full"
-              />
-              
-              {importError && (
-                <p className="text-error mt-2">{importError}</p>
+            <input
+              type="file"
+              accept=".csv"
+              onChange={handleFileChange}
+              className="file-input file-input-bordered w-full"
+            />
+            
+            {importError && (
+              <p className="text-error mt-2">{importError}</p>
+            )}
+          </div>
+          
+          <div className="flex justify-end gap-2">
+            <button
+              onClick={() => {
+                setShowImportModal(false);
+                setCsvFile(null);
+                setImportError("");
+              }}
+              className="btn btn-ghost"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleImport}
+              className="btn btn-primary"
+              disabled={!csvFile || isImporting}
+            >
+              {isImporting ? (
+                <>
+                  <span className="loading loading-spinner loading-xs"></span>
+                  Importing...
+                </>
+              ) : (
+                "Import"
               )}
-            </div>
-            
-            <div className="flex justify-end gap-2">
-              <button
-                onClick={() => {
-                  setShowImportModal(false);
-                  setCsvFile(null);
-                  setImportError("");
-                }}
-                className="btn btn-ghost"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleImport}
-                className="btn btn-primary"
-                disabled={!csvFile || isImporting}
-              >
-                {isImporting ? (
-                  <>
-                    <span className="loading loading-spinner loading-xs"></span>
-                    Importing...
-                  </>
-                ) : (
-                  "Import"
-                )}
-              </button>
-            </div>
+            </button>
           </div>
-        </dialog>
-
-      </div>
+        </div>
+      </dialog>
     </main>
   );
 };

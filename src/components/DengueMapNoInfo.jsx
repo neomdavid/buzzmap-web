@@ -130,9 +130,8 @@ const DengueMapNoInfo = forwardRef((props, ref) => {
   const propsToDengueMap = {
     ...props,
     handlePolygonClick: handleBarangayClick,
-    CustomInfoWindow: CustomInfoWindow,
-    selectedBarangay: selectedBarangay,
-    infoWindowPosition: infoWindowPosition,
+    selectedBarangay: null, // Don't pass selectedBarangay
+    infoWindowPosition: null, // Don't pass infoWindowPosition
     getPolygonOptions: getPolygonOptions,
     onMapLoad: handleMapLoad,
     activeInterventions: props.activeInterventions,

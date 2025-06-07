@@ -195,14 +195,11 @@ const DengueMap = ({
   };
 
   function normalizeBarangayName(name) {
-    if (!name) return '';
-    return name
-      .toLowerCase()
-      .replace(/\bsr\.?\b/g, '')
-      .replace(/\bjr\.?\b/g, '')
-      .replace(/[.\-']/g, '')
-      .replace(/\s+/g, ' ')
-      .trim();
+    if (!name || typeof name !== 'string') return '';
+    return name.toLowerCase()
+      .replace(/barangay\s+/i, '') // Remove "Barangay" prefix
+      .replace(/\s+/g, '') // Remove all spaces
+      .replace(/[^a-z0-9]/g, ''); // Remove special characters
   }
 
   // Merge pattern/status from barangaysList into geojsonBarangays
@@ -307,17 +304,22 @@ const DengueMap = ({
             count++;
           });
           const center = { lat: latSum / count, lng: lngSum / count };
-          if (showInterventions) {
-            setSelectedIntervention(null);
-            setSelectedBarangayFeature(feature);
-            setInfoWindowPosition(center);
-          } else if (showBreedingSites) {
-            setSelectedBreedingSite(null);
-            setSelectedBarangayFeature(feature);
-            setInfoWindowPosition(center);
+          
+          // Only set InfoWindow position if breeding sites or interventions are shown
+          if (showInterventions || showBreedingSites) {
+            if (showInterventions) {
+              setSelectedIntervention(null);
+              setSelectedBarangayFeature(feature);
+              setInfoWindowPosition(center);
+            } else if (showBreedingSites) {
+              setSelectedBreedingSite(null);
+              setSelectedBarangayFeature(feature);
+              setInfoWindowPosition(center);
+            }
           } else {
+            // Just highlight the barangay without showing InfoWindow
             setSelectedBarangayFeature(feature);
-            setInfoWindowPosition(center);
+            setInfoWindowPosition(null);
           }
           handlePolygonClick(feature);
         });
@@ -740,9 +742,22 @@ const DengueMap = ({
     const [lng, lat] = coordinates;
     if (lat && lng && !isNaN(lat) && !isNaN(lng)) {
       mapInstanceRef.current.panTo({ lat, lng });
-      setSelectedBarangayFeature(feature);
+      // Create a feature object with all necessary properties
+      const enhancedFeature = {
+        type: 'Feature',
+        geometry: feature.geometry,
+        properties: {
+          ...feature.properties,
+          patternType: feature.properties?.patternType || 'none',
+          status_and_recommendation: feature.properties?.status_and_recommendation || {},
+          risk_level: feature.properties?.risk_level || 'unknown',
+          pattern_data: feature.properties?.pattern_data || {},
+          displayName: feature.properties?.name || feature.properties?.displayName
+        }
+      };
+      setSelectedBarangayFeature(enhancedFeature);
       setInfoWindowPosition({ lat, lng });
-      if (onBarangaySelect) onBarangaySelect(feature);
+      if (onBarangaySelect) onBarangaySelect(enhancedFeature);
     }
   };
 
