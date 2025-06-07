@@ -162,6 +162,7 @@ const Mapping = () => {
   const markerClusterRef = useRef(null);
   const [selectedBarangayFeature, setSelectedBarangayFeature] = useState(null);
   const [selectedBarangayCenter, setSelectedBarangayCenter] = useState(null);
+  const [showLegends, setShowLegends] = useState(true);
 
   // Fetch data
   const { data: barangaysList } = useGetBarangaysQuery();
@@ -835,7 +836,7 @@ const Mapping = () => {
                 onChange={handleBarangaySelect}
                 className="w-full px-4 py-2 hover:cursor-pointer rounded-md shadow bg-transparent text-primary border border-primary/20 focus:border-primary focus:outline-none"
               >
-                <option value="">Select a barangay</option>
+                <option key="default" value="">Select a barangay</option>
                 {barangayData?.features.map(f => (
                   <option key={f.properties.name} value={f.properties.name}>{f.properties.name}</option>
                 ))}
@@ -843,46 +844,59 @@ const Mapping = () => {
 
               {/* Legends */}
               <div className="flex flex-col gap-3">
-                {/* Pattern Types Legend */}
-                <div className="bg-white rounded-md shadow px-4 py-3 border border-gray-200">
-                  <p className="font-semibold mb-2 text-primary">Pattern Types</p>
-                  <div className="flex items-center justify-between sm:justify-start gap-2 flex-wrap">
-                    {Object.entries(PATTERN_COLORS)
-                      .filter(([key]) => key !== 'default')
-                      .sort(([aKey], [bKey]) => { 
-                        const order = { none: 0, stability: 1, decline: 2, gradual_rise: 3, spike: 4 };
-                        return order[aKey] - order[bKey];
-                      })
-                      .map(([pattern, color]) => (
-                        <div key={pattern} className="flex items-center gap-1">
-                          <span
-                            style={{ backgroundColor: color, width: '12px', height: '12px' }}
-                            className="inline-block"
-                          />
-                          <span className="text-xs text-primary">
-                            {pattern.charAt(0).toUpperCase() + pattern.slice(1).replace('_', ' ')}
-                          </span>
-                        </div>
-                      ))}
-                  </div>
-                </div>
-
                 {/* Marker Legend */}
+                {(showBreedingSites || showInterventions) && (
                   <div className="bg-white rounded-md shadow px-4 py-3 border border-gray-200">
-                  <p className="font-semibold mb-2 text-primary">Marker Legend</p>
-                  <div className="flex items-center gap-4 flex-wrap">
-                    {/* Breeding Site Marker */}
-                    <div className="flex items-center gap-2">
-                      <MapPin size={22} weight="fill" color="#FF6347" />
-                      <span className="text-xs text-primary">Breeding Site</span>
+                    <div className="space-y-2">
+                      {showBreedingSites && (
+                        <>
+                          <p className="text-sm font-medium text-gray-600 mb-2">Breeding Site Types</p>
+                          <div className="flex flex-wrap gap-4">
+                            <div key="stagnant" className="flex items-center space-x-2">
+                              <img src={stagnantIcon} alt="Stagnant Water" className="w-6 h-6" />
+                              <span className="text-xs text-primary">Stagnant Water</span>
+                            </div>
+                            <div key="standing" className="flex items-center space-x-2">
+                              <img src={standingIcon} alt="Standing Water" className="w-6 h-6" />
+                              <span className="text-xs text-primary">Standing Water</span>
+                            </div>
+                            <div key="garbage" className="flex items-center space-x-2">
+                              <img src={garbageIcon} alt="Garbage" className="w-6 h-6" />
+                              <span className="text-xs text-primary">Garbage</span>
+                            </div>
+                            <div key="others" className="flex items-center space-x-2">
+                              <img src={othersIcon} alt="Others" className="w-6 h-6" />
+                              <span className="text-xs text-primary">Others</span>
+                            </div>
                           </div>
-                    {/* Intervention Marker */}
-                    <div className="flex items-center gap-2">
-                      <MapPin size={22} weight="fill" color="#1893F8" />
-                      <span className="text-xs text-primary">Intervention</span>
+                        </>
+                      )}
+                      {showInterventions && (
+                        <>
+                          <p className="text-sm font-medium text-gray-600 mb-2">Intervention Types</p>
+                          <div className="flex flex-wrap gap-4">
+                            <div key="fogging" className="flex items-center space-x-2">
+                              <img src={foggingIcon} alt="Fogging" className="w-6 h-6" />
+                              <span className="text-xs text-primary">Fogging</span>
+                            </div>
+                            <div key="trapping" className="flex items-center space-x-2">
+                              <img src={trappingIcon} alt="Ovicidal-Larvicidal Trapping" className="w-6 h-6" />
+                              <span className="text-xs text-primary">Ovicidal-Larvicidal Trapping</span>
+                            </div>
+                            <div key="cleanup" className="flex items-center space-x-2">
+                              <img src={cleanUpIcon} alt="Clean-up Drive" className="w-6 h-6" />
+                              <span className="text-xs text-primary">Clean-up Drive</span>
+                            </div>
+                            <div key="education" className="flex items-center space-x-2">
+                              <img src={educationIcon} alt="Education Campaign" className="w-6 h-6" />
+                              <span className="text-xs text-primary">Education Campaign</span>
+                            </div>
+                          </div>
+                        </>
+                      )}
                     </div>
                   </div>
-                </div>
+                )}
               </div>
             </div>
           </div>
@@ -901,6 +915,7 @@ const Mapping = () => {
       <div 
         ref={mapRef} 
         id="map" 
+        className="w-full h-full"
         style={{ 
           width: '100%',
           height: '100%',

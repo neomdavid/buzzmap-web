@@ -59,6 +59,8 @@ const Analytics = () => {
   const [dataVersion, setDataVersion] = useState(0);
   const [isImporting, setIsImporting] = useState(false);
   const [spikeRecommendationDetails, setSpikeRecommendationDetails] = useState(null);
+  const [showBreedingSites, setShowBreedingSites] = useState(true);
+  const [showInterventions, setShowInterventions] = useState(true);
 
   const { data: patternResultsData, isLoading: isLoadingPatterns } = useGetPatternRecognitionResultsQuery();
   const { data: allInterventionsData, isLoading: isLoadingAllInterventions } = useGetAllInterventionsQuery();
@@ -390,6 +392,10 @@ const Analytics = () => {
                 barangaysList={barangaysList}
                 onBarangaySelect={handleMapBarangaySelect}
                 onInfoWindowClose={handleMapInfoWindowClose}
+                showBreedingSites={showBreedingSites}
+                showInterventions={showInterventions}
+                onToggleBreedingSites={() => setShowBreedingSites(!showBreedingSites)}
+                onToggleInterventions={() => setShowInterventions(!showInterventions)}
               />
             )}
           </div>

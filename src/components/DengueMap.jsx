@@ -9,6 +9,7 @@ import trappingIcon from "../assets/icons/trapping.svg";
 import cleanUpIcon from "../assets/icons/cleanup.svg";
 import educationIcon from "../assets/icons/education.svg";
 import * as turf from '@turf/turf';
+import { MapPinLine, Circle } from "phosphor-react";
 
 const DengueMap = ({
   showLegends = true,
@@ -21,6 +22,10 @@ const DengueMap = ({
   barangaysList = [],
   onBarangaySelect = () => {},
   onInfoWindowClose = null,
+  showBreedingSites = true,
+  showInterventions = false,
+  onToggleBreedingSites = () => {},
+  onToggleInterventions = () => {},
 }) => {
   const mapRef = useRef(null);
   const mapInstanceRef = useRef(null);
@@ -32,8 +37,6 @@ const DengueMap = ({
   const infoWindowRef = useRef(null);
   const [selectedBarangayFeature, setSelectedBarangayFeature] = useState(null);
   const [infoWindowPosition, setInfoWindowPosition] = useState(null);
-  const [showBreedingSites, setShowBreedingSites] = useState(true);
-  const [showInterventions, setShowInterventions] = useState(false);
   const [breedingSites, setBreedingSites] = useState([]);
   const [selectedBreedingSite, setSelectedBreedingSite] = useState(null);
   const [selectedIntervention, setSelectedIntervention] = useState(null);
@@ -110,17 +113,58 @@ const DengueMap = ({
 
   // Initialize breeding sites from posts
   useEffect(() => {
+    console.log('[DengueMap DEBUG] ===== POSTS DATA DEBUG =====');
+    console.log('[DengueMap DEBUG] Posts data type:', typeof posts);
+    console.log('[DengueMap DEBUG] Is posts an array?', Array.isArray(posts));
+    console.log('[DengueMap DEBUG] Posts object keys:', posts ? Object.keys(posts) : 'null');
+    console.log('[DengueMap DEBUG] Raw posts data:', JSON.stringify(posts, null, 2));
+
     if (posts) {
-      console.log('[DengueMap DEBUG] Processing posts for breeding sites:', posts);
-      const breedingSitesFromPosts = (Array.isArray(posts.posts) ? posts.posts : posts).filter(post =>
-        post.status === "Validated" && 
-        post.specific_location?.coordinates &&
-        (post.report_type === "Breeding Site" || post.report_type === "Standing Water" || post.report_type === "Infestation")
-      );
+      const postsArray = Array.isArray(posts.posts) ? posts.posts : (Array.isArray(posts) ? posts : []);
+      console.log('[DengueMap DEBUG] Posts array length:', postsArray.length);
+      console.log('[DengueMap DEBUG] First few posts:', postsArray.slice(0, 3));
+      
+      const breedingSitesFromPosts = postsArray.filter(post => {
+        console.log('[DengueMap DEBUG] Checking post:', {
+          id: post._id,
+          status: post.status,
+          report_type: post.report_type,
+          hasCoordinates: !!post.specific_location?.coordinates,
+          coordinates: post.specific_location?.coordinates
+        });
+        
+        const isValid = post.status === "Validated" && 
+          post.specific_location?.coordinates &&
+          (post.report_type === "Stagnant Water" || 
+           post.report_type === "Standing Water" || 
+           post.report_type === "Uncollected Garbage or Trash" ||
+           post.report_type === "Others");
+        
+        if (!isValid) {
+          console.log('[DengueMap DEBUG] Invalid breeding site post:', {
+            id: post._id,
+            status: post.status,
+            report_type: post.report_type,
+            hasCoordinates: !!post.specific_location?.coordinates,
+            coordinates: post.specific_location?.coordinates
+          });
+        }
+        return isValid;
+      });
+      
       console.log('[DengueMap DEBUG] Filtered breeding sites:', breedingSitesFromPosts);
       setBreedingSites(breedingSitesFromPosts);
+    } else {
+      console.log('[DengueMap DEBUG] No posts data available');
+      setBreedingSites([]);
     }
   }, [posts]);
+
+  // Add debug for showBreedingSites state changes
+  useEffect(() => {
+    console.log('[DengueMap DEBUG] showBreedingSites changed:', showBreedingSites);
+    console.log('[DengueMap DEBUG] Current breeding sites:', breedingSites);
+  }, [showBreedingSites, breedingSites]);
 
   // Pattern color mapping
   const PATTERN_COLORS = {
@@ -187,6 +231,12 @@ const DengueMap = ({
     if (!mapLoaded || !mergedBarangays.length) return;
     const map = mapInstanceRef.current;
     if (!map) return;
+
+    console.log('[DengueMap DEBUG] Drawing markers:', {
+      showBreedingSites,
+      breedingSitesCount: breedingSites.length,
+      hasMarkerLibrary: !!window.google?.maps?.marker
+    });
 
     // Clear existing polygons and markers
     polygonsRef.current.forEach(polygon => polygon.setMap(null));
@@ -277,9 +327,21 @@ const DengueMap = ({
 
     // Add markers based on toggles
     if (showBreedingSites && breedingSites.length > 0 && window.google.maps.marker) {
+      console.log('[DengueMap DEBUG] Drawing breeding site markers:', {
+        count: breedingSites.length,
+        sites: breedingSites
+      });
+
       const { AdvancedMarkerElement, PinElement } = window.google.maps.marker;
+
       breedingSites.forEach(site => {
         if (site.specific_location?.coordinates) {
+          console.log('[DengueMap DEBUG] Creating marker for site:', {
+            id: site._id,
+            type: site.report_type,
+            coordinates: site.specific_location.coordinates
+          });
+
           const iconUrl = BREEDING_SITE_TYPE_ICONS[site.report_type] || BREEDING_SITE_TYPE_ICONS.default;
           const glyphImg = document.createElement("img");
           glyphImg.src = iconUrl;
@@ -289,21 +351,24 @@ const DengueMap = ({
           glyphImg.style.backgroundColor = "#FFFFFF";
           glyphImg.style.borderRadius = "100%";
           glyphImg.style.padding = "2px";
+
           const pin = new PinElement({
             glyph: glyphImg,
-            background: "#FF6347",         
+            background: "#FF6347",
             borderColor: "#FF6347",
             scale: 1.5,
           });
+
           const marker = new AdvancedMarkerElement({
             map,
             position: {
               lat: site.specific_location.coordinates[1],
-              lng: site.specific_location.coordinates[0],
+              lng: site.specific_location.coordinates[0]
             },
             content: pin.element,
-            title: site.report_type || 'Breeding Site',
+            title: site.report_type || 'Breeding Site'
           });
+
           marker.addListener('click', () => {
             setSelectedBreedingSite(site);
             setSelectedBarangayFeature(null);
@@ -313,6 +378,7 @@ const DengueMap = ({
               lng: site.specific_location.coordinates[0]
             });
           });
+
           markersRef.current.push(marker);
         }
       });
@@ -596,19 +662,30 @@ const DengueMap = ({
 
   // Show InfoWindow for breeding site
   useEffect(() => {
-    if (showInterventions || !selectedBreedingSite || !infoWindowPosition || !mapInstanceRef.current) return;
+    if (!selectedBreedingSite || !infoWindowPosition || !mapInstanceRef.current) return;
     const site = selectedBreedingSite;
     const content = document.createElement('div');
     content.innerHTML = `
-      <div class="bg-white p-4 rounded-lg text-center h-auto" style="width: 40vw;">
-        <p class="font-extrabold text-2xl mb-2" style="color:#2563eb;">${site.report_type}</p>
-        <div class="mt-2 space-y-2">
-          <p><span class="font-bold">Barangay:</span> ${site.barangay}</p>
-          <p><span class="font-bold">Reported by:</span> ${site.user?.username || ''}</p>
-          <p><span class="font-bold">Date:</span> ${site.date_and_time ? new Date(site.date_and_time).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' }) : 'N/A'}</p>
-          <p><span class="font-bold">Description:</span> ${site.description}</p>
-          ${(site.images && site.images.length > 0) ? `<div class="flex justify-center gap-2">${site.images.map((img, idx) => `<img key="${idx}" src="${img}" alt="evidence-${idx + 1}" class="w-35 h-25 object-cover rounded" />`).join('')}</div>` : ''}
+      <div class="bg-white p-4 rounded-lg text-primary text-center max-w-120 w-[50vw]">
+        <p class="font-bold text-4xl font-extrabold mb-4 text-primary">
+          ${site.report_type || 'Breeding Site'}
+        </p>
+        <div class="flex flex-col items-center mt-2 space-y-1 font-normal text-center">
+          <p class="text-xl">
+            <span class="font-bold">Barangay:</span> ${site.barangay || ''}
+          </p>
+          <p class="text-xl">
+            <span class="font-bold">Reported by:</span> ${site.user?.username || ''}
+          </p>
+          <p class="text-xl">
+            <span class="font-bold">Date:</span> ${site.date_and_time ? new Date(site.date_and_time).toLocaleDateString() : ''}
+          </p>
+          <p class="text-xl">
+            <span class="font-bold">Description:</span> ${site.description || ''}
+          </p>
+          ${(site.images && site.images.length > 0) ? `<div class='mt-2 flex justify-center gap-2'>${site.images.map(img => `<img src='${img}' class='w-35 h-25 object-cover rounded border'/>`).join('')}</div>` : ''}
         </div>
+        <button class="mt-4 px-4 py-2 bg-primary w-[40%] text-white rounded-lg shadow hover:bg-primary/80 hover:cursor-pointer font-bold" onclick="window.location.href='/mapping/${site._id}'">View Details</button>
       </div>
     `;
     if (!infoWindowRef.current) {
@@ -622,11 +699,11 @@ const DengueMap = ({
       setSelectedBreedingSite(null);
       setInfoWindowPosition(null);
     });
-  }, [selectedBreedingSite, infoWindowPosition, showInterventions]);
+  }, [selectedBreedingSite, infoWindowPosition]);
 
   // Show InfoWindow for intervention
   useEffect(() => {
-    if (showInterventions || !selectedIntervention || !infoWindowPosition || !mapInstanceRef.current) return;
+    if (!selectedIntervention || !infoWindowPosition || !mapInstanceRef.current) return;
     const intervention = selectedIntervention;
     const content = document.createElement('div');
     content.innerHTML = `
@@ -653,7 +730,7 @@ const DengueMap = ({
       setSelectedIntervention(null);
       setInfoWindowPosition(null);
     });
-  }, [selectedIntervention, infoWindowPosition, showInterventions]);
+  }, [selectedIntervention, infoWindowPosition]);
 
   // Update the polygon click handler to include pattern data
   const handlePolygonClick = (feature) => {
@@ -672,31 +749,81 @@ const DengueMap = ({
   return (
     <div className="relative w-full h-full">
       {/* Toggle Buttons */}
-        <div className="absolute top-4 left-4 z-20 flex gap-2">
-          <button
-          onClick={() => setShowBreedingSites(v => !v)}
-          className={`px-4 py-2 rounded-lg font-medium transition-colors ${showBreedingSites ? 'bg-primary text-white' : 'bg-white/90 text-gray-600 hover:bg-gray-50'}`}
-        >{showBreedingSites ? 'Hide Breeding Sites' : 'Show Breeding Sites'}</button>
-          <button
-          onClick={() => setShowInterventions(v => !v)}
-          className={`px-4 py-2 rounded-lg font-medium transition-colors ${showInterventions ? 'bg-primary text-white' : 'bg-white/90 text-gray-600 hover:bg-gray-50'}`}
-        >{showInterventions ? 'Hide Interventions' : 'Show Interventions'}</button>
-        </div>
+      <div className="absolute top-4 left-4 z-20 flex gap-2">
+        <button
+          onClick={onToggleBreedingSites}
+          className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+            showBreedingSites
+              ? 'bg-red-100 text-red-700 hover:bg-red-200'
+              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+          }`}
+        >
+          <MapPinLine size={18} weight="fill" className="text-red-600" />
+          {showBreedingSites ? 'Hide Breeding Sites' : 'Show Breeding Sites'}
+        </button>
+        <button
+          onClick={onToggleInterventions}
+          className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+            showInterventions
+              ? 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+          }`}
+        >
+          <MapPinLine size={18} weight="fill" className="text-blue-600" />
+          {showInterventions ? 'Hide Interventions' : 'Show Interventions'}
+        </button>
+      </div>
       <div ref={mapRef} className="w-full h-full" />
       {showLegends && (
-        <div className="absolute bottom-4 right-4 bg-white p-4 rounded-lg shadow-lg">
-          {showBreedingSites && (
-                  <div className="flex items-center gap-2 mb-2">
-              <div className="w-4 h-4 rounded-full" style={{background:'#FF6347'}} />
-              <span>Breeding Site</span>
-        </div>
-      )}
-          {showInterventions && (
-            <div className="flex items-center gap-2 mb-2">
-              <div className="w-4 h-4 rounded-full" style={{background:'#1893F8'}} />
-              <span>Intervention</span>
-        </div>
-      )}
+        <div className="absolute bottom-4 left-4 z-10 bg-white p-4 rounded-lg shadow-lg">
+          <div className="space-y-2">
+            {showBreedingSites && (
+              <>
+                <p className="text-sm font-medium text-gray-600 mb-2">Breeding Site Types</p>
+                <div className="space-y-2">
+                  <div className="flex items-center space-x-2">
+                    <img src={stagnantIcon} alt="Stagnant Water" className="w-6 h-6" />
+                    <span className="text-sm">Stagnant Water</span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <img src={standingIcon} alt="Standing Water" className="w-6 h-6" />
+                    <span className="text-sm">Standing Water</span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <img src={garbageIcon} alt="Garbage" className="w-6 h-6" />
+                    <span className="text-sm">Garbage</span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <img src={othersIcon} alt="Others" className="w-6 h-6" />
+                    <span className="text-sm">Others</span>
+                  </div>
+                </div>
+              </>
+            )}
+            {showInterventions && (
+              <>
+                <p className="text-sm font-medium text-gray-600 mb-2">Intervention Types</p>
+                <div className="space-y-2">
+                  <div className="flex items-center space-x-2">
+                    <img src={foggingIcon} alt="Fogging" className="w-6 h-6" />
+                    <span className="text-sm">Fogging</span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <img src={trappingIcon} alt="Ovicidal-Larvicidal Trapping" className="w-6 h-6" />
+                    <span className="text-sm">Ovicidal-Larvicidal Trapping</span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <img src={cleanUpIcon} alt="Clean-up Drive" className="w-6 h-6" />
+                    <span className="text-sm">Clean-up Drive</span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <img src={educationIcon} alt="Education Campaign" className="w-6 h-6" />
+                    <span className="text-sm">Education Campaign</span>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
         </div>
       )}
     </div>
