@@ -154,9 +154,31 @@ const Interventions = () => {
     return Array.from(patterns).sort();
   }, [transformedBarangays]);
 
-  // Apply filters and search to recommendations
+  // Add this helper function at the top level
+  const isWithinTwoWeeks = (dateStr) => {
+    const today = new Date();
+    const interventionDate = new Date(dateStr);
+    const twoWeeksAgo = new Date(today);
+    twoWeeksAgo.setDate(today.getDate() - 14);
+    const twoWeeksAhead = new Date(today);
+    twoWeeksAhead.setDate(today.getDate() + 14);
+
+    return interventionDate >= twoWeeksAgo && interventionDate <= twoWeeksAhead;
+  };
+
+  // Update the filteredRecommendations logic
   const filteredRecommendations = React.useMemo(() => {
     if (!transformedBarangays) return [];
+    
+    // Get all interventions for each barangay
+    const barangayInterventions = interventions ? interventions.reduce((acc, intervention) => {
+      if (!acc[intervention.barangay]) {
+        acc[intervention.barangay] = [];
+      }
+      acc[intervention.barangay].push(intervention);
+      return acc;
+    }, {}) : {};
+
     let recommendations = transformedBarangays
       .filter(item => {
         // Show item if it has any of these:
@@ -198,18 +220,22 @@ const Interventions = () => {
       );
     }
 
-    // Log the filtered recommendations for debugging
-    console.log("[DEBUG] Filtered Recommendations:", {
-      total: recommendations.length,
-      byPattern: recommendations.reduce((acc, item) => {
-        acc[item.patternType] = (acc[item.patternType] || 0) + 1;
-        return acc;
-      }, {}),
-      items: recommendations
+    // Add intervention status to each recommendation
+    recommendations = recommendations.map(item => {
+      const barangayInterventionsList = barangayInterventions[item.name] || [];
+      const recentInterventions = barangayInterventionsList.filter(intervention => 
+        isWithinTwoWeeks(intervention.date)
+      );
+
+      return {
+        ...item,
+        recentInterventions,
+        hasValidIntervention: recentInterventions.length > 0
+      };
     });
 
     return recommendations;
-  }, [transformedBarangays, patternFilter, recommendationSearchQuery]);
+  }, [transformedBarangays, patternFilter, recommendationSearchQuery, interventions]);
 
   // Log what is being rendered in ActionRecommendationCard for debugging
   console.log('ActionRecommendationCard data:', filteredRecommendations);
@@ -439,6 +465,7 @@ const Interventions = () => {
                           }}
                           death_priority={item.death_priority}
                           hideSharedInfo={true}
+                          hasValidIntervention={item.hasValidIntervention}
                           onApply={(barangay, patternType) => {
                             setSelectedBarangay(barangay);
                             setSelectedPattern(patternType);

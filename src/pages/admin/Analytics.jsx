@@ -131,7 +131,7 @@ const Analytics = () => {
     // Find all barangays with spike pattern
     const spikeBarangays = barangaysList.filter(barangay => 
       barangay.status_and_recommendation?.pattern_based?.status?.toLowerCase() === 'spike'
-    );
+      );
 
     if (spikeBarangays.length === 0) return null;
 

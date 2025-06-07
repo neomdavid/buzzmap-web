@@ -57,7 +57,7 @@ export { default as FormCoordinationRequest } from "./Admin/FormCoordinationRequ
 export { default as InterventionsTable } from "./Admin/InterventionsTable.jsx";
 export { default as AddInterventionModal } from "./Admin/AddInterventionModal.jsx";
 export { default as InterventionDetailsModal } from "./Admin/InterventionDetailsModal.jsx";
-export { default as ActionRecommendationCard } from "./Admin/ActionRecommendationCard.jsx";
+export { default as ActionRecommendationCard } from "./Admin/ActionRecommendationCard";
 export { default as EditInterventionModal } from "./Admin/EditInterventionModal.jsx";
 export { default as PieChart } from "./Admin/PieChart.jsx";
 export { default as AdminPostsTable } from "./Admin/AdminPostsTable.jsx";

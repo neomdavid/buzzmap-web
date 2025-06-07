@@ -1,6 +1,7 @@
 import React from "react";
 import { Circle, MagnifyingGlass, Lightbulb, Warning, CheckCircle } from "phosphor-react";
 import { useGetAllInterventionsQuery } from "../../api/dengueApi";
+import { CheckCircle as LucideCheckCircle } from 'lucide-react';
 
 // Pattern color mapping for both border and badge
 const PATTERN_COLORS = {
@@ -104,26 +105,76 @@ const ActionRecommendationCard = ({
   // Get all interventions
   const { data: allInterventions } = useGetAllInterventionsQuery();
   
-  console.log('[DEBUG] All interventions:', allInterventions);
+  // Helper function to check if a date is within 2 weeks
+  const isWithinTwoWeeks = (dateStr) => {
+    const today = new Date();
+    const interventionDate = new Date(dateStr);
+    
+    // Set time to start of day for both dates to compare only dates
+    today.setHours(0, 0, 0, 0);
+    interventionDate.setHours(0, 0, 0, 0);
+    
+    const twoWeeksAgo = new Date(today);
+    twoWeeksAgo.setDate(today.getDate() - 14);
+    twoWeeksAgo.setHours(0, 0, 0, 0);
+    
+    const twoWeeksAhead = new Date(today);
+    twoWeeksAhead.setDate(today.getDate() + 14);
+    twoWeeksAhead.setHours(0, 0, 0, 0);
 
-  // Check if barangay has any interventions
-  const barangayHasIntervention = allInterventions?.some(i => i.barangay === barangay);
-  const latestBarangayIntervention = barangayHasIntervention 
-    ? allInterventions?.filter(i => i.barangay === barangay)
-        .sort((a, b) => new Date(b.date) - new Date(a.date))[0]
+    const daysFromToday = Math.floor((interventionDate - today) / (1000 * 60 * 60 * 24));
+    const isWithin = daysFromToday >= -14 && daysFromToday <= 14;
+
+    console.log('[DEBUG] Date validation for', dateStr, ':');
+    console.log('- Today:', today.toISOString());
+    console.log('- Intervention date:', interventionDate.toISOString());
+    console.log('- Days from today:', daysFromToday);
+    console.log('- Two weeks ago:', twoWeeksAgo.toISOString());
+    console.log('- Two weeks ahead:', twoWeeksAhead.toISOString());
+    console.log('- Is within two weeks:', isWithin);
+
+    return isWithin;
+  };
+
+  // Get all interventions for this barangay
+  const barangayInterventions = allInterventions?.filter(i => i.barangay === barangay) || [];
+  
+  // Debug each intervention's date validation
+  console.log(`[DEBUG] Checking interventions for ${barangay}:`);
+  barangayInterventions.forEach(i => {
+    console.log(`\nValidating intervention from ${i.date}:`);
+    const isValid = isWithinTwoWeeks(i.date);
+    console.log(`- Is within 2 weeks: ${isValid}`);
+  });
+  
+  // Filter to only include interventions within the 2-week window
+  const recentInterventions = barangayInterventions.filter(i => {
+    const isValid = isWithinTwoWeeks(i.date);
+    console.log(`[DEBUG] Filtering intervention from ${i.date}: ${isValid ? 'INCLUDED' : 'EXCLUDED'}`);
+    return isValid;
+  });
+
+  console.log(`[DEBUG] Summary for ${barangay}:`);
+  console.log('- Total interventions:', barangayInterventions.length);
+  console.log('- Recent interventions (within 2 weeks):', recentInterventions.length);
+  console.log('- Recent intervention dates:', recentInterventions.map(i => i.date));
+
+  const hasRecentIntervention = recentInterventions.length > 0;
+  const latestRecentIntervention = hasRecentIntervention 
+    ? recentInterventions.sort((a, b) => new Date(b.date) - new Date(a.date))[0]
     : null;
 
-  console.log('[DEBUG] For', barangay, ':');
-  console.log('- Has intervention:', barangayHasIntervention);
-  console.log('- Latest intervention:', latestBarangayIntervention);
-  console.log('- Latest status:', latestBarangayIntervention?.status);
-  console.log('- Is Complete?', latestBarangayIntervention?.status === 'Complete');
+  console.log(`[DEBUG] Final status for ${barangay}:`);
+  console.log('- Has recent intervention:', hasRecentIntervention);
+  console.log('- Latest recent intervention:', latestRecentIntervention?.date);
+  console.log('- Latest status:', latestRecentIntervention?.status);
 
-  // Show Apply button only if there's no intervention
-  const showApplyButton = !barangayHasIntervention;
+  // Show Apply button if there are no recent interventions
+  const showApplyButton = !hasRecentIntervention;
 
-  console.log('[DEBUG] Show Apply button:', showApplyButton, 'for', barangay);
-  console.log('- Condition (no intervention):', !barangayHasIntervention);
+  console.log(`[DEBUG] Button state for ${barangay}:`);
+  console.log('- Show Apply button:', showApplyButton);
+  console.log('- Reason:', hasRecentIntervention ? 'Has recent intervention' : 'No recent interventions');
 
   // Determine colors and urgency based on pattern type
   const patternType = pattern_based?.status || "none";
@@ -158,10 +209,10 @@ const ActionRecommendationCard = ({
               View Recommendations
             </button>
           )}
-          {barangayHasIntervention && !showApplyButton ? (
-            <div className={`px-3 py-1.5 rounded-full border text-sm flex items-center gap-1.5 ${statusStyles[latestBarangayIntervention.status]}`}>
-              <CheckCircle size={16} weight="fill" />
-              {latestBarangayIntervention.status}
+          {hasRecentIntervention ? (
+            <div className={`px-3 py-1.5 rounded-full border text-sm flex items-center gap-1.5 ${statusStyles[latestRecentIntervention.status]}`}>
+              <LucideCheckCircle size={16} weight="fill" />
+              {latestRecentIntervention.status}
             </div>
           ) : onApply && ['spike', 'gradual_rise'].includes(patternType?.toLowerCase()) && showApplyButton && (
             <button 

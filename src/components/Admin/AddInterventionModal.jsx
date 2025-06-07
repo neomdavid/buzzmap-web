@@ -66,12 +66,26 @@ const AddInterventionModal = ({ isOpen, onClose, preselectedBarangay, patternTyp
 
   // Helper to get allowed statuses based on date
   const getAllowedStatuses = (dateStr) => {
-    if (!dateStr) return ["Scheduled", "Ongoing", "Complete"];
-    const today = dayjs().startOf('day');
-    const selected = dayjs(dateStr).startOf('day');
-    if (selected.isBefore(today)) return ["Complete"];
-    if (selected.isSame(today)) return ["Ongoing", "Complete"];
-    return ["Scheduled"];
+    const today = new Date();
+    const interventionDate = new Date(dateStr);
+    const twoWeeksAgo = new Date(today);
+    twoWeeksAgo.setDate(today.getDate() - 14);
+    const twoWeeksAhead = new Date(today);
+    twoWeeksAhead.setDate(today.getDate() + 14);
+
+    // Check if the date is within the 2-week window
+    const isWithinTwoWeeks = interventionDate >= twoWeeksAgo && interventionDate <= twoWeeksAhead;
+
+    if (!isWithinTwoWeeks) {
+      return ['Completed']; // Only allow 'Completed' status if outside 2-week window
+    }
+
+    // For dates within the 2-week window
+    if (interventionDate < today) {
+      return ['Completed', 'In Progress']; // Past dates can be Completed or In Progress
+    } else {
+      return ['Scheduled', 'In Progress']; // Future dates can be Scheduled or In Progress
+    }
   };
   const allowedStatuses = getAllowedStatuses(formData.date);
 
@@ -281,139 +295,60 @@ const AddInterventionModal = ({ isOpen, onClose, preselectedBarangay, patternTyp
       hasBarangay: !!formData.barangay,
       hasSpecificLocation: !!formData.specific_location,
       isLocationValid,
-      isBoundaryDataLoaded,
+      isBoundaryDataLoaded: !!barangayGeoJsonData,
       formData
     });
 
-    if (!isBoundaryDataLoaded) {
-      const errorMsg = "Please wait for the map to load completely before submitting.";
-      showCustomToast(errorMsg, "error");
-      setSubmissionError(errorMsg);
-      return;
-    }
-
     if (!formData.barangay) {
-      const errorMsg = "Please select a barangay.";
-      showCustomToast(errorMsg, "error");
-      setSubmissionError(errorMsg);
+      setSubmissionError('Please select a barangay');
       return;
     }
-    if (!formData.specific_location || !isLocationValid) {
-      const errorMsg = "Please pin a specific location on the map within the selected barangay.";
-      showCustomToast(errorMsg, "error");
-      setSubmissionError(errorMsg);
-      return;
-    }
-    setSubmissionError("");
-    setShowConfirmation(true);
-  };
 
-  const confirmSubmit = async () => {
+    if (!isLocationValid) {
+      setSubmissionError('Please pin a specific location on the map within the selected barangay.');
+      return;
+    }
+
+    if (!formData.date) {
+      setSubmissionError('Please select a date');
+      return;
+    }
+
+    if (!formData.interventionType) {
+      setSubmissionError('Please select an intervention type');
+      return;
+    }
+
+    if (!formData.personnel) {
+      setSubmissionError('Please enter personnel name');
+      return;
+    }
+
+    if (!formData.status) {
+      setSubmissionError('Please select a status');
+      return;
+    }
+
+    setSubmissionError(null);
     setIsSubmitting(true);
-    setSubmissionError(""); 
+
     try {
-      // Format the date to ISO string
-      const formattedDate = formData.date ? new Date(formData.date).toISOString() : null;
-
-      // Ensure coordinates are in the correct format [longitude, latitude]
-      const formattedLocation = formData.specific_location ? {
-        type: "Point",
-        coordinates: [
-          parseFloat(formData.specific_location.coordinates[0]),
-          parseFloat(formData.specific_location.coordinates[1])
-        ]
-      } : null;
-
-      // Prepare the submission data
-      const submissionData = {
-        barangay: formData.barangay,
-        address: formData.address || "",
-        interventionType: formData.interventionType,
-        personnel: formData.personnel,
-        date: formattedDate,
-        status: formData.status,
-        specific_location: formattedLocation
+      // Format the data before sending to the backend
+      const formattedData = {
+        ...formData,
+        status: formData.status === 'Completed' ? 'Complete' : formData.status, // Convert to correct case
+        specific_location: {
+          type: "Point", // Add the required type field
+          coordinates: formData.specific_location.coordinates
+        }
       };
 
-      console.log("[DEBUG] Starting intervention submission with data:", JSON.stringify(submissionData, null, 2));
-      
-      const response = await createIntervention(submissionData).unwrap();
-      console.log("[DEBUG] API Response:", JSON.stringify(response, null, 2));
-      
-      // Invalidate the interventions cache for this barangay
-      dengueApi.util.invalidateTags([{ type: 'Intervention', id: formData.barangay }]);
-      
-      setIsSuccess(true);
-      setFormData({
-        barangay: "",
-        address: "",
-        interventionType: "All",
-        personnel: "",
-        date: "",
-        status: "Scheduled",
-        specific_location: null,
-      });
-      setIsLocationValid(false); 
-      setFocusCommand(null);
-
-      setTimeout(() => {
-        onClose(); 
-        setShowConfirmation(false);
-        setIsSuccess(false);
-      }, 2000); 
+      await createIntervention(formattedData).unwrap();
+      console.log('[Modal DEBUG] Intervention created successfully');
+      onClose();
     } catch (error) {
-      // Enhanced error logging
-      console.error("[DEBUG] Error submitting intervention:", {
-        error: error,
-        errorData: error.data,
-        errorMessage: error.data?.error || error.data?.message,
-        fullError: JSON.stringify(error, null, 2),
-        status: error.status,
-        originalError: error.originalError,
-        stack: error.stack
-      });
-
-      // Extract error message from different possible locations in the error object
-      let errorMessage = "Failed to submit intervention. Please try again.";
-      
-      if (error.data) {
-        if (typeof error.data === 'string') {
-          errorMessage = error.data;
-        } else if (error.data.error) {
-          errorMessage = error.data.error;
-        } else if (error.data.message) {
-          // Clean up MongoDB validation error messages
-          if (error.data.message.includes('validation failed')) {
-            const validationError = error.data.message.split(': ')[1];
-            errorMessage = `Validation Error: ${validationError}`;
-          } else {
-            errorMessage = error.data.message;
-          }
-        } else if (error.data.details) {
-          errorMessage = error.data.details;
-        }
-      } else if (error.error) {
-        errorMessage = error.error;
-      } else if (error.message) {
-        errorMessage = error.message;
-      }
-
-      // If we have a network error or server error, add more context
-      if (error.status === 'FETCH_ERROR') {
-        errorMessage = "Network error: Unable to connect to the server. Please check your internet connection.";
-      } else if (error.status === 'PARSING_ERROR') {
-        errorMessage = "Server response error: Unable to parse server response.";
-      } else if (error.status === 'CUSTOM_ERROR') {
-        errorMessage = `Server error: ${errorMessage}`;
-      }
-
-      // Show error using custom toast - ensure it's called after error message is set
-      console.log("[DEBUG] Showing error toast with message:", errorMessage);
-      showCustomToast(errorMessage, "error");
-      
-      setSubmissionError(errorMessage);
-      setIsSuccess(false);
-      setShowConfirmation(false);
+      console.error('[Modal DEBUG] Error creating intervention:', error);
+      setSubmissionError(error.data?.message || 'Failed to create intervention');
     } finally {
       setIsSubmitting(false);
     }
@@ -526,7 +461,7 @@ const AddInterventionModal = ({ isOpen, onClose, preselectedBarangay, patternTyp
                     Cancel
                   </button>
                   <button
-                    onClick={confirmSubmit}
+                    onClick={handleSubmit}
                     className="bg-success text-white font-semibold py-2 px-8 rounded-xl hover:bg-success/80 transition-all hover:cursor-pointer"
                     disabled={isSubmitting}
                   >
