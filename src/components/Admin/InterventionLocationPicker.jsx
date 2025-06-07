@@ -202,6 +202,25 @@ const InterventionLocationPicker = ({
         mapTypeControl: false,
         streetViewControl: false,
         fullscreenControl: false,
+        zoomControl: true,
+        mapTypeId: 'roadmap',
+        styles: [
+          {
+            featureType: 'poi',
+            elementType: 'labels',
+            stylers: [{ visibility: 'off' }]
+          },
+          {
+            featureType: 'transit',
+            elementType: 'labels',
+            stylers: [{ visibility: 'off' }]
+          },
+          {
+            featureType: 'road',
+            elementType: 'labels.icon',
+            stylers: [{ visibility: 'off' }]
+          }
+        ]
       });
       // Draw polygons and marker
       drawMapFeatures(mapInstance.current, qcBoundaryFeatures, highlightedBarangayName, currentMarker);
