@@ -500,6 +500,7 @@ const Interventions = () => {
           preselectedBarangay={selectedBarangay}
           patternType={selectedPattern}
           patternUrgency={selectedUrgency}
+          transformedBarangays={transformedBarangays}
         />
       )}
     </main>

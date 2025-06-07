@@ -335,30 +335,53 @@ export const dengueApi = createApi({
     }),
     // Intervention Endpoints
 
-    // Create an intervention
-    createIntervention: builder.mutation({
-      query: (interventionData) => ({
-        url: "interventions", // The endpoint for creating interventions
-        method: "POST",
-        body: interventionData,
-      }),
-      invalidatesTags: [{ type: "Intervention", id: "LIST" }],
-    }),
-
     // Get all interventions (paginated)
     getAllInterventions: builder.query({
       query: () => `interventions`,
       transformResponse: (response) => {
-        // No more paginated format, just return the array directly
+        console.log('[DEBUG] All interventions response:', response);
         return response;
       },
-      providesTags: (result) =>
-        Array.isArray(result)
-          ? [
-              ...result.map(({ id, _id }) => ({ type: 'Intervention', id: id || _id })),
-              { type: 'Intervention', id: 'LIST' },
-            ]
-          : [{ type: 'Intervention', id: 'LIST' }],
+      providesTags: (result) => {
+        if (!Array.isArray(result)) return [{ type: 'Intervention', id: 'LIST' }];
+        
+        // Create tags for each barangay that has interventions
+        const barangayTags = [...new Set(result.map(i => i.barangay))].map(barangay => ({
+          type: 'Intervention',
+          id: barangay
+        }));
+        
+        return [
+          ...barangayTags,
+          { type: 'Intervention', id: 'LIST' }
+        ];
+      },
+    }),
+
+    // Get interventions for a specific barangay
+    getInterventionsInProgress: builder.query({
+      query: (barangay) => `interventions/barangay/${barangay}`,
+      transformResponse: (response) => {
+        console.log('[DEBUG] Interventions for barangay response:', response);
+        return response;
+      },
+      providesTags: (result, error, barangay) => [
+        { type: "Intervention", id: barangay },
+        { type: "Intervention", id: "LIST" }
+      ],
+    }),
+
+    // Create an intervention
+    createIntervention: builder.mutation({
+      query: (interventionData) => ({
+        url: "interventions",
+        method: "POST",
+        body: interventionData,
+      }),
+      invalidatesTags: (result, error, { barangay }) => [
+        { type: "Intervention", id: barangay },
+        { type: "Intervention", id: "LIST" }
+      ],
     }),
 
     // Get a single intervention by ID
@@ -370,34 +393,33 @@ export const dengueApi = createApi({
     // Update an intervention
     updateIntervention: builder.mutation({
       query: ({ id, updatedData }) => ({
-        url: `interventions/${id}`, // The endpoint to update intervention by ID
+        url: `interventions/${id}`,
         method: "PATCH",
         body: updatedData,
       }),
-      invalidatesTags: (result, error, { id }) => [
+      invalidatesTags: (result, error, { id, updatedData }) => [
         { type: "Intervention", id },
+        { type: "Intervention", id: updatedData.barangay },
+        { type: "Intervention", id: "LIST" }
       ],
     }),
 
     // Delete an intervention
     deleteIntervention: builder.mutation({
       query: (id) => ({
-        url: `interventions/${id}`, // The endpoint to delete an intervention by ID
+        url: `interventions/${id}`,
         method: "DELETE",
       }),
-      invalidatesTags: (result, error, id) => [{ type: "Intervention", id }],
+      invalidatesTags: (result, error, id) => [
+        { type: "Intervention", id },
+        { type: "Intervention", id: "LIST" }
+      ],
     }),
 
     //PATTERN RECOGNITION
     getPatternRecognitionResults: builder.query({
       query: () => "analytics/retrieve-pattern-recognition-results",
       providesTags: ["PatternRecognition"],
-    }),
-
-    // Add this to the endpoints object
-    getInterventionsInProgress: builder.query({
-      query: (barangay) => `interventions/in-progress/${barangay}`,
-      providesTags: (result, error, barangay) => [{ type: "Intervention", id: barangay }],
     }),
 
     // Get all barangays

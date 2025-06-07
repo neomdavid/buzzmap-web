@@ -34,9 +34,17 @@ function loadGoogleMapsScript(apiKey) {
 // --- End loader ---
 
 const QC_DEFAULT_CENTER = { lat: 14.6488, lng: 121.0509 };
-const MAP_CONTAINER_STYLE = { width: '100%', height: '300px', borderRadius: '0.5rem', marginBottom: '1rem' };
+const MAP_CONTAINER_STYLE = { width: '100%', height: '400px', borderRadius: '0.5rem' };
 
-const InterventionLocationPicker = ({ onPinChange, initialPin, focusCommand, patternType }) => {
+const InterventionLocationPicker = ({ 
+  onPinChange, 
+  initialPin,
+  focusCommand,
+  patternType,
+  preselectedBarangay,
+  highlightedBarangay,
+  onBoundaryDataLoad 
+}) => {
   const mapRef = useRef(null);
   const mapInstance = useRef(null);
   const markerRef = useRef(null);
@@ -239,7 +247,7 @@ const InterventionLocationPicker = ({ onPinChange, initialPin, focusCommand, pat
           strokeOpacity: isHighlighted ? 0.8 : 0.3,
           strokeWeight: isHighlighted ? 2 : 1,
           fillOpacity: 0.1,
-          fillColor: '#4A8D6E',
+          fillColor: isHighlighted ? '#FF8C00' : '#4A8D6E',
           map,
           zIndex: isHighlighted ? 10 : 1,
           clickable: false,
@@ -259,6 +267,18 @@ const InterventionLocationPicker = ({ onPinChange, initialPin, focusCommand, pat
       if (markerRef.current) markerRef.current.setMap(null);
     }
   }
+
+  // Update the style function to use highlightedBarangay
+  const style = useCallback((feature) => {
+    const barangayName = feature.properties.BRGY_NAME;
+    return {
+      fillColor: barangayName === highlightedBarangay ? '#ff0000' : '#3388ff',
+      fillOpacity: barangayName === highlightedBarangay ? 0.3 : 0.1,
+      color: barangayName === highlightedBarangay ? '#ff0000' : '#3388ff',
+      weight: barangayName === highlightedBarangay ? 3 : 1,
+      opacity: 1
+    };
+  }, [highlightedBarangay]);
 
   return (
     <div className="flex flex-col space-y-3">

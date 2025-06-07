@@ -1,5 +1,6 @@
 import React from "react";
-import { Circle, MagnifyingGlass, Lightbulb, Warning } from "phosphor-react";
+import { Circle, MagnifyingGlass, Lightbulb, Warning, CheckCircle } from "phosphor-react";
+import { useGetAllInterventionsQuery } from "../../api/dengueApi";
 
 // Pattern color mapping for both border and badge
 const PATTERN_COLORS = {
@@ -100,10 +101,41 @@ const ActionRecommendationCard = ({
   hideSharedInfo = false,
   onApply,
 }) => {
+  // Get all interventions
+  const { data: allInterventions } = useGetAllInterventionsQuery();
+  
+  console.log('[DEBUG] All interventions:', allInterventions);
+
+  // Check if barangay has any interventions
+  const barangayHasIntervention = allInterventions?.some(i => i.barangay === barangay);
+  const latestBarangayIntervention = barangayHasIntervention 
+    ? allInterventions?.filter(i => i.barangay === barangay)
+        .sort((a, b) => new Date(b.date) - new Date(a.date))[0]
+    : null;
+
+  console.log('[DEBUG] For', barangay, ':');
+  console.log('- Has intervention:', barangayHasIntervention);
+  console.log('- Latest intervention:', latestBarangayIntervention);
+  console.log('- Latest status:', latestBarangayIntervention?.status);
+  console.log('- Is Complete?', latestBarangayIntervention?.status === 'Complete');
+
+  // Show Apply button only if there's no intervention
+  const showApplyButton = !barangayHasIntervention;
+
+  console.log('[DEBUG] Show Apply button:', showApplyButton, 'for', barangay);
+  console.log('- Condition (no intervention):', !barangayHasIntervention);
+
   // Determine colors and urgency based on pattern type
   const patternType = pattern_based?.status || "none";
   const styles = PATTERN_STYLES[patternType?.toLowerCase()] || PATTERN_STYLES.none;
   const urgencyLevelToDisplay = styles.urgency;
+
+  // Status badge styles
+  const statusStyles = {
+    Scheduled: "bg-info/10 text-info border-info/20",
+    Ongoing: "bg-warning/10 text-warning border-warning/20",
+    Complete: "bg-success/10 text-success border-success/20"
+  };
 
   return (
     <div className={`flex flex-col gap-4 border-2 ${styles.border} rounded-3xl p-6 ${className}`}>
@@ -126,7 +158,12 @@ const ActionRecommendationCard = ({
               View Recommendations
             </button>
           )}
-          {onApply && ['spike', 'gradual_rise'].includes(patternType?.toLowerCase()) && (
+          {barangayHasIntervention && !showApplyButton ? (
+            <div className={`px-3 py-1.5 rounded-full border text-sm flex items-center gap-1.5 ${statusStyles[latestBarangayIntervention.status]}`}>
+              <CheckCircle size={16} weight="fill" />
+              {latestBarangayIntervention.status}
+            </div>
+          ) : onApply && ['spike', 'gradual_rise'].includes(patternType?.toLowerCase()) && showApplyButton && (
             <button 
               onClick={() => onApply(barangay, pattern_based?.status)}
               className="px-3 py-1.5 bg-primary text-white rounded-full hover:bg-primary/90 transition-colors text-sm cursor-pointer"

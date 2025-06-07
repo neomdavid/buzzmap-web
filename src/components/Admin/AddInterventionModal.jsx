@@ -1,6 +1,14 @@
 import React, { useState, useEffect, useRef } from "react";
-import { IconX, IconCheck, IconTrendingUp, IconTrendingUp2, IconChartLine } from "@tabler/icons-react";
-import { useCreateInterventionMutation } from "../../api/dengueApi"; // Import RTK query hook for create intervention
+import { 
+  IconX, 
+  IconCheck, 
+  IconTrendingUp, 
+  IconTrendingUp2, 
+  IconChartLine,
+  IconTrendingDown,
+  IconMinusVertical
+} from "@tabler/icons-react";
+import { useCreateInterventionMutation, dengueApi } from "../../api/dengueApi"; // Import dengueApi
 import InterventionLocationPicker from "./InterventionLocationPicker"; // Import the new component
 import * as turf from '@turf/turf'; // Import turf for calculations
 import dayjs from "dayjs";
@@ -19,7 +27,7 @@ const mapContainerStyle = {
   marginBottom: "1rem",
 };
 
-const AddInterventionModal = ({ isOpen, onClose, preselectedBarangay, patternType, patternUrgency }) => {
+const AddInterventionModal = ({ isOpen, onClose, preselectedBarangay, patternType, patternUrgency, transformedBarangays = [] }) => {
   const modalRef = useRef(null);
   const [formData, setFormData] = useState({
     barangay: "",
@@ -39,12 +47,22 @@ const AddInterventionModal = ({ isOpen, onClose, preselectedBarangay, patternTyp
   const [barangayGeoJsonData, setBarangayGeoJsonData] = useState(null); // Store full GeoJSON
   const [focusCommand, setFocusCommand] = useState(null); // To control picker focus (renamed from focusBarangayPicker)
   const [isBoundaryDataLoaded, setIsBoundaryDataLoaded] = useState(false);
+  const [showUrgencyLevel, setShowUrgencyLevel] = useState(true); // Track whether to show urgency level
 
   // Mock personnel options (replace with real data if needed)
   const personnelOptions = ["John Doe", "Jane Smith", "Carlos Rivera"];
 
   // RTK Query mutation hook for creating an intervention
   const [createIntervention] = useCreateInterventionMutation();
+
+  // Add new state for current barangay's pattern data
+  const [currentBarangayPattern, setCurrentBarangayPattern] = useState({
+    type: patternType,
+    urgency: patternUrgency
+  });
+
+  // Add state for current highlighted barangay
+  const [highlightedBarangay, setHighlightedBarangay] = useState(preselectedBarangay);
 
   // Helper to get allowed statuses based on date
   const getAllowedStatuses = (dateStr) => {
@@ -123,119 +141,137 @@ const AddInterventionModal = ({ isOpen, onClose, preselectedBarangay, patternTyp
     }
   }, [isOpen, preselectedBarangay, barangayGeoJsonData, isBoundaryDataLoaded]);
 
+  // Update useEffect to set initial highlighted barangay
+  useEffect(() => {
+    if (isOpen && preselectedBarangay) {
+      setHighlightedBarangay(preselectedBarangay);
+      setCurrentBarangayPattern({
+        type: patternType,
+        urgency: patternUrgency
+      });
+    }
+  }, [isOpen, preselectedBarangay, patternType, patternUrgency]);
+
+  // Helper function to get pattern data for a barangay
+  const getBarangayPatternData = (barangayName) => {
+    console.log('[DEBUG] Getting pattern data for:', barangayName);
+    console.log('[DEBUG] Available barangays:', transformedBarangays);
+    
+    const barangayData = transformedBarangays.find(b => b.name === barangayName);
+    if (barangayData) {
+      console.log('[DEBUG] Found barangay data:', {
+        name: barangayData.name,
+        pattern: barangayData.pattern,
+        issueDetected: barangayData.issueDetected,
+        suggestedAction: barangayData.suggestedAction,
+        rawData: barangayData
+      });
+      
+      // Determine pattern type and urgency
+      let patternType = 'none';
+      let urgency = null;
+
+      // Check pattern based on issueDetected text content
+      if (barangayData.issueDetected) {
+        const issueText = barangayData.issueDetected.toLowerCase();
+        
+        if (issueText.includes('spike') || issueText.includes('sudden increase')) {
+          patternType = 'spike';
+          urgency = 'Immediate Action Required';
+          console.log('[DEBUG] Pattern determined as spike');
+        } else if (issueText.includes('gradual rise') || issueText.includes('increasing trend')) {
+          patternType = 'gradual_rise';
+          urgency = 'Action Required Soon';
+          console.log('[DEBUG] Pattern determined as gradual_rise');
+        } else if (issueText.includes('stable') || issueText.includes('consistent')) {
+          patternType = 'stability';
+          urgency = 'Monitor Situation';
+          console.log('[DEBUG] Pattern determined as stability');
+        } else if (issueText.includes('decline') || issueText.includes('decreasing')) {
+          patternType = 'decline';
+          urgency = 'Continue Monitoring';
+          console.log('[DEBUG] Pattern determined as decline');
+        } else {
+          console.log('[DEBUG] No specific pattern found in issue text');
+        }
+      }
+
+      console.log('[DEBUG] Final pattern determination:', {
+        patternType,
+        urgency,
+        barangayName
+      });
+
+      return {
+        type: patternType,
+        urgency: urgency
+      };
+    }
+    console.log('[DEBUG] No barangay data found for:', barangayName);
+    return null;
+  };
+
+  // Update handleChange to update highlighted barangay
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({
+    
+    setFormData(prev => ({
       ...prev,
-      [name]: value,
+      [name]: value
     }));
-    if (submissionError) setSubmissionError(""); // Clear error on form change
 
+    // If barangay is changed, update the highlighted barangay and pattern data
     if (name === 'barangay') {
-      // When barangay changes via dropdown, clear specific pinned location, its validity, and any existing pin-related error.
-      setFormData(prev => ({ ...prev, specific_location: null }));
-      setIsLocationValid(false);
-      setSubmissionError(''); // Explicitly clear submission error here
-
-      if (value && barangayGeoJsonData && barangayGeoJsonData.features) {
-        const selectedFeature = barangayGeoJsonData.features.find(
-          (feature) => feature.properties.name === value
-        );
-        if (selectedFeature) {
-          try {
-            // Use turf.centerOfMass for a more robust center, fallback to centroid if error
-            let center;
-            if (selectedFeature.geometry) {
-                // turf.centerOfMass expects a Feature or FeatureCollection.
-                // If geometry is simple, turf.centroid can be more direct for simple polygons.
-                // However, centerOfMass is generally better for complex/multi-polygons.
-                center = turf.centerOfMass(selectedFeature);
-            }
-            
-            if (center && center.geometry && center.geometry.coordinates) {
-              const [lng, lat] = center.geometry.coordinates;
-              setFocusCommand({ // Renamed from setFocusBarangayPicker
-                type: 'barangay', // Explicitly set type
-                name: value,
-                center: { lat, lng },
-                zoomLevel: 15, // Standard zoom for a barangay
-              });
-              console.log(`[Modal] Focusing map on ${value}: Lat ${lat}, Lng ${lng}`);
-            } else {
-              console.warn('[Modal] Could not calculate center for barangay:', value);
-              setFocusCommand(null); // Renamed from setFocusBarangayPicker
-            }
-          } catch (err) {
-            console.error('[Modal] Error calculating center for barangay:', value, err);
-            setFocusCommand(null); // Renamed from setFocusBarangayPicker
-          }
-        } else {
-          setFocusCommand(null); // Renamed from setFocusBarangayPicker
-        }
-      } else {
-        setFocusCommand(null); // Renamed from setFocusBarangayPicker
+      setHighlightedBarangay(value);
+      const patternData = getBarangayPatternData(value);
+      if (patternData) {
+        setCurrentBarangayPattern(patternData);
       }
     }
   };
 
+  // Update handlePinChange to update highlighted barangay
   const handlePinChange = (pinData) => {
-    console.log('[Modal DEBUG] handlePinChange received pinData:', pinData);
-
-    if (!isBoundaryDataLoaded) {
-      console.log('[Modal DEBUG] Boundary data not yet loaded, cannot validate pin');
-      setSubmissionError("Please wait for the map to load completely before placing a pin.");
-      return;
-    }
-
-    if (pinData && pinData.isWithinQC && pinData.coordinates && pinData.barangayName) {
-      console.log('[Modal DEBUG] Pin is valid. Setting location data:', {
-        coordinates: pinData.coordinates,
-        barangay: pinData.barangayName,
-        address: pinData.formattedAddress
-      });
-
-      setFormData(prev => {
-        const newAddress = typeof pinData.formattedAddress === 'string' ? pinData.formattedAddress : prev.address;
-        // Only update barangay if it is empty or matches the pin's barangay
-        const shouldUpdateBarangay = !prev.barangay || prev.barangay === pinData.barangayName;
-        return {
-          ...prev,
-          specific_location: {
-            type: "Point",
-            coordinates: pinData.coordinates,
-          },
-          barangay: shouldUpdateBarangay ? pinData.barangayName : prev.barangay,
-          address: newAddress,
-        };
-      });
-      setIsLocationValid(true);
-      setSubmissionError("");
-    } else { 
-      console.log('[Modal DEBUG] Pin validation failed:', {
-        isWithinQC: pinData?.isWithinQC,
-        hasCoordinates: !!pinData?.coordinates,
-        hasBarangayName: !!pinData?.barangayName,
-        error: pinData?.error,
-        boundaryDataLoaded: isBoundaryDataLoaded
-      });
-
+    console.log('[DEBUG] Pin data received:', pinData);
+    
+    if (pinData) {
+      console.log('[DEBUG] Valid pin data:', pinData);
+      
+      // Update the form data with both location and specific_location
       setFormData(prev => ({
         ...prev,
-        specific_location: null,
+        location: {
+          coordinates: pinData.coordinates,
+          barangay: pinData.barangayName,
+          address: pinData.formattedAddress
+        },
+        specific_location: {
+          coordinates: pinData.coordinates,
+          barangay: pinData.barangayName,
+          address: pinData.formattedAddress
+        },
+        // Update the barangay dropdown
+        barangay: pinData.barangayName,
+        // Update the address field
+        address: pinData.formattedAddress
       }));
-      setIsLocationValid(false);
 
-      if (pinData) {
-        if (!pinData.isWithinQC) {
-          setSubmissionError("Pinned location is outside Quezon City boundaries.");
-        } else if (!pinData.coordinates || !pinData.barangayName) {
-          setSubmissionError("Unable to determine barangay for this location. Please try pinning again.");
-        } else if (pinData.error) {
-          setSubmissionError(pinData.error);
-        }
-      } else if (!isBoundaryDataLoaded) {
-        setSubmissionError("Please wait for the map to load completely before placing a pin.");
+      // Update the highlighted barangay
+      setHighlightedBarangay(pinData.barangayName);
+
+      // Get pattern data for the pinned barangay
+      const patternData = getBarangayPatternData(pinData.barangayName);
+      if (patternData) {
+        setCurrentBarangayPattern(patternData);
       }
+
+      // Set location as valid since we have valid pin data
+      setIsLocationValid(true);
+      setSubmissionError(null);
+    } else {
+      console.log('[DEBUG] Invalid pin data:', pinData);
+      setIsLocationValid(false);
+      setSubmissionError('Please pin a specific location on the map within the selected barangay.');
     }
   };
 
@@ -303,6 +339,9 @@ const AddInterventionModal = ({ isOpen, onClose, preselectedBarangay, patternTyp
       
       const response = await createIntervention(submissionData).unwrap();
       console.log("[DEBUG] API Response:", JSON.stringify(response, null, 2));
+      
+      // Invalidate the interventions cache for this barangay
+      dengueApi.util.invalidateTags([{ type: 'Intervention', id: formData.barangay }]);
       
       setIsSuccess(true);
       setFormData({
@@ -429,282 +468,288 @@ const AddInterventionModal = ({ isOpen, onClose, preselectedBarangay, patternTyp
   if (!isOpen) return null;
 
   return (
-    <>
-      {/* Main Modal */}
-      <dialog
-        ref={modalRef}
-        className="modal transition-transform duration-300 ease-in-out"
-        onClick={(e) => e.target === e.currentTarget && onClose()}
-      >
-        <div className="modal-box bg-white rounded-3xl shadow-3xl w-11/12 max-w-5xl p-12 pt-12 relative"> {/* Increased width and top padding for badge */}
-          <button
-            className="absolute top-10 right-10 text-2xl font-semibold hover:text-gray-500 transition-colors duration-200 hover:cursor-pointer"
-            onClick={onClose}
-          >
-            ✕
-          </button>
+    <dialog
+      ref={modalRef}
+      className="modal transition-transform duration-300 ease-in-out"
+      onClick={(e) => e.target === e.currentTarget && onClose()}
+    >
+      <div className="modal-box bg-white rounded-3xl shadow-3xl w-11/12 max-w-5xl p-12 pt-12 relative">
+        <button
+          className="absolute top-10 right-10 text-2xl font-semibold hover:text-gray-500 transition-colors duration-200 hover:cursor-pointer"
+          onClick={onClose}
+        >
+          ✕
+        </button>
 
-          <p className="text-center text-3xl font-bold mb-6">
-            Add New Intervention
-          </p>
-          <hr className="text-accent/50 mb-6" />
+        <p className="text-center text-3xl font-bold mb-6">
+          Add New Intervention
+        </p>
+        <hr className="text-accent/50 mb-6" />
 
-          <div className="space-y-6 text-lg">
-            {!showConfirmation ? (
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-5">
-                  {/* Left Column: Form Fields */}
-                  <div className="flex flex-col gap-5">
-                    {/* Pattern Tag */}
-                    {patternType && patternUrgency && (
-                      <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium w-fit
-                        ${patternType === 'spike' ? 'bg-error/10 text-error border border-error/20' : ''}
-                        ${patternType === 'gradual_rise' ? 'bg-warning/10 text-warning border border-warning/20' : ''}
-                        ${patternType === 'stability' ? 'bg-info/10 text-info border border-info/20' : ''}
-                        ${patternType === 'decline' ? 'bg-success/10 text-success border border-success/20' : ''}
-                        ${patternType === 'none' ? 'bg-gray-100 text-gray-500 border border-gray-200' : ''}
-                      `}>
-                        {patternType === 'spike' ? (
-                          <IconTrendingUp size={18} className="text-error" />
-                        ) : patternType === 'gradual_rise' ? (
-                          <IconTrendingUp2 size={18} className="text-warning" />
-                        ) : (
-                          <IconChartLine size={18} className={
-                            patternType === 'stability' ? 'text-info' :
-                            patternType === 'decline' ? 'text-success' :
-                            'text-gray-500'
-                          } />
-                        )}
-                        <span className="font-semibold">
-                          {patternType.charAt(0).toUpperCase() + patternType.slice(1).replace('_', ' ')}
-                        </span>
-                        <span className="text-gray-500">•</span>
-                        <span className="text-gray-600">{patternUrgency}</span>
-                      </div>
+        {showConfirmation ? (
+          <div className="space-y-6">
+            {!isSuccess ? (
+              <>
+                <div className="flex flex-col items-center text-center">
+                  <p className="text-primary mb-2 text-2xl">
+                    Are you sure you want to submit this intervention?
+                  </p>
+                  {/* Display key details for confirmation */}
+                  <div className="text-left bg-base-200 p-4 rounded-lg w-full max-w-md mb-4 text-sm">
+                    <p><strong>Barangay:</strong> {formData.barangay}</p>
+                    <p><strong>Address:</strong> {formData.address}</p>
+                    <p><strong>Type:</strong> {formData.interventionType}</p>
+                    <p><strong>Date:</strong> {new Date(formData.date).toLocaleString()}</p>
+                    <p><strong>Personnel:</strong> {formData.personnel}</p>
+                    {formData.specific_location && (
+                      <p>
+                        <strong>Coordinates:</strong> Lng: {formData.specific_location.coordinates[0].toFixed(4)}, Lat: {formData.specific_location.coordinates[1].toFixed(4)}
+                      </p>
                     )}
-
-                    {/* Location (Barangay & Address) */}
-                    <div className="form-control">
-                      <label className="label text-primary text-lg font-bold mb-1">
-                        Location Details
-                      </label>
-                      <div className="grid grid-cols-1 gap-4">
-                        <div>
-                          {/* Barangay Dropdown */}
-                          <select
-                            name="barangay"
-                            value={formData.barangay}
-                            onChange={handleChange}
-                            className="select rounded-lg bg-base-200 w-full border-0 text-lg py-2 cursor-pointer hover:bg-base-300 transition-all"
-                            required
-                          >
-                            <option value="">Select Barangay</option>
-                            {barangayOptions.map((bName, index) => (
-                              <option key={index} value={bName}>
-                                {bName}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-                        <div>
-                          {/* Address (changed from addressLine) */}
-                          <input
-                            type="text"
-                            name="address" // Changed from addressLine
-                            value={formData.address}
-                            onChange={handleChange}
-                            className="input border-0 w-full rounded-lg bg-base-200 text-lg py-2 cursor-pointer hover:bg-base-300 transition-all"
-                            placeholder="Street Address / Building Name (Optional)"
-                          />
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Type of Intervention */}
-                    <div className="form-control">
-                      <label className="label text-primary text-lg font-bold mb-1">
-                        Type of Intervention
-                      </label>
-                      <select
-                        name="interventionType"
-                        value={formData.interventionType}
-                        onChange={handleChange}
-                        className="select border-0 rounded-lg w-full bg-base-200 text-lg py-2 cursor-pointer hover:bg-base-300 transition-all"
-                        required
-                      >
-                        <option value="All">All</option>
-                        <option value="Fogging">Fogging</option>
-                        <option value="Ovicidal-Larvicidal Trapping">Ovicidal-Larvicidal Trapping</option>
-                        <option value="Clean-up Drive">Clean-up Drive</option>
-                        <option value="Education Campaign">Education Campaign</option>
-                      </select>
-                    </div>
-
-                    {/* Assigned Personnel */}
-                    <div className="form-control">
-                      <label className="label text-primary text-lg font-bold mb-1">
-                        Assigned Personnel
-                      </label>
-                      <input
-                        type="text" // Changed from select to input for flexibility
-                        name="personnel"
-                        value={formData.personnel}
-                        onChange={handleChange}
-                        className="input border-0 w-full rounded-lg bg-base-200 text-lg py-2 cursor-pointer hover:bg-base-300 transition-all"
-                        placeholder="e.g., John Doe, Jane Smith"
-                        required
-                      />
-                    </div>
-
-                    {/* Date and Time */}
-                    <div className="form-control">
-                      <label className="label text-primary text-lg font-bold mb-1">
-                        Date and Time
-                      </label>
-                      <input
-                        type="datetime-local"
-                        name="date"
-                        value={formData.date}
-                        onChange={handleChange}
-                        className="input border-0 w-full rounded-lg bg-base-200 text-lg py-2 cursor-pointer hover:bg-base-300 transition-all"
-                        required
-                      />
-                    </div>
-
-                    {/* Status */}
-                    <div className="form-control">
-                      <label className="label text-primary text-lg font-bold mb-1">
-                        Status
-                      </label>
-                      <select
-                        name="status"
-                        value={formData.status}
-                        onChange={handleChange}
-                        className="select border-0 rounded-lg w-full bg-base-200 text-lg py-2 cursor-pointer hover:bg-base-300 transition-all"
-                        required
-                      >
-                        {allowedStatuses.map((status) => (
-                          <option key={status} value={status}>{status}</option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-
-                  {/* Right Column: Map and Coordinates */}
-                  <div className="flex flex-col">
-                    <label className="label text-primary text-lg font-bold mb-1">
-                      Pin Intervention Location on Map 
-                    </label>
-                    <InterventionLocationPicker 
-                      onPinChange={handlePinChange}
-                      initialPin={formData.specific_location ? { lat: formData.specific_location.coordinates[1], lng: formData.specific_location.coordinates[0] } : null}
-                      focusCommand={focusCommand}
-                      patternType={patternType}
-                    />
-                    {/* Error for picker is handled by submissionError or picker's internal messages */}
                   </div>
                 </div>
-                
-                {/* Updated error message display */}
+
+                {/* Error Message in Confirmation View */}
                 {submissionError && (
-                  <div className="text-center p-4 bg-error/10 rounded-lg border border-error/20 mb-4">
-                    <p className="text-error font-semibold mb-2">Error</p>
-                    <p className="text-error/90 whitespace-pre-line">{submissionError}</p>
-                    <button 
-                      onClick={() => setSubmissionError("")}
-                      className="mt-2 text-error/70 hover:text-error text-sm underline"
-                    >
-                      Dismiss
-                    </button>
+                  <div className="text-center p-4 bg-error/10 rounded-lg border border-error/20">
+                    <p className="text-error font-semibold mb-1">Error</p>
+                    <p className="text-error/90">{submissionError}</p>
                   </div>
                 )}
 
-                {/* Action Buttons */}
-                <div className="modal-action w-full flex justify-center mt-6">
+                <div className="flex justify-center gap-4">
                   <button
-                    type="submit"
-                    className="bg-success text-white font-semibold py-3 px-8 rounded-xl hover:bg-success/80 transition-all hover:cursor-pointer text-lg"
+                    onClick={cancelSubmit}
+                    className="bg-gray-300 text-gray-800 font-semibold py-2 px-8 rounded-xl hover:bg-gray-400 transition-all hover:cursor-pointer"
+                    disabled={isSubmitting}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={confirmSubmit}
+                    className="bg-success text-white font-semibold py-2 px-8 rounded-xl hover:bg-success/80 transition-all hover:cursor-pointer"
                     disabled={isSubmitting}
                   >
                     {isSubmitting ? (
                       <span className="loading loading-spinner"></span>
                     ) : (
-                      "Submit Intervention"
+                      "Confirm & Submit"
                     )}
                   </button>
                 </div>
-              </form>
+              </>
             ) : (
-              <div className="space-y-6">
-                {!isSuccess ? (
-                  <>
-                    <div className="flex flex-col items-center text-center">
-                      <p className="text-primary mb-2 text-2xl">
-                        Are you sure you want to submit this intervention?
-                      </p>
-                      {/* Display key details for confirmation */}
-                      <div className="text-left bg-base-200 p-4 rounded-lg w-full max-w-md mb-4 text-sm">
-                        <p><strong>Barangay:</strong> {formData.barangay}</p>
-                        <p><strong>Address:</strong> {formData.address}</p>
-                        <p><strong>Type:</strong> {formData.interventionType}</p>
-                        <p><strong>Date:</strong> {new Date(formData.date).toLocaleString()}</p>
-                        <p><strong>Personnel:</strong> {formData.personnel}</p>
-                        {formData.specific_location && (
-                          <p>
-                            <strong>Coordinates:</strong> Lng: {formData.specific_location.coordinates[0].toFixed(4)}, Lat: {formData.specific_location.coordinates[1].toFixed(4)}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Error Message in Confirmation View */}
-                    {submissionError && (
-                      <div className="text-center p-4 bg-error/10 rounded-lg border border-error/20">
-                        <p className="text-error font-semibold mb-1">Error</p>
-                        <p className="text-error/90">{submissionError}</p>
-                      </div>
-                    )}
-
-                    <div className="flex justify-center gap-4">
-                      <button
-                        onClick={cancelSubmit}
-                        className="bg-gray-300 text-gray-800 font-semibold py-2 px-8 rounded-xl hover:bg-gray-400 transition-all hover:cursor-pointer"
-                        disabled={isSubmitting}
-                      >
-                        Cancel
-                      </button>
-                      <button
-                        onClick={confirmSubmit}
-                        className="bg-success text-white font-semibold py-2 px-8 rounded-xl hover:bg-success/80 transition-all hover:cursor-pointer"
-                        disabled={isSubmitting}
-                      >
-                        {isSubmitting ? (
-                          <span className="loading loading-spinner"></span>
-                        ) : (
-                          "Confirm & Submit"
-                        )}
-                      </button>
-                    </div>
-                  </>
-                ) : (
-                  <div className="flex flex-col items-center justify-center py-2">
-                    <div className="rounded-full bg-success p-3 mt-[-5px] mb-4 text-white">
-                      <IconCheck size={32} stroke={3} />
-                    </div>
-                    <p className="text-3xl font-bold mb-2 text-center text-success">
-                      Intervention Submitted!
-                    </p>
-                    <p className="text-gray-600 text-center">
-                      The intervention has been successfully recorded.
-                    </p>
-                  </div>
-                )}
+              <div className="flex flex-col items-center justify-center py-2">
+                <div className="rounded-full bg-success p-3 mt-[-5px] mb-4 text-white">
+                  <IconCheck size={32} stroke={3} />
+                </div>
+                <p className="text-3xl font-bold mb-2 text-center text-success">
+                  Intervention Submitted!
+                </p>
+                <p className="text-gray-600 text-center">
+                  The intervention has been successfully recorded.
+                </p>
               </div>
             )}
           </div>
-        </div>
-      </dialog>
-    </>
+        ) : (
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="space-y-6 text-lg">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-5">
+                {/* Left Column: Form Fields */}
+                <div className="flex flex-col gap-5">
+                  {/* Location (Barangay & Address) */}
+                  <div className="form-control">
+                    <div className="space-y-2">
+                      <label className="label text-primary text-lg font-bold">
+                        Location Details
+                      </label>
+                      {/* Pattern Tag - Now shows for any barangay with pattern data */}
+                     
+                    </div>
+                    {currentBarangayPattern.type && currentBarangayPattern.urgency && (
+                        <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium w-fit mb-2 mt-2
+                          ${currentBarangayPattern.type === 'spike' ? 'bg-error/10 text-error border border-error/20' : ''}
+                          ${currentBarangayPattern.type === 'gradual_rise' ? 'bg-warning/10 text-warning border border-warning/20' : ''}
+                          ${currentBarangayPattern.type === 'stability' ? 'bg-info/10 text-info border border-info/20' : ''}
+                          ${currentBarangayPattern.type === 'decline' ? 'bg-success/10 text-success border border-success/20' : ''}
+                          ${currentBarangayPattern.type === 'none' ? 'bg-gray-100 text-gray-500 border border-gray-200' : ''}
+                        `}>
+                          {currentBarangayPattern.type === 'spike' ? (
+                            <IconTrendingUp size={18} className="text-error" />
+                          ) : currentBarangayPattern.type === 'gradual_rise' ? (
+                            <IconTrendingUp2 size={18} className="text-warning" />
+                          ) : currentBarangayPattern.type === 'stability' ? (
+                            <IconMinusVertical size={18} className="text-info" />
+                          ) : currentBarangayPattern.type === 'decline' ? (
+                            <IconTrendingDown size={18} className="text-success" />
+                          ) : null}
+                          {currentBarangayPattern.urgency}
+                        </div>
+                      )}
+                    
+                    <div className="space-y-4 ">
+                      <div className="form-control">
+                        <label className="label">
+                          <span className="label-text text-base font-medium">Barangay</span>
+                        </label>
+                        <select
+                          name="barangay"
+                          value={formData.barangay}
+                          onChange={handleChange}
+                          className="select select-bordered w-full text-base"
+                          required
+                        >
+                          <option value="">Select Barangay</option>
+                          {barangayOptions.map((bName, index) => (
+                            <option key={index} value={bName}>
+                              {bName}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="form-control">
+                        <label className="label">
+                          <span className="label-text text-base font-medium">Address</span>
+                        </label>
+                        <input
+                          type="text"
+                          name="address"
+                          value={formData.address}
+                          onChange={handleChange}
+                          placeholder="Enter specific location"
+                          className="input input-bordered w-full text-base"
+                          required
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Intervention Type Field */}
+                  <div className="form-control">
+                    <label className="label">
+                      <span className="label-text text-lg font-semibold">Intervention Type</span>
+                    </label>
+                    <select
+                      className="select select-bordered w-full text-lg"
+                      value={formData.interventionType}
+                      onChange={handleChange}
+                      name="interventionType"
+                      required
+                    >
+                      <option value="All">All</option>
+                      <option value="Fogging">Fogging</option>
+                      <option value="Larviciding">Larviciding</option>
+                      <option value="Health Education">Health Education</option>
+                      <option value="Clean-up Drive">Clean-up Drive</option>
+                      <option value="Ovi Trap Installation">Ovi Trap Installation</option>
+                    </select>
+                  </div>
+
+                  {/* Personnel Field */}
+                  <div className="form-control">
+                    <label className="label">
+                      <span className="label-text text-lg font-semibold">Personnel</span>
+                    </label>
+                    <input
+                      type="text"
+                      className="input input-bordered w-full text-lg"
+                      value={formData.personnel}
+                      onChange={handleChange}
+                      name="personnel"
+                      required
+                    />
+                  </div>
+
+                  {/* Date Field */}
+                  <div className="form-control">
+                    <label className="label">
+                      <span className="label-text text-lg font-semibold">Date</span>
+                    </label>
+                    <input
+                      type="datetime-local"
+                      className="input input-bordered w-full text-lg"
+                      value={formData.date}
+                      onChange={handleChange}
+                      name="date"
+                      required
+                    />
+                  </div>
+
+                  {/* Status Field */}
+                  <div className="form-control">
+                    <label className="label">
+                      <span className="label-text text-lg font-semibold">Status</span>
+                    </label>
+                    <select
+                      className="select select-bordered w-full text-lg"
+                      value={formData.status}
+                      onChange={handleChange}
+                      name="status"
+                      required
+                    >
+                      {getAllowedStatuses(formData.date).map((status) => (
+                        <option key={status} value={status}>
+                          {status}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                {/* Right Column: Map */}
+                <div className="space-y-4">
+                  <div className="form-control">
+                    <label className="label">
+                      <span className="label-text text-lg font-semibold">Location</span>
+                    </label>
+                    <div className="rounded-xl overflow-hidden ">
+                      <InterventionLocationPicker 
+                        onPinChange={handlePinChange}
+                        initialPin={formData.specific_location ? { lat: formData.specific_location.coordinates[1], lng: formData.specific_location.coordinates[0] } : null}
+                        focusCommand={focusCommand}
+                        patternType={patternType}
+                        preselectedBarangay={preselectedBarangay}
+                        highlightedBarangay={highlightedBarangay}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Location Validation Message */}
+                  {!isLocationValid && (
+                    <div className="text-error text-sm">
+                      Please place a pin on the map to specify the exact location.
+                    </div>
+                  )}
+
+                  {/* Error Message */}
+                  {submissionError && (
+                    <div className="text-error text-sm">
+                      {submissionError}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Submit Button */}
+              <div className="flex justify-end">
+                <button
+                  type="submit"
+                  className="btn btn-primary text-white text-lg px-8"
+                  disabled={!isLocationValid || isSubmitting}
+                >
+                  {isSubmitting ? (
+                    <span className="loading loading-spinner"></span>
+                  ) : (
+                    "Submit"
+                  )}
+                </button>
+              </div>
+            </div>
+          </form>
+        )}
+      </div>
+    </dialog>
   );
 };
 
