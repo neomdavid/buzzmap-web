@@ -4,7 +4,7 @@ import {
   // FormCoordinationRequest, // Commented out as it's not used in the current visible layout
   ActionRecommendationCard,
 } from "../../components";
-import { useGetAllInterventionsQuery, useGetPostsQuery, useGetPatternRecognitionResultsQuery, useGetBarangaysQuery } from "../../api/dengueApi";
+import { useGetAllInterventionsQuery, useGetPostsQuery, useGetBarangaysQuery } from "../../api/dengueApi";
 import { Bar, Pie } from 'react-chartjs-2'; // Pie and Bar will be removed from render
 import {
   Chart as ChartJS,
@@ -43,12 +43,42 @@ const Interventions = () => {
     error: errorBarangays,
   } = useGetBarangaysQuery();
 
-  // Log the raw patternResultsData when it's available
-  useEffect(() => {
-    if (barangaysList) {
-      console.log("Raw Barangays List Data:", JSON.stringify(barangaysList, null, 2));
-    }
+  // Log the raw API response data and transform it
+  const transformedBarangays = React.useMemo(() => {
+    if (!barangaysList) return [];
+    
+    console.log("[DEBUG] Raw Barangays List:", JSON.stringify(barangaysList, null, 2));
+    
+    return barangaysList.map(b => {
+      const patternBased = b.status_and_recommendation?.pattern_based || {};
+      const reportBased = b.status_and_recommendation?.report_based || {};
+      const deathBased = b.status_and_recommendation?.death_priority || {};
+      
+      return {
+        name: b.name,
+        patternType: patternBased.status?.toLowerCase() || 'none',
+        issueDetected: patternBased.alert || '',
+        suggestedAction: patternBased.admin_recommendation || patternBased.recommendation || '',
+        report_based: {
+          count: reportBased.count || 0,
+          alert: reportBased.alert || '',
+          recommendation: reportBased.recommendation || ''
+        },
+        death_priority: {
+          count: deathBased.count || 0,
+          alert: deathBased.alert || '',
+          recommendation: deathBased.recommendation || ''
+        }
+      };
+    });
   }, [barangaysList]);
+
+  // Log the transformed data
+  useEffect(() => {
+    if (transformedBarangays.length > 0) {
+      console.log("[DEBUG] Transformed Barangays List:", JSON.stringify(transformedBarangays, null, 2));
+    }
+  }, [transformedBarangays]);
 
   const completedInterventions = interventions ? interventions.filter(i => {
     const status = i.status?.toLowerCase();
@@ -114,33 +144,42 @@ const Interventions = () => {
 
   // Get unique pattern types for the filter dropdown (from barangaysList)
   const uniquePatternTypes = React.useMemo(() => {
-    if (!barangaysList) return [];
+    if (!transformedBarangays) return [];
     const patterns = new Set(
-      barangaysList
-        .map(b => b.status_and_recommendation?.pattern_based?.status)
+      transformedBarangays
+        .map(b => b.patternType)
         .filter(Boolean)
         .map(s => s.toLowerCase())
     );
     return Array.from(patterns).sort();
-  }, [barangaysList]);
+  }, [transformedBarangays]);
 
-  // Apply filters and search to recommendations (from barangaysList)
+  // Apply filters and search to recommendations
   const filteredRecommendations = React.useMemo(() => {
-    if (!barangaysList) return [];
-    let recommendations = barangaysList
-      .map(b => {
-        const patternBased = b.status_and_recommendation?.pattern_based || {};
-        // Get patternType ONLY from pattern_based.status
-        let patternType = patternBased.status?.toLowerCase();
-        if (!patternType || patternType === "") patternType = "none";
-        return {
-          name: b.name,
-          patternType,
-          issueDetected: patternBased.alert || '',
-          suggestedAction: patternBased.recommendation || '',
-        };
+    if (!transformedBarangays) return [];
+    let recommendations = transformedBarangays
+      .filter(item => {
+        // Show item if it has any of these:
+        // 1. Pattern-based alert or recommendation
+        // 2. Death-based alert, recommendation, or count
+        return (
+          (item.issueDetected && item.issueDetected.toLowerCase() !== 'none') || 
+          (item.suggestedAction && item.suggestedAction.trim() !== '') ||
+          (item.death_priority.count > 0 || 
+           (item.death_priority.alert && item.death_priority.alert.trim() !== '') ||
+           (item.death_priority.recommendation && item.death_priority.recommendation.trim() !== ''))
+        );
       })
-      .filter(item => (item.issueDetected && item.issueDetected.toLowerCase() !== 'none') || (item.suggestedAction && item.suggestedAction.trim() !== ''));
+      // Sort by death count first (descending), then by pattern type
+      .sort((a, b) => {
+        // First sort by death count
+        if (a.death_priority.count !== b.death_priority.count) {
+          return b.death_priority.count - a.death_priority.count;
+        }
+        // If death counts are equal, sort by pattern type (spike first, then gradual_rise, etc.)
+        const patternOrder = { spike: 0, gradual_rise: 1, stability: 2, decline: 3, none: 4 };
+        return patternOrder[a.patternType] - patternOrder[b.patternType];
+      });
 
     // Apply pattern filter
     if (patternFilter) {
@@ -154,11 +193,23 @@ const Interventions = () => {
         item.name?.toLowerCase().includes(searchQueryLower) ||
         item.issueDetected?.toLowerCase().includes(searchQueryLower) ||
         item.suggestedAction?.toLowerCase().includes(searchQueryLower) ||
-        item.patternType?.toLowerCase().includes(searchQueryLower)
+        item.patternType?.toLowerCase().includes(searchQueryLower) ||
+        (item.death_priority.alert && item.death_priority.alert.toLowerCase().includes(searchQueryLower))
       );
     }
+
+    // Log the filtered recommendations for debugging
+    console.log("[DEBUG] Filtered Recommendations:", {
+      total: recommendations.length,
+      byPattern: recommendations.reduce((acc, item) => {
+        acc[item.patternType] = (acc[item.patternType] || 0) + 1;
+        return acc;
+      }, {}),
+      items: recommendations
+    });
+
     return recommendations;
-  }, [barangaysList, patternFilter, recommendationSearchQuery]);
+  }, [transformedBarangays, patternFilter, recommendationSearchQuery]);
 
   // Log what is being rendered in ActionRecommendationCard for debugging
   console.log('ActionRecommendationCard data:', filteredRecommendations);
@@ -196,10 +247,10 @@ const Interventions = () => {
 
   // Helper function to find recommendation for a specific barangay
   const findRecommendationForBarangay = (barangayName) => {
-    if (!barangaysList) return null;
+    if (!transformedBarangays) return null;
     // Normalize names for robust matching
     const normalizedTargetName = barangayName.toLowerCase().replace(/barangay /g, '').trim();
-    return barangaysList.find(item => 
+    return transformedBarangays.find(item => 
       item.name?.toLowerCase().replace(/barangay /g, '').trim() === normalizedTargetName
     );
   };
@@ -374,13 +425,6 @@ const Interventions = () => {
                       <span>Pattern:</span> <span className="capitalize">{sharedPattern.replace('_', ' ')}</span>
                     </p>
                   )}
-                  {sharedSuggestedAction && (
-                    <p className="text-base mb-1 flex items-center justify-center gap-2 flex-wrap">
-                      <span className="inline-flex items-center whitespace-nowrap"><Lightbulb weight="fill" size={16} className="text-primary" /></span>
-                      <span className="whitespace-nowrap">Suggested Action:</span>
-                      <span className="font-medium break-words text-left">{sharedSuggestedAction}</span>
-                    </p>
-                  )}
                 </div>
                 <div className="overflow-y-auto max-h-[500px]">
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -393,6 +437,7 @@ const Interventions = () => {
                             alert: item.issueDetected,
                             admin_recommendation: item.suggestedAction
                           }}
+                          death_priority={item.death_priority}
                           hideSharedInfo={true}
                           onApply={(barangay, patternType) => {
                             setSelectedBarangay(barangay);

@@ -1,6 +1,63 @@
 import React from "react";
 import { Circle, MagnifyingGlass, Lightbulb, Warning } from "phosphor-react";
 
+// Pattern color mapping for both border and badge
+const PATTERN_COLORS = {
+  spike: { border: 'border-error', badge: 'bg-error' },
+  gradual_rise: { border: 'border-warning', badge: 'bg-warning' },
+  stability: { border: 'border-info', badge: 'bg-info' },
+  decline: { border: 'border-success', badge: 'bg-success' },
+  low_level_activity: { border: 'border-gray-400', badge: 'bg-gray-400' },
+  default: { border: 'border-gray-400', badge: 'bg-gray-400' }
+};
+
+const getPatternKey = (pattern) => {
+  if (!pattern) return 'default';
+  const p = pattern.trim().toLowerCase();
+  if (p === 'spike') return 'spike';
+  if (p === 'gradual_rise') return 'gradual_rise';
+  if (p === 'stability') return 'stability';
+  if (p === 'decline') return 'decline';
+  if (p === 'low_level_activity') return 'low_level_activity';
+  return 'default';
+};
+
+const getPatternBadgeColor = (pattern) => {
+  if (!pattern) return 'border-gray-300';
+  switch (pattern.toLowerCase()) {
+    case 'spike':
+      return 'border-error';
+    case 'gradual_rise':
+      return 'border-warning';
+    case 'stability':
+      return 'border-info';
+    case 'decline':
+      return 'border-success';
+    case 'low_level_activity':
+      return 'border-gray-300';
+    default:
+      return 'border-gray-300';
+  }
+};
+
+const getPatternLabel = (pattern) => {
+  if (!pattern) return 'No Pattern';
+  switch (pattern.toLowerCase()) {
+    case 'spike':
+      return 'Spike';
+    case 'gradual_rise':
+      return 'Gradual Rise';
+    case 'stability':
+      return 'Stability';
+    case 'decline':
+      return 'Decline';
+    case 'low_level_activity':
+      return 'Low Level Activity';
+    default:
+      return 'No Pattern';
+  }
+};
+
 const PATTERN_STYLES = {
   spike: {
     bg: "bg-error",
@@ -43,40 +100,41 @@ const ActionRecommendationCard = ({
   hideSharedInfo = false,
   onApply,
 }) => {
-  // Debug statements
-  console.log('[ActionRecommendationCard DEBUG] Props:', {
-    barangay,
-    pattern_based,
-    report_based,
-    death_priority
-  });
-
   // Determine colors and urgency based on pattern type
   const patternType = pattern_based?.status || "none";
-  console.log('[ActionRecommendationCard DEBUG] Pattern Type:', {
-    raw: pattern_based?.status,
-    processed: patternType,
-    lowercase: patternType?.toLowerCase()
-  });
-
   const styles = PATTERN_STYLES[patternType?.toLowerCase()] || PATTERN_STYLES.none;
-  console.log('[ActionRecommendationCard DEBUG] Selected Styles:', {
-    patternType: patternType?.toLowerCase(),
-    selectedStyle: styles
-  });
-
   const urgencyLevelToDisplay = styles.urgency;
 
   return (
     <div className={`flex flex-col gap-4 border-2 ${styles.border} rounded-3xl p-6 ${className}`}>
       {/* Header */}
-      <div className="flex items-center gap-2 mb-2 flex-wrap">
-        <p className={`${styles.text} font-extrabold text-2xl`}>{barangay}</p>
-        {!hideSharedInfo && (
-          <p className={`${styles.bg} text-center text-white py-1 px-4 rounded-xl text-sm`}>
-            {urgencyLevelToDisplay}
-          </p>
-        )}
+      <div className="flex items-center justify-between gap-2 flex-wrap">
+        <div className="flex items-center gap-2">
+          <p className={`${styles.text} font-extrabold text-2xl`}>{barangay}</p>
+          {!hideSharedInfo && (
+            <p className={`${styles.bg} text-center text-white py-1 px-4 rounded-xl text-sm`}>
+              {urgencyLevelToDisplay}
+            </p>
+          )}
+        </div>
+        <div className="flex gap-2">
+          {(pattern_based?.admin_recommendation || report_based?.admin_recommendation || death_priority?.recommendation) && (
+            <button
+              onClick={() => document.getElementById(`recommendations_modal_${barangay}`).showModal()}
+              className="px-3 py-1.5 bg-white border border-primary text-primary rounded-full hover:bg-primary/5 transition-colors text-sm cursor-pointer"
+            >
+              View Recommendations
+            </button>
+          )}
+          {onApply && ['spike', 'gradual_rise'].includes(patternType?.toLowerCase()) && (
+            <button 
+              onClick={() => onApply(barangay, pattern_based?.status)}
+              className="px-3 py-1.5 bg-primary text-white rounded-full hover:bg-primary/90 transition-colors text-sm cursor-pointer"
+            >
+              Apply
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Pattern-based Section */}
@@ -94,26 +152,8 @@ const ActionRecommendationCard = ({
                 <MagnifyingGlass size={16} />
               </div>
               <p className="text-black">
-                <span className="font-semibold">Alert: </span>
                 {pattern_based.alert}
               </p>
-            </div>
-          )}
-          {pattern_based.admin_recommendation && (
-            <div className="flex items-start gap-3 ml-6">
-              <div className="text-primary pt-1">
-                <Lightbulb weight="fill" size={16} />
-              </div>
-              <div className="text-black">
-                <span className="font-semibold">Recommendations: </span>
-                <ul className="list-disc list-inside ml-4 mt-1">
-                  {pattern_based.admin_recommendation.split('\n')
-                    .filter(rec => rec.trim())
-                    .map((rec, index) => (
-                      <li key={index}>{rec.trim().replace(/^- /, '')}</li>
-                    ))}
-                </ul>
-              </div>
             </div>
           )}
         </div>
@@ -136,29 +176,11 @@ const ActionRecommendationCard = ({
               </p>
             </div>
           )}
-          {report_based.alert && (
+          {report_based.alert && report_based.alert !== 'None' && (
             <div className="flex items-start gap-3 ml-6">
               <p className="text-black">
-                <span className="font-semibold">Alert: </span>
                 {report_based.alert}
               </p>
-            </div>
-          )}
-          {report_based.admin_recommendation && (
-            <div className="flex items-start gap-3 ml-6">
-              <div className="text-primary pt-1">
-                <Lightbulb weight="fill" size={16} />
-              </div>
-              <div className="text-black">
-                <span className="font-semibold">Recommendations: </span>
-                <ul className="list-disc list-inside ml-4 mt-1">
-                  {report_based.admin_recommendation.split('\n')
-                    .filter(rec => rec.trim())
-                    .map((rec, index) => (
-                      <li key={index}>{rec.trim().replace(/^- /, '')}</li>
-                    ))}
-                </ul>
-              </div>
             </div>
           )}
         </div>
@@ -173,37 +195,102 @@ const ActionRecommendationCard = ({
             </div>
             <p className="font-bold text-lg text-error">Death Priority</p>
           </div>
-          <div className="flex items-start gap-3 ml-6">
-            <p className="text-error">
-              <span className="font-semibold">Alert: </span>
-              {death_priority.alert}
-            </p>
-          </div>
-          {death_priority.recommendation && (
+          {death_priority.alert && 
+           death_priority.alert.trim() !== '' && 
+           !death_priority.alert.toLowerCase().includes('no deaths') && (
             <div className="flex items-start gap-3 ml-6">
-              <div className="text-primary pt-1">
-                <Lightbulb weight="fill" size={16} />
-              </div>
-              <div className="text-error">
-                <span className="font-semibold">Recommendation: </span>
-                {death_priority.recommendation}
-              </div>
+              <p className="text-error">
+                {death_priority.alert}
+              </p>
             </div>
           )}
         </div>
       )}
 
-      {/* Apply Button */}
-      {['spike', 'gradual_rise'].includes(patternType?.toLowerCase()) && (
-        <div className="flex justify-end mt-4">
+      {/* Recommendations Modal */}
+      <dialog id={`recommendations_modal_${barangay}`} className="modal">
+        <div className={`modal-box bg-white rounded-4xl shadow-2xl w-11/12 max-w-5xl p-12 relative border-3 ${PATTERN_COLORS[getPatternKey(pattern_based?.status)].border}`}>
           <button
-            onClick={() => onApply && onApply(barangay, patternType)}
-            className="bg-primary text-white px-4 py-2 rounded-full shadow font-semibold hover:bg-primary/80 transition-all"
+            className="absolute top-10 right-10 text-2xl font-semibold hover:text-gray-500 transition-colors duration-200 hover:cursor-pointer"
+            onClick={() => document.getElementById(`recommendations_modal_${barangay}`).close()}
           >
-            Apply
+            ✕
           </button>
+
+          <p className="text-center text-3xl font-bold mb-6 text-primary">Recommendations</p>
+          <p className="text-left text-2xl font-bold mb-6">For <span className={`text-white px-4 py-1 font-normal text-xl font-semibold ml-1 rounded-full ${PATTERN_COLORS[getPatternKey(pattern_based?.status)].badge}`}>{barangay}</span></p>
+          <hr className="text-accent/50 mb-[-2px]" />
+
+          {/* Pattern and Alert Section */}
+          <div className="mb-4">
+            <span className={`px-4 py-1 rounded-full text-white text-sm font-semibold ${getPatternBadgeColor(pattern_based?.status)}`}>
+              {getPatternLabel(pattern_based?.status)}
+            </span>
+            
+            {pattern_based?.alert && (
+              <div className="bg-base-200 p-4 rounded-lg">
+                {pattern_based.alert}
+              </div>
+            )}
+          </div>
+
+          {/* Report-based Section */}
+          {report_based && (
+            <div className="mb-6 p-4 rounded-lg text-lg border border-warning">
+              <div className="font-bold mb-2 text-base-content text-lg">Report-Based</div>
+              {typeof report_based.count === 'number' && report_based.count > 0 && (
+                <div className="mb-2">
+                  <span className="font-bold">Reports:</span> {report_based.count}
+                </div>
+              )}
+              {report_based.alert && report_based.alert !== 'None' && (
+                <div className="mb-2">
+                  {report_based.alert}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Death Priority Section */}
+          {death_priority && death_priority.count > 0 && (
+            <div className="mb-6 p-4 rounded-lg text-lg border border-error">
+              <div className="font-bold mb-2 text-base-content text-lg">Death-Based</div>
+              <p 
+                className="text-error mb-3"
+                dangerouslySetInnerHTML={{
+                  __html: death_priority.alert.replace(
+                    `${death_priority.count} death(s)`,
+                    `<span class="bg-error text-white px-2 py-0.5 rounded-full text-sm font-semibold mx-1">${death_priority.count} ${death_priority.count === 1 ? 'death' : 'deaths'}</span>`
+                  )
+                }}
+              />
+            </div>
+          )}
+
+          <div className="max-h-[60vh] overflow-y-auto">
+            <p className="text-xl font-semibold mb-4">Pattern-Based Recommendations:</p>
+            <ul className="list-disc list-inside space-y-4">
+              {pattern_based?.admin_recommendation ? (
+                pattern_based.admin_recommendation.split('\n')
+                  .filter(rec => rec.trim())
+                  .map((rec, index) => (
+                    <li key={index} className="text-gray-700 text-lg">
+                      {rec.trim().replace(/^- /, '')}
+                    </li>
+                  ))
+              ) : (
+                <li className="text-gray-700 text-lg">No recommendations available.</li>
+              )}
+            </ul>
+          </div>
+
+          <div className="modal-action mt-8">
+            <form method="dialog">
+              <button className="btn btn-primary text-white">Close</button>
+            </form>
+          </div>
         </div>
-      )}
+      </dialog>
     </div>
   );
 };
