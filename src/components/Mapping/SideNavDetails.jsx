@@ -292,7 +292,7 @@ md:w-[35vw]   max-w-[370px] "
           Prevention Tips
         </button>
       </div>
-      <div className="flex flex-col text-sm text-center font-light mx-4">
+      {/* <div className="flex flex-col text-sm text-center font-light mx-4">
         <p>
           Heads up! Your data helps power community safety insights. Learn how
           we protect it in our
@@ -300,7 +300,7 @@ md:w-[35vw]   max-w-[370px] "
         <p className="font-semibold italic underline">
           Privacy & Data Disclaimer.
         </p>
-      </div>
+      </div> */}
       {/* DaisyUI dialog modal for barangays only */}
       <dialog
         id="side_nav_modal"

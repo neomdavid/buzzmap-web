@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, forwardRef, useMemo } from "react";
 import { DescriptionWithImages, SecondaryButton } from "../";
-import profile1 from "../../assets/profile1.png";
-// import anonProfile from "../../assets/anon-profile.png";
+// import profile1 from "../../assets/profile1.png";
+import defaultProfile from "../../assets/default_profile.png";
 import { MapPicker, CustomModalToast } from "../";
 import { showCustomToast, toastError } from "../../utils.jsx";
 import {
@@ -20,7 +20,7 @@ const QC_BOUNDS = {
   east: 121.2,
 };
 
-const NewPostModal = forwardRef(({ onSubmit, initialCoordinates = "", initialBarangay = "", profilePhoto }, ref) => {
+const NewPostModal = forwardRef(({ onSubmit, initialCoordinates = "", initialBarangay = "" }, ref) => {
   const [barangay, setBarangay] = useState(initialBarangay);
   const [coordinates, setCoordinates] = useState(initialCoordinates);
   const [date, setDate] = useState("");
@@ -32,6 +32,7 @@ const NewPostModal = forwardRef(({ onSubmit, initialCoordinates = "", initialBar
   const [locationMethod, setLocationMethod] = useState("map"); // 'map' or 'manual'
   const [images, setImages] = useState([]); // State for images
   const token = useSelector((state) => state.auth.token);
+  const user = useSelector((state) => state.auth.user);
   const [toast, setToast] = useState(null); // For storing the toast message
   const [isAnonymous, setIsAnonymous] = useState(false);
   const [searchBarangay, setSearchBarangay] = useState("");
@@ -281,11 +282,11 @@ const NewPostModal = forwardRef(({ onSubmit, initialCoordinates = "", initialBar
                 {isAnonymous ? (
                   <IconUserCircle size={48} className="text-gray-400 mr-2" />
                 ) : (
-                <img
-                  src={profilePhoto || profile1}
-                  className="h-15 w-15 rounded-full mr-4"
-                  alt="Profile"
-                />
+                  <img
+                    src={user?.profilePhotoUrl || defaultProfile}
+                    className="h-15 w-15 rounded-full mr-4"
+                    alt="Profile"
+                  />
                 )}
               </div>
 

@@ -118,6 +118,7 @@ const Analytics = () => {
   const [isImporting, setIsImporting] = useState(false);
   const [showBreedingSites, setShowBreedingSites] = useState(true);
   const [showInterventions, setShowInterventions] = useState(true);
+  const [importProgress, setImportProgress] = useState(0);
 
   const { data: patternResultsData, isLoading: isLoadingPatterns } = useGetPatternRecognitionResultsQuery();
   const { data: allInterventionsData, isLoading: isLoadingAllInterventions } = useGetAllInterventionsQuery();
@@ -215,8 +216,10 @@ const Analytics = () => {
     }
     setIsImporting(true);
     setImportError("");
+    setImportProgress(0);
 
     try {
+      // Step 1: Upload CSV (50% progress)
       const formData = new FormData();
       formData.append("file", csvFile);
 
@@ -231,16 +234,29 @@ const Analytics = () => {
       }
 
       const result = await response.json();
+      setImportProgress(50); // Set to 50% after CSV upload
+
+      // Step 2: Trigger dengue analysis (remaining 50% progress)
+      const analysisResponse = await fetch("http://localhost:4000/api/v1/analytics/trigger-dengue-analysis", {
+        method: "GET",
+      });
+
+      if (!analysisResponse.ok) {
+        throw new Error("Failed to trigger dengue analysis");
+      }
+
+      setImportProgress(100); // Set to 100% after analysis is triggered
       setShowImportModal(false);
       setCsvFile(null);
       setImportError("");
-      setUploadSuccessMessage(result.message || "CSV uploaded successfully!");
+      setUploadSuccessMessage("Dengue case data has been successfully imported and analyzed. The system has updated all risk assessments and pattern recognition for affected barangays.");
       setUploadedFileName(result.data?.file_info?.original_filename || "");
       setShowSuccessModal(true);
     } catch (error) {
       setImportError(error.message);
     } finally {
       setIsImporting(false);
+      setImportProgress(0);
     }
   };
 
@@ -416,9 +432,9 @@ const Analytics = () => {
               <button
                 onClick={() => setShowImportModal(true)}
                 className="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors"
-              >
+              > 
                 <Upload size={20} />
-                Import CSV
+                Import Dengue Cases
               </button>
             </div>
 
@@ -640,16 +656,30 @@ const Analytics = () => {
       {/* Import Modal */}
       <dialog ref={importModalRef} className="modal" open={showImportModal}>
         <div className="modal-box bg-white rounded-3xl shadow-3xl w-9/12 max-w-2xl p-8">
-          <h3 className="text-2xl font-bold mb-4">Import Dengue Cases</h3>
+          <p className="text-3xl font-extrabold mb-4">Import Dengue Cases</p>
           <div className="mb-4">
+            <p className="text-md text-primary mb-2">Select a CSV file containing dengue case data for analysis.</p>
             <input
               type="file"
               accept=".csv"
               onChange={handleFileChange}
-              className="file-input file-input-bordered w-full"
+              className="file-input file-input-bordered  w-full"
             />
             {importError && (
               <p className="text-error mt-2">{importError}</p>
+            )}
+            {isImporting && (
+              <div className="mt-4">
+                <div className="w-full bg-gray-200 rounded-full h-6">
+                  <div 
+                    className="bg-primary h-6 rounded-full transition-all duration-300" 
+                    style={{ width: `${importProgress}%` }}
+                  ></div>
+                </div>
+                <p className="text-md text-gray-600 mt-3">
+                  {importProgress < 50 ? "Uploading CSV file..." : "Analyzing dengue data..."}
+                </p>
+              </div>
             )}
           </div>
           <div className="flex justify-end gap-2">
@@ -658,6 +688,7 @@ const Analytics = () => {
                 setShowImportModal(false);
                 setCsvFile(null);
                 setImportError("");
+                setImportProgress(0);
               }}
               className="btn btn-ghost"
             >
@@ -671,7 +702,7 @@ const Analytics = () => {
               {isImporting ? (
                 <>
                   <span className="loading loading-spinner loading-xs"></span>
-                  Importing...
+                  {importProgress}%
                 </>
               ) : (
                 "Import"
@@ -682,11 +713,11 @@ const Analytics = () => {
       </dialog>
       {/* Success Modal */}
       <dialog open={showSuccessModal} className="modal">
-        <div className="modal-box bg-white rounded-3xl shadow-3xl w-9/12 max-w-md p-8 flex flex-col items-center">
+        <div className="modal-box bg-white rounded-3xl shadow-3xl w-9/12 max-w-3xl p-8 flex flex-col items-center">
           <div className="text-green-600 mb-2">
             <Check size={48} />
           </div>
-          <h3 className="text-2xl font-bold mb-2">{uploadSuccessMessage}</h3>
+          <p className="text-2xl text-center font-semibold mb-4 ">{uploadSuccessMessage}</p>
           {uploadedFileName && (
             <p className="text-lg text-gray-700 mb-4">File: <span className="font-semibold">{uploadedFileName}</span></p>
           )}
