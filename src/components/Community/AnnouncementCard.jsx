@@ -14,7 +14,8 @@ import {
   useUpvoteAdminPostCommentMutation,
   useDownvoteAdminPostCommentMutation,
   useRemoveAdminPostCommentUpvoteMutation,
-  useRemoveAdminPostCommentDownvoteMutation
+  useRemoveAdminPostCommentDownvoteMutation,
+  useGetBasicProfilesQuery
 } from "../../api/dengueApi";
 import { showCustomToast } from "../../utils.jsx";
 import { formatDistanceToNow } from "date-fns";
@@ -30,6 +31,18 @@ const AnnouncementCard = ({ announcement }) => {
     skip: !announcement?._id,
     pollingInterval: 5000,
   });
+
+  // Fetch basic profiles
+  const { data: userProfiles } = useGetBasicProfilesQuery();
+
+  // Create a map of user profiles for quick lookup
+  const userProfileMap = React.useMemo(() => {
+    if (!userProfiles) return {};
+    return userProfiles.reduce((acc, profile) => {
+      acc[profile._id] = profile;
+      return acc;
+    }, {});
+  }, [userProfiles]);
 
   const [addComment] = useAddAdminPostCommentMutation();
   const [upvoteComment] = useUpvoteAdminPostCommentMutation();
@@ -244,23 +257,27 @@ const AnnouncementCard = ({ announcement }) => {
                 </button>
               </div>
             ) : comments && comments.length > 0 ? (
-              comments.map((comment) => (
-                <div key={comment._id} className="break-words self-start w-fit max-w-full">
-                  <Comment2
-                    username={comment.user?.username || 'Anonymous'}
-                    comment={comment.content}
-                    timestamp={formatTimestamp(comment.createdAt)}
-                    commentId={comment._id}
-                    upvotesArray={localCommentVotes[comment._id]?.upvotes || comment.upvotes || []}
-                    downvotesArray={localCommentVotes[comment._id]?.downvotes || comment.downvotes || []}
-                    currentUserId={userFromStore?.role === "user" ? userFromStore?._id : null}
-                    onShowToast={showCustomToast}
-                    onVoteUpdate={(newUpvotes, newDownvotes) => 
-                      handleCommentVoteUpdate(comment._id, newUpvotes, newDownvotes)
-                    }
-                  />
-                </div>
-              ))
+              comments.map((comment) => {
+                const userProfile = userProfileMap[comment.user?._id];
+                return (
+                  <div key={comment._id} className="break-words self-start w-fit max-w-full">
+                    <Comment2
+                      username={userProfile?.username || comment.user?.username || 'Anonymous'}
+                      profileImg={userProfile?.profilePhotoUrl || defaultProfile}
+                      comment={comment.content}
+                      timestamp={formatTimestamp(comment.createdAt)}
+                      commentId={comment._id}
+                      upvotesArray={localCommentVotes[comment._id]?.upvotes || comment.upvotes || []}
+                      downvotesArray={localCommentVotes[comment._id]?.downvotes || comment.downvotes || []}
+                      currentUserId={userFromStore?.role === "user" ? userFromStore?._id : null}
+                      onShowToast={showCustomToast}
+                      onVoteUpdate={(newUpvotes, newDownvotes) => 
+                        handleCommentVoteUpdate(comment._id, newUpvotes, newDownvotes)
+                      }
+                    />
+                  </div>
+                );
+              })
             ) : (
               <div className="text-center py-4 text-gray-500">No comments yet</div>
             )}

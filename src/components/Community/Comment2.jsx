@@ -1,5 +1,4 @@
 import React from "react";
-import profile1 from "../../assets/profile1.png";
 import { ArrowFatUp, ArrowFatDown } from "phosphor-react";
 import {
   useUpvoteCommentMutation,
@@ -15,11 +14,11 @@ import { showCustomToast } from "../../utils.jsx";
 
 const Comment2 = ({
   username,
-  profileImg = profile1,
+  profileImg,
   comment,
   timestamp,
   bgColor = "bg-base-200",
-  profileSize = "h-11",
+  profileSize = "h-11 w-11",
   textSize = "text-base",
   commentId,
   upvotesArray = [],
