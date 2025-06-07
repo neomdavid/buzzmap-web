@@ -388,9 +388,11 @@ const Interventions = () => {
                       <div key={item.name + item.patternType} className="flex flex-col items-center">
                         <ActionRecommendationCard
                           barangay={item.name}
-                          patternType={item.patternType}
-                          issueDetected={item.issueDetected}
-                          suggestedAction={item.suggestedAction}
+                          pattern_based={{
+                            status: item.patternType,
+                            alert: item.issueDetected,
+                            admin_recommendation: item.suggestedAction
+                          }}
                           hideSharedInfo={true}
                           onApply={(barangay, patternType) => {
                             setSelectedBarangay(barangay);

@@ -6,26 +6,24 @@ export default function PatternAlerts({ selectedBarangay, selectedTab, onAlertSe
   const { data: barangaysData, isLoading, error } = useGetBarangaysQuery();
   const { data: patternResultsData, isLoading: patternResultsLoading } = useGetPatternRecognitionResultsQuery();
 
-  console.log('[PatternAlerts DEBUG] Raw barangaysData:', barangaysData);
-  console.log('[PatternAlerts DEBUG] Raw patternResultsData:', patternResultsData);
+
 
   // Merge pattern data with barangay data (now only barangaysData)
   const patternData = useMemo(() => {
     if (!barangaysData) return [];
-    console.log('[PatternAlerts DEBUG] Processing barangaysData:', barangaysData);
     
     const processedData = barangaysData.map(barangay => {
       const patternBased = barangay.status_and_recommendation?.pattern_based;
       const reportBased = barangay.status_and_recommendation?.report_based;
       const deathPriority = barangay.status_and_recommendation?.death_priority;
       
-      console.log('[PatternAlerts DEBUG] Processing barangay:', {
-        name: barangay.name,
-        patternBased,
-        reportBased,
-        deathPriority,
-        pattern_data: barangay.pattern_data
-      });
+      // console.log('[PatternAlerts DEBUG] Processing barangay:', {
+      //   name: barangay.name,
+      //   patternBased,
+      //   reportBased,
+      //   deathPriority,
+      //   pattern_data: barangay.pattern_data
+      // });
 
       return {
         _id: barangay._id,
@@ -38,22 +36,20 @@ export default function PatternAlerts({ selectedBarangay, selectedTab, onAlertSe
       };
     });
 
-    console.log('[PatternAlerts DEBUG] Processed pattern data:', processedData);
     return processedData;
   }, [barangaysData]);
 
   // Filter alerts based on selected tab
   const filteredAlerts = useMemo(() => {
     if (!patternResultsData?.data) {
-      console.log('[PatternAlerts DEBUG] No pattern results data available');
       return [];
     }
 
-    console.log('[PatternAlerts DEBUG] Filtering alerts with:', {
-      selectedTab,
-      selectedBarangay,
-      patternResultsData: patternResultsData.data
-    });
+    // console.log('[PatternAlerts DEBUG] Filtering alerts with:', {
+    //   selectedTab,
+    //   selectedBarangay,
+    //   patternResultsData: patternResultsData.data
+    // });
 
     const filtered = patternResultsData.data.filter(item => {
       const pattern = item.pattern?.toLowerCase();
@@ -88,12 +84,10 @@ export default function PatternAlerts({ selectedBarangay, selectedTab, onAlertSe
       return shouldInclude;
     });
 
-    console.log('[PatternAlerts DEBUG] Filtered alerts:', filtered);
     return filtered;
   }, [patternResultsData, selectedTab, selectedBarangay]);
 
   if (isLoading) {
-    console.log('[PatternAlerts DEBUG] Loading barangays data...');
     return (
       <div className="flex items-center justify-center h-full">
         <span className="loading loading-spinner loading-lg text-primary"></span>
@@ -102,13 +96,11 @@ export default function PatternAlerts({ selectedBarangay, selectedTab, onAlertSe
   }
 
   if (!patternResultsData?.data) {
-    console.log('[PatternAlerts DEBUG] No pattern data available');
     return (
       <div className="text-gray-500">No pattern data available.</div>
     );
   }
 
-  console.log('[PatternAlerts DEBUG] Rendering with filtered alerts:', filteredAlerts);
 
   return (
     <div className="flex flex-col gap-4 w-full px-4">
@@ -130,10 +122,8 @@ export default function PatternAlerts({ selectedBarangay, selectedTab, onAlertSe
         <div className="text-gray-500">No alerts found.</div>
       ) : (
         filteredAlerts.map(item => {
-          console.log('[PatternAlerts DEBUG] Rendering alert card for:', item);
           // Find the corresponding barangay data
           const barangayData = barangaysData?.find(b => b.name === item.name);
-          console.log('[PatternAlerts DEBUG] Found barangay data:', barangayData);
           
           return (
             <AlertCard

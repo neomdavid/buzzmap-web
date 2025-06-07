@@ -1,4 +1,4 @@
-import { Check, Upload } from "phosphor-react";
+import { Check, Upload, Warning, ChartLineUp, Skull } from "phosphor-react";
 import { alerts } from "../../utils";
 import {
   ActionPlanCard,
@@ -12,7 +12,7 @@ import {
 } from "../../components";
 import PatternRecognitionResults from "@/components/Admin/PatternAlerts";
 import PatternAlerts from "@/components/Admin/PatternAlerts";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { useGetAnalyticsQuery, useGetPostsQuery, useGetAllInterventionsQuery, useGetPatternRecognitionResultsQuery, useGetBarangaysQuery } from '../../api/dengueApi';
 import ActionRecommendationCard from "../../components/Admin/ActionRecommendationCard";
 import { Bar } from 'react-chartjs-2';
@@ -42,6 +42,63 @@ const TABS = [
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
+// Pattern color mapping for both border and badge
+const PATTERN_COLORS = {
+  spike: { border: 'border-error', badge: 'bg-error' },
+  gradual_rise: { border: 'border-warning', badge: 'bg-warning' },
+  stability: { border: 'border-info', badge: 'bg-info' },
+  decline: { border: 'border-success', badge: 'bg-success' },
+  low_level_activity: { border: 'border-gray-400', badge: 'bg-gray-400' },
+  default: { border: 'border-gray-400', badge: 'bg-gray-400' }
+};
+
+const getPatternKey = (pattern) => {
+  if (!pattern) return 'default';
+  const p = pattern.trim().toLowerCase();
+  if (p === 'spike') return 'spike';
+  if (p === 'gradual_rise') return 'gradual_rise';
+  if (p === 'stability') return 'stability';
+  if (p === 'decline') return 'decline';
+  if (p === 'low_level_activity') return 'low_level_activity';
+  return 'default';
+};
+
+const getPatternBadgeColor = (pattern) => {
+  if (!pattern) return 'border-gray-300';
+  switch (pattern.toLowerCase()) {
+    case 'spike':
+      return 'border-error';
+    case 'gradual_rise':
+      return 'border-warning';
+    case 'stability':
+      return 'border-info';
+    case 'decline':
+      return 'border-success';
+    case 'low_level_activity':
+      return 'border-gray-300';
+    default:
+      return 'border-gray-300';
+  }
+};
+
+const getPatternLabel = (pattern) => {
+  if (!pattern) return 'No Pattern';
+  switch (pattern.toLowerCase()) {
+    case 'spike':
+      return 'Spike';
+    case 'gradual_rise':
+      return 'Gradual Rise';
+    case 'stability':
+      return 'Stability';
+    case 'decline':
+      return 'Decline';
+    case 'low_level_activity':
+      return 'Low Level Activity';
+    default:
+      return 'No Pattern';
+  }
+};
+
 const Analytics = () => {
   const [searchBarangay, setSearchBarangay] = useState(null); // for programmatic search
   const [mapSelectedBarangay, setMapSelectedBarangay] = useState(null); // for map selection
@@ -59,7 +116,6 @@ const Analytics = () => {
   const { refetch: refetchInterventions } = useGetAllInterventionsQuery();
   const [dataVersion, setDataVersion] = useState(0);
   const [isImporting, setIsImporting] = useState(false);
-  const [spikeRecommendationDetails, setSpikeRecommendationDetails] = useState(null);
   const [showBreedingSites, setShowBreedingSites] = useState(true);
   const [showInterventions, setShowInterventions] = useState(true);
 
@@ -68,42 +124,40 @@ const Analytics = () => {
   const { data: posts, isLoading: isLoadingPosts } = useGetPostsQuery();
   const { data: barangaysList, isLoading: isLoadingBarangays } = useGetBarangaysQuery();
 
+  // Get the barangay with spike pattern and highest death cases
+  const spikeRecommendationDetails = useMemo(() => {
+    if (!barangaysList) return null;
+    
+    // Find all barangays with spike pattern
+    const spikeBarangays = barangaysList.filter(barangay => 
+      barangay.status_and_recommendation?.pattern_based?.status?.toLowerCase() === 'spike'
+    );
+
+    if (spikeBarangays.length === 0) return null;
+
+    // Find the one with highest death cases
+    const highestDeathBarangay = spikeBarangays.reduce((highest, current) => {
+      const currentDeaths = current.status_and_recommendation?.death_priority?.count || 0;
+      const highestDeaths = highest.status_and_recommendation?.death_priority?.count || 0;
+      return currentDeaths > highestDeaths ? current : highest;
+    }, spikeBarangays[0]);
+
+    return {
+      barangay: highestDeathBarangay.name,
+      patternType: highestDeathBarangay.status_and_recommendation?.pattern_based?.status || 'no_pattern',
+      pattern_based: highestDeathBarangay.status_and_recommendation?.pattern_based,
+      report_based: highestDeathBarangay.status_and_recommendation?.report_based,
+      death_priority: highestDeathBarangay.status_and_recommendation?.death_priority,
+      last_analysis_time: highestDeathBarangay.last_analysis_time
+    };
+  }, [barangaysList]);
+
+  // Update mapSelectedBarangay when spikeRecommendationDetails changes
   useEffect(() => {
-    if (patternResultsData?.data && !initialBarangayNameForMap) {
-      // Find barangays with spike patterns
-      const spikeBarangays = patternResultsData.data.filter(item =>
-        item.pattern?.toLowerCase() === 'spike'
-      );
-
-      let targetBarangayName;
-
-      if (spikeBarangays.length > 0) {
-        // If we have spike patterns, select the first one
-        targetBarangayName = spikeBarangays[0].name;
-      } else {
-        // Fallback to first barangay in the list
-        targetBarangayName = patternResultsData.data[0]?.name;
-      }
-
-      if (targetBarangayName) {
-        const patternInfo = patternResultsData.data.find(
-          item => item.name === targetBarangayName
-        );
-
-        const recommendationDetails = {
-          barangay: targetBarangayName,
-          patternType: patternInfo?.pattern || 'none',
-          issueDetected: patternInfo?.alert || 'N/A',
-          suggestedAction: patternInfo?.recommendation || 'No specific recommendation available.'
-        };
-
-        setSearchBarangay(targetBarangayName);
-        setMapSelectedBarangay(targetBarangayName);
-        setInitialBarangayNameForMap(targetBarangayName);
-        setSpikeRecommendationDetails(recommendationDetails);
-      }
+    if (spikeRecommendationDetails) {
+      setMapSelectedBarangay(spikeRecommendationDetails.barangay);
     }
-  }, [patternResultsData, initialBarangayNameForMap]);
+  }, [spikeRecommendationDetails]);
 
   // Handle barangay selection from analytics UI (PatternAlerts, TrendChart, etc)
   const handleAnalyticsBarangaySelect = (barangayName) => {
@@ -293,19 +347,59 @@ const Analytics = () => {
         )}
         {!isLoadingPatterns && spikeRecommendationDetails && (
           <div className="w-full shadow-sm shadow-lg p-6 py-8 rounded-lg mt-6">
+            {console.log('[Analytics DEBUG] spikeRecommendationDetails:', spikeRecommendationDetails)}
             <p className="text-base-content text-3xl font-bold mb-4">
               {spikeRecommendationDetails.patternType.toLowerCase() === 'spike'
                 ? "Priority Action Recommendation (Spike Detected)"
                 : `Action Recommendation for ${spikeRecommendationDetails.barangay}`
               }
             </p>
-            {/* {console.log("[Analytics DEBUG] Rendering ActionRecommendationCard with props:", JSON.stringify(spikeRecommendationDetails, null, 2))} */}
-            <ActionRecommendationCard
-              barangay={spikeRecommendationDetails.barangay}
-              patternType={spikeRecommendationDetails.patternType}
-              issueDetected={spikeRecommendationDetails.issueDetected}
-              suggestedAction={spikeRecommendationDetails.suggestedAction}
-            />
+            <div className={`relative border-[2px] ${getPatternBadgeColor(spikeRecommendationDetails.patternType)} rounded-4xl p-4 pt-10 text-black`}>
+              <p className={`absolute text-lg left-[-2px] top-[-6px] text-nowrap ${getPatternBadgeColor(spikeRecommendationDetails.patternType).replace('border-', 'bg-')} rounded-2xl font-semibold text-white p-1 px-4`}>
+                {spikeRecommendationDetails.barangay}
+              </p>
+
+            
+              {/* Alerts List */}
+              <ul className="space-y-3 mt-2">
+                {spikeRecommendationDetails.pattern_based?.alert && (
+                  <li className="grid grid-cols-[24px_1fr] gap-2 items-center">
+                    <ChartLineUp size={20} className="text-primary" />
+                    <div>
+                      <span className="font-bold text-primary">Pattern-Based:</span>
+                      <span className="text-black ml-1">{spikeRecommendationDetails.pattern_based.alert.replace(spikeRecommendationDetails.barangay, spikeRecommendationDetails.barangay.charAt(0).toUpperCase() + spikeRecommendationDetails.barangay.slice(1).toLowerCase())}</span>
+                    </div>
+                  </li>
+                )}
+                {spikeRecommendationDetails.report_based && spikeRecommendationDetails.report_based.alert && spikeRecommendationDetails.report_based.alert.trim() !== '' && spikeRecommendationDetails.report_based.alert !== 'None' && (
+                  <li className="grid grid-cols-[24px_1fr] gap-2 items-center">
+                    <Warning size={20} className="text-warning" />
+                    <div>
+                      <span className="font-bold text-primary">Report-Based:</span>
+                      <span className="text-black ml-1">{spikeRecommendationDetails.report_based.alert.replace(spikeRecommendationDetails.barangay, spikeRecommendationDetails.barangay.charAt(0).toUpperCase() + spikeRecommendationDetails.barangay.slice(1).toLowerCase())}</span>
+                    </div>
+                  </li>
+                )}
+                {spikeRecommendationDetails.death_priority?.alert && (
+                  <li className="grid grid-cols-[24px_1fr] gap-2 items-center">
+                    <div className="w-5 h-5 rounded-full bg-error mx-auto" />
+                    <div>
+                      <span className="font-bold text-primary">Death-Based:</span>
+                      <span className="text-black ml-1">{spikeRecommendationDetails.death_priority.alert.replace(spikeRecommendationDetails.barangay, spikeRecommendationDetails.barangay.charAt(0).toUpperCase() + spikeRecommendationDetails.barangay.slice(1).toLowerCase())}</span>
+                    </div>
+                  </li>
+                )}
+              </ul>
+
+              <div className="flex justify-end gap-2 mt-4">
+                <button 
+                  onClick={() => handleAnalyticsBarangaySelect(spikeRecommendationDetails.barangay)}
+                  className="px-3 py-1.5 bg-primary text-white rounded-full hover:bg-primary/90 transition-colors text-sm cursor-pointer"
+                >
+                  Select
+                </button>
+              </div>
+            </div>
           </div>
         )}
         {!isLoadingPatterns && !spikeRecommendationDetails && mapSelectedBarangay && (

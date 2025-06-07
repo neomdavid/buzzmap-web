@@ -1,5 +1,5 @@
 import React from "react";
-import { Circle, MagnifyingGlass, Lightbulb } from "phosphor-react";
+import { Circle, MagnifyingGlass, Lightbulb, Warning } from "phosphor-react";
 
 const PATTERN_STYLES = {
   spike: {
@@ -36,110 +36,165 @@ const PATTERN_STYLES = {
 
 const ActionRecommendationCard = ({
   barangay,
-  patternType = "none", // Default to 'none'
-  issueDetected,
-  suggestedAction,
+  pattern_based,
+  report_based,
+  death_priority,
   className = "",
   hideSharedInfo = false,
   onApply,
 }) => {
+  // Debug statements
+  console.log('[ActionRecommendationCard DEBUG] Props:', {
+    barangay,
+    pattern_based,
+    report_based,
+    death_priority
+  });
+
   // Determine colors and urgency based on pattern type
+  const patternType = pattern_based?.status || "none";
+  console.log('[ActionRecommendationCard DEBUG] Pattern Type:', {
+    raw: pattern_based?.status,
+    processed: patternType,
+    lowercase: patternType?.toLowerCase()
+  });
+
   const styles = PATTERN_STYLES[patternType?.toLowerCase()] || PATTERN_STYLES.none;
+  console.log('[ActionRecommendationCard DEBUG] Selected Styles:', {
+    patternType: patternType?.toLowerCase(),
+    selectedStyle: styles
+  });
+
   const urgencyLevelToDisplay = styles.urgency;
 
-  // Parse suggestedAction
-  let primarySuggestion = "";
-  let actionListItems = [];
-  const rawAction = suggestedAction || "";
-
-  const marker = "Recommended actions:";
-  const markerIndex = rawAction.indexOf(marker);
-
-  if (markerIndex !== -1) {
-    primarySuggestion = rawAction.substring(0, markerIndex).trim();
-    let itemsString = rawAction.substring(markerIndex + marker.length).trim();
-    
-    // Clean up common prefixes for the items string like ": -", ":", "-"
-    if (itemsString.startsWith(":-")) {
-      itemsString = itemsString.substring(2).trim();
-    } else if (itemsString.startsWith(":")) {
-      itemsString = itemsString.substring(1).trim();
-    } else if (itemsString.startsWith("-")) {
-      itemsString = itemsString.substring(1).trim();
-    }
-    
-    actionListItems = itemsString.split(" - ").map(item => item.trim()).filter(Boolean);
-  } else {
-    // Marker not found, fall back to splitting the whole string
-    const parts = rawAction.split(" - ").map(item => item.trim()).filter(Boolean);
-    if (parts.length > 0) {
-      primarySuggestion = parts[0];
-      actionListItems = parts.slice(1);
-    } else { 
-      primarySuggestion = rawAction.trim(); 
-    }
-  }
-
-  // Determine if the Apply button should be shown
-  const showApplyButton = ['spike', 'gradual_rise'].includes(patternType?.toLowerCase());
-
   return (
-    <div
-      className={`flex flex-col gap-1 border-2 ${styles.border} rounded-3xl p-6 ${className}`}
-    >
+    <div className={`flex flex-col gap-4 border-2 ${styles.border} rounded-3xl p-6 ${className}`}>
+      {/* Header */}
       <div className="flex items-center gap-2 mb-2 flex-wrap">
         <p className={`${styles.text} font-extrabold text-2xl`}>{barangay}</p>
         {!hideSharedInfo && (
-          <p
-            className={`${styles.bg} text-center text-white py-1 px-4 rounded-xl text-sm`}
-          >
+          <p className={`${styles.bg} text-center text-white py-1 px-4 rounded-xl text-sm`}>
             {urgencyLevelToDisplay}
           </p>
         )}
       </div>
-      <div className="flex items-start gap-3">
-        <div className="text-primary pt-0.5">
-          <MagnifyingGlass size={16} />
-        </div>
-        <p className="text-black">
-          <span className="font-semibold">Issue Detected: </span>
-          {issueDetected}
-        </p>
-      </div>
-      {!hideSharedInfo && (
-        <>
-          <div className="flex items-center gap-3">
+
+      {/* Pattern-based Section */}
+      {pattern_based && (
+        <div className="space-y-2">
+          <div className="flex items-center gap-2">
             <div className={styles.text}>
               <Circle weight="fill" size={16} />
             </div>
-            <p className={`${styles.text} font-bold`}>
-              <span className="font-semibold text-black">Pattern: </span>
-              {patternType.charAt(0).toUpperCase() + patternType.slice(1).replace('_', ' ')}
+            <p className="font-bold text-lg">Pattern-Based</p>
+          </div>
+          {pattern_based.alert && (
+            <div className="flex items-start gap-3 ml-6">
+              <div className="text-primary pt-0.5">
+                <MagnifyingGlass size={16} />
+              </div>
+              <p className="text-black">
+                <span className="font-semibold">Alert: </span>
+                {pattern_based.alert}
+              </p>
+            </div>
+          )}
+          {pattern_based.admin_recommendation && (
+            <div className="flex items-start gap-3 ml-6">
+              <div className="text-primary pt-1">
+                <Lightbulb weight="fill" size={16} />
+              </div>
+              <div className="text-black">
+                <span className="font-semibold">Recommendations: </span>
+                <ul className="list-disc list-inside ml-4 mt-1">
+                  {pattern_based.admin_recommendation.split('\n')
+                    .filter(rec => rec.trim())
+                    .map((rec, index) => (
+                      <li key={index}>{rec.trim().replace(/^- /, '')}</li>
+                    ))}
+                </ul>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Report-based Section */}
+      {report_based && (
+        <div className="space-y-2">
+          <div className="flex items-center gap-2">
+            <div className="text-primary">
+              <MagnifyingGlass size={16} />
+            </div>
+            <p className="font-bold text-lg">Report-Based</p>
+          </div>
+          {report_based.count > 0 && (
+            <div className="flex items-start gap-3 ml-6">
+              <p className="text-black">
+                <span className="font-semibold">Reports: </span>
+                {report_based.count}
+              </p>
+            </div>
+          )}
+          {report_based.alert && (
+            <div className="flex items-start gap-3 ml-6">
+              <p className="text-black">
+                <span className="font-semibold">Alert: </span>
+                {report_based.alert}
+              </p>
+            </div>
+          )}
+          {report_based.admin_recommendation && (
+            <div className="flex items-start gap-3 ml-6">
+              <div className="text-primary pt-1">
+                <Lightbulb weight="fill" size={16} />
+              </div>
+              <div className="text-black">
+                <span className="font-semibold">Recommendations: </span>
+                <ul className="list-disc list-inside ml-4 mt-1">
+                  {report_based.admin_recommendation.split('\n')
+                    .filter(rec => rec.trim())
+                    .map((rec, index) => (
+                      <li key={index}>{rec.trim().replace(/^- /, '')}</li>
+                    ))}
+                </ul>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Death Priority Section */}
+      {death_priority && death_priority.count > 0 && (
+        <div className="space-y-2">
+          <div className="flex items-center gap-2">
+            <div className="text-error">
+              <Warning weight="fill" size={16} />
+            </div>
+            <p className="font-bold text-lg text-error">Death Priority</p>
+          </div>
+          <div className="flex items-start gap-3 ml-6">
+            <p className="text-error">
+              <span className="font-semibold">Alert: </span>
+              {death_priority.alert}
             </p>
           </div>
-          <div className="flex items-start gap-3">
-            <div className="text-primary pt-1">
-              <Lightbulb weight="fill" size={16} />
+          {death_priority.recommendation && (
+            <div className="flex items-start gap-3 ml-6">
+              <div className="text-primary pt-1">
+                <Lightbulb weight="fill" size={16} />
+              </div>
+              <div className="text-error">
+                <span className="font-semibold">Recommendation: </span>
+                {death_priority.recommendation}
+              </div>
             </div>
-            <div className="text-black">
-              <span className="font-semibold">Suggested Action: </span>
-              {primarySuggestion && <span>{primarySuggestion}</span>}
-              {actionListItems.length > 0 && (
-                <ul className={`list-disc list-inside ml-4 ${primarySuggestion ? 'mt-1' : ''}`}>
-                  {actionListItems.map((item, index) => (
-                    <li key={index}>{item}</li>
-                  ))}
-                </ul>
-              )}
-              {/* Fallback if suggestedAction had content but parsing yielded nothing */}
-              {!primarySuggestion && actionListItems.length === 0 && rawAction.trim() && (
-                <span>{rawAction.trim()}</span>
-              )}
-            </div>
-          </div>
-        </>
+          )}
+        </div>
       )}
-      {showApplyButton && (
+
+      {/* Apply Button */}
+      {['spike', 'gradual_rise'].includes(patternType?.toLowerCase()) && (
         <div className="flex justify-end mt-4">
           <button
             onClick={() => onApply && onApply(barangay, patternType)}
