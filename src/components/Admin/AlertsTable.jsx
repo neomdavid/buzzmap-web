@@ -17,6 +17,24 @@ const customTheme = themeQuartz.withParams({
   wrapperBorderRadius: 0,
 });
 
+const DateCell = (p) => {
+  const date = p.value;
+  return (
+    <div className="flex items-center justify-center h-full">
+      {date.toLocaleString("en-US", {
+        weekday: "short",
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        hour12: true,
+      })}
+    </div>
+  );
+};
+
 const AlertsTable = () => {
   const { data: alerts, isLoading } = useGetAllAlertsQuery();
   const [selectedAlert, setSelectedAlert] = useState(null);
@@ -52,6 +70,11 @@ const AlertsTable = () => {
         field: "date",
         flex: 1,
         filter: 'agDateColumnFilter',
+        cellRenderer: DateCell,
+        sort: 'desc',
+        comparator: (dateA, dateB) => {
+          return dateA.getTime() - dateB.getTime();
+        }
       },
       {
         headerName: "Actions",
@@ -82,7 +105,7 @@ const AlertsTable = () => {
           .map((b) => (typeof b === "string" ? b : b.name))
           .join(", "),
         messages: Array.isArray(alert.messages) ? alert.messages.join(" | ") : "",
-        date: alert.timestamp ? new Date(alert.timestamp).toLocaleString() : "N/A",
+        date: alert.timestamp ? new Date(alert.timestamp) : null,
       })),
     [alerts]
   );

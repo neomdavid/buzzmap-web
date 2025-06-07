@@ -50,6 +50,24 @@ const StatusCell = (p) => {
   );
 };
 
+const DateCell = (p) => {
+  const date = p.value;
+  return (
+    <div className="flex items-center justify-center h-full">
+      {date.toLocaleString("en-US", {
+        weekday: "short",
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        hour12: true,
+      })}
+    </div>
+  );
+};
+
 const ActionsCell = (p) => {
   return (
     <div className="flex justify-center items-center h-full w-full">
@@ -82,16 +100,7 @@ function InterventionsTable({
   let rowData = interventions.map((intervention) => ({
     _id: intervention._id,
     barangay: intervention.barangay,
-    date: new Date(intervention.date).toLocaleString("en-US", {
-      weekday: "short",
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-      second: "2-digit",
-      hour12: true,
-    }),
+    date: new Date(intervention.date), // Keep as Date object
     interventionType: intervention.interventionType,
     personnel: intervention.personnel,
     status: intervention.status,
@@ -102,7 +111,16 @@ function InterventionsTable({
   const columnDefs = useMemo(() => {
     const baseCols = [
       { field: "barangay", headerName: "Barangay", minWidth: 200 },
-      { field: "date", headerName: "Date", minWidth: 140 },
+      { 
+        field: "date", 
+        headerName: "Date", 
+        minWidth: 140,
+        cellRenderer: DateCell,
+        sort: 'desc', // Default sort by date descending
+        comparator: (dateA, dateB) => {
+          return dateA.getTime() - dateB.getTime();
+        }
+      },
       {
         field: "interventionType",
         headerName: "Type of Intervention",

@@ -24,6 +24,24 @@ const customTheme = themeQuartz.withParams({
   wrapperBorderRadius: 0,
 });
 
+const DateCell = (p) => {
+  const date = p.value;
+  return (
+    <div className="flex items-center justify-center h-full">
+      {date.toLocaleString("en-US", {
+        weekday: "short",
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        hour12: true,
+      })}
+    </div>
+  );
+};
+
 const AdminPostsTable = () => {
   const token = useSelector((state) => state.auth.token);
   const { data: adminPosts, isLoading } = useGetAllAdminPostsQuery(undefined, {
@@ -58,6 +76,11 @@ const AdminPostsTable = () => {
         field: "publishDate",
         flex: 1,
         filter: 'agDateColumnFilter',
+        cellRenderer: DateCell,
+        sort: 'desc', // Default sort by date descending
+        comparator: (dateA, dateB) => {
+          return dateA.getTime() - dateB.getTime();
+        }
       },
       {
         headerName: "Image",
@@ -117,9 +140,7 @@ const AdminPostsTable = () => {
         .filter(post => post.status === "active")
         .map((post) => ({
           ...post,
-          publishDate: post.publishDate
-            ? new Date(post.publishDate).toLocaleString()
-            : "N/A",
+          publishDate: post.publishDate ? new Date(post.publishDate) : null,
         })),
     [adminPosts]
   );
