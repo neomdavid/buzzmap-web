@@ -4,7 +4,7 @@ import cleaningImg from "../../assets/cleaning.jpg";
 import logoFooter from "../../assets/logo_ligthbg.svg";
 import logoSurveillance from "../../assets/icons/quezon_surveillance.png";
 import profile1 from "../../assets/profile1.png";
-
+import landing3 from '../../assets/landing3.jpg'
 import {
   GoalCard,
   Heading,
@@ -137,8 +137,8 @@ const Landing = () => {
       </div>
 
       <img
-        src={patient1}
-        className="h-[380px] lg:h-[420px] xl:h-[440px] object-cover rounded-3xl  mx-auto mt-[-60px] z-[-1] mb-8 max-w-[95vw] w-full px-6 sm:px-6"
+        src={landing3}
+        className="h-[380px] lg:h-[420px] xl:h-[440px] object-cover object-top rounded-3xl  mx-auto mt-[-60px] z-[-1] mb-8 max-w-[95vw] w-full px-6 sm:px-6"
         style={{
           maskImage:
             "linear-gradient(to bottom, rgba(0,0,0,0) 20%, rgba(0,0,0,0.8) 50%, rgba(0,0,0,1) 60%)",
@@ -148,7 +148,7 @@ const Landing = () => {
       />
 
       <section className="flex flex-col lg:flex-row  justify-center max-w-[95vw] m-auto px-6 sm:px-6 gap-x-4">
-        <div className="rounded-xl overflow-hidden h-[400px] lg:h-[500px] mb-6 lg:mb-0 lg:flex-13 flex items-center justify-center bg-gray-100">
+        <div className="rounded-xl overflow-hidden h-[400px] lg:h-auto mb-8  lg:flex-13 flex items-center justify-center bg-gray-100">
           <MapOnly style={{height: '100%', width: '100%'}} />
         </div>
         <div className="mb-16 flex flex-col flex-10  mx-6 items-center text-center lg:items-end lg:text-right">
