@@ -35,6 +35,20 @@ const DateCell = (p) => {
   );
 };
 
+const formatDate = (date) => {
+  if (!date) return "N/A";
+  return date.toLocaleString("en-US", {
+    weekday: "short",
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: true,
+  });
+};
+
 const AlertsTable = () => {
   const { data: alerts, isLoading } = useGetAllAlertsQuery();
   const [selectedAlert, setSelectedAlert] = useState(null);
@@ -171,7 +185,7 @@ const AlertsTable = () => {
                     Date
                   </label>
                   <div className="p-3 bg-base-200 rounded-lg">
-                    {selectedAlert.date}
+                    {formatDate(selectedAlert.date)}
                   </div>
                 </div>
 
