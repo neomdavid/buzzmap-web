@@ -189,7 +189,7 @@ const SignUp = () => {
             </label>
           </div>
           <button
-            disabled={isLoading || !acceptedTerms}
+            disabled={isLoading || !acceptedTerms || !username.trim() || !email.trim() || !password.trim() || !confirmPassword.trim()}
             className="bg-white font-extrabold shadow-[2px_6px_3px_rgba(0,0,0,0.20)] font-bold text-primary w-xs py-3 px-4 rounded-2xl hover:cursor-pointer hover:bg-base-200/60 transition-all duration-300 disabled:opacity-60 disabled:cursor-not-allowed"
           >
             {isLoading ? "Signing Up..." : "Sign Up"}
@@ -201,7 +201,7 @@ const SignUp = () => {
             </p>
           )}
 
-          <div className="flex w-[60%] gap-x-4 mt-6 mb-2 ">
+          {/* <div className="flex w-[60%] gap-x-4 mt-6 mb-2 ">
             <div className="flex-1 border-t-1 border-white/60 mt-3 text-primary ">
               -
             </div>
@@ -212,7 +212,7 @@ const SignUp = () => {
           </div>
           <button className="bg-white mb-2 font-extrabold shadow-[2px_6px_3px_rgba(0,0,0,0.20)] font-bold text-primary w-xs py-3 px-4 rounded-2xl hover:cursor-pointer hover:bg-base-200/60 transition-all duration-300">
             Google
-          </button>
+          </button> */}
         </form>
         <p className="mt-4 text-md lg:text-[14px]">
           Already have an account?{" "}

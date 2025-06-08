@@ -211,8 +211,9 @@ const Login = () => {
           <div className="flex flex-col h-full"></div>
 
           <button
+            disabled={isLoading || !email.trim() || !password.trim()}
             className={`bg-primary  font-extrabold shadow-[2px_6px_3px_rgba(0,0,0,0.20)] font-bold text-white w-xs py-3 px-4 rounded-2xl hover:cursor-pointer hover:bg-base-200/60 transition-all duration-300 ${
-              isLoading && "bg-gray-100 disabled"
+              (isLoading || !email.trim() || !password.trim()) && "bg-gray-100 disabled opacity-50 cursor-not-allowed"
             }`}
           >
             {isLoading ? "Logging in..." : "Login"}
@@ -225,7 +226,7 @@ const Login = () => {
                   : "Login failed. Please check your credentials.")}
             </p>
           )}
-          <div className="flex w-[60%] gap-x-4 mb-[-8px] ">
+          {/* <div className="flex w-[60%] gap-x-4 mb-[-8px] ">
             <div className="flex-1 border-t-1 border-primary/60 mt-3 text-white  ">
               -
             </div>
@@ -236,7 +237,7 @@ const Login = () => {
           </div>
           <button className="bg-primary mb-2 font-extrabold shadow-[2px_6px_3px_rgba(0,0,0,0.20)] font-bold text-white w-xs py-3 px-4 rounded-2xl hover:cursor-pointer hover:bg-base-200/60 transition-all duration-300">
             Google
-          </button>
+          </button> */}
         </form>
         <p className="mt-4 text-md lg:text-[14px]">
           Don't have an account?{" "}
