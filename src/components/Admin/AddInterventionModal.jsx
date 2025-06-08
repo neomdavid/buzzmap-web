@@ -64,38 +64,37 @@ const AddInterventionModal = ({ isOpen, onClose, preselectedBarangay, patternTyp
   // Add state for current highlighted barangay
   const [highlightedBarangay, setHighlightedBarangay] = useState(preselectedBarangay);
 
-  // Helper to get allowed statuses based on date
+  // Update the intervention types array
+  const interventionTypes = [
+    "All",
+    "Fogging",
+    "Ovicidal-Larvicidal Trapping",
+    "Clean-up Drive",
+    "Education Campaign"
+  ];
+
+  // Update the getAllowedStatuses function
   const getAllowedStatuses = (dateStr) => {
-    const today = new Date();
-    const interventionDate = new Date(dateStr);
-    const twoWeeksAgo = new Date(today);
-    twoWeeksAgo.setDate(today.getDate() - 14);
-    const twoWeeksAhead = new Date(today);
-    twoWeeksAhead.setDate(today.getDate() + 14);
-
-    // Check if the date is within the 2-week window
-    const isWithinTwoWeeks = interventionDate >= twoWeeksAgo && interventionDate <= twoWeeksAhead;
-
-    if (!isWithinTwoWeeks) {
-      return ['Completed']; // Only allow 'Completed' status if outside 2-week window
+    const now = new Date();
+    const selectedDate = new Date(dateStr);
+    
+    // Reset hours, minutes, seconds, and milliseconds for date comparison
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const selectedDay = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate());
+    
+    // If date is in the past, only allow "Complete"
+    if (selectedDay < today) {
+      return ["Complete"];
     }
-
-    // For dates within the 2-week window
-    if (interventionDate < today) {
-      return ['Completed', 'In Progress']; // Past dates can be Completed or In Progress
-    } else {
-      return ['Scheduled', 'In Progress']; // Future dates can be Scheduled or In Progress
+    
+    // If date is today, allow "Scheduled" and "Ongoing"
+    if (selectedDay.getTime() === today.getTime()) {
+      return ["Scheduled", "Ongoing"];
     }
+    
+    // If date is in the future, only allow "Scheduled"
+    return ["Scheduled"];
   };
-  const allowedStatuses = getAllowedStatuses(formData.date);
-
-  // If the current status is not allowed, reset it
-  useEffect(() => {
-    if (!allowedStatuses.includes(formData.status)) {
-      setFormData((prev) => ({ ...prev, status: allowedStatuses[0] }));
-    }
-    // eslint-disable-next-line
-  }, [formData.date]);
 
   // Add loading state for boundary data
   useEffect(() => {
@@ -572,12 +571,12 @@ const AddInterventionModal = ({ isOpen, onClose, preselectedBarangay, patternTyp
                       name="interventionType"
                       required
                     >
-                      <option value="All">All</option>
-                      <option value="Fogging">Fogging</option>
-                      <option value="Larviciding">Larviciding</option>
-                      <option value="Health Education">Health Education</option>
-                      <option value="Clean-up Drive">Clean-up Drive</option>
-                      <option value="Ovi Trap Installation">Ovi Trap Installation</option>
+                      <option value="">Select Intervention Type</option>
+                      {interventionTypes.map((type) => (
+                        <option key={type} value={type}>
+                          {type}
+                        </option>
+                      ))}
                     </select>
                   </div>
 

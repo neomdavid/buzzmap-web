@@ -360,7 +360,7 @@ export const dengueApi = createApi({
 
     // Get interventions for a specific barangay
     getInterventionsInProgress: builder.query({
-      query: (barangay) => `interventions/barangay/${barangay}`,
+      query: (barangay) => `interventions/in-progress/${barangay}`,
       transformResponse: (response) => {
         console.log('[DEBUG] Interventions for barangay response:', response);
         return response;
@@ -1232,6 +1232,19 @@ export const dengueApi = createApi({
         { type: "Comments", id: "LIST" }
       ],
     }),
+
+    // Add this to the endpoints object
+    getRecentReportsForBarangay: builder.mutation({
+      query: (barangayName) => ({
+        url: 'barangays/get-recent-reports-for-barangay',
+        method: 'POST',
+        body: { barangay_name: barangayName }
+      }),
+      transformResponse: (response) => {
+        console.log('[DEBUG] Recent reports for barangay response:', response);
+        return response;
+      }
+    }),
   }),
 });
 
@@ -1360,4 +1373,7 @@ export const {
 
   // Add this new endpoint
   useGetBasicProfilesQuery,
+
+  // Add this to the exported hooks
+  useGetRecentReportsForBarangayMutation,
 } = dengueApi;

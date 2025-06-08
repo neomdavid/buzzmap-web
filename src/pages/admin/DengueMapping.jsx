@@ -1,6 +1,6 @@
-import { MapPinLine, Circle, CheckCircle, Hourglass, MagnifyingGlass, Upload } from "phosphor-react";
+import { MapPinLine, Circle, CheckCircle, Hourglass, MagnifyingGlass, Upload, Clock } from "phosphor-react";
 import { useState, useMemo, useRef, useEffect } from "react";
-import { useGetInterventionsInProgressQuery, useGetPostsQuery, useGetAllInterventionsQuery, useGetBarangaysQuery } from "@/api/dengueApi";
+import { useGetInterventionsInProgressQuery, useGetPostsQuery, useGetAllInterventionsQuery, useGetBarangaysQuery, useGetRecentReportsForBarangayMutation } from "@/api/dengueApi";
 import * as turf from '@turf/turf';
 import MapOnly from '../../components/Mapping/MapOnly';
 
@@ -45,21 +45,18 @@ const DengueMapping = () => {
   // Add filtered barangays state
   const [filteredBarangays, setFilteredBarangays] = useState([]);
 
+  const [getRecentReports] = useGetRecentReportsForBarangayMutation();
+  const [recentDengueCases, setRecentDengueCases] = useState(null);
+
   useEffect(() => {
     if(allInterventionsData) {
       console.log("[DengueMapping DEBUG] Raw allInterventionsData received:", JSON.stringify(allInterventionsData, null, 2));
     }
   }, [allInterventionsData]);
 
-  const { data: interventionsInProgress, error: interventionsError } = useGetInterventionsInProgressQuery(
-    selectedBarangay?.properties?.name?.toLowerCase().replace(/\s+/g, '') || '',
-    {
-      skip: !selectedBarangay,
-      onError: (error) => {
-        console.error('[DEBUG] Error fetching interventions:', error);
-      }
-    }
-  );
+  const { data: interventionsData } = useGetInterventionsInProgressQuery(selectedBarangay?.properties?.name || '', {
+    skip: !selectedBarangay?.properties?.name
+  });
 
   // Add debug for raw posts data
   useEffect(() => {
@@ -237,6 +234,22 @@ const DengueMapping = () => {
     }
     fetchRecentReports();
   }, [selectedBarangay]);
+
+  // Add this effect to fetch recent dengue cases when a barangay is selected
+  useEffect(() => {
+    const fetchRecentDengueCases = async () => {
+      if (selectedBarangay?.properties?.name) {
+        try {
+          const response = await getRecentReports(selectedBarangay.properties.name).unwrap();
+          setRecentDengueCases(response.reports.case_counts);
+        } catch (error) {
+          console.error('[DEBUG] Error fetching recent dengue cases:', error);
+        }
+      }
+    };
+
+    fetchRecentDengueCases();
+  }, [selectedBarangay, getRecentReports]);
 
   // Add search handler
   const handleSearch = (query) => {
@@ -503,10 +516,10 @@ const DengueMapping = () => {
 
   // Add debug logging for interventions error
   useEffect(() => {
-    if (interventionsError) {
-      console.error('[DEBUG] Interventions API Error:', interventionsError);
+    if (interventionsData && interventionsData.length > 0) {
+      console.log('[DEBUG] Interventions data:', interventionsData);
     }
-  }, [interventionsError]);
+  }, [interventionsData]);
 
   return (
     <main className="flex flex-col w-full">
@@ -621,7 +634,7 @@ const DengueMapping = () => {
         <div className="grid grid-cols-10 gap-10">
           <div className={`col-span-4 border-2 ${getBorderColor(selectedBarangay?.properties?.patternType)} rounded-2xl flex flex-col p-4 gap-1`}>
             <p className="text-center font-semibold text-base-content">Selected Barangay - Dengue Overview</p>
-            <p className={`text-center font-bold ${getPatternTextColor(selectedBarangay?.properties?.patternType)} text-4xl mb-2`}>
+            <p className={`text-center font-bold ${getPatternTextColor(selectedBarangay?.properties?.patternType)} text-4xl mb-4 mt-2`}>
               {selectedBarangay ? `Barangay ${selectedBarangay.properties?.displayName || selectedBarangay.properties?.name}` : 'Select a Barangay'}
             </p>
             <p className={`text-center font-semibold text-white text-lg uppercase mb-4 px-4 py-1 rounded-full inline-block mx-auto ${getPatternBgColor(selectedBarangay?.properties?.patternType)}`}>
@@ -707,100 +720,83 @@ const DengueMapping = () => {
                   <hr className="border-t border-gray-200 my-2" />
                 </>
             )}
-            {/* Recent Reports */}
-            <div>
-              <p className="mt-1"><span className="font-bold">Recent Reports: </span></p>
-              <div className="w-[80%] mx-auto mt-1">
-                {recentReports.length > 0 ? (
-                  recentReports.map((r, idx) => (
-                    <div key={idx} className="flex gap-2 items-center">
+               {/* Pattern Based Alert */}
+               {barangaysList?.find(b => b.name === selectedBarangay?.properties?.name)?.status_and_recommendation?.pattern_based?.alert && (
+                      <div>
+                        <p className="text-md text-center text-gray-700 font-normal">
+                          {barangaysList.find(b => b.name === selectedBarangay?.properties?.name)?.status_and_recommendation?.pattern_based?.alert}
+                        </p>
+                      </div>
+                  )}
+            {/* Recent Dengue Cases */}
+            {recentDengueCases && Object.keys(recentDengueCases).length > 0 && (
+              <div className="mb-2">
+                <p className="mt-1"><span className="font-bold text-lg">Recent Dengue Cases: </span></p>
+                <div className="mt-2 flex flex-col space-y-2 ml-4">
+               
+                  {/* Dengue Cases List */}
+                  {Object.entries(recentDengueCases).map(([date, count]) => (
+                    <div key={date} className="flex gap-2 items-center">
                       <div><Circle size={16} color="red" weight="fill" /></div>
-                      <p><span className="font-semibold">{r.date}: </span> {r.count} new case{r.count > 1 ? 's' : ''}</p>
+                      <p className="font-bold">{date}: <span className="font-normal">{count} case{count > 1 ? 's' : ''}</span></p>
                     </div>
-                  ))
-                ) : (
-                  // Only show 'No recent reports' if there is no Report-Based section
-                  !(
-                    selectedBarangay?.status_and_recommendation?.report_based &&
-                    selectedBarangay.status_and_recommendation.report_based.status &&
-                    selectedBarangay.status_and_recommendation.report_based.status.trim() !== ""
-                  ) && (
-                    <p className="text-gray-500 italic">No recent reports</p>
-                  )
-                )}
-              </div>
-            </div>
-            <hr className="border-t border-gray-200 my-2" />
-            {/* Interventions Section */}
-            {interventionsInProgress && (interventionsInProgress.some(i => i.status?.toLowerCase() === 'ongoing') || 
-                                       interventionsInProgress.some(i => i.status?.toLowerCase() === 'scheduled')) && (
-              <>
-                <p className=""><span className="text-primary font-bold text-lg">Interventions: </span>  </p>
-                <div className="w-[80%] mx-auto mt-1">
-                  {/* Ongoing Interventions */}
-                  <div className="mb-4">
-                    <p className="font-semibold text-gray-700 mb-2">Ongoing:</p>
-                    {interventionsInProgress.filter(i => i.status?.toLowerCase() === 'ongoing').length > 0 ? (
-                      interventionsInProgress
-                        .filter(i => i.status?.toLowerCase() === 'ongoing')
-                        .map((intervention) => (
-                          <div key={intervention._id} className="flex gap-2 items-start mb-2">
-                            <div className="text-success mt-[2px]">
-                              <CheckCircle size={16} />
-                            </div>
-                            <div>
-                              <p>
-                                <span className="font-semibold">
-                                  {new Date(intervention.date).toLocaleDateString('en-US', {
-                                    month: 'long',
-                                    day: 'numeric'
-                                  })}: 
-                                </span> 
-                                {' '+intervention.interventionType}
-                              </p>
-                              <p className="text-sm text-gray-600">
-                                Personnel: {intervention.personnel}
-                              </p>
-                            </div>
-                          </div>
-                        ))
-                    ) : (
-                      <p className="text-gray-500 italic">No ongoing interventions</p>
-                    )}
-                  </div>
-
-                  {/* Scheduled Interventions */}
-                  <div>
-                    <p className="font-semibold text-gray-700 mb-2">Scheduled:</p>
-                    {interventionsInProgress.filter(i => i.status?.toLowerCase() === 'scheduled').length > 0 ? (
-                      interventionsInProgress
-                        .filter(i => i.status?.toLowerCase() === 'scheduled')
-                        .map((intervention) => (
-                          <div key={intervention._id} className="flex gap-2 items-start mb-2">
-                            <div className="text-warning mt-[2px]">
-                              <Hourglass size={16} />
-                            </div>
-                            <div>
-                              <p>
-                                <span className="font-semibold">
-                                  {new Date(intervention.date).toLocaleDateString('en-US', {
-                                    month: 'long',
-                                    day: 'numeric'
-                                  })}: 
-                                </span> 
-                                {' '+intervention.interventionType}
-                              </p>
-                              <p className="text-sm text-gray-600">
-                                Personnel: {intervention.personnel}
-                              </p>
-                            </div>
-                          </div>
-                        ))
-                    ) : (
-                      <p className="text-gray-500 italic">No scheduled interventions</p>
-                    )}
-                  </div>
+                  ))}
                 </div>
+                <hr className="border-t border-gray-200 my-2" />
+              </div>
+            )}
+            {/* Interventions Section */}
+            {interventionsData && interventionsData.length > 0 && (
+              <>
+                {/* Ongoing Interventions */}
+                {interventionsData.filter(i => i.status === "Ongoing").length > 0 && (
+                  <>
+                    <p className="font-bold text-lg text-primary mb-1">Ongoing Interventions:</p>
+                    <div className="flex flex-col space-y-2 ml-4">
+                      {interventionsData
+                        .filter(i => i.status === "Ongoing")
+                        .map((intervention) => (
+                          <div key={intervention._id} className="flex text-md gap-2 items-center">
+                            <div className="text-success">
+                              <CheckCircle size={16}/>
+                            </div>
+                            <p className="font-bold">
+                              {new Date(intervention.date).toLocaleDateString('en-US', {
+                                month: 'long',
+                                day: 'numeric'
+                              })}: <span className="font-normal">{intervention.interventionType}</span>
+                            </p>
+                          </div>
+                        ))}
+                    </div>
+                    <hr className="border-t border-gray-200 my-2" />
+                  </>
+                )}
+
+                {/* Scheduled Interventions */}
+                {interventionsData.filter(i => i.status === "Scheduled").length > 0 && (
+                  <>
+                    <p className="font-bold text-lg text-primary mb-1">Scheduled Interventions:</p>
+                    <div className="flex flex-col space-y-2 ml-4">
+                      {interventionsData
+                        .filter(i => i.status === "Scheduled")
+                        .map((intervention) => (
+                          <div key={intervention._id} className="flex text-md gap-2 items-center">
+                            <div className="text-warning">
+                              <Clock size={16}/>
+                            </div>
+                            <p className="font-bold">
+                              {new Date(intervention.date).toLocaleDateString('en-US', {
+                                month: 'long',
+                                day: 'numeric'
+                              })}: <span className="font-normal">{intervention.interventionType}</span>
+                            </p>
+                          </div>
+                        ))}
+                    </div>
+                    <hr className="border-t border-gray-200 my-2" />
+                  </>
+                )}
               </>
             )}
           </div>
