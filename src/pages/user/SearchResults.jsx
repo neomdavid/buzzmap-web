@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useGetPostsQuery, useGetBarangaysQuery } from '../../api/dengueApi';
 import { PostCard, CustomSearchBar, Navbar } from '../../components';
@@ -30,13 +30,55 @@ const SearchResults = () => {
   const observer = useRef();
 
   // Get posts with search parameters and pagination
-  const { data, isLoading, isError } = useGetPostsQuery({
-    search: searchQuery,
+  // Note: Temporarily removing server-side search to rely on client-side filtering
+  const { data: rawData, isLoading, isError } = useGetPostsQuery({
+    // search: searchQuery, // Commented out to test client-side search
     ...filters,
     status: 'Validated',
     page,
     limit: 10
   });
+
+  // Transform data to handle different response structures and apply client-side search as fallback
+  const data = useMemo(() => {
+    console.log('[DEBUG] Raw API data:', rawData);
+    
+    // Handle different response structures
+    let posts = [];
+    if (Array.isArray(rawData)) {
+      posts = rawData;
+    } else if (rawData?.posts) {
+      posts = rawData.posts;
+    } else if (rawData?.data) {
+      posts = rawData.data;
+    }
+
+    // Apply client-side search as fallback if server-side search didn't work
+    if (searchQuery && posts.length > 0) {
+      const query = searchQuery.toLowerCase();
+      const serverFilteredCount = posts.length;
+      
+      // Apply client-side filtering
+      const clientFiltered = posts.filter(post => 
+        (post.user?.username?.toLowerCase().includes(query)) ||
+        (post.barangay?.toLowerCase().includes(query)) ||
+        (post.report_type?.toLowerCase().includes(query)) ||
+        (post.description?.toLowerCase().includes(query))
+      );
+      
+      console.log('[DEBUG] Server returned:', serverFilteredCount, 'posts, client filtering found:', clientFiltered.length);
+      
+      return {
+        posts: clientFiltered,
+        pagination: rawData?.pagination || { totalItems: clientFiltered.length }
+      };
+    }
+
+    return {
+      posts: posts,
+      pagination: rawData?.pagination || { totalItems: posts.length }
+    };
+  }, [rawData, searchQuery]);
 
   const lastPostElementRef = useCallback(node => {
     if (isLoading) return;
