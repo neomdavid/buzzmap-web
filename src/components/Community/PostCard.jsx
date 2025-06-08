@@ -5,6 +5,7 @@ import { UserDetailsTab } from "../";
 import { useSelector } from "react-redux";
 import CommentModal from "./CommentModal";
 import { toastInfo } from "../../utils.jsx";
+import { useGetCommentsQuery } from "../../api/dengueApi";
 import axios from "axios";
 
 const PostCard = ({
@@ -33,10 +34,36 @@ const PostCard = ({
   const commentModalRef = useRef(null);
   const [userProfile, setUserProfile] = useState({ username, profilePhotoUrl: profileImage });
   
+  // Fetch actual comments to get real count
+  const { data: actualComments } = useGetCommentsQuery(postId, {
+    skip: !postId,
+  });
+  
   // Initialize local state with props
   const [localUpvotes, setLocalUpvotes] = useState(upvotesArray);
   const [localDownvotes, setLocalDownvotes] = useState(downvotesArray);
-  const [localCommentCount, setLocalCommentCount] = useState(_commentCount);
+  
+  // Calculate actual comment count from fetched comments
+  const actualCommentCount = actualComments ? actualComments.length : 0;
+  const [localCommentCount, setLocalCommentCount] = useState(actualCommentCount || commentsCount || _commentCount || 0);
+
+  // Update local comment count when actual comments change
+  useEffect(() => {
+    if (actualComments) {
+      setLocalCommentCount(actualComments.length);
+    }
+  }, [actualComments]);
+
+  // Debug logging
+  useEffect(() => {
+    console.log('[DEBUG] PostCard - Comment counts:', {
+      commentsCount,
+      _commentCount,
+      actualCommentCount,
+      localCommentCount,
+      postId
+    });
+  }, [commentsCount, _commentCount, actualCommentCount, localCommentCount, postId]);
 
   // Fetch user profile data
   useEffect(() => {
@@ -62,10 +89,14 @@ const PostCard = ({
     if (JSON.stringify(downvotesArray) !== JSON.stringify(localDownvotes)) {
       setLocalDownvotes(downvotesArray);
     }
-    if (_commentCount !== localCommentCount) {
-      setLocalCommentCount(_commentCount);
+    // Only update from props if we don't have actual comments data
+    if (!actualComments) {
+      const newCommentCount = commentsCount || _commentCount || 0;
+      if (newCommentCount !== localCommentCount) {
+        setLocalCommentCount(newCommentCount);
+      }
     }
-  }, [upvotesArray, downvotesArray, _commentCount]);
+  }, [upvotesArray, downvotesArray, commentsCount, _commentCount, localCommentCount, localUpvotes, localDownvotes, actualComments]);
 
   const handleCommentClick = () => {
     if (commentModalRef.current) {

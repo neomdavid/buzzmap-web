@@ -1,5 +1,5 @@
 import React, { useState, forwardRef, useRef, useEffect } from "react";
-import { useGetCommentsQuery, useAddCommentMutation, useGetPostByIdQuery } from "../../api/dengueApi";
+import { useGetCommentsQuery, useAddCommentMutation, useGetPostByIdQuery, useGetBasicProfilesQuery } from "../../api/dengueApi";
 import { Smiley, PaperPlaneRight, UserCircle, CaretLeft, CaretRight } from "phosphor-react";
 import Picker from '@emoji-mart/react';
 import data from '@emoji-mart/data';
@@ -7,7 +7,7 @@ import { useSelector } from "react-redux";
 import { DotsThree } from "phosphor-react";
 import ReactionsTab from "./ReactionsTab";
 import Comment2 from "./Comment2";
-import profile1 from "../../assets/profile1.png";
+import defaultProfile from "../../assets/default_profile.png";
 import { formatDistanceToNow } from "date-fns";
 import { useNavigate } from "react-router-dom";
 
@@ -27,7 +27,7 @@ const CommentModal = forwardRef(({
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [preloadedImages, setPreloadedImages] = useState({});
   const [toast, setToast] = useState(null);
-  const [localCommentVotes, setLocalCommentVotes] = useState({});
+
   const textareaRef = useRef(null);
   const userFromStore = useSelector((state) => state.auth?.user);
   const [addComment, { isLoading }] = useAddCommentMutation();
@@ -36,6 +36,7 @@ const CommentModal = forwardRef(({
     skip: !postId,
   });
   const { data: postData, isLoading: isLoadingPost } = useGetPostByIdQuery(postId);
+  const { data: userProfiles } = useGetBasicProfilesQuery();
   const navigate = useNavigate();
 
   const showToast = (message, type) => {
@@ -44,6 +45,15 @@ const CommentModal = forwardRef(({
       setToast(null);
     }, 3000);
   };
+
+  // Create a map of user profiles for quick lookup
+  const userProfileMap = React.useMemo(() => {
+    if (!userProfiles) return {};
+    return userProfiles.reduce((acc, profile) => {
+      acc[profile._id] = profile;
+      return acc;
+    }, {});
+  }, [userProfiles]);
 
   // Preload images when post data changes
   useEffect(() => {
@@ -86,30 +96,7 @@ const CommentModal = forwardRef(({
     }
   }, [postId, comments, isLoadingComments, error]);
 
-  // Update comment votes when comments change
-  useEffect(() => {
-    if (comments && Array.isArray(comments)) {
-      console.log('[DEBUG] Setting initial comment votes for comments:', comments);
-      const initialCommentVotes = {};
-      comments.forEach(comment => {
-        initialCommentVotes[comment._id] = {
-          upvotes: comment.upvotes || [],
-          downvotes: comment.downvotes || []
-        };
-      });
-      setLocalCommentVotes(initialCommentVotes);
-    }
-  }, [comments]);
 
-  const handleCommentVoteUpdate = (commentId, newUpvotes, newDownvotes) => {
-    setLocalCommentVotes(prev => ({
-      ...prev,
-      [commentId]: {
-        upvotes: newUpvotes,
-        downvotes: newDownvotes
-      }
-    }));
-  };
 
   const handleTextareaChange = (e) => {
     setComment(e.target.value);
@@ -274,23 +261,24 @@ const CommentModal = forwardRef(({
             <div className="flex flex-col">
               <div className="flex flex-col gap-4 px-6 mb-5">
                 <div className="flex justify-between">
-                  <div className="flex gap-3">
-                    {post?.isAnonymous ? (
-                      <UserCircle size={48} className="text-gray-400 mr-[-6px]" />
-                    ) : (
-                      <img
-                        src={profile1}
-                        className="h-12 w-12 rounded-full object-cover"
-                        alt="profile"
-                      />
-                    )}
-                    <div className="flex flex-col text-lg">
-                      <p className="font-bold">
-                        {post?.isAnonymous ? "Anonymous" : "User"}
-                      </p>
-                      <p>{formatTimestamp(post?.createdAt)}</p>
+                                     {/* THIS IS THE POST AUTHOR'S PROFILE - ALWAYS SHOW ACTUAL POST AUTHOR INFO */}
+                    <div className="flex gap-3">
+                      {post?.isAnonymous ? (
+                        <UserCircle size={48} className="text-gray-400 mr-[-6px]" />
+                      ) : (
+                        <img
+                          src={userFromStore ? (userFromStore.profilePhotoUrl || defaultProfile) : defaultProfile}
+                          className="h-12 w-12 rounded-full object-cover"
+                          alt="profile"
+                        />
+                      )}
+                      <div className="flex flex-col text-lg">
+                        <p className="font-bold">
+                          {post?.isAnonymous ? "Anonymous" : (userProfileMap[post?.user?._id]?.username || post?.user?.username || "User")}
+                        </p>
+                        <p>{formatTimestamp(post?.createdAt)}</p>
+                      </div>
                     </div>
-                  </div>
                   <DotsThree size={28} />
                 </div>
                 <p className="text-black">{post?.description}</p>
@@ -385,21 +373,15 @@ const CommentModal = forwardRef(({
                   </p>
                   {comments.map((comment) => {
                     console.log('[DEBUG] Rendering comment:', comment);
+                    const userProfile = userProfileMap[comment.user?._id];
                     return (
                       <div key={comment._id} className="break-words self-start w-fit max-w-full">
                         <Comment2
                           profileSize="h-12"
-                          username={comment.user?.username || 'Anonymous'}
+                          username={userProfile?.username || comment.user?.username || 'Anonymous'}
+                          profileImg={userProfile?.profilePhotoUrl || defaultProfile}
                           comment={comment.content}
                           timestamp={formatTimestamp(comment.createdAt)}
-                          commentId={comment._id}
-                          upvotesArray={localCommentVotes[comment._id]?.upvotes || comment.upvotes || []}
-                          downvotesArray={localCommentVotes[comment._id]?.downvotes || comment.downvotes || []}
-                          currentUserId={userFromStore?.role === "user" ? userFromStore?._id : null}
-                          onShowToast={showToast}
-                          onVoteUpdate={(newUpvotes, newDownvotes) => 
-                            handleCommentVoteUpdate(comment._id, newUpvotes, newDownvotes)
-                          }
                         />
                       </div>
                     );
@@ -430,7 +412,7 @@ const CommentModal = forwardRef(({
         <form onSubmit={handleSubmit} className="flex items-start gap-3 px-4 py-4 shadow-[0_-1px_4px_2px_rgba(0,0,0,0.08)]">
           <img
             className="h-12 w-12 rounded-full object-cover"
-            src={userFromStore?.profileImage || profile1}
+            src={userFromStore ? (userFromStore.profilePhotoUrl || defaultProfile) : defaultProfile}
             alt="profile"
           />
           <div className="flex-1 z-10 flex flex-col text-black">

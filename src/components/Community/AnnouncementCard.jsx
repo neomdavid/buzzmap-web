@@ -45,10 +45,6 @@ const AnnouncementCard = ({ announcement }) => {
   }, [userProfiles]);
 
   const [addComment] = useAddAdminPostCommentMutation();
-  const [upvoteComment] = useUpvoteAdminPostCommentMutation();
-  const [downvoteComment] = useDownvoteAdminPostCommentMutation();
-  const [removeCommentUpvote] = useRemoveAdminPostCommentUpvoteMutation();
-  const [removeCommentDownvote] = useRemoveAdminPostCommentDownvoteMutation();
 
   // Debug effect for comments
   useEffect(() => {
@@ -62,8 +58,7 @@ const AnnouncementCard = ({ announcement }) => {
   const [localUpvotes, setLocalUpvotes] = useState(announcement?.upvotes || []);
   const [localDownvotes, setLocalDownvotes] = useState(announcement?.downvotes || []);
 
-  // Add local state for comment votes
-  const [localCommentVotes, setLocalCommentVotes] = useState({});
+
 
   // Update local state when props change
   useEffect(() => {
@@ -71,19 +66,7 @@ const AnnouncementCard = ({ announcement }) => {
     setLocalDownvotes(announcement?.downvotes || []);
   }, [announcement?.upvotes, announcement?.downvotes]);
 
-  // Update comment votes when comments change
-  useEffect(() => {
-    if (comments) {
-      const initialCommentVotes = {};
-      comments.forEach(comment => {
-        initialCommentVotes[comment._id] = {
-          upvotes: comment.upvotes || [],
-          downvotes: comment.downvotes || []
-        };
-      });
-      setLocalCommentVotes(initialCommentVotes);
-    }
-  }, [comments]);
+
 
   // Use dynamic data if available, otherwise fallback to static/default values
   const title = announcement?.title || "Important Announcement";
@@ -149,15 +132,7 @@ const AnnouncementCard = ({ announcement }) => {
     setLocalDownvotes(newDownvotes);
   };
 
-  const handleCommentVoteUpdate = (commentId, newUpvotes, newDownvotes) => {
-    setLocalCommentVotes(prev => ({
-      ...prev,
-      [commentId]: {
-        upvotes: newUpvotes,
-        downvotes: newDownvotes
-      }
-    }));
-  };
+
 
   const [showAside, setShowAside] = useState(true);
 
@@ -266,14 +241,6 @@ const AnnouncementCard = ({ announcement }) => {
                       profileImg={userProfile?.profilePhotoUrl || defaultProfile}
                       comment={comment.content}
                       timestamp={formatTimestamp(comment.createdAt)}
-                      commentId={comment._id}
-                      upvotesArray={localCommentVotes[comment._id]?.upvotes || comment.upvotes || []}
-                      downvotesArray={localCommentVotes[comment._id]?.downvotes || comment.downvotes || []}
-                      currentUserId={userFromStore?.role === "user" ? userFromStore?._id : null}
-                      onShowToast={showCustomToast}
-                      onVoteUpdate={(newUpvotes, newDownvotes) => 
-                        handleCommentVoteUpdate(comment._id, newUpvotes, newDownvotes)
-                      }
                     />
                   </div>
                 );
