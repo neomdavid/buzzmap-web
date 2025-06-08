@@ -31,10 +31,11 @@ const baseQueryWithErrorHandling = async (args, api, extraOptions) => {
     
     // Check for 401 Unauthorized response
     if (result.error?.status === 401) {
+      // Preserve the original error message from the backend
       return { 
         error: { 
           status: 'UNAUTHORIZED', 
-          data: 'Please log in to perform this action' 
+          data: result.error.data || 'Please log in to perform this action' 
         } 
       };
     }

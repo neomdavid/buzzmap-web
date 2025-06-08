@@ -2,7 +2,7 @@ import { CustomFormInput, LogoNamed } from "../../components";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import manHighHand from "../../assets/man_highhand.png";
 import { useState } from "react";
-import { useLoginMutation } from "../../api/dengueApi";
+import { useLoginMutation, useResendOtpMutation } from "../../api/dengueApi";
 import { useDispatch } from "react-redux";
 import { setAuthCredentials } from "../../features/authSlice.js";
 import { setEmailForOtp } from "../../features/otpSlice";
@@ -27,6 +27,7 @@ const Login = () => {
   };
 
   const [login, { isLoading, isError, error }] = useLoginMutation("");
+  const [resendOtp] = useResendOtpMutation();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -85,33 +86,61 @@ const Login = () => {
       });
       
       // Check for unverified account error
-      if (err?.data?.message?.toLowerCase().includes("not been verified")) {
+      const errorMessage = err?.data?.message?.toLowerCase() || '';
+      if (errorMessage.includes("not been verified") || errorMessage.includes("pending activation")) {
         console.log("Unverified account detected");
         console.log("Storing email in Redux:", email);
         
         // Store email in Redux for OTP verification
         dispatch(setEmailForOtp(email));
         
-        // Wait for Redux state to update
-        setTimeout(() => {
-          console.log("Redirecting to OTP page with state");
-          // Use replace: true to prevent back navigation
-          navigate("/otp", { 
-            replace: true,
-            state: { 
-              from: 'login',
-              email: email 
-            }
-          });
-        }, 100);
+        try {
+          // Automatically resend OTP for account verification
+          await resendOtp({
+            email,
+            purpose: "account-verification"
+          }).unwrap();
+          
+          toastSuccess("Verification code has been resent to your email!");
+          
+          // Wait for Redux state to update
+          setTimeout(() => {
+            console.log("Redirecting to OTP page with state");
+            // Use replace: true to prevent back navigation
+            navigate("/otp", { 
+              replace: true,
+              state: { 
+                from: 'login',
+                email: email 
+              }
+            });
+          }, 100);
+        } catch (resendError) {
+          console.error("Failed to resend OTP:", resendError);
+          toastError("Failed to resend verification code. Please try again.");
+          
+          // Still redirect to OTP page even if resend fails
+          setTimeout(() => {
+            navigate("/otp", { 
+              replace: true,
+              state: { 
+                from: 'login',
+                email: email 
+              }
+            });
+          }, 100);
+        }
         return;
       }
 
-      // Handle other errors
-      if (err?.status === 500) {
+      // Handle other errors - prioritize backend message
+      const backendMessage = err?.data?.message;
+      if (backendMessage) {
+        toastError(backendMessage);
+      } else if (err?.status === 500) {
         toastError('Network error. Please check your connection and try again.');
       } else {
-        toastError(err?.data?.message || "Login failed. Please check your credentials.");
+        toastError("Login failed. Please check your credentials.");
       }
     }
   };
@@ -190,9 +219,10 @@ const Login = () => {
           </button>
           {isError && (
             <p className="z-10000000  font-semibold text-red-500 font-light italic text-md">
-              {error?.status === 500 
-                ? "Network error. Please check your connection and try again."
-                : error?.data?.message || "Login failed. Please check your credentials."}
+              {error?.data?.message || 
+                (error?.status === 500 
+                  ? "Network error. Please check your connection and try again."
+                  : "Login failed. Please check your credentials.")}
             </p>
           )}
           <div className="flex w-[60%] gap-x-4 mb-[-8px] ">
