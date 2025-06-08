@@ -51,18 +51,11 @@ const Login = () => {
       // Wait for state to be updated and persisted
       await new Promise(resolve => setTimeout(resolve, 100));
 
-      // Verify the state was updated correctly by checking both storage types
+      // Verify the state was updated correctly
       const storedUser = localStorage.getItem('user') || sessionStorage.getItem('user');
       const storedToken = localStorage.getItem('token') || sessionStorage.getItem('token');
-      
-      console.log('[DEBUG] Stored auth data:', {
-        user: storedUser,
-        token: storedToken,
-        storage: rememberMe ? 'localStorage' : 'sessionStorage'
-      });
 
       if (!storedUser || !storedToken) {
-        console.error('[DEBUG] Auth data not properly stored');
         toastError('Login failed - please try again');
         return;
       }
