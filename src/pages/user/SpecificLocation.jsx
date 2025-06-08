@@ -182,22 +182,37 @@ const SpecificLocation = () => {
 
   // Initialize map
   useEffect(() => {
-    if (!isLoaded || !window.google) return;
+    if (!isLoaded || !window.google) {
+      console.log('[DEBUG] Map initialization skipped:', { isLoaded, hasGoogle: !!window.google });
+      return;
+    }
 
-    const map = new window.google.maps.Map(document.getElementById("map"), {
+    const mapContainer = document.getElementById("map");
+    if (!mapContainer) {
+      console.log('[DEBUG] Map container not found');
+      return;
+    }
+
+    console.log('[DEBUG] Initializing map with:', {
+      hasReport: !!report,
+      coordinates: report?.specific_location?.coordinates,
+      container: mapContainer
+    });
+
+    const map = new window.google.maps.Map(mapContainer, {
       center: report?.specific_location?.coordinates 
         ? {
             lat: report.specific_location.coordinates[1],
             lng: report.specific_location.coordinates[0],
           }
-        : { lat: 14.5995, lng: 120.9842 },
+        : defaultCenter,
       zoom: 18,
       mapTypeId: "satellite",
       fullscreenControl: false,
       streetViewControl: false,
       mapTypeControl: false,
       zoomControl: true,
-      mapId: import.meta.env.VITE_GOOGLE_MAPS_MAP_ID // Add Map ID
+      mapId: import.meta.env.VITE_GOOGLE_MAPS_MAP_ID
     });
 
     mapRef.current = map;
@@ -244,7 +259,19 @@ const SpecificLocation = () => {
 
   // Add markers and polylines
   useEffect(() => {
-    if (!mapRef.current || !window.google || !allReports.length) return;
+    if (!mapRef.current || !window.google || !allReports.length) {
+      console.log('[DEBUG] Skipping marker creation:', {
+        hasMap: !!mapRef.current,
+        hasGoogle: !!window.google,
+        reportsCount: allReports.length
+      });
+      return;
+    }
+
+    console.log('[DEBUG] Creating markers for:', {
+      reportId: report?._id,
+      filteredReportsCount: filteredReports.length
+    });
 
     const { AdvancedMarkerElement, PinElement } = window.google.maps.marker;
 

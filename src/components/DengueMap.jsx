@@ -10,6 +10,43 @@ import cleanUpIcon from "../assets/icons/cleanup.svg";
 import educationIcon from "../assets/icons/education.svg";
 import * as turf from '@turf/turf';
 import { MapPinLine, Circle } from "phosphor-react";
+import { loadGoogleMapsScript, createMapInstance, cleanupMapInstance, isValidMapInstance } from "../utils/googleMapsLoader";
+
+// Color utilities for map patterns
+const PATTERN_COLORS = {
+  spike: {
+    fill: '#FF0000',
+    stroke: '#CC0000',
+    hover: '#FF3333'
+  },
+  cluster: {
+    fill: '#FFA500',
+    stroke: '#CC8400',
+    hover: '#FFB733'
+  },
+  scattered: {
+    fill: '#FFFF00',
+    stroke: '#CCCC00',
+    hover: '#FFFF33'
+  },
+  stable: {
+    fill: '#00FF00',
+    stroke: '#00CC00',
+    hover: '#33FF33'
+  },
+  default: {
+    fill: '#808080',
+    stroke: '#666666',
+    hover: '#999999'
+  }
+};
+
+const getPatternColor = (patternType, type = 'fill') => {
+  const pattern = PATTERN_COLORS[patternType?.toLowerCase()] || PATTERN_COLORS.default;
+  return pattern[type] || pattern.fill;
+};
+
+const QC_CENTER = { lat: 14.5995, lng: 120.9842 };
 
 const DengueMap = ({
   showLegends = true,
@@ -41,6 +78,9 @@ const DengueMap = ({
   const [selectedBreedingSite, setSelectedBreedingSite] = useState(null);
   const [selectedIntervention, setSelectedIntervention] = useState(null);
 
+  const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+  const mapId = import.meta.env.VITE_GOOGLE_MAPS_MAP_ID;
+
   // Load GeoJSON for barangay boundaries
   useEffect(() => {
     fetch('/quezon_barangays_boundaries.geojson')
@@ -66,7 +106,7 @@ const DengueMap = ({
         console.log('[DengueMap DEBUG] Google Maps script loaded');
         if (!mapInstanceRef.current && mapRef.current) {
           mapInstanceRef.current = new window.google.maps.Map(mapRef.current, {
-            center: { lat: 14.5995, lng: 120.9842 },
+            center: QC_CENTER,
             zoom: 12,
             mapId: import.meta.env.VITE_GOOGLE_MAPS_MAP_ID,
             styles: [
@@ -87,7 +127,7 @@ const DengueMap = ({
     } else {
       if (!mapInstanceRef.current && mapRef.current) {
         mapInstanceRef.current = new window.google.maps.Map(mapRef.current, {
-          center: { lat: 14.5995, lng: 120.9842 },
+          center: QC_CENTER,
           zoom: 12,
           mapId: import.meta.env.VITE_GOOGLE_MAPS_MAP_ID,
           styles: [
@@ -113,50 +153,22 @@ const DengueMap = ({
 
   // Initialize breeding sites from posts
   useEffect(() => {
-   
-
     if (posts) {
       const postsArray = Array.isArray(posts.posts) ? posts.posts : (Array.isArray(posts) ? posts : []);
-    
-      
       const breedingSitesFromPosts = postsArray.filter(post => {
-        // console.log('[DengueMap DEBUG] Checking post:', {
-        //   id: post._id,
-        //   status: post.status,
-        //   report_type: post.report_type,
-        //   hasCoordinates: !!post.specific_location?.coordinates,
-        //   coordinates: post.specific_location?.coordinates
-        // });
-        
         const isValid = post.status === "Validated" && 
           post.specific_location?.coordinates &&
           (post.report_type === "Stagnant Water" || 
            post.report_type === "Standing Water" || 
            post.report_type === "Uncollected Garbage or Trash" ||
            post.report_type === "Others");
-        
-        if (!isValid) {
-          // console.log('[DengueMap DEBUG] Invalid breeding site post:', {
-          //   id: post._id,
-          //   status: post.status,
-          //   report_type: post.report_type,
-          //   hasCoordinates: !!post.specific_location?.coordinates,
-          //   coordinates: post.specific_location?.coordinates
-          // });
-        }
         return isValid;
       });
-      
       setBreedingSites(breedingSitesFromPosts);
     } else {
       setBreedingSites([]);
     }
   }, [posts]);
-
-  // Add debug for showBreedingSites state changes
-  useEffect(() => {
-   
-  }, [showBreedingSites, breedingSites]);
 
   // Pattern color mapping
   const PATTERN_COLORS = {
@@ -199,8 +211,6 @@ const DengueMap = ({
     return geojsonBarangays.map(feature => {
       const geoName = normalizeBarangayName(feature.properties?.name);
       const apiBarangay = barangaysList.find(b => normalizeBarangayName(b.name) === geoName);
-      // Optionally keep the debug log:
-      // console.log('[DengueMap DEBUG] Merging barangay data:', { geoName, apiBarangay, featureName: feature.properties?.name });
       return {
         ...feature,
         patternType: apiBarangay?.status_and_recommendation?.pattern_based?.status || feature.properties?.patternType || 'none',
@@ -212,19 +222,11 @@ const DengueMap = ({
     });
   }, [geojsonBarangays, barangaysList]);
 
-
-
   // Draw polygons and markers
   useEffect(() => {
     if (!mapLoaded || !mergedBarangays.length) return;
     const map = mapInstanceRef.current;
     if (!map) return;
-
-    // console.log('[DengueMap DEBUG] Drawing markers:', {
-    //   showBreedingSites,
-    //   breedingSitesCount: breedingSites.length,
-    //   hasMarkerLibrary: !!window.google?.maps?.marker
-    // });
 
     // Clear existing polygons and markers
     polygonsRef.current.forEach(polygon => polygon.setMap(null));
@@ -320,21 +322,10 @@ const DengueMap = ({
 
     // Add markers based on toggles
     if (showBreedingSites && breedingSites.length > 0 && window.google.maps.marker) {
-      // console.log('[DengueMap DEBUG] Drawing breeding site markers:', {
-      //   count: breedingSites.length,
-      //   sites: breedingSites
-      // });
-
       const { AdvancedMarkerElement, PinElement } = window.google.maps.marker;
 
       breedingSites.forEach(site => {
         if (site.specific_location?.coordinates) {
-          // console.log('[DengueMap DEBUG] Creating marker for site:', {
-          //   id: site._id,
-          //   type: site.report_type,
-          //   coordinates: site.specific_location.coordinates
-          // });
-
           const iconUrl = BREEDING_SITE_TYPE_ICONS[site.report_type] || BREEDING_SITE_TYPE_ICONS.default;
           const glyphImg = document.createElement("img");
           glyphImg.src = iconUrl;
@@ -376,6 +367,7 @@ const DengueMap = ({
         }
       });
     }
+
     if (showInterventions && Array.isArray(activeInterventions) && window.google.maps.marker) {
       const { AdvancedMarkerElement, PinElement } = window.google.maps.marker;
       activeInterventions.forEach(intervention => {
@@ -429,18 +421,18 @@ const DengueMap = ({
       barangay => normalizeBarangayName(barangay.properties?.name) === selectedNorm
     );
     if (selectedBarangay && selectedBarangay.geometry?.coordinates) {
-    let bounds = new window.google.maps.LatLngBounds();
+      let bounds = new window.google.maps.LatLngBounds();
       let coordsArray = [];
       if (selectedBarangay.geometry.type === 'Polygon') {
         coordsArray = [selectedBarangay.geometry.coordinates];
       } else if (selectedBarangay.geometry.type === 'MultiPolygon') {
         coordsArray = selectedBarangay.geometry.coordinates;
       }
-    coordsArray.forEach((polygonCoords) => {
-      polygonCoords[0].forEach(([lng, lat]) => {
-        bounds.extend({ lat, lng });
+      coordsArray.forEach((polygonCoords) => {
+        polygonCoords[0].forEach(([lng, lat]) => {
+          bounds.extend({ lat, lng });
+        });
       });
-    });
       map.fitBounds(bounds);
     }
   }, [mapLoaded, mergedBarangays, searchQuery]);
@@ -751,6 +743,76 @@ const DengueMap = ({
       if (onBarangaySelect) onBarangaySelect(enhancedFeature);
     }
   };
+
+  // Add effect to handle selected barangay changes
+  useEffect(() => {
+    if (!mapInstanceRef.current || !selectedBarangay || !geojsonBarangays.length) return;
+
+    // Find the matching barangay feature
+    const matchingFeature = geojsonBarangays.find(feature => 
+      normalizeBarangayName(feature.properties.name) === normalizeBarangayName(selectedBarangay)
+    );
+
+    if (matchingFeature) {
+      // Create a feature object with all necessary properties
+      const enhancedFeature = {
+        type: 'Feature',
+        geometry: matchingFeature.geometry,
+        properties: {
+          ...matchingFeature.properties,
+          patternType: matchingFeature.properties?.patternType || 'none',
+          status_and_recommendation: matchingFeature.properties?.status_and_recommendation || {},
+          risk_level: matchingFeature.properties?.risk_level || 'unknown',
+          pattern_data: matchingFeature.properties?.pattern_data || {},
+          displayName: matchingFeature.properties?.name || matchingFeature.properties?.displayName
+        }
+      };
+      setSelectedBarangayFeature(enhancedFeature);
+
+      // Center the map on the selected barangay
+      const center = turf.center(matchingFeature.geometry);
+      const { coordinates } = center.geometry;
+      const [lng, lat] = coordinates;
+      if (lat && lng && !isNaN(lat) && !isNaN(lng)) {
+        mapInstanceRef.current.panTo({ lat, lng });
+        mapInstanceRef.current.setZoom(15);
+        setInfoWindowPosition({ lat, lng });
+      }
+    }
+  }, [selectedBarangay, geojsonBarangays]);
+
+  // Add effect to handle polygon styling based on selection
+  useEffect(() => {
+    if (!mapInstanceRef.current || !polygonsRef.current.length) return;
+
+    // Reset all polygons to default style
+    polygonsRef.current.forEach(polygon => {
+      const patternType = polygon.feature?.properties?.patternType || 'none';
+      polygon.setOptions({
+        strokeColor: getPatternColor(patternType, 'stroke'),
+        strokeWeight: 1,
+        fillOpacity: 0.5,
+        zIndex: 1
+      });
+    });
+
+    // Highlight selected polygon if exists
+    if (selectedBarangayFeature) {
+      const selectedPolygon = polygonsRef.current.find(polygon => 
+        normalizeBarangayName(polygon.feature?.properties?.name) === normalizeBarangayName(selectedBarangayFeature.properties.name)
+      );
+
+      if (selectedPolygon) {
+        const patternType = selectedBarangayFeature.properties?.patternType || 'none';
+        selectedPolygon.setOptions({
+          strokeColor: getPatternColor(patternType, 'stroke'),
+          strokeWeight: 4,
+          fillOpacity: 0.7,
+          zIndex: 2
+        });
+      }
+    }
+  }, [selectedBarangayFeature, polygonsRef.current]);
 
   const getPatternColor = (patternType) => {
     const patternTypeLower = patternType?.toLowerCase();

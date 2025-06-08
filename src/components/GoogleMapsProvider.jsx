@@ -1,5 +1,5 @@
-import { useJsApiLoader } from "@react-google-maps/api";
-import { createContext, useContext } from "react";
+import { createContext, useContext, useEffect, useState } from "react";
+import { loadGoogleMapsScript } from "../utils/googleMapsLoader";
 
 const GoogleMapsContext = createContext(null);
 
@@ -8,11 +8,20 @@ const GOOGLE_MAPS_LIBRARIES = ["geometry", "marker", "places", "visualization"];
 
 export const GoogleMapsProvider = ({ children }) => {
   console.log("[DEBUG] GoogleMapsProvider: Initializing...");
+  const [isLoaded, setIsLoaded] = useState(false);
+  const [loadError, setLoadError] = useState(null);
   
-  const { isLoaded, loadError } = useJsApiLoader({
-    googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY,
-    libraries: GOOGLE_MAPS_LIBRARIES,
-  });
+  useEffect(() => {
+    loadGoogleMapsScript(import.meta.env.VITE_GOOGLE_MAPS_API_KEY)
+      .then(() => {
+        console.log("[DEBUG] GoogleMapsProvider: Script loaded successfully");
+        setIsLoaded(true);
+      })
+      .catch(err => {
+        console.error("[DEBUG] GoogleMapsProvider: Error loading script", err);
+        setLoadError(err);
+      });
+  }, []);
 
   console.log("[DEBUG] GoogleMapsProvider: isLoaded =", isLoaded);
   console.log("[DEBUG] GoogleMapsProvider: loadError =", loadError);

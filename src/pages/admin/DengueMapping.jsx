@@ -1,4 +1,3 @@
-import { DengueMapNoInfo } from "@/components";
 import { MapPinLine, Circle, CheckCircle, Hourglass, MagnifyingGlass, Upload } from "phosphor-react";
 import { useState, useMemo, useRef, useEffect } from "react";
 import { useGetInterventionsInProgressQuery, useGetPostsQuery, useGetAllInterventionsQuery, useGetBarangaysQuery } from "@/api/dengueApi";
@@ -257,7 +256,7 @@ const DengueMapping = () => {
   }, [barangaysList]);
 
   const handleBarangaySelect = (barangay) => {
-    console.log('[DEBUG] handleBarangaySelect called with:', barangay);
+    if (!barangay) return;
     
     // If this is a GeoJSON feature (clicked on map)
     if (barangay.type === 'Feature') {
@@ -265,8 +264,6 @@ const DengueMapping = () => {
       const matching = barangaysList?.find(b => 
         normalizeBarangayName(b.name) === normalizeBarangayName(barangay.properties?.name)
       );
-      
-      console.log('[DEBUG] Matching barangay from list:', matching);
       
       // Merge the data, ensuring all properties are properly set
       const merged = {
@@ -281,10 +278,9 @@ const DengueMapping = () => {
           pattern_data: matching?.pattern_data || barangay.properties?.pattern_data
         }
       };
-      
-      console.log('[DEBUG] Merged barangay data:', merged);
+
       setSelectedBarangay(merged);
-      
+
       // Pan logic
       if (mapOnlyRef.current && barangay.geometry?.coordinates) {
         try {
@@ -551,7 +547,7 @@ const DengueMapping = () => {
           )}
         </div>
         
-        <div className="flex gap-2">
+        {/* <div className="flex gap-2">
           <button
             onClick={() => setShowBreedingSites((prev) => !prev)}
             className={`px-4 py-2 rounded-lg shadow-lg transition-all duration-200 ${
@@ -572,7 +568,7 @@ const DengueMapping = () => {
           >
             {showInterventions ? 'Hide Interventions' : 'Show Interventions'}
           </button>
-        </div>
+        </div> */}
       </div>
 
       <div className="flex h-[50vh] mb-4" ref={mapContainerRef}>
