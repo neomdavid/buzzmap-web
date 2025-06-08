@@ -100,6 +100,7 @@ function InterventionsTable({
   let rowData = interventions.map((intervention) => ({
     _id: intervention._id,
     barangay: intervention.barangay,
+    address: intervention.address,
     date: new Date(intervention.date), // Keep as Date object
     interventionType: intervention.interventionType,
     personnel: intervention.personnel,
@@ -110,7 +111,20 @@ function InterventionsTable({
   }
   const columnDefs = useMemo(() => {
     const baseCols = [
-      { field: "barangay", headerName: "Barangay", minWidth: 200 },
+      { field: "barangay", headerName: "Barangay", minWidth: 150 },
+      { 
+        field: "address", 
+        headerName: "Address", 
+        minWidth: 250,
+        sortable: false,
+        cellRenderer: (p) => (
+          <div className="flex items-center h-full p-1">
+            <span className="truncate" title={p.value}>
+              {p.value || 'No address specified'}
+            </span>
+          </div>
+        )
+      },
       { 
         field: "date", 
         headerName: "Date", 

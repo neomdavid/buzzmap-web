@@ -653,7 +653,7 @@ const DengueMapping = () => {
             <p className={`text-center font-semibold text-white text-lg uppercase mb-4 px-4 py-1 rounded-full inline-block mx-auto ${getPatternBgColor(selectedBarangay?.properties?.patternType)}`}>
               {selectedBarangay
                 ? selectedBarangay.properties?.patternType
-                  ? (selectedBarangay.properties.patternType.charAt(0).toUpperCase() + selectedBarangay.properties.patternType.slice(1).replace('_', ' '))
+                  ? (selectedBarangay.properties.patternType.charAt(0).toUpperCase() + selectedBarangay.properties.patternType.slice(1).replace(/_/g, ' '))
                   : 'NO PATTERN DETECTED'
                 : 'NO BARANGAY SELECTED'
               }

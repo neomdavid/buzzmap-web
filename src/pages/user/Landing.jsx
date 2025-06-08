@@ -3,7 +3,7 @@ import tubImg from "../../assets/mosquito_tub.jpg";
 import cleaningImg from "../../assets/cleaning.jpg";
 import logoFooter from "../../assets/logo_ligthbg.svg";
 import logoSurveillance from "../../assets/icons/quezon_surveillance.png";
-import profile1 from "../../assets/profile1.png";
+import landing2 from "../../assets/landing2.jpg";
 
 import {
   GoalCard,
@@ -137,8 +137,8 @@ const Landing = () => {
       </div>
 
       <img
-        src={patient1}
-        className="h-[380px] lg:h-[420px] xl:h-[440px] object-cover rounded-3xl  mx-auto mt-[-60px] z-[-1] mb-8 max-w-[95vw] w-full px-6 sm:px-6"
+        src={landing2}
+        className="h-[380px] lg:h-[420px] xl:h-[440px] object-cover object-top rounded-3xl  mx-auto mt-[-60px] z-[-1] mb-8 max-w-[95vw] w-full px-6 sm:px-6"
         style={{
           maskImage:
             "linear-gradient(to bottom, rgba(0,0,0,0) 20%, rgba(0,0,0,0.8) 50%, rgba(0,0,0,1) 60%)",
@@ -206,7 +206,7 @@ const Landing = () => {
           className="flex items-center justify-center sm:w-[60%] max-w-[600px] px-10 py-5 bg-white rounded-2xl gap-3 mb-8 cursor-pointer hover:bg-gray-50 transition-colors"
           onClick={handleReportClick}
         >
-          <img src={profile1} className="h-12 w-12 rounded-full" />
+          <img src={landing2} className="h-12 w-12 rounded-full" />
           <input
             type="text"
             placeholder={!user || user.name === "Guest" ? "Login to share your report..." : "Share your report here..."}

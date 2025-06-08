@@ -15,6 +15,7 @@ const ForgotPassword = () => {
   const [otpError, setOtpError] = useState(false);
   const [cooldown, setCooldown] = useState(0);
   const [hasResent, setHasResent] = useState(false);
+  const [passwordErrors, setPasswordErrors] = useState([]);
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -69,16 +70,40 @@ const ForgotPassword = () => {
     }
   };
 
+  const validatePassword = (password) => {
+    const errors = [];
+    if (password.length < 8) {
+      errors.push("Password must be at least 8 characters long");
+    }
+    if (!/(?=.*[a-z])/.test(password)) {
+      errors.push("Password must contain at least one lowercase letter");
+    }
+    if (!/(?=.*[A-Z])/.test(password)) {
+      errors.push("Password must contain at least one uppercase letter");
+    }
+    if (!/(?=.*\d)/.test(password)) {
+      errors.push("Password must contain at least one number");
+    }
+    if (!/(?=.*[@$!%*?&])/.test(password)) {
+      errors.push("Password must contain at least one special character (@$!%*?&)");
+    }
+    return errors;
+  };
+
   const handleResetPassword = async (e) => {
     e.preventDefault();
+    
+    const errors = validatePassword(newPassword);
     if (newPassword !== confirmPassword) {
-      toastError("Passwords do not match");
+      errors.push("Passwords do not match");
+    }
+    
+    if (errors.length > 0) {
+      setPasswordErrors(errors);
       return;
     }
-    if (newPassword.length < 8) {
-      toastError("Password must be at least 8 characters long");
-      return;
-    }
+    
+    setPasswordErrors([]);
     try {
       await resetPassword({
         resetToken,
@@ -95,13 +120,11 @@ const ForgotPassword = () => {
     try {
       console.log("Sending resend request with:", {
         email,
-        purpose: "forgot-password"
+        purpose: "password-reset"
       });
-      const response = await resendOtp({
-        email,
-        purpose: "forgot-password"
-      }).unwrap();
+      const response = await resendOtp(email).unwrap();
       console.log("OTP resend response:", response);
+      toastSuccess("OTP has been resent successfully!");
       setCooldown(60); // Start 60 second cooldown only for resend
       setHasResent(true);
     } catch (err) {
@@ -142,18 +165,25 @@ const ForgotPassword = () => {
       <div className="hidden absolute lg:block z-[-1000] text-primary bg-primary w-10 top-0 bottom-0 left-0 xl:w-12.5 2xl:w-13">
         h
       </div>
-      <img
-        src={manHighHand}
-        className="z-10000 absolute hidden left-[-2px] bottom-[-25px] w-203 lg:block xl:w-250 xl:right-249 2xl:w-260"
-      />
+      {step === 1 && (
+        <img
+          src={manHighHand}
+          className="z-10000 absolute hidden left-[-2px] bottom-[-25px] w-203 lg:block xl:w-250 xl:right-249 2xl:w-260"
+        />
+      )}
 
-      <section className="w-[87vw] h-[80vh] max-w-220 mt-25 rounded-2xl shadow-md text-primary bg-white py-8 px-[7%] lg:px-25 flex flex-col justify-center items-center text-center text-xl lg:text-2xl lg:shadow-none lg:max-w-none lg:m-0 lg:rounded-none lg:absolute lg:right-0 lg:top-0 lg:h-[100vh] lg:w-[60vw] xl:w-250 overflow-y-auto">
+      <section className={`w-[87vw] h-[80vh] max-w-220 mt-25 rounded-2xl shadow-md text-primary bg-white py-8 px-[7%] lg:px-25 flex flex-col justify-center items-center text-center text-xl lg:text-2xl lg:shadow-none lg:max-w-none lg:m-0 lg:rounded-none lg:absolute lg:top-0 lg:h-[100vh] overflow-y-auto ${step === 1 ? 'lg:right-0 lg:w-[60vw] xl:w-250' : 'lg:left-1/2 lg:transform lg:-translate-x-1/2 lg:w-[60vw] xl:w-250'}`}>
         <h1 className="mb-2 text-7xl lg:text-8xl">Forgot Password?</h1>
-        <p className="font-normal w-[70%] text-center mb-2">
-          Enter your email address and we'll send you a one-time password (OTP) to reset your password.
+        <p className="font-normal w-[70%] text-center mb-4">
+          {step === 1 
+            ? "Enter your email address and we'll send you a one-time password (OTP) to reset your password."
+            : step === 2 
+            ? "We've sent a 4-digit OTP code to your email. Please enter it below to verify your account."
+            : "Create a new password for your account."
+          }
         </p>
         {step > 1 && (
-          <p className="font-bold text-white text-2xl text-center mt-[-18px] mb-6">
+          <p className="font-bold text-primary text-2xl text-center mb-6">
             {email}
           </p>
         )}
@@ -181,7 +211,7 @@ const ForgotPassword = () => {
         ) : step === 2 ? (
           <div className="flex flex-col items-center gap-y-3 lg:gap-y-4 w-[85%]">
             {/* 4 OTP input boxes */}
-            <div className="grid grid-cols-4 gap-2 h-30 sm:h-55 md:h-65 mb-4 w-[70vw] max-w-5xl">
+            <div className="grid grid-cols-4 gap-2 h-30 sm:h-55 md:h-65 mb-4 w-full max-w-[500px] lg:max-w-[700px] xl:max-w-[800px]">
               {otp.map((digit, idx) => (
                 <input
                   key={idx}
@@ -233,15 +263,33 @@ const ForgotPassword = () => {
               type="password"
               theme="light"
               value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
+              onChange={(e) => {
+                setNewPassword(e.target.value);
+                setPasswordErrors([]);
+              }}
             />
             <CustomFormInput
               label="Confirm Password"
               type="password"
               theme="light"
               value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
+              onChange={(e) => {
+                setConfirmPassword(e.target.value);
+                setPasswordErrors([]);
+              }}
             />
+            {passwordErrors.length > 0 && (
+              <div className="w-full bg-red-50 border border-red-200 rounded-lg p-3 mb-2">
+                <ul className="text-red-600 text-base space-y-1">
+                  {passwordErrors.map((error, index) => (
+                    <li key={index} className="flex items-start">
+                      <span className="mr-1">•</span>
+                      <span>{error}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
             <button
               type="submit"
               disabled={isResetLoading}
