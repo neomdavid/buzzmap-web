@@ -3,6 +3,10 @@ import { useState, useMemo, useRef, useEffect } from "react";
 import { useGetInterventionsInProgressQuery, useGetPostsQuery, useGetAllInterventionsQuery, useGetBarangaysQuery, useGetRecentReportsForBarangayMutation } from "@/api/dengueApi";
 import * as turf from '@turf/turf';
 import MapOnly from '../../components/Mapping/MapOnly';
+import stagnantIcon from "../../assets/icons/stagnant_water.svg";
+import standingIcon from "../../assets/icons/standing_water.svg";
+import garbageIcon from "../../assets/icons/garbage.svg";
+import othersIcon from "../../assets/icons/others.svg";
 
 // Define QC_CENTER constant for default map position
 const QC_CENTER = {
@@ -17,6 +21,15 @@ const normalizeBarangayName = (name) => {
     .replace(/barangay\s+/i, '') // Remove "Barangay" prefix
     .replace(/\s+/g, '') // Remove all spaces
     .replace(/[^a-z0-9]/g, ''); // Remove special characters
+};
+
+// Add breeding site type icon mapping
+const BREEDING_SITE_TYPE_ICONS = {
+  "Stagnant Water": stagnantIcon,
+  "Standing Water": standingIcon,
+  "Uncollected Garbage or Trash": garbageIcon,
+  "Others": othersIcon,
+  "default": stagnantIcon,
 };
 
 const DengueMapping = () => {
@@ -631,7 +644,7 @@ const DengueMapping = () => {
         </div>
         Click on a Barangay to view details
       </p>
-        <div className="grid grid-cols-10 gap-10">
+        <div className="h-auto grid grid-cols-10 gap-10">
           <div className={`col-span-4 border-2 ${getBorderColor(selectedBarangay?.properties?.patternType)} rounded-2xl flex flex-col p-4 gap-1`}>
             <p className="text-center font-semibold text-base-content">Selected Barangay - Dengue Overview</p>
             <p className={`text-center font-bold ${getPatternTextColor(selectedBarangay?.properties?.patternType)} text-4xl mb-4 mt-2`}>
@@ -732,7 +745,7 @@ const DengueMapping = () => {
             {recentDengueCases && Object.keys(recentDengueCases).length > 0 && (
               <div className="mb-2">
                 <p className="mt-1"><span className="font-bold text-lg">Recent Dengue Cases: </span></p>
-                <div className="mt-2 flex flex-col space-y-2 ml-4">
+                <div className="mt-3 flex flex-col space-y-3 ml-4">
                
                   {/* Dengue Cases List */}
                   {Object.entries(recentDengueCases).map(([date, count]) => (
@@ -811,13 +824,16 @@ const DengueMapping = () => {
           {nearbyReports.length > 0 ? (
             nearbyReports.map((report, index) => (
               <div key={index} className="flex flex-col items-start bg-white rounded-2xl p-4 text-black gap-2 w-full">
-                <p className={`${
-                  report.report_type === "Breeding Site" ? "bg-info" :
-                  report.report_type === "Standing Water" ? "bg-warning" :
-                  "bg-error"
-                } rounded-2xl px-3 py-2 font-semibold text-white mb-1`}>
-                  {report.barangay} - {report.report_type}
-                </p>
+                <div className="flex items-center gap-2 mb-1">
+                  <img 
+                    src={BREEDING_SITE_TYPE_ICONS[report.report_type] || BREEDING_SITE_TYPE_ICONS.default} 
+                    alt={report.report_type} 
+                    className="w-8 h-8"
+                  />
+                  <p className="font-semibold text-lg">
+                    {report.barangay} - {report.report_type}
+                  </p>
+                </div>
                 <p>
                   <span className="font-bold ml-1.5">Distance: </span>
                   {(report.distance * 1000).toFixed(0)}m away
@@ -829,40 +845,22 @@ const DengueMapping = () => {
                     day: 'numeric'
                   })}
                 </p>
-                <div className="flex gap-2 items-start w-full">
-                  <div className={`shrink-0 mt-1 ${
-                    report.report_type === "Breeding Site" ? "text-info" :
-                    report.report_type === "Standing Water" ? "text-warning" :
-                    "text-error"
-                  }`}>
-                    <Circle size={16} weight="fill" />
-                  </div>
-                  <p
-                    className="flex-1 min-w-0 overflow-hidden break-words"
-                    style={{
-                      display: '-webkit-box',
-                      WebkitLineClamp: 2,
-                      WebkitBoxOrient: 'vertical',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      wordBreak: 'break-word',
-                    }}
-                  >
-                    {report.description}
-                  </p>
-                </div>
+                <p>
+                  <span className="font-bold ml-1.5">Description: </span>
+                  {report.description}
+                </p>
                 <div className="flex justify-end w-full gap-2">
                   <button 
-                    onClick={() => handleShowOnMap(report, 'report')}
-                    className="bg-info rounded-full text-white px-4 py-1 text-[11px] hover:bg-info/80 hover:scale-105 transition-all duration-200 active:scale-95 cursor-pointer"
-                  >
-                    Show on Map
-                  </button>
-                  <button 
                     onClick={() => handleViewFullReport(report)}
-                    className="bg-primary rounded-full text-white px-4 py-1 text-[11px] hover:bg-primary/80 hover:scale-105 transition-all duration-200 active:scale-95 cursor-pointer"
+                    className="bg-white text-primary border-1 rounded-full  px-4 py-1 text-[11px] hover:cursor-pointer hover:bg-primary/30 transition-all duration-200"
                   >
                     View Full Report
+                  </button>
+                  <button 
+                    onClick={() => handleShowOnMap(report, 'report')}
+                    className="bg-primary rounded-full text-white px-4 py-1 text-[11px] hover:bg-primary/80 hover:scale-105 transition-all duration-200 active:scale-95 cursor-pointer"
+                  >
+                    Show on Map
                   </button>
                 </div>
               </div>
