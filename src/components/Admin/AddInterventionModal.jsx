@@ -224,7 +224,7 @@ const AddInterventionModal = ({ isOpen, onClose, preselectedBarangay, patternTyp
     return null;
   };
 
-  // Update handleChange to update highlighted barangay
+  // Update handleChange to update highlighted barangay and pan map
   const handleChange = (e) => {
     const { name, value } = e.target;
     
@@ -233,12 +233,39 @@ const AddInterventionModal = ({ isOpen, onClose, preselectedBarangay, patternTyp
       [name]: value
     }));
 
-    // If barangay is changed, update the highlighted barangay and pattern data
+    // If barangay is changed, update the highlighted barangay, pattern data, and pan map
     if (name === 'barangay') {
       setHighlightedBarangay(value);
       const patternData = getBarangayPatternData(value);
       if (patternData) {
         setCurrentBarangayPattern(patternData);
+      }
+
+      // Pan map to selected barangay
+      if (value && barangayGeoJsonData) {
+        const selectedFeature = barangayGeoJsonData.features.find(
+          (feature) => feature.properties.name === value
+        );
+        if (selectedFeature && selectedFeature.geometry) {
+          try {
+            const center = turf.centerOfMass(selectedFeature);
+            if (center && center.geometry && center.geometry.coordinates) {
+              const [lng, lat] = center.geometry.coordinates;
+              console.log('[DEBUG] Panning to barangay:', value, 'at coordinates:', { lat, lng });
+              setFocusCommand({ 
+                type: 'barangay',
+                name: value,
+                center: { lat, lng },
+                zoomLevel: 15,
+              });
+            }
+          } catch (err) { 
+            console.error("Error calculating center for barangay:", value, err); 
+          }
+        }
+      } else if (!value) {
+        // Clear focus if no barangay selected
+        setFocusCommand(null);
       }
     }
   };

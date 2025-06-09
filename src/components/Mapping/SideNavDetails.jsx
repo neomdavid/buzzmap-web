@@ -1,7 +1,7 @@
 import { CustomDropDown, SecondaryButton, LogoNamed } from "../";
 import UPBuilding from "../../assets/UPbuilding.jpg";
 import { useEffect, useState, useMemo, useRef } from "react";
-import { useGetPostsQuery } from "../../api/dengueApi";
+import { useGetPostsQuery, useGetBarangaysQuery } from "../../api/dengueApi";
 import NewPostModal from "../Community/NewPostModal";
 import { useSelector } from "react-redux";
 import { toastInfo } from "../../utils.jsx";
@@ -29,7 +29,8 @@ const SideNavDetails = ({
   radius = 2, 
   onReportBreedingSite,
   onViewCommunityClick,
-  onPreventionTipsClick 
+  onPreventionTipsClick,
+  onBarangaySelect // Add callback for when barangay is selected
 }) => {
   console.log("SideNavDetails nearbyReports prop:", nearbyReports);
   console.log("SideNavDetails report prop:", report);
@@ -49,6 +50,14 @@ const SideNavDetails = ({
 
   // Fetch all reports (could be filtered by status if needed)
   const { data: allReports } = useGetPostsQuery();
+  
+  // Fetch all barangays for the dropdown
+  const { data: barangays = [], isLoading: isLoadingBarangays } = useGetBarangaysQuery();
+  
+  // Debug barangays data
+  console.log('[DEBUG] Barangays data:', barangays);
+  console.log('[DEBUG] Barangays loading:', isLoadingBarangays);
+  console.log('[DEBUG] Barangays count:', barangays.length);
 
   // Calculate number of nearby reports (within 2,000 meters, excluding self)
   const nearbyCountCalculated = useMemo(() => {
@@ -170,11 +179,33 @@ md:w-[35vw]   max-w-[370px] "
     >
       <div className="flex flex-col items-center">
         <LogoNamed theme="dark" iconSize="h-11 w-11" textSize="text-[30px]" />
-        <CustomDropDown
-          options={["Quezon City", "Manila", "Makati", "Pasig"]}
-          className="mt-4 text-sm mb-4"
-          fillColor="white"
-        />
+        
+        {/* Barangay Selection */}
+        <div className="relative mt-4 mb-4 w-full max-w-sm">
+          <select
+            className="w-full p-3 border-[1.5px] border-white rounded-full bg-white text-primary text-sm focus:outline-none focus:ring-1 focus:ring-base-200"
+            defaultValue=""
+            onChange={(e) => {
+              const selectedValue = e.target.value;
+              if (selectedValue && onBarangaySelect) {
+                const barangay = barangays.find(b => b._id === selectedValue);
+                console.log('[DEBUG] Selected barangay:', barangay);
+                onBarangaySelect(barangay);
+              }
+            }}
+          >
+            <option value="" disabled>Select Barangay</option>
+            {isLoadingBarangays ? (
+              <option disabled>Loading barangays...</option>
+            ) : (
+              barangays.map(b => (
+                <option key={b._id} value={b._id}>
+                  {b.displayName || b.name}
+                </option>
+              ))
+            )}
+          </select>
+        </div>
         {/* Use Google Maps Street View iframe (not satellite) */}
         {coordinates ? (
           <div style={{ width: "100%", height: "180px", marginBottom: "0.5rem" }}>

@@ -2,7 +2,7 @@
 // It must be rewritten to use the plain Google Maps JS API if needed.
 import { useLocation, useParams, useNavigate } from "react-router-dom";
 import { useGoogleMaps } from "../../components/GoogleMapsProvider";
-import { useGetPostByIdQuery, useGetPostsQuery, useGetBasicProfilesQuery } from "../../api/dengueApi";
+import { useGetPostByIdQuery, useGetPostsQuery, useGetBasicProfilesQuery, useGetBarangaysQuery } from "../../api/dengueApi";
 import { skipToken } from "@reduxjs/toolkit/query";
 import React, { useEffect, useState, useRef } from "react";
 import Slider from "rc-slider";
@@ -15,6 +15,7 @@ import standingIcon from '../../assets/icons/standing_water.svg';
 import garbageIcon from '../../assets/icons/garbage.svg';
 import othersIcon from '../../assets/icons/others.svg';
 import defaultProfile from "../../assets/default_profile.png";
+import * as turf from '@turf/turf'; // Import turf for center calculations
 
 const containerStyle = {
   width: "100%",
@@ -29,6 +30,28 @@ const defaultCenter = {
   lat: 14.5995,
   lng: 120.9842
 };
+
+// Pattern colors (darker versions for better visibility)
+const PATTERN_COLORS = {
+  spike: "#D32F2F",        // darker red (error)
+  gradual_rise: "#FB8C00", // darker orange (warning)
+  decline: "#388E3C",      // darker green (success)
+  stability: "#0288D1",    // darker blue (info)
+  none: "#BDBDBD",         // darker gray (default for no pattern)
+  default: "#4a5568",      // darker gray (fallback)
+};
+
+// Helper function to normalize barangay names for comparison (from Mapping.jsx)
+function normalizeBarangayName(name) {
+  if (!name) return '';
+  return name
+    .toLowerCase()
+    .replace(/\bsr\.?\b/g, '') // Remove sr. or sr
+    .replace(/\bjr\.?\b/g, '') // Remove jr. or jr
+    .replace(/[.\-']/g, '')    // Remove periods, hyphens, apostrophes
+    .replace(/\s+/g, ' ')      // Normalize multiple spaces to single space
+    .trim();
+}
 
 // Haversine formula to calculate distance between two points
 function calculateDistance(lat1, lon1, lat2, lon2) {
@@ -65,6 +88,76 @@ function getRelativeTime(dateString) {
   return date.toLocaleDateString();
 }
 
+// Function to draw barangay polygons with pattern colors
+function drawBarangayPolygons(map, geoJsonData, barangaysList, highlightedBarangayName) {
+  if (!map || !geoJsonData || !window.google) return [];
+
+  const polygons = [];
+  
+  geoJsonData.features.forEach((feature) => {
+    const geometry = feature.geometry;
+    const barangayName = feature.properties.name;
+    const isHighlighted = highlightedBarangayName === barangayName;
+    
+    // Find matching barangay in barangaysList for pattern data
+    let barangayObj = barangaysList?.find(b => 
+      normalizeBarangayName(b.name) === normalizeBarangayName(barangayName)
+    );
+    
+    // Get pattern type
+    let patternType = (
+      barangayObj?.status_and_recommendation?.pattern_based?.status || 
+      feature.properties.patternType || 
+      feature.properties.pattern_type || 
+      'none'
+    ).toLowerCase();
+    
+    if (!patternType || patternType === '') patternType = 'none';
+    const patternColor = PATTERN_COLORS[patternType] || PATTERN_COLORS.default;
+    
+    // Handle both Polygon and MultiPolygon geometries
+    const coordsArray = geometry.type === 'Polygon' 
+      ? [geometry.coordinates] 
+      : geometry.type === 'MultiPolygon' 
+      ? geometry.coordinates 
+      : [];
+    
+    coordsArray.forEach((polygonCoords) => {
+      const path = polygonCoords[0].map(([lng, lat]) => ({ lat, lng }));
+      
+      const polygon = new window.google.maps.Polygon({
+        paths: path,
+        strokeColor: isHighlighted ? '#c9c9c9' : patternColor,
+        strokeOpacity: isHighlighted ? 1.0 : 0.8,
+        strokeWeight: isHighlighted ? 4 : 2,
+        fillOpacity: isHighlighted ? 0 : 0.4,
+        fillColor: patternColor,
+        map,
+        zIndex: isHighlighted ? 10 : 1,
+        clickable: false,
+        // Add dotted stroke pattern for highlighted barangay
+        ...(isHighlighted && {
+          strokePattern: [
+            {
+              icon: {
+                path: 'M 0,-1 0,1',
+                strokeOpacity: 1,
+                scale: 4
+              },
+              offset: '0',
+              repeat: '20px'
+            }
+          ]
+        })
+      });
+      
+      polygons.push(polygon);
+    });
+  });
+  
+  return polygons;
+}
+
 const BREEDING_SITE_TYPE_ICONS = {
   "Stagnant Water": stagnantIcon,
   "Standing Water": standingIcon,
@@ -84,6 +177,11 @@ const SpecificLocation = () => {
   const polylinesRef = useRef([]);
   const infoWindowRef = useRef(null);
   const clustererRef = useRef(null);
+  
+  // State for barangay boundary data
+  const [barangayGeoJsonData, setBarangayGeoJsonData] = useState(null);
+  const [highlightedBarangay, setHighlightedBarangay] = useState(null);
+  const barangayPolygonsRef = useRef([]);
 
   console.log("[DEBUG] SpecificLocation: isLoaded =", isLoaded);
   console.log("[DEBUG] SpecificLocation: state =", state);
@@ -106,6 +204,23 @@ const SpecificLocation = () => {
 
   // Get basic profiles
   const { data: basicProfiles = [] } = useGetBasicProfilesQuery();
+
+  // Get barangays list for pattern data
+  const { data: barangaysList = [] } = useGetBarangaysQuery();
+
+  // Load barangay boundary data
+  useEffect(() => {
+    console.log('[DEBUG] Loading boundary data...');
+    fetch("/quezon_barangays_boundaries.geojson")
+      .then((res) => res.json())
+      .then((data) => {
+        console.log('[DEBUG] Boundary data loaded successfully');
+        setBarangayGeoJsonData(data);
+      })
+      .catch((error) => {
+        console.error('[DEBUG] Error loading boundary data:', error);
+      });
+  }, []);
 
   // Helper function to get profile image
   const getProfileImage = (userId) => {
@@ -269,11 +384,13 @@ const SpecificLocation = () => {
     }
 
     return () => {
-      // Cleanup markers and polylines
+      // Cleanup markers, polylines, and barangay polygons
       markersRef.current.forEach(marker => marker.setMap(null));
       markersRef.current = [];
       polylinesRef.current.forEach(line => line.setMap(null));
       polylinesRef.current = [];
+      barangayPolygonsRef.current.forEach(polygon => polygon.setMap(null));
+      barangayPolygonsRef.current = [];
       if (clustererRef.current) {
         clustererRef.current.clearMarkers();
       }
@@ -392,8 +509,9 @@ const SpecificLocation = () => {
       markersRef.current.push(mainMarker);
     }
 
-    // Add markers for filtered reports
-    const markers = filteredReports.map(r => {
+    // Add markers for all validated reports (not just nearby ones)
+    const allValidatedReports = allReports.filter(r => r.status === "Validated" && r._id !== report._id);
+    const markers = allValidatedReports.map(r => {
       if (!r.specific_location?.coordinates) return null;
 
       const [lng, lat] = r.specific_location.coordinates;
@@ -477,7 +595,7 @@ const SpecificLocation = () => {
       markers.forEach(marker => markersRef.current.push(marker));
     }
 
-    // Add polylines from main report to each filtered report
+    // Add polylines from main report to each nearby report only (not all reports)
     if (report?.specific_location?.coordinates) {
       const [mainLng, mainLat] = report.specific_location.coordinates;
       filteredReports.forEach(r => {
@@ -500,7 +618,30 @@ const SpecificLocation = () => {
       });
     }
 
-  }, [filteredReports, report]);
+  }, [allReports, filteredReports, report]);
+
+  // Effect to draw/redraw barangay polygons when highlighted barangay changes
+  useEffect(() => {
+    if (!mapRef.current || !barangayGeoJsonData || !isLoaded) return;
+
+    console.log('[DEBUG] Drawing barangay polygons, highlighted:', highlightedBarangay);
+    
+    // Small delay to ensure map is fully ready and other overlays are drawn
+    const timeoutId = setTimeout(() => {
+      // Clear existing polygons
+      barangayPolygonsRef.current.forEach(polygon => polygon.setMap(null));
+      
+      // Draw new polygons
+      barangayPolygonsRef.current = drawBarangayPolygons(
+        mapRef.current, 
+        barangayGeoJsonData, 
+        barangaysList,
+        highlightedBarangay
+      );
+    }, 100);
+
+    return () => clearTimeout(timeoutId);
+  }, [barangayGeoJsonData, barangaysList, highlightedBarangay, report, isLoaded]);
 
   // Helper functions
   function getStatusColorClass(status) {
@@ -593,16 +734,65 @@ const SpecificLocation = () => {
         radius={1}
         onViewCommunityClick={() => navigate('/community')}
         onPreventionTipsClick={() => navigate('/buzzline')}
+        onBarangaySelect={(barangay) => {
+          console.log('[DEBUG] Barangay selected:', barangay);
+          console.log('[DEBUG] Barangay keys:', Object.keys(barangay));
+          console.log('[DEBUG] Full barangay object:', JSON.stringify(barangay, null, 2));
+          
+          if (mapRef.current && barangay && barangayGeoJsonData) {
+            // Use the same approach as intervention modal - find barangay in GeoJSON and calculate center
+            const barangayName = barangay.displayName || barangay.name;
+            console.log('[DEBUG] Looking for barangay name:', barangayName);
+            
+            const selectedFeature = barangayGeoJsonData.features.find(
+              (feature) => feature.properties.name === barangayName
+            );
+            
+            if (selectedFeature && selectedFeature.geometry) {
+              try {
+                const center = turf.centerOfMass(selectedFeature);
+                if (center && center.geometry && center.geometry.coordinates) {
+                  const [lng, lat] = center.geometry.coordinates;
+                  console.log('[DEBUG] Calculated center using turf:', { lat, lng });
+                  
+                  // Pan to the calculated center
+                  const centerLatLng = new window.google.maps.LatLng(lat, lng);
+                  mapRef.current.panTo(centerLatLng);
+                  mapRef.current.setZoom(15);
+                  
+                  // Set highlighted barangay for border highlighting
+                  setHighlightedBarangay(barangayName);
+                  console.log('[DEBUG] Pan completed to calculated center and highlighted:', barangayName);
+                } else {
+                  console.warn('[DEBUG] Failed to get center coordinates from turf calculation');
+                }
+              } catch (err) {
+                console.error('[DEBUG] Error calculating center with turf:', err);
+              }
+            } else {
+              console.warn('[DEBUG] Barangay feature not found in GeoJSON:', barangayName);
+              console.log('[DEBUG] Available barangay names in GeoJSON:', 
+                barangayGeoJsonData.features.map(f => f.properties.name)
+              );
+            }
+          } else {
+            console.warn('[DEBUG] Missing requirements:', { 
+              hasMapRef: !!mapRef.current, 
+              hasBarangay: !!barangay, 
+              hasGeoJsonData: !!barangayGeoJsonData 
+            });
+          }
+        }}
       />
       <article className="absolute z-100000 flex flex-col text-primary right-[10px] bottom-0 md:max-w-[60vw] lg:max-w-[62vw] xl:max-w-[69vw] 2xl:max-w-[72vw]">
         <p className="text-[20px] text-white shadow-sm font-semibold text-left mb-2 w-full">
-          Most Recent Reports
+          Nearby Reports
         </p>
         <section className="flex gap-x-2 text-[13px] overflow-x-scroll scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-100">
           {isLoading ? (
             <div className="text-gray-500 p-4">Loading reports...</div>
           ) : recentReports.length === 0 ? (
-            <div className="text-gray-500 p-4">No recent reports found.</div>
+            <div className="text-gray-500 p-4">No nearby reports found.</div>
           ) : (
             recentReports.map((r) => {
               const rawDate = r.date_and_time;
