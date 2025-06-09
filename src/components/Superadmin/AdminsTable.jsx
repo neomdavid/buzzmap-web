@@ -362,6 +362,7 @@ function AdminsTable({ statusFilter, roleFilter, searchQuery }) {
         maxWidth: 250,
         flex: 0,
         filter: false,
+        sortable: false,
         cellRenderer: ActionsCell,
       },
     ],

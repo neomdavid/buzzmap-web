@@ -10,6 +10,43 @@ import cleanUpIcon from "../assets/icons/cleanup.svg";
 import educationIcon from "../assets/icons/education.svg";
 import * as turf from '@turf/turf';
 import { MapPinLine, Circle } from "phosphor-react";
+import { loadGoogleMapsScript, createMapInstance, cleanupMapInstance, isValidMapInstance } from "../utils/googleMapsLoader";
+
+// Color utilities for map patterns
+const PATTERN_COLORS = {
+  spike: {
+    fill: '#FF0000',
+    stroke: '#CC0000',
+    hover: '#FF3333'
+  },
+  cluster: {
+    fill: '#FFA500',
+    stroke: '#CC8400',
+    hover: '#FFB733'
+  },
+  scattered: {
+    fill: '#FFFF00',
+    stroke: '#CCCC00',
+    hover: '#FFFF33'
+  },
+  stable: {
+    fill: '#00FF00',
+    stroke: '#00CC00',
+    hover: '#33FF33'
+  },
+  default: {
+    fill: '#808080',
+    stroke: '#666666',
+    hover: '#999999'
+  }
+};
+
+const getPatternColor = (patternType, type = 'fill') => {
+  const pattern = PATTERN_COLORS[patternType?.toLowerCase()] || PATTERN_COLORS.default;
+  return pattern[type] || pattern.fill;
+};
+
+const QC_CENTER = { lat: 14.5995, lng: 120.9842 };
 
 const DengueMap = ({
   showLegends = true,
@@ -41,6 +78,9 @@ const DengueMap = ({
   const [selectedBreedingSite, setSelectedBreedingSite] = useState(null);
   const [selectedIntervention, setSelectedIntervention] = useState(null);
 
+  const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+  const mapId = import.meta.env.VITE_GOOGLE_MAPS_MAP_ID;
+
   // Load GeoJSON for barangay boundaries
   useEffect(() => {
     fetch('/quezon_barangays_boundaries.geojson')
@@ -66,7 +106,7 @@ const DengueMap = ({
         console.log('[DengueMap DEBUG] Google Maps script loaded');
         if (!mapInstanceRef.current && mapRef.current) {
           mapInstanceRef.current = new window.google.maps.Map(mapRef.current, {
-            center: { lat: 14.5995, lng: 120.9842 },
+            center: QC_CENTER,
             zoom: 12,
             mapId: import.meta.env.VITE_GOOGLE_MAPS_MAP_ID,
             styles: [
@@ -87,7 +127,7 @@ const DengueMap = ({
     } else {
       if (!mapInstanceRef.current && mapRef.current) {
         mapInstanceRef.current = new window.google.maps.Map(mapRef.current, {
-          center: { lat: 14.5995, lng: 120.9842 },
+          center: QC_CENTER,
           zoom: 12,
           mapId: import.meta.env.VITE_GOOGLE_MAPS_MAP_ID,
           styles: [
@@ -113,50 +153,22 @@ const DengueMap = ({
 
   // Initialize breeding sites from posts
   useEffect(() => {
-   
-
     if (posts) {
       const postsArray = Array.isArray(posts.posts) ? posts.posts : (Array.isArray(posts) ? posts : []);
-    
-      
       const breedingSitesFromPosts = postsArray.filter(post => {
-        // console.log('[DengueMap DEBUG] Checking post:', {
-        //   id: post._id,
-        //   status: post.status,
-        //   report_type: post.report_type,
-        //   hasCoordinates: !!post.specific_location?.coordinates,
-        //   coordinates: post.specific_location?.coordinates
-        // });
-        
         const isValid = post.status === "Validated" && 
           post.specific_location?.coordinates &&
           (post.report_type === "Stagnant Water" || 
            post.report_type === "Standing Water" || 
            post.report_type === "Uncollected Garbage or Trash" ||
            post.report_type === "Others");
-        
-        if (!isValid) {
-          // console.log('[DengueMap DEBUG] Invalid breeding site post:', {
-          //   id: post._id,
-          //   status: post.status,
-          //   report_type: post.report_type,
-          //   hasCoordinates: !!post.specific_location?.coordinates,
-          //   coordinates: post.specific_location?.coordinates
-          // });
-        }
         return isValid;
       });
-      
       setBreedingSites(breedingSitesFromPosts);
     } else {
       setBreedingSites([]);
     }
   }, [posts]);
-
-  // Add debug for showBreedingSites state changes
-  useEffect(() => {
-   
-  }, [showBreedingSites, breedingSites]);
 
   // Pattern color mapping
   const PATTERN_COLORS = {
@@ -199,20 +211,20 @@ const DengueMap = ({
     return geojsonBarangays.map(feature => {
       const geoName = normalizeBarangayName(feature.properties?.name);
       const apiBarangay = barangaysList.find(b => normalizeBarangayName(b.name) === geoName);
-      // Optionally keep the debug log:
-      // console.log('[DengueMap DEBUG] Merging barangay data:', { geoName, apiBarangay, featureName: feature.properties?.name });
       return {
         ...feature,
         patternType: apiBarangay?.status_and_recommendation?.pattern_based?.status || feature.properties?.patternType || 'none',
-        status_and_recommendation: apiBarangay?.status_and_recommendation,
-        risk_level: apiBarangay?.risk_level,
-        pattern_data: apiBarangay?.pattern_data,
+        status_and_recommendation: apiBarangay?.status_and_recommendation || feature.properties?.status_and_recommendation || {},
+        risk_level: apiBarangay?.risk_level || feature.properties?.risk_level || 'unknown',
+        pattern_data: apiBarangay?.pattern_data || feature.properties?.pattern_data || {},
         apiBarangayName: apiBarangay?.name,
+        properties: {
+          ...feature.properties,
+          displayName: feature.properties?.name || feature.properties?.displayName
+        }
       };
     });
   }, [geojsonBarangays, barangaysList]);
-
-
 
   // Draw polygons and markers
   useEffect(() => {
@@ -220,44 +232,28 @@ const DengueMap = ({
     const map = mapInstanceRef.current;
     if (!map) return;
 
-    // console.log('[DengueMap DEBUG] Drawing markers:', {
-    //   showBreedingSites,
-    //   breedingSitesCount: breedingSites.length,
-    //   hasMarkerLibrary: !!window.google?.maps?.marker
-    // });
-
-    // Clear existing polygons and markers
     polygonsRef.current.forEach(polygon => polygon.setMap(null));
     polygonsRef.current = [];
     markersRef.current.forEach(marker => marker.setMap(null));
     markersRef.current = [];
 
-    // Normalize selected barangay name
     const selectedNorm = normalizeBarangayName(searchQuery || '');
 
-    // Draw all barangay polygons
     mergedBarangays.forEach(barangay => {
       if (!barangay.geometry?.coordinates) return;
-      
-      // Determine pattern type and color
-      let patternType = (barangay.patternType || 'none').toLowerCase();
+      let patternType = (barangay.patternType || barangay.properties?.patternType || 'none').toLowerCase();
       if (!patternType || patternType === '') patternType = 'none';
       const fillColor = PATTERN_COLORS[patternType] || PATTERN_COLORS.default;
-      
-      // Normalize for selection
       const barangayNorm = normalizeBarangayName(barangay.properties?.name || '');
       const isSelected = barangayNorm === selectedNorm;
-
-      // Handle both Polygon and MultiPolygon
       let coordsArray = [];
       if (barangay.geometry.type === 'Polygon') {
         coordsArray = [barangay.geometry.coordinates];
       } else if (barangay.geometry.type === 'MultiPolygon') {
         coordsArray = barangay.geometry.coordinates;
       } else {
-        return; // Skip if not a polygon type
+        return;
       }
-
       coordsArray.forEach((polygonCoords) => {
         if (!Array.isArray(polygonCoords[0])) return;
         const path = polygonCoords[0].map(([lng, lat]) => ({ lat, lng }));
@@ -271,23 +267,21 @@ const DengueMap = ({
           map: map,
           zIndex: isSelected ? 6 : 1,
         });
-
-        // Create a feature object with all necessary properties
+        // Create a feature object with all necessary properties at top-level
         const feature = {
           type: 'Feature',
           geometry: barangay.geometry,
           properties: {
             ...barangay.properties,
-            patternType: patternType,
-            status_and_recommendation: barangay.status_and_recommendation,
-            risk_level: barangay.risk_level,
-            pattern_data: barangay.pattern_data,
             displayName: barangay.properties?.name
-          }
+          },
+          patternType: barangay.patternType,
+          status_and_recommendation: barangay.status_and_recommendation,
+          risk_level: barangay.risk_level,
+          pattern_data: barangay.pattern_data,
+          apiBarangayName: barangay.apiBarangayName,
         };
-
         polygon.addListener('click', () => {
-          // Calculate center of polygon
           let latSum = 0, lngSum = 0, count = 0;
           polygonCoords[0].forEach(([lng, lat]) => {
             latSum += lat;
@@ -295,8 +289,6 @@ const DengueMap = ({
             count++;
           });
           const center = { lat: latSum / count, lng: lngSum / count };
-          
-          // Only set InfoWindow position if breeding sites or interventions are shown
           if (showInterventions || showBreedingSites) {
             if (showInterventions) {
               setSelectedIntervention(null);
@@ -308,7 +300,6 @@ const DengueMap = ({
               setInfoWindowPosition(center);
             }
           } else {
-            // Just highlight the barangay without showing InfoWindow
             setSelectedBarangayFeature(feature);
             setInfoWindowPosition(null);
           }
@@ -320,21 +311,10 @@ const DengueMap = ({
 
     // Add markers based on toggles
     if (showBreedingSites && breedingSites.length > 0 && window.google.maps.marker) {
-      // console.log('[DengueMap DEBUG] Drawing breeding site markers:', {
-      //   count: breedingSites.length,
-      //   sites: breedingSites
-      // });
-
       const { AdvancedMarkerElement, PinElement } = window.google.maps.marker;
 
       breedingSites.forEach(site => {
         if (site.specific_location?.coordinates) {
-          // console.log('[DengueMap DEBUG] Creating marker for site:', {
-          //   id: site._id,
-          //   type: site.report_type,
-          //   coordinates: site.specific_location.coordinates
-          // });
-
           const iconUrl = BREEDING_SITE_TYPE_ICONS[site.report_type] || BREEDING_SITE_TYPE_ICONS.default;
           const glyphImg = document.createElement("img");
           glyphImg.src = iconUrl;
@@ -376,6 +356,7 @@ const DengueMap = ({
         }
       });
     }
+
     if (showInterventions && Array.isArray(activeInterventions) && window.google.maps.marker) {
       const { AdvancedMarkerElement, PinElement } = window.google.maps.marker;
       activeInterventions.forEach(intervention => {
@@ -429,127 +410,80 @@ const DengueMap = ({
       barangay => normalizeBarangayName(barangay.properties?.name) === selectedNorm
     );
     if (selectedBarangay && selectedBarangay.geometry?.coordinates) {
-    let bounds = new window.google.maps.LatLngBounds();
+      let bounds = new window.google.maps.LatLngBounds();
       let coordsArray = [];
       if (selectedBarangay.geometry.type === 'Polygon') {
         coordsArray = [selectedBarangay.geometry.coordinates];
       } else if (selectedBarangay.geometry.type === 'MultiPolygon') {
         coordsArray = selectedBarangay.geometry.coordinates;
       }
-    coordsArray.forEach((polygonCoords) => {
-      polygonCoords[0].forEach(([lng, lat]) => {
-        bounds.extend({ lat, lng });
+      coordsArray.forEach((polygonCoords) => {
+        polygonCoords[0].forEach(([lng, lat]) => {
+          bounds.extend({ lat, lng });
+        });
       });
-    });
       map.fitBounds(bounds);
     }
   }, [mapLoaded, mergedBarangays, searchQuery]);
 
-  // Show InfoWindow when barangay is selected from Analytics (searchQuery changes)
-  useEffect(() => {
-    if (!mapLoaded || !mergedBarangays.length || !searchQuery) return;
-    const map = mapInstanceRef.current;
-    if (!map) return;
-
-    const selectedNorm = normalizeBarangayName(searchQuery);
-    const selectedBarangayObj = mergedBarangays.find(
-      barangay => normalizeBarangayName(barangay.properties?.name) === selectedNorm
-    );
-
-    if (selectedBarangayObj && selectedBarangayObj.geometry?.coordinates) {
-      // Calculate center of polygon
-      let latSum = 0, lngSum = 0, count = 0;
-      let coordsArray = [];
-      if (selectedBarangayObj.geometry.type === 'Polygon') {
-        coordsArray = [selectedBarangayObj.geometry.coordinates];
-      } else if (selectedBarangayObj.geometry.type === 'MultiPolygon') {
-        coordsArray = selectedBarangayObj.geometry.coordinates;
-      }
-      coordsArray.forEach((polygonCoords) => {
-        polygonCoords[0].forEach(([lng, lat]) => {
-          latSum += lat;
-          lngSum += lng;
-          count++;
-        });
-      });
-      const center = { lat: latSum / count, lng: lngSum / count };
-      
-      // Create a feature object with all necessary properties
-      const feature = {
-        type: 'Feature',
-        geometry: selectedBarangayObj.geometry,
-        properties: {
-          ...selectedBarangayObj.properties,
-          patternType: selectedBarangayObj.patternType,
-          status_and_recommendation: selectedBarangayObj.status_and_recommendation,
-          risk_level: selectedBarangayObj.risk_level,
-          pattern_data: selectedBarangayObj.pattern_data,
-          displayName: selectedBarangayObj.properties?.name
-        }
-      };
-
-      // Only update if the selected barangay has changed
-      if (!selectedBarangayFeature || 
-          normalizeBarangayName(selectedBarangayFeature.properties?.name) !== selectedNorm) {
-        setSelectedBarangayFeature(feature);
-        setInfoWindowPosition(center);
-        map.panTo(center);
-        map.setZoom(14);
-      }
-      if (onBarangaySelect) onBarangaySelect(feature);
-    }
-  }, [mapLoaded, mergedBarangays, searchQuery]);
-
-  // When selectedBarangay changes (from map or programmatic), update InfoWindow
-  useEffect(() => {
-    if (!mapLoaded || !mergedBarangays.length || !selectedBarangay) return;
-    const selectedNorm = normalizeBarangayName(selectedBarangay);
-    const selectedBarangayObj = mergedBarangays.find(
-      barangay => normalizeBarangayName(barangay.properties?.name) === selectedNorm
-    );
-    if (selectedBarangayObj && selectedBarangayObj.geometry?.coordinates) {
-      let latSum = 0, lngSum = 0, count = 0;
-      let coordsArray = [];
-      if (selectedBarangayObj.geometry.type === 'Polygon') {
-        coordsArray = [selectedBarangayObj.geometry.coordinates];
-      } else if (selectedBarangayObj.geometry.type === 'MultiPolygon') {
-        coordsArray = selectedBarangayObj.geometry.coordinates;
-      }
-      coordsArray.forEach((polygonCoords) => {
-        polygonCoords[0].forEach(([lng, lat]) => {
-          latSum += lat;
-          lngSum += lng;
-          count++;
-        });
-      });
-      const center = { lat: latSum / count, lng: lngSum / count };
-      // Create a feature object with all necessary properties
-      const feature = {
-        type: 'Feature',
-        geometry: selectedBarangayObj.geometry,
-        properties: {
-          ...selectedBarangayObj.properties,
-          patternType: selectedBarangayObj.patternType,
-          status_and_recommendation: selectedBarangayObj.status_and_recommendation,
-          risk_level: selectedBarangayObj.risk_level,
-          pattern_data: selectedBarangayObj.pattern_data,
-          displayName: selectedBarangayObj.properties?.name
-        }
-      };
-      setSelectedBarangayFeature(feature);
-      setInfoWindowPosition(center);
-    }
-  }, [selectedBarangay, mapLoaded, mergedBarangays]);
-
   // Show InfoWindow for selected barangay
   useEffect(() => {
     if (!selectedBarangayFeature || !infoWindowPosition || !mapInstanceRef.current) return;
-    const props = selectedBarangayFeature.properties;
-    const patternType = props?.patternType?.toLowerCase() || "none";
-    const lastAnalysisTime = props?.lastAnalysisTime;
-    const patternBased = props?.status_and_recommendation?.pattern_based || {};
-    const reportBased = props?.status_and_recommendation?.report_based || {};
-    const deathPriority = props?.status_and_recommendation?.death_priority || {};
+    
+    console.log('[DengueMap DEBUG] InfoWindow Creation - Full Selected Feature:', selectedBarangayFeature);
+    console.log('[DengueMap DEBUG] InfoWindow Creation - Properties:', selectedBarangayFeature.properties);
+    
+    // Get patternType and status_and_recommendation from top-level or properties
+    const patternType = selectedBarangayFeature.patternType?.toLowerCase() || 
+                       selectedBarangayFeature.properties?.patternType?.toLowerCase() || 
+                       selectedBarangayFeature.status_and_recommendation?.pattern_based?.status?.toLowerCase() || 
+                       'none';
+    
+    const props = selectedBarangayFeature.properties || {};
+    const status_and_recommendation = selectedBarangayFeature.status_and_recommendation || props.status_and_recommendation || {};
+    const lastAnalysisTime = selectedBarangayFeature.last_analysis_time || 
+                            props.last_analysis_time ||
+                            status_and_recommendation?.last_analysis_time;
+    
+    const patternBased = status_and_recommendation?.pattern_based || {};
+    const reportBased = status_and_recommendation?.report_based || {};
+    const deathPriority = status_and_recommendation?.death_priority || {};
+
+    // Detailed debug logs
+    console.log('[DengueMap DEBUG] InfoWindow Data Access:', {
+      patternType,
+      status_and_recommendation,
+      lastAnalysisTime,
+      patternBased,
+      reportBased,
+      deathPriority
+    });
+    
+    console.log('[DengueMap DEBUG] Pattern Based Details:', {
+      status: patternBased.status,
+      alert: patternBased.alert,
+      admin_recommendation: patternBased.admin_recommendation,
+      user_recommendation: patternBased.user_recommendation
+    });
+    
+    console.log('[DengueMap DEBUG] Report Based Details:', {
+      count: reportBased.count,
+      alert: reportBased.alert,
+      recommendation: reportBased.recommendation
+    });
+    
+    console.log('[DengueMap DEBUG] Death Priority Details:', {
+      count: deathPriority.count,
+      alert: deathPriority.alert,
+      recommendation: deathPriority.recommendation
+    });
+
+    // If we don't have the required data, don't create the InfoWindow
+    if (!patternType || !status_and_recommendation || !patternBased.status) {
+      console.log('[DengueMap DEBUG] Missing required data, skipping InfoWindow creation');
+      return;
+    }
+
     // Color for report-based alert
     const reportStatus = (reportBased.status || "unknown").toLowerCase();
     const REPORT_STATUS_COLORS = {
@@ -559,6 +493,7 @@ const DengueMap = ({
       unknown: "border-gray-400 bg-gray-100"
     };
     const reportCardColor = REPORT_STATUS_COLORS[reportStatus] || REPORT_STATUS_COLORS.unknown;
+
     const content = document.createElement('div');
     content.innerHTML = `
       <div class="bg-white p-4 rounded-lg text-center h-auto w-[50vw] max-w-[500px] min-w-[320px] break-words overflow-x-auto">
@@ -580,46 +515,42 @@ const DengueMap = ({
           }">
             <div>
               <p class="text-sm font-medium text-gray-600 uppercase">Pattern</p>
-              <p class="text-lg font-semibold">
-                ${patternType === 'none'
-                  ? 'No pattern detected'
-                  : patternType.charAt(0).toUpperCase() + patternType.slice(1).replace('_', ' ')}
-              </p>
+              <div class="flex justify-center mt-1">
+                <span class="px-3 py-1 rounded-full text-white font-semibold text-md" style="background-color: ${PATTERN_COLORS[patternType] || PATTERN_COLORS.default}">
+                  ${patternType === 'none'
+                    ? 'No pattern detected'
+                    : patternType.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
+                </span>
+              </div>
+              ${patternBased.alert ? `
+                <p class="text-base text-gray-700 mt-2">${patternBased.alert}</p>
+              ` : ''}
             </div>
           </div>
           <!-- Pattern-Based Alert Card -->
-          ${patternBased.alert && patternBased.alert !== "None" ? `
+          ${patternBased.alert && patternBased.alert !== "None" && patternBased.status ? `
             <div class="p-3 rounded-lg border-2 border-primary/30 bg-primary/5">
               <div>
                 <p class="text-sm font-medium text-gray-600 uppercase">Pattern-Based Alert</p>
                 <p class="text-lg font-semibold">${patternBased.alert}</p>
-                ${patternBased.recommendation ? `
-                  <p class="text-base text-gray-700 mt-1">Recommendation: ${patternBased.recommendation}</p>
-                ` : ''}
               </div>
             </div>
           ` : ''}
           <!-- Report-Based Alert Card -->
-          ${reportBased.alert && reportBased.alert !== "None" ? `
+          ${reportBased.alert && reportBased.alert !== "None" && reportBased.count > 0 ? `
             <div class="p-3 rounded-lg border-2 ${reportCardColor}">
               <div>
                 <p class="text-sm font-medium text-gray-600 uppercase">Report-Based Alert</p>
                 <p class="text-lg font-semibold">${reportBased.alert}</p>
-                ${reportBased.recommendation ? `
-                  <p class="text-base text-gray-700 mt-1">Recommendation: ${reportBased.recommendation}</p>
-                ` : ''}
               </div>
             </div>
           ` : ''}
           <!-- Death Priority Alert Card -->
-          ${deathPriority.alert && deathPriority.alert !== "None" ? `
+          ${deathPriority.alert && deathPriority.alert !== "None" && deathPriority.count > 0 ? `
             <div class="p-3 rounded-lg border-2 border-primary/30 bg-primary/5">
               <div>
                 <p class="text-sm font-medium text-gray-600 uppercase">Death Priority Alert</p>
                 <p class="text-lg font-semibold">${deathPriority.alert}</p>
-                ${deathPriority.recommendation ? `
-                  <p class="text-base text-gray-700 mt-1">Recommendation: ${deathPriority.recommendation}</p>
-                ` : ''}
               </div>
             </div>
           ` : ''}
@@ -733,24 +664,138 @@ const DengueMap = ({
     const [lng, lat] = coordinates;
     if (lat && lng && !isNaN(lat) && !isNaN(lng)) {
       mapInstanceRef.current.panTo({ lat, lng });
+      
+      // Find the matching barangay in the API data
+      const geoName = normalizeBarangayName(feature.properties?.name);
+      console.log('[DengueMap DEBUG] Normalized Barangay Name:', geoName);
+      
+      const apiBarangay = barangaysList.find(b => normalizeBarangayName(b.name) === geoName);
+      console.log('[DengueMap DEBUG] Found API Barangay:', apiBarangay);
+      console.log('[DengueMap DEBUG] Original Feature:', feature);
+      
       // Create a feature object with all necessary properties
       const enhancedFeature = {
         type: 'Feature',
         geometry: feature.geometry,
         properties: {
           ...feature.properties,
-          patternType: feature.properties?.patternType || 'none',
-          status_and_recommendation: feature.properties?.status_and_recommendation || {},
-          risk_level: feature.properties?.risk_level || 'unknown',
-          pattern_data: feature.properties?.pattern_data || {},
-          displayName: feature.properties?.name || feature.properties?.displayName
-        }
+          displayName: feature.properties?.name,
+          // Include API data in properties as well for redundancy
+          patternType: apiBarangay?.status_and_recommendation?.pattern_based?.status || feature.patternType || 'none',
+          status_and_recommendation: apiBarangay?.status_and_recommendation || feature.status_and_recommendation || {},
+          risk_level: apiBarangay?.risk_level || feature.risk_level || 'unknown',
+          pattern_data: apiBarangay?.pattern_data || feature.pattern_data || {},
+          last_analysis_time: apiBarangay?.last_analysis_time
+        },
+        // Top-level properties for direct access
+        patternType: apiBarangay?.status_and_recommendation?.pattern_based?.status || feature.patternType || 'none',
+        status_and_recommendation: apiBarangay?.status_and_recommendation || feature.status_and_recommendation || {},
+        risk_level: apiBarangay?.risk_level || feature.risk_level || 'unknown',
+        pattern_data: apiBarangay?.pattern_data || feature.pattern_data || {},
+        apiBarangayName: apiBarangay?.name,
+        last_analysis_time: apiBarangay?.last_analysis_time
       };
+
+      // Detailed debug logs
+      console.log('[DengueMap DEBUG] Enhanced Feature Properties:', enhancedFeature.properties);
+      console.log('[DengueMap DEBUG] Enhanced Feature Top Level:', {
+        patternType: enhancedFeature.patternType,
+        status_and_recommendation: enhancedFeature.status_and_recommendation,
+        risk_level: enhancedFeature.risk_level,
+        pattern_data: enhancedFeature.pattern_data,
+        apiBarangayName: enhancedFeature.apiBarangayName,
+        last_analysis_time: enhancedFeature.last_analysis_time
+      });
+      
+      // Update the state with the enhanced feature
       setSelectedBarangayFeature(enhancedFeature);
       setInfoWindowPosition({ lat, lng });
       if (onBarangaySelect) onBarangaySelect(enhancedFeature);
     }
   };
+
+  // Add effect to handle selected barangay changes
+  useEffect(() => {
+    if (!mapInstanceRef.current || !selectedBarangay || !geojsonBarangays.length) return;
+
+    // Find the matching barangay feature
+    const matchingFeature = geojsonBarangays.find(feature => 
+      normalizeBarangayName(feature.properties.name) === normalizeBarangayName(selectedBarangay)
+    );
+
+    if (matchingFeature) {
+      // Find the matching barangay in the API data
+      const apiBarangay = barangaysList.find(b => 
+        normalizeBarangayName(b.name) === normalizeBarangayName(selectedBarangay)
+      );
+
+      // Create a feature object with all necessary properties
+      const enhancedFeature = {
+        type: 'Feature',
+        geometry: matchingFeature.geometry,
+        properties: {
+          ...matchingFeature.properties,
+          displayName: matchingFeature.properties?.name,
+          patternType: apiBarangay?.status_and_recommendation?.pattern_based?.status || matchingFeature.properties?.patternType || 'none',
+          status_and_recommendation: apiBarangay?.status_and_recommendation || matchingFeature.properties?.status_and_recommendation || {},
+          risk_level: apiBarangay?.risk_level || matchingFeature.properties?.risk_level || 'unknown',
+          pattern_data: apiBarangay?.pattern_data || matchingFeature.properties?.pattern_data || {},
+          last_analysis_time: apiBarangay?.last_analysis_time
+        },
+        patternType: apiBarangay?.status_and_recommendation?.pattern_based?.status || matchingFeature.properties?.patternType || 'none',
+        status_and_recommendation: apiBarangay?.status_and_recommendation || matchingFeature.properties?.status_and_recommendation || {},
+        risk_level: apiBarangay?.risk_level || matchingFeature.properties?.risk_level || 'unknown',
+        pattern_data: apiBarangay?.pattern_data || matchingFeature.properties?.pattern_data || {},
+        apiBarangayName: apiBarangay?.name,
+        last_analysis_time: apiBarangay?.last_analysis_time
+      };
+
+      setSelectedBarangayFeature(enhancedFeature);
+
+      // Center the map on the selected barangay
+      const center = turf.center(matchingFeature.geometry);
+      const { coordinates } = center.geometry;
+      const [lng, lat] = coordinates;
+      if (lat && lng && !isNaN(lat) && !isNaN(lng)) {
+        mapInstanceRef.current.panTo({ lat, lng });
+        mapInstanceRef.current.setZoom(15);
+        setInfoWindowPosition({ lat, lng });
+      }
+    }
+  }, [selectedBarangay, geojsonBarangays, barangaysList]);
+
+  // Add effect to handle polygon styling based on selection
+  useEffect(() => {
+    if (!mapInstanceRef.current || !polygonsRef.current.length) return;
+
+    // Reset all polygons to default style
+    polygonsRef.current.forEach(polygon => {
+      const patternType = polygon.feature?.properties?.patternType || 'none';
+      polygon.setOptions({
+        strokeColor: getPatternColor(patternType, 'stroke'),
+        strokeWeight: 1,
+        fillOpacity: 0.5,
+        zIndex: 1
+      });
+    });
+
+    // Highlight selected polygon if exists
+    if (selectedBarangayFeature) {
+      const selectedPolygon = polygonsRef.current.find(polygon => 
+        normalizeBarangayName(polygon.feature?.properties?.name) === normalizeBarangayName(selectedBarangayFeature.properties.name)
+      );
+
+      if (selectedPolygon) {
+        const patternType = selectedBarangayFeature.properties?.patternType || 'none';
+        selectedPolygon.setOptions({
+          strokeColor: getPatternColor(patternType, 'stroke'),
+          strokeWeight: 4,
+          fillOpacity: 0.7,
+          zIndex: 2
+        });
+      }
+    }
+  }, [selectedBarangayFeature, polygonsRef.current]);
 
   const getPatternColor = (patternType) => {
     const patternTypeLower = patternType?.toLowerCase();
@@ -810,13 +855,10 @@ const DengueMap = ({
                     <img src={stagnantIcon} alt="Stagnant Water" className="w-6 h-6" />
                     <span className="text-sm">Stagnant Water</span>
                   </div>
+
                   <div className="flex items-center space-x-2">
-                    <img src={standingIcon} alt="Standing Water" className="w-6 h-6" />
-                    <span className="text-sm">Standing Water</span>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <img src={garbageIcon} alt="Garbage" className="w-6 h-6" />
-                    <span className="text-sm">Garbage</span>
+                    <img src={garbageIcon} alt="Uncollected Garbage or Trash" className="w-6 h-6" />
+                    <span className="text-sm">Uncollected Garbage or Trash</span>
                   </div>
                   <div className="flex items-center space-x-2">
                     <img src={othersIcon} alt="Others" className="w-6 h-6" />

@@ -132,7 +132,7 @@ const AdminLayout = () => {
       )}
 
       {/* Content */}
-      <div className=" flex flex-1 flex-col overflow-auto w-full">
+      <div className=" flex flex-1 flex-col overflow-auto w-full bg-neutral-content">
         {/* Top navbar */}
         <div className=" bg-transparent  w-full px-7 py-6  bg-neutral-content flex justify-between items-center">
           <div className="md:hidden">

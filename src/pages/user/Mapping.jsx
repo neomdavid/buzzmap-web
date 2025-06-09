@@ -10,6 +10,7 @@ import cleanUpIcon from "../../assets/icons/cleanup.svg";
 import foggingIcon from "../../assets/icons/fogging.svg";
 import educationIcon from "../../assets/icons/education.svg";
 import trappingIcon from "../../assets/icons/trapping.svg";
+import { loadGoogleMapsScript, createMapInstance, cleanupMapInstance, isValidMapInstance } from "../../utils/googleMapsLoader";
 
 import stagnantIcon from "../../assets/icons/stagnant_water.svg";
 import standingIcon from '../../assets/icons/standing_water.svg';
@@ -55,7 +56,7 @@ const INTERVENTION_TYPE_ICONS = {
 const BREEDING_SITE_TYPE_ICONS = {
   "Stagnant Water": stagnantIcon,
   "Standing Water": standingIcon,
-  "Garbage": garbageIcon,
+  "Uncollected Garbage or Trash": garbageIcon,
   "Others": othersIcon,
   "default": stagnantIcon // fallback
 };
@@ -89,56 +90,6 @@ function panToWithOffset(map, position, offsetY = 0.15) {
 }
 
 const QC_CENTER = { lat: 14.676, lng: 121.0437 };
-
-// Utility to load Google Maps JS API ONCE
-let googleMapsScriptLoadingPromise = null;
-function loadGoogleMapsScript(apiKey) {
-  console.log('loadGoogleMapsScript called with API key:', apiKey ? 'Present' : 'Missing');
-  
-  if (window.google && window.google.maps && window.google.maps.Map && window.google.maps.marker) {
-    console.log('Google Maps and Marker library already loaded');
-    return Promise.resolve();
-  }
-  
-  if (googleMapsScriptLoadingPromise) {
-    console.log('Google Maps script already loading');
-    return googleMapsScriptLoadingPromise;
-  }
-  
-  console.log('Creating new script element for Google Maps');
-  googleMapsScriptLoadingPromise = new Promise((resolve, reject) => {
-    if (document.getElementById('google-maps-script')) {
-      console.log('Script element already exists, waiting for load...');
-      const check = () => {
-        if (window.google && window.google.maps && window.google.maps.Map && window.google.maps.marker) {
-          console.log('Google Maps and Marker library loaded from existing script');
-          resolve();
-        } else {
-          console.log('Waiting for Google Maps and Marker library to load...');
-          setTimeout(check, 50);
-        }
-      };
-      check();
-      return;
-    }
-    
-    const script = document.createElement('script');
-    script.id = 'google-maps-script';
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=marker`;
-    script.onload = () => {
-      console.log('Google Maps script loaded successfully');
-      resolve();
-    };
-    script.onerror = (err) => {
-      console.error('Error loading Google Maps script:', err);
-      reject(err);
-    };
-    console.log('Appending Google Maps script to document');
-    document.body.appendChild(script);
-  });
-  
-  return googleMapsScriptLoadingPromise;
-}
 
 const Mapping = () => {
   const mapRef = useRef(null);
@@ -187,10 +138,22 @@ const Mapping = () => {
     return () => {
       console.log('Mapping component unmounting...');
       isMountedRef.current = false;
+      
+      // Clean up overlays first
+      if (overlaysRef.current.length > 0) {
+        console.log('Cleaning up map overlays...');
+        overlaysRef.current.forEach(o => {
+          if (o && typeof o.setMap === 'function') {
+            o.setMap(null);
+          }
+        });
+        overlaysRef.current = [];
+      }
+
+      // Then clean up the map instance
       if (mapInstance.current) {
         console.log('Cleaning up map instance...');
-        overlaysRef.current.forEach(o => o.setMap(null));
-        overlaysRef.current = [];
+        cleanupMapInstance(mapInstance.current);
         mapInstance.current = null;
       }
     };
@@ -275,20 +238,24 @@ const Mapping = () => {
     }
 
     console.log('Starting map initialization...');
-    let map, overlays = [];
+    let overlays = [];
     loadGoogleMapsScript(apiKey).then(() => {
       if (!isMountedRef.current) return;
       
       console.log('Google Maps script loaded');
       // Clean up previous overlays
-      overlaysRef.current.forEach(o => o.setMap(null));
+      overlaysRef.current.forEach(o => {
+        if (o && typeof o.setMap === 'function') {
+          o.setMap(null);
+        }
+      });
       overlaysRef.current = [];
       
-      // Only create map if not already created
-      if (!mapInstance.current) {
+      // Only create map if not already created or invalid
+      if (!mapInstance.current || !isValidMapInstance(mapInstance.current)) {
         console.log('Creating new map instance...');
         try {
-          mapInstance.current = new window.google.maps.Map(mapRef.current, {
+          mapInstance.current = createMapInstance(mapRef.current, {
             center: QC_CENTER,
             zoom: 13,
             mapId: mapId || undefined,
@@ -306,8 +273,9 @@ const Mapping = () => {
         }
       }
       
-      map = mapInstance.current;
+      const map = mapInstance.current;
       console.log('Drawing barangay polygons...');
+      
       // --- InfoWindow instance (only one open at a time) ---
       if (!infoWindowRef.current) {
         infoWindowRef.current = new window.google.maps.InfoWindow({
@@ -620,7 +588,11 @@ const Mapping = () => {
     // Cleanup overlays on unmount or data change
     return () => {
       console.log('Cleaning up map overlays...');
-      overlaysRef.current.forEach(o => o.setMap(null));
+      overlaysRef.current.forEach(o => {
+        if (o && typeof o.setMap === 'function') {
+          o.setMap(null);
+        }
+      });
       overlaysRef.current = [];
     };
   }, [loading, error, barangayData, breedingSites, showBreedingSites, showInterventions, interventions, apiKey, mapId, selectedBarangayFeature]);
@@ -836,9 +808,11 @@ const Mapping = () => {
                 onChange={handleBarangaySelect}
                 className="w-full px-4 py-2 hover:cursor-pointer rounded-md shadow bg-transparent text-primary border border-primary/20 focus:border-primary focus:outline-none"
               >
-                <option key="default" value="">Select a barangay</option>
-                {barangayData?.features.map(f => (
-                  <option key={f.properties.name} value={f.properties.name}>{f.properties.name}</option>
+                <option value="">Select a barangay</option>
+                {barangayData?.features.map(feature => (
+                  <option key={feature.properties.name} value={feature.properties.name}>
+                    {feature.properties.name}
+                  </option>
                 ))}
               </select>
 
@@ -856,13 +830,10 @@ const Mapping = () => {
                               <img src={stagnantIcon} alt="Stagnant Water" className="w-6 h-6" />
                               <span className="text-xs text-primary">Stagnant Water</span>
                         </div>
-                            <div key="standing" className="flex items-center space-x-2">
-                              <img src={standingIcon} alt="Standing Water" className="w-6 h-6" />
-                              <span className="text-xs text-primary">Standing Water</span>
-                  </div>
+
                             <div key="garbage" className="flex items-center space-x-2">
-                              <img src={garbageIcon} alt="Garbage" className="w-6 h-6" />
-                              <span className="text-xs text-primary">Garbage</span>
+                              <img src={garbageIcon} alt="Uncollected Garbage or Trash" className="w-6 h-6" />
+                              <span className="text-xs text-primary">Uncollected Garbage or Trash</span>
                 </div>
                             <div key="others" className="flex items-center space-x-2">
                               <img src={othersIcon} alt="Others" className="w-6 h-6" />

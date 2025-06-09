@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useGetPostsQuery, useGetBarangaysQuery } from '../../api/dengueApi';
 import { PostCard, CustomSearchBar, Navbar } from '../../components';
@@ -23,20 +23,80 @@ const SearchResults = () => {
     barangay: '',
     report_type: '',
     description: '',
-    username: ''
+    username: '',
+    filterType: '' // 'posts' or 'people' or ''
   });
   const [searchQuery, setSearchQuery] = useState(searchParams.get('q') || '');
   const [page, setPage] = useState(1);
   const observer = useRef();
 
   // Get posts with search parameters and pagination
-  const { data, isLoading, isError } = useGetPostsQuery({
-    search: searchQuery,
+  // Note: Temporarily removing server-side search to rely on client-side filtering
+  const { data: rawData, isLoading, isError } = useGetPostsQuery({
+    // search: searchQuery, // Commented out to test client-side search
     ...filters,
     status: 'Validated',
     page,
     limit: 10
   });
+
+  // Transform data to handle different response structures and apply client-side search as fallback
+  const data = useMemo(() => {
+    console.log('[DEBUG] Raw API data:', rawData);
+    
+    // Handle different response structures
+    let posts = [];
+    if (Array.isArray(rawData)) {
+      posts = rawData;
+    } else if (rawData?.posts) {
+      posts = rawData.posts;
+    } else if (rawData?.data) {
+      posts = rawData.data;
+    }
+
+    // Apply client-side search as fallback if server-side search didn't work
+    if (searchQuery && posts.length > 0) {
+      const query = searchQuery.toLowerCase();
+      const serverFilteredCount = posts.length;
+      
+      // Apply client-side filtering based on filter type
+      let clientFiltered = [];
+      
+      if (filters.filterType === 'posts') {
+        // Only show posts where search matches post content (not username)
+        clientFiltered = posts.filter(post => 
+          (post.barangay?.toLowerCase().includes(query)) ||
+          (post.report_type?.toLowerCase().includes(query)) ||
+          (post.description?.toLowerCase().includes(query))
+        );
+      } else if (filters.filterType === 'people') {
+        // Only show posts where search matches username
+        clientFiltered = posts.filter(post => 
+          (post.user?.username?.toLowerCase().includes(query))
+        );
+      } else {
+        // Show all matches (default behavior)
+        clientFiltered = posts.filter(post => 
+          (post.user?.username?.toLowerCase().includes(query)) ||
+          (post.barangay?.toLowerCase().includes(query)) ||
+          (post.report_type?.toLowerCase().includes(query)) ||
+          (post.description?.toLowerCase().includes(query))
+        );
+      }
+      
+      console.log('[DEBUG] Server returned:', serverFilteredCount, 'posts, client filtering found:', clientFiltered.length, 'with filter type:', filters.filterType);
+      
+      return {
+        posts: clientFiltered,
+        pagination: rawData?.pagination || { totalItems: clientFiltered.length }
+      };
+    }
+
+    return {
+      posts: posts,
+      pagination: rawData?.pagination || { totalItems: posts.length }
+    };
+  }, [rawData, searchQuery]);
 
   const lastPostElementRef = useCallback(node => {
     if (isLoading) return;
@@ -58,7 +118,8 @@ const SearchResults = () => {
       barangay: searchParams.get('barangay') || '',
       report_type: searchParams.get('report_type') || '',
       description: searchParams.get('description') || '',
-      username: searchParams.get('username') || ''
+      username: searchParams.get('username') || '',
+      filterType: searchParams.get('filterType') || ''
     });
     // Reset page when filters change
     setPage(1);
@@ -69,7 +130,8 @@ const SearchResults = () => {
     !filters.barangay &&
     !filters.report_type &&
     !filters.description &&
-    !filters.username;
+    !filters.username &&
+    !filters.filterType;
 
   const handleFilterChange = (key, value) => {
     const newFilters = { ...filters, [key]: value };
@@ -117,38 +179,40 @@ const SearchResults = () => {
               className={`flex gap-2.5 items-center text-primary hover:text-white hover:bg-primary/60 hover:cursor-pointer transition-all duration-300 rounded-xl px-4 py-2 ${
                 isAllActive ? 'bg-primary text-white' : ''
               }`}
-              onClick={() => {
-                setFilters({
-                  barangay: '',
-                  report_type: '',
-                  description: '',
-                  username: ''
-                });
-                const newParams = new URLSearchParams(searchParams);
-                newParams.delete('barangay');
-                newParams.delete('report_type');
-                newParams.delete('description');
-                newParams.delete('username');
-                setSearchParams(newParams);
-              }}
+                                  onClick={() => {
+                      setFilters({
+                        barangay: '',
+                        report_type: '',
+                        description: '',
+                        username: '',
+                        filterType: ''
+                      });
+                      const newParams = new URLSearchParams(searchParams);
+                      newParams.delete('barangay');
+                      newParams.delete('report_type');
+                      newParams.delete('description');
+                      newParams.delete('username');
+                      newParams.delete('filterType');
+                      setSearchParams(newParams);
+                    }}
             >
               <div><IconMenuDeep stroke={3} /> </div>
               <p>All</p>
             </div>
             <div 
               className={`flex gap-2.5 items-center text-primary hover:text-white hover:bg-primary/60 hover:cursor-pointer transition-all duration-300 rounded-xl px-4 py-2 ${
-                filters.report_type ? 'bg-primary text-white' : ''
+                filters.filterType === 'posts' ? 'bg-primary text-white' : ''
               }`}
-              onClick={() => handleFilterChange('report_type', 'Breeding Site')}
+              onClick={() => handleFilterChange('filterType', filters.filterType === 'posts' ? '' : 'posts')}
             >
               <div><IconTableShare stroke={2} size={23} weight='fill' /> </div>
               <p>Posts</p>
             </div>
             <div 
               className={`flex gap-2.5 items-center text-primary hover:text-white hover:bg-primary/60 hover:cursor-pointer transition-all duration-300 rounded-xl px-4 py-2 mb-3 ${
-                filters.username ? 'bg-primary text-white' : ''
+                filters.filterType === 'people' ? 'bg-primary text-white' : ''
               }`}
-              onClick={() => handleFilterChange('username', searchQuery)}
+              onClick={() => handleFilterChange('filterType', filters.filterType === 'people' ? '' : 'people')}
             >
               <div><Users stroke={2} size={23} weight='fill' /> </div>
               <p>People</p>
@@ -172,8 +236,9 @@ const SearchResults = () => {
               onChange={(e) => handleFilterChange('report_type', e.target.value)}
             >
               <option value="">All Report Types</option>
-              <option value="Breeding Site">Breeding Site</option>
-              <option value="Dengue Case">Dengue Case</option>
+              <option value="Stagnant Water">Stagnant Water</option>
+              <option value="Uncollected Garbage or Trash">Uncollected Garbage or Trash</option>
+              <option value="Others">Others</option>
             </select>
           </div>
         </aside>
@@ -207,13 +272,15 @@ const SearchResults = () => {
                         barangay: '',
                         report_type: '',
                         description: '',
-                        username: ''
+                        username: '',
+                        filterType: ''
                       });
                       const newParams = new URLSearchParams(searchParams);
                       newParams.delete('barangay');
                       newParams.delete('report_type');
                       newParams.delete('description');
                       newParams.delete('username');
+                      newParams.delete('filterType');
                       setSearchParams(newParams);
                     }}
                   >
@@ -222,18 +289,18 @@ const SearchResults = () => {
                   </button>
                   <button
                     className={`flex gap-2 items-center px-4 py-2 rounded-xl whitespace-nowrap ${
-                      filters.report_type ? 'bg-primary text-white' : 'text-primary hover:bg-primary/60 hover:text-white'
+                      filters.filterType === 'posts' ? 'bg-primary text-white' : 'text-primary hover:bg-primary/60 hover:text-white'
                     }`}
-                    onClick={() => handleFilterChange('report_type', 'Breeding Site')}
+                    onClick={() => handleFilterChange('filterType', filters.filterType === 'posts' ? '' : 'posts')}
                   >
                     <IconTableShare stroke={2} size={23} weight='fill' />
                     <span>Posts</span>
                   </button>
                   <button
                     className={`flex gap-2 items-center px-4 py-2 rounded-xl whitespace-nowrap ${
-                      filters.username ? 'bg-primary text-white' : 'text-primary hover:bg-primary/60 hover:text-white'
+                      filters.filterType === 'people' ? 'bg-primary text-white' : 'text-primary hover:bg-primary/60 hover:text-white'
                     }`}
-                    onClick={() => handleFilterChange('username', searchQuery)}
+                    onClick={() => handleFilterChange('filterType', filters.filterType === 'people' ? '' : 'people')}
                   >
                     <Users stroke={2} size={23} weight='fill' />
                     <span>People</span>
@@ -258,8 +325,9 @@ const SearchResults = () => {
                     onChange={(e) => handleFilterChange('report_type', e.target.value)}
                   >
                     <option value="" className="text-primary">All Report Types</option>
-                    <option value="Breeding Site" className="text-primary">Breeding Site</option>
-                    <option value="Dengue Case" className="text-primary">Dengue Case</option>
+                    <option value="Stagnant Water" className="text-primary">Stagnant Water</option>
+                    <option value="Uncollected Garbage or Trash" className="text-primary">Uncollected Garbage or Trash</option>
+                    <option value="Others" className="text-primary">Others</option>
                   </select>
                 </div>
               </div>

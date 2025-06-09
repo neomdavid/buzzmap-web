@@ -112,6 +112,7 @@ const PrivateRoute = ({ children, requiredRole }) => {
       const currentTime = Math.floor(Date.now() / 1000);
       if (tokenPayload.exp < currentTime) {
         console.log("[DEBUG] PrivateRoute - Token expired");
+        // Clear auth data from both storage types
         localStorage.removeItem("token");
         localStorage.removeItem("user");
         sessionStorage.removeItem("token");
@@ -123,6 +124,7 @@ const PrivateRoute = ({ children, requiredRole }) => {
       // Verify token role matches user role
       if (tokenPayload.role !== user.role) {
         console.log("[DEBUG] PrivateRoute - Token role mismatch with user role");
+        // Clear auth data from both storage types
         localStorage.removeItem("token");
         localStorage.removeItem("user");
         sessionStorage.removeItem("token");
@@ -132,6 +134,7 @@ const PrivateRoute = ({ children, requiredRole }) => {
       }
     } catch (error) {
       console.error("[DEBUG] PrivateRoute - Error decoding token:", error);
+      // Clear auth data from both storage types
       localStorage.removeItem("token");
       localStorage.removeItem("user");
       sessionStorage.removeItem("token");

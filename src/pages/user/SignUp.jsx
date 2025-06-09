@@ -18,6 +18,8 @@ const SignUp = () => {
     length: false,
     number: false
   });
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
+  const [hasScrolledToBottom, setHasScrolledToBottom] = useState(false);
   const navigate = useNavigate();
 
   const [signUp, { isLoading, isError, error: apiError }] = useRegisterMutation("");
@@ -48,6 +50,11 @@ const SignUp = () => {
 
     if (password !== confirmPassword) {
       setError("Passwords do not match");
+      return;
+    }
+
+    if (!acceptedTerms) {
+      setError("Please accept the Terms and Conditions to continue");
       return;
     }
 
@@ -100,10 +107,10 @@ const SignUp = () => {
       />
 
       <section
-        className="w-[87vw] max-w-220 mt-25 rounded-2xl shadow-md text-white bg-primary py-8 px-[7%] lg:px-25 flex flex-col justify-center items-center text-center text-xl lg:text-xl
+        className="w-[94vw] pt-12 lg:pt-0 md:w-[87vw] max-w-220 mt-25 rounded-2xl shadow-md text-white bg-primary py-8 px-[7%] lg:px-25 flex flex-col justify-center items-center text-center text-lg lg:text-xl
         lg:max-w-none lg:m-0 lg:rounded-none lg:absolute lg:right-0 lg:top-0 lg:h-[100vh] lg:w-[60vw] xl:w-250"
       >
-        <h1 className="mb-2 text-7xl lg:text-8xl">Join buzzmap!</h1>
+        <h1 className="mb-2 text-6xl sm:text-7xl lg:text-8xl">Join buzzmap!</h1>
         <p className="mb-4">
           <span className="font-bold">Sign Up</span> to join us today and be
           part of the movement to track, report, and prevent dengue outbreaks.
@@ -160,14 +167,29 @@ const SignUp = () => {
           <div className="mt-6 mb-7 flex justify-center  items-center gap-x-2">
             <input
               type="checkbox"
-              className="checkbox checkbox-lg border-white bg-transparent checked:bg-transparent checked:text-white checked:border-white "
+              checked={acceptedTerms}
+              disabled={!hasScrolledToBottom}
+              onChange={(e) => setAcceptedTerms(e.target.checked)}
+              className={`checkbox checkbox-lg border-white bg-transparent checked:bg-transparent checked:text-white checked:border-white ${
+                !hasScrolledToBottom ? 'opacity-50 cursor-not-allowed' : ''
+              }`}
             />
             <label className="text-md lg:text-[14px]">
-              I agree to the Terms and Conditions
+              I agree to the{" "}
+              <button
+                type="button"
+                onClick={() => {
+                  setHasScrolledToBottom(false); // Reset scroll state when opening modal
+                  document.getElementById('terms_modal').showModal();
+                }}
+                className="underline hover:text-gray-200 font-semibold hover:cursor-pointer"
+              >
+                Terms and Conditions
+              </button>
             </label>
           </div>
           <button
-            disabled={isLoading}
+            disabled={isLoading || !acceptedTerms || !username.trim() || !email.trim() || !password.trim() || !confirmPassword.trim()}
             className="bg-white font-extrabold shadow-[2px_6px_3px_rgba(0,0,0,0.20)] font-bold text-primary w-xs py-3 px-4 rounded-2xl hover:cursor-pointer hover:bg-base-200/60 transition-all duration-300 disabled:opacity-60 disabled:cursor-not-allowed"
           >
             {isLoading ? "Signing Up..." : "Sign Up"}
@@ -179,7 +201,7 @@ const SignUp = () => {
             </p>
           )}
 
-          <div className="flex w-[60%] gap-x-4 mt-6 mb-2 ">
+          {/* <div className="flex w-[60%] gap-x-4 mt-6 mb-2 ">
             <div className="flex-1 border-t-1 border-white/60 mt-3 text-primary ">
               -
             </div>
@@ -190,7 +212,7 @@ const SignUp = () => {
           </div>
           <button className="bg-white mb-2 font-extrabold shadow-[2px_6px_3px_rgba(0,0,0,0.20)] font-bold text-primary w-xs py-3 px-4 rounded-2xl hover:cursor-pointer hover:bg-base-200/60 transition-all duration-300">
             Google
-          </button>
+          </button> */}
         </form>
         <p className="mt-4 text-md lg:text-[14px]">
           Already have an account?{" "}
@@ -202,6 +224,90 @@ const SignUp = () => {
           </Link>
         </p>
       </section>
+
+      {/* Terms and Conditions Modal */}
+      <dialog id="terms_modal" className="modal">
+                  <div className="modal-box w-11/12 text-primary max-w-4xl max-h-[80vh]">
+            <p className="font-extrabold text-2xl text-primary mb-4">Terms and Conditions</p>
+            <div 
+              className="overflow-y-auto max-h-[50vh] text-gray-700 space-y-4 text-sm leading-relaxed"
+              onScroll={(e) => {
+                const { scrollTop, scrollHeight, clientHeight } = e.target;
+                // Check if user has scrolled to within 5px of the bottom
+                if (scrollTop + clientHeight >= scrollHeight - 5) {
+                  setHasScrolledToBottom(true);
+                }
+              }}
+            >
+                          <div>
+                <h4 className="font-semibold text-base text-lg mb-2">1. Acceptance of Terms:</h4>
+                <p className="text-md">By accessing or using the BuzzMap application, you agree to be bound by these Terms and Conditions. If you do not agree with any part of these terms, you must not use the application.</p>
+              </div>
+              
+              <div>
+                <h4 className="font-semibold text-base text-lg mb-2">2. User Responsibilities:</h4>
+                <p className="text-md">You agree to use BuzzMap only for lawful purposes and in a way that does not infringe on the rights of, restrict, or inhibit anyone else's use and enjoyment of the application.</p>
+              </div>
+              
+              <div>
+                <h4 className="font-semibold text-base text-lg mb-2">3. Data Collection and Privacy:</h4>
+                <p className="text-md">BuzzMap collects personal information to provide and improve its services. By using the application, you consent to the collection and use of information in accordance with our Privacy Policy.</p>
+              </div>
+              
+              <div>
+                <h4 className="font-semibold text-base text-lg mb-2">4. Dengue Reporting Accuracy:</h4>
+                <p className="text-md">Users are responsible for providing accurate information when reporting dengue cases. False or misleading reports may result in account suspension.</p>
+              </div>
+              
+              <div>
+                <h4 className="font-semibold text-base text-lg mb-2">5. Intellectual Property:</h4>
+                <p className="text-md">All content, features, and functionality of BuzzMap are the exclusive property of the developers and are protected by international copyright laws.</p>
+              </div>
+              
+              <div>
+                <h4 className="font-semibold text-base text-lg mb-2">6. Limitation of Liability:</h4>
+                <p className="text-md">BuzzMap and its developers shall not be liable for any indirect, incidental, special, consequential, or punitive damages resulting from your use of or inability to use the application.</p>
+              </div>
+              
+              <div>
+                <h4 className="font-semibold text-base text-lg mb-2">7. Changes to Terms:</h4>
+                <p className="text-md">We reserve the right to modify these terms at any time. Your continued use of BuzzMap after any changes constitutes your acceptance of the new terms.</p>
+              </div>
+              
+              <div>
+                <h4 className="font-semibold text-base text-lg mb-2">8. Governing Law:</h4>
+                <p className="text-md">These terms shall be governed by and construed in accordance with the laws of the jurisdiction where the application is developed.</p>
+              </div>
+          </div>
+          <div className="modal-action">
+            <button
+              onClick={() => {
+                setAcceptedTerms(true);
+                document.getElementById('terms_modal').close();
+              }}
+              disabled={!hasScrolledToBottom}
+              className={`font-semibold py-2 px-4 rounded-md transition-all duration-300 ${
+                hasScrolledToBottom 
+                  ? 'bg-primary text-white hover:cursor-pointer hover:bg-primary/80' 
+                  : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+              }`}
+            >
+              {hasScrolledToBottom ? 'Accept Terms' : 'Scroll to Accept Terms'}
+            </button>
+                          <form method="dialog">
+                <button 
+                  onClick={() => {
+                    setAcceptedTerms(false);
+                    setHasScrolledToBottom(false); // Reset scroll state when closing
+                  }}
+                  className="bg-white border-1 border-primary text-primary font-semibold py-2 px-4 rounded-md hover:cursor-pointer hover:bg-primary/20 transition-all duration-300"
+                >
+                  Close
+                </button>
+              </form>
+          </div>
+        </div>
+      </dialog>
     </main>
   );
 };

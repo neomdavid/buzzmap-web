@@ -31,10 +31,11 @@ const baseQueryWithErrorHandling = async (args, api, extraOptions) => {
     
     // Check for 401 Unauthorized response
     if (result.error?.status === 401) {
+      // Preserve the original error message from the backend
       return { 
         error: { 
           status: 'UNAUTHORIZED', 
-          data: 'Please log in to perform this action' 
+          data: result.error.data || 'Please log in to perform this action' 
         } 
       };
     }
@@ -212,6 +213,25 @@ export const dengueApi = createApi({
         console.log('API Request URL:', url);
         return url;
       },
+      async onQueryStarted(arg, { dispatch, queryFulfilled, getState }) {
+        try {
+          // Check if user is admin and trigger analysis before fetching posts
+          const state = getState();
+          const user = state.auth?.user;
+          
+          if (user?.role === 'admin') {
+            console.log('[DEBUG] Admin fetching posts, triggering crowdsourced analysis first...');
+            // Trigger analysis before fetching posts
+            await dispatch(dengueApi.endpoints.analyzeCrowdsourcedReports.initiate()).unwrap();
+            console.log('[DEBUG] Crowdsourced analysis completed, now fetching posts...');
+          }
+          
+          await queryFulfilled;
+        } catch (error) {
+          console.error('[DEBUG] Error in getPosts onQueryStarted:', error);
+          // Still allow posts to be fetched even if analysis fails
+        }
+      },
       transformResponse: (response, meta, arg) => {
         // No more paginated format, just return the array directly
         return response;
@@ -317,6 +337,18 @@ export const dengueApi = createApi({
       providesTags: ["Analytics"],
     }),
 
+    // Analyze crowdsourced reports
+    analyzeCrowdsourcedReports: builder.mutation({
+      query: () => ({
+        url: "analytics/analyze-crowdsourced-reports",
+        method: "GET",
+      }),
+      transformResponse: (response) => {
+        console.log('[DEBUG] Crowdsourced analysis response:', response);
+        return response;
+      },
+    }),
+
     // Test Endpoints (for development)
     uploadTestReports: builder.mutation({
       query: () => ({
@@ -360,7 +392,7 @@ export const dengueApi = createApi({
 
     // Get interventions for a specific barangay
     getInterventionsInProgress: builder.query({
-      query: (barangay) => `interventions/barangay/${barangay}`,
+      query: (barangay) => `interventions/in-progress/${barangay}`,
       transformResponse: (response) => {
         console.log('[DEBUG] Interventions for barangay response:', response);
         return response;
@@ -1232,6 +1264,39 @@ export const dengueApi = createApi({
         { type: "Comments", id: "LIST" }
       ],
     }),
+
+    // Add this to the endpoints object
+    getRecentReportsForBarangay: builder.mutation({
+      query: (barangayName) => ({
+        url: 'barangays/get-recent-reports-for-barangay',
+        method: 'POST',
+        body: { barangay_name: barangayName }
+      }),
+      transformResponse: (response) => {
+        console.log('[DEBUG] Recent reports for barangay response:', response);
+        return response;
+      }
+    }),
+
+    // Update profile photo
+    updateProfilePhoto: builder.mutation({
+      query: (formData) => ({
+        url: "accounts/profile-photo",
+        method: "POST",
+        body: formData,
+      }),
+      invalidatesTags: ["Accounts"],
+    }),
+
+    // Update user bio
+    updateBio: builder.mutation({
+      query: ({ id, bio }) => ({
+        url: `accounts/${id}/bio`,
+        method: "PATCH",
+        body: { bio },
+      }),
+      invalidatesTags: ["Accounts"],
+    }),
   }),
 });
 
@@ -1274,6 +1339,7 @@ export const {
 
   // Analytics hooks
   useGetAnalyticsQuery,
+  useAnalyzeCrowdsourcedReportsMutation,
 
   // Test hooks
   useUploadTestReportsMutation,
@@ -1360,4 +1426,13 @@ export const {
 
   // Add this new endpoint
   useGetBasicProfilesQuery,
+
+  // Add this to the exported hooks
+  useGetRecentReportsForBarangayMutation,
+
+  // Profile photo update
+  useUpdateProfilePhotoMutation,
+
+  // Update user bio
+  useUpdateBioMutation,
 } = dengueApi;

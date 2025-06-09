@@ -30,7 +30,7 @@ import BuzzLineFooter from '../../components/BuzzLineFooter';
 import UpdatesCard from '../../components/UpdatesCard';
 import dummyUpdates from '../../data/dummyUpdates';
 import ArticlesCard from '../../components/ArticlesCard';
-
+import sprayingImg from '../../assets/spray.svg'
 // Add this temporary test component
 const TestNewsGrid = ({ articles = [] }) => {
   console.log('TestNewsGrid rendered with articles:', articles);
@@ -90,10 +90,10 @@ const BuzzLine = () => {
   const surveillanceUpdates = dummyUpdates;
 
   return (
-    <main className="flex flex-col text-center items-center justify-center mt-2 py-8 overflow-x-hidden">
+    <main className="flex flex-col text-center items-center justify-center mt-2 py-8 overflow-x-hidden py-20">
       <div className="mx-4">
-        <Heading text="Stay one step /ahead/" className="text-8xl mb-4" />
-        <p className="font-semibold text-xl">
+        <Heading text="Stay one step /ahead/" className="text-8xl md:text-9xl mb-4" />
+        <p className="font-semibold text-xl mx-4">
           Read and View Smart Tips to Prevent Dengue and Protect Your Community
           Below
         </p>
@@ -101,7 +101,7 @@ const BuzzLine = () => {
 
       <div className="relative mt-12 w-[112%] rounded-tl-[450px] rounded-tr-[450px] md:rounded-tl-[1000px] md:rounded-tr-[1000px] md:h-300 md:mb-[-450px] md:w-[120%] overflow-hidden">
         {/* Image */}
-        <img className="w-full h-150 object-cover" src={sprayingAlcohol} />
+        <img className="w-full h-150 object-cover md:h-200" src={sprayingImg} />
 
         {/* Gradient Overlay */}
         <div className="absolute inset-0 bg-gradient-to-t from-primary via-primary/2 to-transparent  md:mt-[-850px]"></div>

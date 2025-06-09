@@ -87,6 +87,7 @@ const AdminPostsTable = () => {
         field: "images",
         flex: 1,
         filter: false,
+        sortable: false,
         cellRenderer: (params) => {
           return params.value && params.value.length > 0 ? (
             <img
@@ -107,6 +108,8 @@ const AdminPostsTable = () => {
       {
         headerName: "Actions",
         field: "actions",
+        filter: false,
+        sortable: false,
         cellRenderer: (params) => (
           <div className="flex w-full h-full items-center justify-center gap-2">
             <button

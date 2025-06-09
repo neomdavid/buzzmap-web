@@ -274,6 +274,7 @@ function UsersTable({ statusFilter, roleFilter, searchQuery }) {
         maxWidth: 200,
         flex: 0,
         filter: false,
+        sortable: false,
         cellRenderer: ActionsCell,
       },
     ],

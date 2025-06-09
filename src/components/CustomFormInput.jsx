@@ -17,9 +17,9 @@ const CustomFormInput = ({
   const isDark = theme === "dark";
 
   return (
-    <div className="w-full text-left relative">
+    <div className="w-full text-left relative z-1000000">
       <label
-        className={`block mb-2 font-semibold text-xl ${
+        className={`block mb-2 font-semibold text-md lg:text-xl ${
           isDark ? "text-white" : "text-black"
         }`}
       >
