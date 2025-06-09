@@ -73,7 +73,6 @@ const MapOnly = forwardRef(({
   const overlaysRef = useRef([]);
   const isMountedRef = useRef(true);
   const infoWindowRef = useRef(null);
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [barangayData, setBarangayData] = useState(null);
   const [breedingSites, setBreedingSites] = useState([]);
@@ -82,8 +81,6 @@ const MapOnly = forwardRef(({
   const { data: posts } = useGetPostsQuery();
   const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
   const mapId = import.meta.env.VITE_GOOGLE_MAPS_MAP_ID;
-  // console.log('[DEBUG] Google Maps API Key:', apiKey);
-  // console.log('[DEBUG] Google Maps Map ID:', mapId);
   const [infoWindow, setInfoWindow] = useState(null);
 
   useEffect(() => {
@@ -102,8 +99,6 @@ const MapOnly = forwardRef(({
     const fetchData = async () => {
       if (!isMountedRef.current) return;
       try {
-        setLoading(true);
-        setError(null);
         const barangayResponse = await fetch("/quezon_barangays_boundaries.geojson");
         if (!barangayResponse.ok) throw new Error('Failed to load barangay data');
         const barangayGeoJson = await barangayResponse.json();
@@ -124,10 +119,6 @@ const MapOnly = forwardRef(({
       } catch (err) {
         if (isMountedRef.current) {
           setError(err.message);
-        }
-      } finally {
-        if (isMountedRef.current) {
-          setLoading(false);
         }
       }
     };
@@ -158,9 +149,6 @@ const MapOnly = forwardRef(({
   }), []);
 
   useEffect(() => {
-    if (loading || error || !barangayData || !isMountedRef.current) {
-      return;
-    }
     let map, overlays = [];
     setMapLoaded(false);
     loadGoogleMapsScript(apiKey).then(() => {
@@ -193,19 +181,8 @@ const MapOnly = forwardRef(({
       }
       map = mapInstance.current;
       if (!map || !barangayData || !barangaysList) {
-        // console.log('[DEBUG] Missing required data:', {
-        //   hasMap: !!map,
-        //   hasBarangayData: !!barangayData,
-        //   hasBarangaysList: !!barangaysList
-        // });
         return;
       }
-
-      // console.log('[DEBUG] Starting polygon creation with:', {
-      //   barangayDataFeatures: barangayData.features?.length,
-      //   barangaysListLength: barangaysList?.length,
-      //   selectedBarangay: selectedBarangay
-      // });
 
       // Clear existing overlays
       overlays.forEach(overlay => overlay.setMap(null));
@@ -213,20 +190,10 @@ const MapOnly = forwardRef(({
 
       // Create polygons for each barangay
       barangayData.features.forEach((feature) => {
-        // console.log('[DEBUG] Processing feature:', {
-        //   name: feature.properties.name,
-        //   geometryType: feature.geometry.type
-        // });
-
         const geometry = feature.geometry;
         const coordsArray = geometry.type === "Polygon" ? [geometry.coordinates] : geometry.type === "MultiPolygon" ? geometry.coordinates : [];
         
         let barangayObj = barangaysList?.find(b => normalizeBarangayName(b.name) === normalizeBarangayName(feature.properties.name));
-        // console.log('[DEBUG] Found matching barangay:', {
-        //   featureName: feature.properties.name,
-        //   matchedBarangay: barangayObj?.name,
-        //   patternType: barangayObj?.status_and_recommendation?.pattern_based?.status
-        // });
 
         let patternType = (barangayObj?.status_and_recommendation?.pattern_based?.status || feature.properties.patternType || feature.properties.pattern_type || 'none').toLowerCase();
         if (!patternType || patternType === '') patternType = 'none';
@@ -237,25 +204,9 @@ const MapOnly = forwardRef(({
         const isSelected = selectedBarangay && 
           normalizeBarangayName(feature.properties.name) === normalizeBarangayName(selectedBarangay.properties?.name);
 
-        // console.log('[DEBUG] Selection check:', {
-        //   featureName: feature.properties.name,
-        //   selectedBarangayName: selectedBarangay?.properties?.name,
-        //   isSelected,
-        //   patternColor,
-        //   patternColorDark
-        // });
-
         coordsArray.forEach((polygonCoords) => {
           const path = polygonCoords[0].map(([lng, lat]) => ({ lat, lng }));
           
-          // console.log('[DEBUG] Creating polygon with style:', {
-          //   name: feature.properties.name,
-          //   isSelected,
-          //   strokeColor: isSelected ? patternColorDark : patternColor,
-          //   strokeWeight: isSelected ? 6 : 1,
-          //   zIndex: isSelected ? 10 : 1
-          // });
-
           const polygon = new window.google.maps.Polygon({
             paths: path,
             strokeColor: isSelected ? patternColorDark : patternColor,
@@ -269,11 +220,6 @@ const MapOnly = forwardRef(({
 
           // Add click listener
           polygon.addListener('click', () => {
-            // console.log('[DEBUG] Polygon clicked:', {
-            //   name: feature.properties.name,
-            //   currentSelected: selectedBarangay?.properties?.name
-            // });
-
             if (onBarangaySelect) {
               const selectedFeature = {
                 ...feature,
@@ -294,8 +240,6 @@ const MapOnly = forwardRef(({
           overlays.push(polygon);
         });
       });
-
-      // Add debug for final overlay count
 
       let breedingMarkers = [];
       if (showBreedingSites && breedingSites.length > 0 && window.google.maps.marker) {
@@ -329,21 +273,13 @@ const MapOnly = forwardRef(({
           });
 
           marker.addListener('click', () => {
-            // console.log('[DEBUG] Marker clicked:', {
-            //   type: 'report',
-            //   site: site,
-            //   coordinates: site.specific_location.coordinates
-            // });
-            
             // Close existing info window if open
             if (infoWindow) {
-              // console.log('[DEBUG] Closing existing info window');
               infoWindow.close();
             }
 
             // Pan to marker position and zoom in
             if (mapInstance.current) {
-              // console.log('[DEBUG] Panning to marker position');
               mapInstance.current.panTo({
                 lat: site.specific_location.coordinates[1],
                 lng: site.specific_location.coordinates[0],
@@ -376,16 +312,13 @@ const MapOnly = forwardRef(({
                 <button class=\"mt-4 px-4 py-2 bg-primary w-[40%] text-white rounded-lg shadow hover:bg-primary/80 hover:cursor-pointer font-bold\" onclick=\"window.location.href='/mapping/${site._id}'\">View Details</button>
               </div>
             `;
-            // console.log('[DEBUG] Created info window content');
 
-            // console.log('[DEBUG] Setting info window content and position');
             infoWindow.setContent(content);
             infoWindow.setPosition({
               lat: site.specific_location.coordinates[1],
               lng: site.specific_location.coordinates[0],
             });
 
-            // console.log('[DEBUG] Opening info window');
             infoWindow.open(map, marker);
           });
 
@@ -431,21 +364,13 @@ const MapOnly = forwardRef(({
             });
 
             marker.addListener('click', () => {
-              // console.log('[DEBUG] Intervention marker clicked:', {
-              //   type: 'intervention',
-              //   intervention: intervention,
-              //   coordinates: intervention.specific_location.coordinates
-              // });
-
               // Close existing info window if open
               if (infoWindow) {
-                // console.log('[DEBUG] Closing existing info window');
                 infoWindow.close();
               }
 
               // Pan to marker position and zoom in
               if (mapInstance.current) {
-                // console.log('[DEBUG] Panning to marker position');
                 mapInstance.current.panTo({
                   lat: intervention.specific_location.coordinates[1],
                   lng: intervention.specific_location.coordinates[0],
@@ -470,16 +395,13 @@ const MapOnly = forwardRef(({
                   <p class="text-lg"><span class="font-bold">Personnel:</span> ${intervention.personnel || ''}</p>
                 </div>
               `;
-              // console.log('[DEBUG] Created info window content');
 
-              // console.log('[DEBUG] Setting info window content and position');
               infoWindow.setContent(content);
               infoWindow.setPosition({
                 lat: intervention.specific_location.coordinates[1],
                 lng: intervention.specific_location.coordinates[0],
               });
 
-              // console.log('[DEBUG] Opening info window');
               infoWindow.open(map, marker);
             });
 
@@ -498,7 +420,7 @@ const MapOnly = forwardRef(({
       overlaysRef.current.forEach(o => o.setMap(null));
       overlaysRef.current = [];
     };
-  }, [loading, error, barangayData, barangaysList, selectedBarangay, onBarangaySelect]);
+  }, [barangayData, barangaysList, selectedBarangay, onBarangaySelect]);
 
   // Add this effect to initialize the info window
   useEffect(() => {
@@ -515,9 +437,6 @@ const MapOnly = forwardRef(({
     // console.log('[DEBUG] Selected barangay changed:', selectedBarangay);
   }, [selectedBarangay]);
 
-  if (loading) return <LoadingSpinner size={32} className="h-full" message="Loading map..." />;
-  if (error) return <ErrorMessage error={error} className="m-4" />;
-
   return (
     <div className={className} style={{ position: 'relative', width: '100%', height: '100%', minHeight: 300, ...style }}>
       <div
@@ -525,11 +444,6 @@ const MapOnly = forwardRef(({
         style={{ width: '100%', height: '100%' }}
         id="map-only"
       />
-      {!mapLoaded && (
-        <div className="absolute inset-0 flex items-center justify-center bg-white/70 z-10">
-          <LoadingSpinner size={40} message="Loading map..." />
-        </div>
-      )}
       {error && <ErrorMessage error={error} className="absolute top-2 left-2 z-20" />}
     </div>
   );
