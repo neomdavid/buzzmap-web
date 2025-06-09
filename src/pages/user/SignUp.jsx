@@ -107,10 +107,10 @@ const SignUp = () => {
       />
 
       <section
-        className="w-[87vw] max-w-220 mt-25 rounded-2xl shadow-md text-white bg-primary py-8 px-[7%] lg:px-25 flex flex-col justify-center items-center text-center text-xl lg:text-xl
+        className="w-[94vw] pt-12 lg:pt-0 md:w-[87vw] max-w-220 mt-25 rounded-2xl shadow-md text-white bg-primary py-8 px-[7%] lg:px-25 flex flex-col justify-center items-center text-center text-lg lg:text-xl
         lg:max-w-none lg:m-0 lg:rounded-none lg:absolute lg:right-0 lg:top-0 lg:h-[100vh] lg:w-[60vw] xl:w-250"
       >
-        <h1 className="mb-2 text-7xl lg:text-8xl">Join buzzmap!</h1>
+        <h1 className="mb-2 text-6xl sm:text-7xl lg:text-8xl">Join buzzmap!</h1>
         <p className="mb-4">
           <span className="font-bold">Sign Up</span> to join us today and be
           part of the movement to track, report, and prevent dengue outbreaks.

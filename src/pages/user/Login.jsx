@@ -151,11 +151,11 @@ const Login = () => {
       </div>
       <img
         src={manHighHand}
-        className="z-10000 absolute hidden left-[-2px] bottom-[-25px] w-203 lg:block xl:w-250 xl:right-249 2xl:w-260 "
+        className="z-10000 absolute hidden left-[-2px] bottom-[-25px] w-203 lg:block xl:w-230 xl:right-249 2xl:w-265 "
       />
 
       <section
-        className="w-[87vw] h-[80vh] max-w-220 mt-25 rounded-2xl shadow-md text-primary bg-white py-8 px-[7%] lg:px-25 flex flex-col justify-center items-center text-center text-xl lg:text-2xl
+        className="md:w-[87vw] md:h-[80vh] max-w-220 mt-25 rounded-2xl lg:shadow-md text-primary bg-white py-8 px-[7%] lg:px-25 flex flex-col justify-center items-center text-center text-lg lg:text-2xl
         lg:shadow-none lg:max-w-none lg:m-0 lg:rounded-none lg:absolute lg:right-0 lg:top-0 lg:h-[100vh] lg:w-[60vw] xl:w-250 overflow-y-auto"
       >
         <h1 className="mb-2 text-7xl lg:text-8xl">Welcome back!</h1>
@@ -184,7 +184,7 @@ const Login = () => {
             onChange={(e) => setPassword(e.target.value)}
           />
 
-          <div className="mt-[-1px] mb-4 flex  w-full justify-between">
+          <div className="mt-[-1px] mb-4 flex  w-full justify-between z-10000000">
             <div className="flex justify-center  items-center gap-x-2">
               <input
                 type="checkbox"
@@ -196,7 +196,7 @@ const Login = () => {
             </div>
             <button
               onClick={handleForgotPasswordClick}
-              className="font-semibold text-[14px] italic hover:underline hover:cursor-pointer"
+              className="font-semibold  italic hover:underline hover:cursor-pointer"
             >
               Forgot password?
             </button>
