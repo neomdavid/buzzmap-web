@@ -456,7 +456,7 @@ const Analytics = () => {
               {TABS.map(tab => (
                 <button
                   key={tab.value}
-                  className={`px-3 py-1 rounded-full ${selectedTab === tab.value
+                  className={`px-3 py-1 rounded-full hover:cursor-pointer hover:bg-primary/20 transition-all duration-200 ${selectedTab === tab.value
                       ? 'bg-primary text-white'
                       : 'bg-gray-200 text-black'
                     }`}

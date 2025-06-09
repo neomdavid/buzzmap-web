@@ -140,7 +140,7 @@ const Navbar = () => {
             : renderLoginButton(true)}
         </div>
         <button className="md:hidden text-white" onClick={toggleDrawer}>
-          {isOpen ? <X size={28} /> : <Menu size={28} />}
+          {isOpen ? <X size={28}  className="hover:cursor-pointer"/> : <Menu size={28} className="hover:cursor-pointer"/>}
         </button>
         {isOpen && (
           <div className="absolute top-full left-0 w-full bg-primary px-6 py-4 flex flex-col gap-y-4 md:hidden">
@@ -168,7 +168,7 @@ const Navbar = () => {
           {user.name !== "Guest" ? renderProfile() : renderLoginButton()}
         </div>
         <button className="md:hidden text-primary" onClick={toggleDrawer}>
-          {isOpen ? <X size={28} /> : <Menu size={28} />}
+          {isOpen ? <X size={28}  className="hover:cursor-pointer"/> : <Menu size={28} className="hover:cursor-pointer"/>}
         </button>
         {isOpen && (
           <div className="absolute top-full left-0 w-full bg-white px-6 py-4 flex flex-col gap-y-4 md:hidden shadow-md">
