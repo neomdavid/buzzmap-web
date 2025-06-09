@@ -195,45 +195,122 @@ function Profile(){
     const renderReports = () => {
         const reports = profileData?.recentActivity?.reports?.[activeTab.charAt(0).toUpperCase() + activeTab.slice(1)] || [];
         
+        // Empty state messages based on tab
+        const getEmptyStateMessage = () => {
+            switch (activeTab) {
+                case 'validated':
+                    return {
+                        title: 'No validated reports yet',
+                        subtitle: 'Your approved reports will appear here'
+                    };
+                case 'pending':
+                    return {
+                        title: 'No pending reports',
+                        subtitle: 'Reports waiting for review will appear here'
+                    };
+                case 'rejected':
+                    return {
+                        title: 'No rejected reports',
+                        subtitle: 'Reports that need revision will appear here'
+                    };
+                default:
+                    return {
+                        title: 'No reports yet',
+                        subtitle: 'Your reports will appear here'
+                    };
+            }
+        };
+        
         return (
             <div className='flex flex-col rounded-md gap-2 p-10 py-8 bg-base-200'>
-                {reports.map((report) => (
-                    <div key={report._id} className={`relative ${activeTab === 'rejected' ? "opacity-75" : ""}`}>
-                        {activeTab === 'pending' && (
-                            <div className='absolute top-6 right-6 bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm font-medium z-10'>
-                                Pending Review
-                            </div>
-                        )}
-                        <PostCard 
-                            postId={report._id}
-                            profileImage={profileData?.account?.profilePhotoUrl || profile1}
-                            username={profileData?.account?.username}
-                            timestamp={new Date(report.date_and_time).toLocaleDateString('en-US', {
-                                year: 'numeric',
-                                month: 'long',
-                                day: 'numeric'
-                            })}
-                            barangay={report.barangay}
-                            coordinates={report.specific_location?.coordinates || []}
-                            dateTime={new Date(report.date_and_time).toLocaleString('en-US', {
-                                year: 'numeric',
-                                month: 'long',
-                                day: 'numeric',
-                                hour: '2-digit',
-                                minute: '2-digit'
-                            })}
-                            reportType={report.report_type}
-                            description={report.description}
-                            images={report.images || []}
-                            upvotes={report.upvotes?.length || 0}
-                            downvotes={report.downvotes?.length || 0}
-                            commentsCount={report._comments?.length || 0}
-                            upvotesArray={report.upvotes || []}
-                            downvotesArray={report.downvotes || []}
-                            userId={report.user?._id}
-                        />
+                {reports.length === 0 ? (
+                    <div className="text-center py-16">
+                        <p className="text-gray-500 text-xl font-medium mb-2">{getEmptyStateMessage().title}</p>
+                        <p className="text-gray-400 text-sm">{getEmptyStateMessage().subtitle}</p>
                     </div>
-                ))}
+                ) : (
+                    reports.map((report) => (
+                        <div key={report._id} className={`relative ${activeTab === 'rejected' ? "opacity-75" : ""}`}>
+                            {activeTab === 'pending' && (
+                                <div className='absolute top-6 right-6 bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm font-medium z-10'>
+                                    Pending Review
+                                </div>
+                            )}
+                            {/* Debug logging */}
+                            {console.log('[DEBUG] Profile PostCard data:', {
+                                postId: report._id,
+                                upvotes: report.upvotes,
+                                downvotes: report.downvotes,
+                                upvotesLength: report.upvotes?.length,
+                                downvotesLength: report.downvotes?.length,
+                                currentUser: user,
+                                report: report
+                            })}
+                            <PostCard 
+                                postId={report._id}
+                                profileImage={profileData?.account?.profilePhotoUrl || profile1}
+                                username={profileData?.account?.username}
+                                timestamp={new Date(report.date_and_time).toLocaleDateString('en-US', {
+                                    year: 'numeric',
+                                    month: 'long',
+                                    day: 'numeric'
+                                })}
+                                barangay={report.barangay}
+                                coordinates={report.specific_location?.coordinates || []}
+                                dateTime={new Date(report.date_and_time).toLocaleString('en-US', {
+                                    year: 'numeric',
+                                    month: 'long',
+                                    day: 'numeric',
+                                    hour: '2-digit',
+                                    minute: '2-digit'
+                                })}
+                                reportType={report.report_type}
+                                description={report.description}
+                                images={report.images || []}
+                                upvotes={report.upvotes || []}
+                                downvotes={report.downvotes || []}
+                                upvotesArray={report.upvotes || []}
+                                downvotesArray={report.downvotes || []}
+                                commentsCount={report._comments?.length || 0}
+                                _commentCount={report._comments?.length || 0}
+                                userId={report.user?._id}
+                                likes={report.upvotes?.length || 0}
+                                comments={report._comments?.length || 0}
+                                shares="0"
+                                currentUserId={user?._id}
+                                onVoteUpdate={(newUpvotes, newDownvotes) => {
+                                    console.log('[DEBUG] Profile onVoteUpdate called:', { newUpvotes, newDownvotes, reportId: report._id });
+                                    
+                                    // Update the specific report in profileData
+                                    setProfileData(prevData => {
+                                        if (!prevData?.recentActivity?.reports) return prevData;
+                                        
+                                        const updatedReports = { ...prevData.recentActivity.reports };
+                                        
+                                        // Update the report in the appropriate tab
+                                        Object.keys(updatedReports).forEach(tab => {
+                                            if (Array.isArray(updatedReports[tab])) {
+                                                updatedReports[tab] = updatedReports[tab].map(r => 
+                                                    r._id === report._id 
+                                                        ? { ...r, upvotes: newUpvotes, downvotes: newDownvotes }
+                                                        : r
+                                                );
+                                            }
+                                        });
+                                        
+                                        return {
+                                            ...prevData,
+                                            recentActivity: {
+                                                ...prevData.recentActivity,
+                                                reports: updatedReports
+                                            }
+                                        };
+                                    });
+                                }}
+                            />
+                        </div>
+                    ))
+                )}
             </div>
         );
     };

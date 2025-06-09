@@ -29,7 +29,19 @@ const PostCard = ({
   downvotesArray = [],
   _commentCount = 0, // Add this prop with default value
   userId, // Add userId prop
+  currentUserId, // Add currentUserId prop
+  onVoteUpdate, // Add onVoteUpdate prop
 }) => {
+  // Debug logging for PostCard props
+  console.log('[DEBUG] PostCard received props:', {
+    postId,
+    upvotesArray,
+    downvotesArray,
+    currentUserId,
+    hasOnVoteUpdate: !!onVoteUpdate,
+    userId
+  });
+
   const userFromStore = useSelector((state) => state.auth?.user);
   const commentModalRef = useRef(null);
   const [userProfile, setUserProfile] = useState({ username, profilePhotoUrl: profileImage });
@@ -153,12 +165,14 @@ const PostCard = ({
         commentsCount={localCommentCount}
         upvotesArray={localUpvotes}
         downvotesArray={localDownvotes}
-        currentUserId={userFromStore?._id}
+        currentUserId={currentUserId}
         onCommentClick={handleCommentClick}
         iconSize={30}
         onVoteUpdate={(newUpvotes, newDownvotes) => {
           setLocalUpvotes(newUpvotes);
           setLocalDownvotes(newDownvotes);
+          // Also call the parent's onVoteUpdate if provided
+          onVoteUpdate?.(newUpvotes, newDownvotes);
         }}
       />
     
@@ -173,6 +187,8 @@ const PostCard = ({
         onVoteUpdate={(newUpvotes, newDownvotes) => {
           setLocalUpvotes(newUpvotes);
           setLocalDownvotes(newDownvotes);
+          // Also call the parent's onVoteUpdate if provided
+          onVoteUpdate?.(newUpvotes, newDownvotes);
         }}
         onCommentAdded={() => {
           setLocalCommentCount(prev => prev + 1);

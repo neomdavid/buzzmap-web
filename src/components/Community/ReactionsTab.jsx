@@ -30,6 +30,19 @@ const ReactionsTab = ({
   userFromStore = null,
   onVoteUpdate,
 }) => {
+  // Debug logging
+  console.log('[DEBUG] ReactionsTab props:', {
+    postId,
+    upvotesArray,
+    downvotesArray,
+    currentUserId,
+    hasOnVoteUpdate: !!onVoteUpdate,
+    upvotesArrayType: typeof upvotesArray,
+    downvotesArrayType: typeof downvotesArray,
+    upvotesArrayLength: upvotesArray?.length,
+    downvotesArrayLength: downvotesArray?.length
+  });
+
   // Regular post mutations
   const [upvoteReport] = useUpvoteReportMutation();
   const [downvoteReport] = useDownvoteReportMutation();
@@ -55,6 +68,12 @@ const ReactionsTab = ({
                   (Array.isArray(downvotesArray) ? downvotesArray.length : 0);
 
   const handleUpvote = async () => {
+    console.log('[DEBUG] handleUpvote called for postId:', postId);
+    console.log('[DEBUG] Current user ID:', currentUserId);
+    console.log('[DEBUG] Has upvoted:', hasUpvoted);
+    console.log('[DEBUG] Current upvotes array:', upvotesArray);
+    console.log('[DEBUG] Current downvotes array:', downvotesArray);
+
     if (!currentUserId) {
       if (onShowToast) {
         onShowToast("Please log in to vote", "error");
@@ -69,36 +88,46 @@ const ReactionsTab = ({
     let newDownvotes = [...downvotesArray];
 
     if (hasUpvoted) {
+      console.log('[DEBUG] Removing upvote...');
       newUpvotes = newUpvotes.filter(vote => 
         typeof vote === 'object' ? vote._id !== currentUserId : vote !== currentUserId
       );
     } else {
+      console.log('[DEBUG] Adding upvote...');
       newUpvotes.push(currentUserId);
       // If user had downvoted, remove it
       if (hasDownvoted) {
+        console.log('[DEBUG] Also removing downvote...');
         newDownvotes = newDownvotes.filter(vote => 
           typeof vote === 'object' ? vote._id !== currentUserId : vote !== currentUserId
         );
       }
     }
 
+    console.log('[DEBUG] New upvotes array:', newUpvotes);
+    console.log('[DEBUG] New downvotes array:', newDownvotes);
+
     // Update parent component immediately
+    console.log('[DEBUG] Calling onVoteUpdate with new arrays');
     onVoteUpdate?.(newUpvotes, newDownvotes);
 
     try {
       if (hasUpvoted) {
+        console.log('[DEBUG] Making API call to remove upvote');
         if (isAdminPost) {
           await removeAdminPostUpvote(postId).unwrap();
         } else {
           await removeUpvote(postId).unwrap();
         }
       } else {
+        console.log('[DEBUG] Making API call to add upvote');
         if (isAdminPost) {
           await upvoteAdminPost(postId).unwrap();
         } else {
           await upvoteReport(postId).unwrap();
         }
       }
+      console.log('[DEBUG] API call successful');
     } catch (error) {
       console.error('[DEBUG] Error handling upvote:', error);
       // Revert optimistic update on error
@@ -110,6 +139,12 @@ const ReactionsTab = ({
   };
 
   const handleDownvote = async () => {
+    console.log('[DEBUG] handleDownvote called for postId:', postId);
+    console.log('[DEBUG] Current user ID:', currentUserId);
+    console.log('[DEBUG] Has downvoted:', hasDownvoted);
+    console.log('[DEBUG] Current upvotes array:', upvotesArray);
+    console.log('[DEBUG] Current downvotes array:', downvotesArray);
+
     if (!currentUserId) {
       if (onShowToast) {
         onShowToast("Please log in to vote", "error");
@@ -124,36 +159,46 @@ const ReactionsTab = ({
     let newDownvotes = [...downvotesArray];
 
     if (hasDownvoted) {
+      console.log('[DEBUG] Removing downvote...');
       newDownvotes = newDownvotes.filter(vote => 
         typeof vote === 'object' ? vote._id !== currentUserId : vote !== currentUserId
       );
     } else {
+      console.log('[DEBUG] Adding downvote...');
       newDownvotes.push(currentUserId);
       // If user had upvoted, remove it
       if (hasUpvoted) {
+        console.log('[DEBUG] Also removing upvote...');
         newUpvotes = newUpvotes.filter(vote => 
           typeof vote === 'object' ? vote._id !== currentUserId : vote !== currentUserId
         );
       }
     }
 
+    console.log('[DEBUG] New upvotes array:', newUpvotes);
+    console.log('[DEBUG] New downvotes array:', newDownvotes);
+
     // Update parent component immediately
+    console.log('[DEBUG] Calling onVoteUpdate with new arrays');
     onVoteUpdate?.(newUpvotes, newDownvotes);
 
     try {
       if (hasDownvoted) {
+        console.log('[DEBUG] Making API call to remove downvote');
         if (isAdminPost) {
           await removeAdminPostDownvote(postId).unwrap();
         } else {
           await removeDownvote(postId).unwrap();
         }
       } else {
+        console.log('[DEBUG] Making API call to add downvote');
         if (isAdminPost) {
           await downvoteAdminPost(postId).unwrap();
         } else {
           await downvoteReport(postId).unwrap();
         }
       }
+      console.log('[DEBUG] API call successful');
     } catch (error) {
       console.error('[DEBUG] Error handling downvote:', error);
       // Revert optimistic update on error

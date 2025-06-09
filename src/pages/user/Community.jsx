@@ -162,9 +162,15 @@ const Community = () => {
         downvotesArray={post.downvotes}
         _commentCount={post.commentsCount}
         userId={post.user?._id}
+        currentUserId={userFromStore?._id}
+        onVoteUpdate={(newUpvotes, newDownvotes) => {
+          console.log('[DEBUG] Community onVoteUpdate called for post:', post._id, { newUpvotes, newDownvotes });
+          // For Community page, we rely on RTK Query cache updates
+          // The mutations in dengueApi.js already handle cache updates automatically
+        }}
       />
     </div>
-  ), [lastPostElementRef]);
+  ), [lastPostElementRef, userFromStore]);
 
   const getCurrentLocation = () => {
     if (navigator.geolocation) {
