@@ -64,7 +64,7 @@ const SingleArticle = () => {
     );
   }
 
-  if (!displayArticle) {
+  if (!displayArticle || displayArticle.status === 'archived') {
     return (
       <div className="flex flex-col items-center justify-center h-screen">
         <p className="text-gray-500 text-xl mb-4">Article not found</p>

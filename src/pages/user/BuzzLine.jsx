@@ -60,9 +60,9 @@ const BuzzLine = () => {
   const { data: adminPosts, isLoading } = useGetAllAdminPostsQuery();
   const navigate = useNavigate();
 
-  // Filter for news and tips
-  const newsArticles = adminPosts?.filter(post => post.category === 'news') || [];
-  const tipArticles = adminPosts?.filter(post => post.category === 'tip') || [];
+  // Filter for news and tips (exclude archived posts)
+  const newsArticles = adminPosts?.filter(post => post.category === 'news' && post.status !== 'archived') || [];
+  const tipArticles = adminPosts?.filter(post => post.category === 'tip' && post.status !== 'archived') || [];
 
   // Filter and format news articles from admin posts
   const formattedArticles = useMemo(() => {
@@ -71,7 +71,7 @@ const BuzzLine = () => {
     }
     
     const filteredNews = Array.isArray(adminPosts?.posts) ? adminPosts.posts.filter(post => {
-      return post && post.category && post.category.toLowerCase() === 'news';
+      return post && post.category && post.category.toLowerCase() === 'news' && post.status !== 'archived';
     }) : [];
 
     return filteredNews.map(post => {
@@ -112,41 +112,59 @@ const BuzzLine = () => {
         </p>
         {/* THIS IS FOR DATA WITH CATEGORY OF NEWS SO USE UPDATECARD */}
         <div className="grid grid-cols-1 sm:grid-cols-2  lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-4 w-full gap-12">
-         {newsArticles.map((post) => (
-           <UpdatesCard
-             key={post._id}
-             image={post.images && post.images.length > 0 ? post.images[0] : undefined}
-             date={post.publishDate ? new Date(post.publishDate).toLocaleDateString() : ''}
-             title={post.title}
-             summary={post.content}
-             onReadMore={() => navigate(`/buzzline/${post._id}`)}
-           />
-         ))}
+         {newsArticles.length > 0 ? (
+           newsArticles.map((post) => (
+             <UpdatesCard
+               key={post._id}
+               image={post.images && post.images.length > 0 ? post.images[0] : undefined}
+               date={post.publishDate ? new Date(post.publishDate).toLocaleDateString() : ''}
+               title={post.title}
+               summary={post.content}
+               onReadMore={() => navigate(`/buzzline/${post._id}`)}
+             />
+           ))
+         ) : (
+           <div className="col-span-full text-center py-10 mb-40">
+             <p className="text-white text-xl">No updates available at the moment.</p>
+             <p className="text-white/80 text-sm mt-2">Check back later for the latest dengue surveillance updates.</p>
+           </div>
+         )}
         </div>
-        <p className="text-lg underline text-white text-center w-full flex items-center justify-center gap-4 cursor-pointer" onClick={() => navigate('/buzzline/updates')}>
-          View All Latest Dengue Surveillance Updates
-          <ArrowRight size={18} />
-        </p>
+        {newsArticles.length > 0 && (
+          <p className="text-lg underline text-white text-center w-full flex items-center justify-center gap-4 cursor-pointer" onClick={() => navigate('/buzzline/updates')}>
+            View All Latest Dengue Surveillance Updates
+            <ArrowRight size={18} />
+          </p>
+        )}
       </section>
       <section className="text-primary flex flex-col font-normal gap-14 md:gap-23 w-full px-6 sm:px-14 py-20 ">
         <p className="text-primary text-4xl sm:text-5xl font-bold italic">#QCESDhelps</p>
         <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-10 text-white">
           {/* THIS IS FOR DATA WITH CATEGORY OF TIP SO CREATE A CARD FOR IT  */}
-          {tipArticles.map((post) => (
-            <ArticlesCard
-              key={post._id}
-              image={post.images && post.images.length > 0 ? post.images[0] : undefined}
-              date={post.publishDate ? new Date(post.publishDate).toLocaleDateString() : ''}
-              title={post.title}
-              summary={post.content}
-              onReadMore={() => navigate(`/buzzline/${post._id}`)}
-            />
-          ))}
+          {tipArticles.length > 0 ? (
+            tipArticles.map((post) => (
+              <ArticlesCard
+                key={post._id}
+                image={post.images && post.images.length > 0 ? post.images[0] : undefined}
+                date={post.publishDate ? new Date(post.publishDate).toLocaleDateString() : ''}
+                title={post.title}
+                summary={post.content}
+                onReadMore={() => navigate(`/buzzline/${post._id}`)}
+              />
+            ))
+          ) : (
+            <div className="col-span-full text-center py-10">
+              <p className="text-primary text-xl">No tips available at the moment.</p>
+              <p className="text-primary/80 text-sm mt-2">Check back later for helpful dengue prevention tips.</p>
+            </div>
+          )}
         </div>
-        <p className="text-lg underline text-primary font-bold text-center w-full flex items-center justify-center gap-4 cursor-pointer" onClick={() => navigate('/buzzline/articles')}>
-        View All #QCESDhelps Articles
-          <ArrowRight size={18} />
-        </p>
+        {tipArticles.length > 0 && (
+          <p className="text-lg underline text-primary font-bold text-center w-full flex items-center justify-center gap-4 cursor-pointer" onClick={() => navigate('/buzzline/articles')}>
+            View All #QCESDhelps Articles
+            <ArrowRight size={18} />
+          </p>
+        )}
       </section>
       <div className="flex flex-col w-full px-10 md:flex-row  md:pr-0 relative pt-20 pb-40 xl:pt-35 xl:pb-50">
         <section className="flex flex-col text-primary gap-6 flex-1 xl:items-center text-left xl:text-center">

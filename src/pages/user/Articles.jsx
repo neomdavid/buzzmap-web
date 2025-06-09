@@ -18,7 +18,7 @@ const Articles = () => {
   const navigate = useNavigate();
 
   const { data: adminPosts, isLoading } = useGetAllAdminPostsQuery();
-  const articles = adminPosts?.filter(post => post.category === 'tip') || [];
+  const articles = adminPosts?.filter(post => post.category === 'tip' && post.status !== 'archived') || [];
 
   useEffect(() => {
     const interval = setInterval(() => {
