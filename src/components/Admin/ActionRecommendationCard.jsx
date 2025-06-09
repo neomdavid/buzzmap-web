@@ -219,7 +219,7 @@ const ActionRecommendationCard = ({
               onClick={() => onApply(barangay, pattern_based?.status)}
               className="px-3 py-1.5 bg-primary text-white rounded-full hover:bg-primary/90 transition-colors text-sm cursor-pointer"
             >
-              Apply
+              Add Intervention
             </button>
           )}
         </div>

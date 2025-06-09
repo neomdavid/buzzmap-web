@@ -257,10 +257,6 @@ function AdminsTable({ statusFilter, roleFilter, searchQuery }) {
 
     return (
       <div className="py-2 h-full w-full flex items-center gap-2">
-        <button className="flex items-center gap-1 text-primary hover:bg-gray-200 p-1 rounded-md">
-          <IconSearch size={13} stroke={2.5} />
-          <p className="text-sm">view</p>
-        </button>
         {/* Only show disable/enable button if not super admin */}
         {!isSuperAdmin && (
           <button 

@@ -32,17 +32,16 @@ const customTheme = themeQuartz.withParams({
 
 const StatusCell = (p) => {
   const status = p.value;
-  const bgColor =
-    status === "Complete"
-      ? "bg-success"
-      : status === "Scheduled"
-      ? "bg-warning"
-      : "bg-info";
+  const statusStyles = {
+    Scheduled: "bg-info/10 text-info border-info/20",
+    Ongoing: "bg-warning/10 text-warning border-warning/20",
+    Complete: "bg-success/10 text-success border-success/20"
+  };
 
   return (
     <div className="flex items-center justify-center h-full p-1">
       <span
-        className={`${bgColor} rounded-2xl px-4 py-1 flex items-center justify-center text-white text-sm font-semibold text-center`}
+        className={`${statusStyles[status]} rounded-2xl px-4 py-1 flex items-center justify-center text-sm font-semibold text-center border`}
       >
         {status}
       </span>

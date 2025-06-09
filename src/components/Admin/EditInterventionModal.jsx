@@ -1,10 +1,14 @@
 import React, { useState, useEffect } from "react";
 
 const EditInterventionModal = ({ intervention, onClose, onSave }) => {
-  const [formData, setFormData] = useState({ ...intervention });
+  // Destructure _id from intervention and spread the rest into formData
+  const { _id, ...interventionWithoutId } = intervention;
+  const [formData, setFormData] = useState({ ...interventionWithoutId });
 
   useEffect(() => {
-    setFormData({ ...intervention });
+    // Destructure _id from intervention and spread the rest into formData
+    const { _id, ...interventionWithoutId } = intervention;
+    setFormData({ ...interventionWithoutId });
   }, [intervention]);
 
   const handleChange = (e) => {

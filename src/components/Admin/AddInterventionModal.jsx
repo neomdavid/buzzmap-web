@@ -367,10 +367,12 @@ const AddInterventionModal = ({ isOpen, onClose, preselectedBarangay, patternTyp
 
       await createIntervention(formattedData).unwrap();
       console.log('[Modal DEBUG] Intervention created successfully');
+      showCustomToast('Intervention created successfully!', 'success');
       onClose();
     } catch (error) {
       console.error('[Modal DEBUG] Error creating intervention:', error);
       setSubmissionError(error.data?.message || 'Failed to create intervention');
+      showCustomToast(error.data?.message || 'Failed to create intervention', 'error');
     } finally {
       setIsSubmitting(false);
     }
