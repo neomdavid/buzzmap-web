@@ -174,38 +174,32 @@ const AddInterventionModal = ({ isOpen, onClose, preselectedBarangay, patternTyp
     if (barangayData) {
       console.log('[DEBUG] Found barangay data:', {
         name: barangayData.name,
-        pattern: barangayData.pattern,
+        patternType: barangayData.patternType,
         issueDetected: barangayData.issueDetected,
         suggestedAction: barangayData.suggestedAction,
         rawData: barangayData
       });
       
-      // Determine pattern type and urgency
-      let patternType = 'none';
+      // Use the existing patternType from transformedBarangays
+      let patternType = barangayData.patternType || 'none';
       let urgency = null;
 
-      // Check pattern based on issueDetected text content
-      if (barangayData.issueDetected) {
-        const issueText = barangayData.issueDetected.toLowerCase();
-        
-        if (issueText.includes('spike') || issueText.includes('sudden increase')) {
-          patternType = 'spike';
-          urgency = 'Immediate Action Required';
-          console.log('[DEBUG] Pattern determined as spike');
-        } else if (issueText.includes('gradual rise') || issueText.includes('increasing trend')) {
-          patternType = 'gradual_rise';
-          urgency = 'Action Required Soon';
-          console.log('[DEBUG] Pattern determined as gradual_rise');
-        } else if (issueText.includes('stable') || issueText.includes('consistent')) {
-          patternType = 'stability';
-          urgency = 'Monitor Situation';
-          console.log('[DEBUG] Pattern determined as stability');
-        } else if (issueText.includes('decline') || issueText.includes('decreasing')) {
-          patternType = 'decline';
-          urgency = 'Continue Monitoring';
-          console.log('[DEBUG] Pattern determined as decline');
-        } else {
-          console.log('[DEBUG] No specific pattern found in issue text');
+      // Map pattern types to urgency levels
+      const patternUrgencyMap = {
+        spike: 'Immediate Action Required',
+        gradual_rise: 'Action Required Soon',
+        stability: 'Monitor Situation',
+        decline: 'Continue Monitoring',
+        none: null
+      };
+
+      urgency = patternUrgencyMap[patternType];
+
+      // Also check death priority for additional urgency
+      if (barangayData.death_priority && barangayData.death_priority.count > 0) {
+        urgency = 'Immediate Action Required (Death Cases Detected)';
+        if (patternType === 'none') {
+          patternType = 'spike'; // Treat death cases as high priority
         }
       }
 
@@ -221,7 +215,10 @@ const AddInterventionModal = ({ isOpen, onClose, preselectedBarangay, patternTyp
       };
     }
     console.log('[DEBUG] No barangay data found for:', barangayName);
-    return null;
+    return {
+      type: 'none',
+      urgency: null
+    };
   };
 
   // Update handleChange to update highlighted barangay and pan map
@@ -237,9 +234,8 @@ const AddInterventionModal = ({ isOpen, onClose, preselectedBarangay, patternTyp
     if (name === 'barangay') {
       setHighlightedBarangay(value);
       const patternData = getBarangayPatternData(value);
-      if (patternData) {
-        setCurrentBarangayPattern(patternData);
-      }
+      // Always update the pattern data, even if it's null/empty
+      setCurrentBarangayPattern(patternData);
 
       // Pan map to selected barangay
       if (value && barangayGeoJsonData) {
@@ -528,7 +524,7 @@ const AddInterventionModal = ({ isOpen, onClose, preselectedBarangay, patternTyp
                       {/* Pattern Tag - Now shows for any barangay with pattern data */}
                      
                     </div>
-                    {currentBarangayPattern.type && currentBarangayPattern.urgency && (
+                    {currentBarangayPattern && currentBarangayPattern.type && currentBarangayPattern.urgency && (
                         <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium w-fit mb-2 mt-2
                           ${currentBarangayPattern.type === 'spike' ? 'bg-error/10 text-error border border-error/20' : ''}
                           ${currentBarangayPattern.type === 'gradual_rise' ? 'bg-warning/10 text-warning border border-warning/20' : ''}
@@ -577,9 +573,9 @@ const AddInterventionModal = ({ isOpen, onClose, preselectedBarangay, patternTyp
                           type="text"
                           name="address"
                           value={formData.address}
-                          onChange={handleChange}
-                          placeholder="Enter specific location"
-                          className="input input-bordered w-full text-base"
+                          placeholder="Address will be set when you place a pin on the map"
+                          className="input input-bordered w-full text-base bg-gray-50"
+                          readOnly
                           required
                         />
                       </div>

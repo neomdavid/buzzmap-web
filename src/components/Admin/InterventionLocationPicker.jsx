@@ -54,7 +54,12 @@ const InterventionLocationPicker = ({
   const [currentMarker, setCurrentMarker] = useState(null);
   const [currentPinDetail, setCurrentPinDetail] = useState({ barangayName: '', isValid: false });
   const [errorMessage, setErrorMessage] = useState('');
-  const [highlightedBarangayName, setHighlightedBarangayName] = useState('');
+  const [highlightedBarangayName, setHighlightedBarangayName] = useState(highlightedBarangay || '');
+
+  // Sync highlightedBarangayName with highlightedBarangay prop
+  useEffect(() => {
+    setHighlightedBarangayName(highlightedBarangay || '');
+  }, [highlightedBarangay]);
 
   // Load barangay boundaries
   useEffect(() => {
@@ -175,9 +180,8 @@ const InterventionLocationPicker = ({
         mapInstance.current.panTo(focusCommand.center);
         mapInstance.current.setZoom(focusCommand.zoom || 15);
         setHighlightedBarangayName(focusCommand.name);
-        if (currentMarker !== null) {
-          setCurrentMarker(null);
-        }
+        // Don't clear the existing pin when highlighting a barangay
+        // The user should be able to see both the highlighted barangay and their existing pin
       } else if (focusCommand.type === 'pin' && focusCommand.lat && focusCommand.lng) {
         const newPin = { lat: focusCommand.lat, lng: focusCommand.lng };
         mapInstance.current.panTo(newPin);
