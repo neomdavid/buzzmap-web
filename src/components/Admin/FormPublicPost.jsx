@@ -58,8 +58,16 @@ const FormPublicPost = () => {
       setTimeout(() => setSuccess(false), 3000);
       refetch(); // Refetch admin posts after successful post
     } catch (err) {
-      alert("Failed to publish post.");
-      console.error(err);
+      console.error("Post upload error:", err);
+      
+      // Better error handling
+      if (err.status === 500 && err.data?.message?.includes('uploads')) {
+        alert("Server upload error: Unable to save images. Please contact administrator.");
+      } else if (err.status === 413) {
+        alert("Files too large. Please reduce image sizes.");
+      } else {
+        alert(`Failed to publish post: ${err.data?.message || err.message || 'Unknown error'}`);
+      }
     } finally {
       setIsSubmitting(false);
     }

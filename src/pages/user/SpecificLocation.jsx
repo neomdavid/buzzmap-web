@@ -10,10 +10,10 @@ import "rc-slider/assets/index.css";
 import profile1 from "../../assets/profile1.png";
 import SideNavDetails from "../../components/Mapping/SideNavDetails";
 import { RecentReportCard } from "../../components";
-import stagnantIcon from "../../assets/icons/stagnant_water.svg";
-import standingIcon from '../../assets/icons/standing_water.svg';
-import garbageIcon from '../../assets/icons/garbage.svg';
-import othersIcon from '../../assets/icons/others.svg';
+import stagnantIcon from "../../assets/icons/stagnant_water.svg?url";
+import standingIcon from '../../assets/icons/standing_water.svg?url';
+import garbageIcon from '../../assets/icons/garbage.svg?url';
+import othersIcon from '../../assets/icons/others.svg?url';
 import defaultProfile from "../../assets/default_profile.png";
 import * as turf from '@turf/turf'; // Import turf for center calculations
 
@@ -166,6 +166,15 @@ const BREEDING_SITE_TYPE_ICONS = {
   "default": stagnantIcon
 };
 
+// Debug the icon URLs in deployment
+console.log('[DEBUG] SpecificLocation - Breeding Site Icons:', {
+  "Stagnant Water": stagnantIcon,
+  "Standing Water": standingIcon,
+  "Uncollected Garbage or Trash": garbageIcon,
+  "Others": othersIcon,
+  "default": stagnantIcon
+});
+
 const SpecificLocation = () => {
   const { isLoaded } = useGoogleMaps();
   const { state } = useLocation();
@@ -207,6 +216,19 @@ const SpecificLocation = () => {
 
   // Get barangays list for pattern data
   const { data: barangaysList = [] } = useGetBarangaysQuery();
+
+  // Preload SVG icons to ensure they're available when needed
+  useEffect(() => {
+    console.log('[DEBUG] Preloading SVG icons...');
+    const iconsToPreload = Object.values(BREEDING_SITE_TYPE_ICONS);
+    
+    iconsToPreload.forEach((iconUrl, index) => {
+      const img = new Image();
+      img.onload = () => console.log(`[DEBUG] Preloaded icon ${index + 1}/${iconsToPreload.length}:`, iconUrl);
+      img.onerror = () => console.error(`[ERROR] Failed to preload icon ${index + 1}/${iconsToPreload.length}:`, iconUrl);
+      img.src = iconUrl;
+    });
+  }, []);
 
   // Load barangay boundary data
   useEffect(() => {
@@ -428,9 +450,24 @@ const SpecificLocation = () => {
     if (report?.specific_location?.coordinates) {
       const [lng, lat] = report.specific_location.coordinates;
       
-      // Create custom icon for main marker
+      // Create custom icon for main marker with error handling
       const iconUrl = BREEDING_SITE_TYPE_ICONS[report.report_type] || BREEDING_SITE_TYPE_ICONS.default;
+      console.log('[DEBUG] Main marker - Report type:', report.report_type, 'Icon URL:', iconUrl);
+      
       const glyphImg = document.createElement("img");
+      
+      // Add success and error handling for missing images
+      glyphImg.onload = function() {
+        console.log('[DEBUG] Successfully loaded main marker icon:', iconUrl);
+      };
+      
+      glyphImg.onerror = function() {
+        console.error('[ERROR] Failed to load main marker icon:', iconUrl, 'for report type:', report.report_type);
+        console.error('[ERROR] Available icon keys:', Object.keys(BREEDING_SITE_TYPE_ICONS));
+        // Fallback to a simple colored circle if image fails
+        this.style.display = 'none';
+      };
+      
       glyphImg.src = iconUrl;
       glyphImg.style.width = "28px";
       glyphImg.style.height = "28px";
@@ -516,9 +553,25 @@ const SpecificLocation = () => {
 
       const [lng, lat] = r.specific_location.coordinates;
       
-      // Create custom icon for nearby markers
+      // Create custom icon for nearby markers with error handling
       const iconUrl = BREEDING_SITE_TYPE_ICONS[r.report_type] || BREEDING_SITE_TYPE_ICONS.default;
+      console.log('[DEBUG] Nearby marker - Report type:', r.report_type, 'Icon URL:', iconUrl);
+      
       const glyphImg = document.createElement("img");
+      
+      // Add success and error handling for missing images
+      glyphImg.onload = function() {
+        console.log('[DEBUG] Successfully loaded nearby marker icon:', iconUrl);
+      };
+      
+      glyphImg.onerror = function() {
+        console.error('[ERROR] Failed to load nearby marker icon:', iconUrl, 'for report type:', r.report_type);
+        console.error('[ERROR] Available icon keys:', Object.keys(BREEDING_SITE_TYPE_ICONS));
+        console.error('[ERROR] Report object:', r);
+        // Fallback to a simple colored circle if image fails
+        this.style.display = 'none';
+      };
+      
       glyphImg.src = iconUrl;
       glyphImg.style.width = "28px";
       glyphImg.style.height = "28px";
