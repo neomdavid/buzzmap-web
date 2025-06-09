@@ -56,7 +56,7 @@ const INTERVENTION_TYPE_ICONS = {
 const BREEDING_SITE_TYPE_ICONS = {
   "Stagnant Water": stagnantIcon,
   "Standing Water": standingIcon,
-  "Garbage": garbageIcon,
+  "Uncollected Garbage or Trash": garbageIcon,
   "Others": othersIcon,
   "default": stagnantIcon // fallback
 };
@@ -830,13 +830,10 @@ const Mapping = () => {
                               <img src={stagnantIcon} alt="Stagnant Water" className="w-6 h-6" />
                               <span className="text-xs text-primary">Stagnant Water</span>
                         </div>
-                            <div key="standing" className="flex items-center space-x-2">
-                              <img src={standingIcon} alt="Standing Water" className="w-6 h-6" />
-                              <span className="text-xs text-primary">Standing Water</span>
-                  </div>
+
                             <div key="garbage" className="flex items-center space-x-2">
-                              <img src={garbageIcon} alt="Garbage" className="w-6 h-6" />
-                              <span className="text-xs text-primary">Garbage</span>
+                              <img src={garbageIcon} alt="Uncollected Garbage or Trash" className="w-6 h-6" />
+                              <span className="text-xs text-primary">Uncollected Garbage or Trash</span>
                 </div>
                             <div key="others" className="flex items-center space-x-2">
                               <img src={othersIcon} alt="Others" className="w-6 h-6" />

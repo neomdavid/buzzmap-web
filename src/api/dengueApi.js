@@ -213,6 +213,25 @@ export const dengueApi = createApi({
         console.log('API Request URL:', url);
         return url;
       },
+      async onQueryStarted(arg, { dispatch, queryFulfilled, getState }) {
+        try {
+          // Check if user is admin and trigger analysis before fetching posts
+          const state = getState();
+          const user = state.auth?.user;
+          
+          if (user?.role === 'admin') {
+            console.log('[DEBUG] Admin fetching posts, triggering crowdsourced analysis first...');
+            // Trigger analysis before fetching posts
+            await dispatch(dengueApi.endpoints.analyzeCrowdsourcedReports.initiate()).unwrap();
+            console.log('[DEBUG] Crowdsourced analysis completed, now fetching posts...');
+          }
+          
+          await queryFulfilled;
+        } catch (error) {
+          console.error('[DEBUG] Error in getPosts onQueryStarted:', error);
+          // Still allow posts to be fetched even if analysis fails
+        }
+      },
       transformResponse: (response, meta, arg) => {
         // No more paginated format, just return the array directly
         return response;
@@ -316,6 +335,18 @@ export const dengueApi = createApi({
         return "analytics/interventions";
       },
       providesTags: ["Analytics"],
+    }),
+
+    // Analyze crowdsourced reports
+    analyzeCrowdsourcedReports: builder.mutation({
+      query: () => ({
+        url: "analytics/analyze-crowdsourced-reports",
+        method: "GET",
+      }),
+      transformResponse: (response) => {
+        console.log('[DEBUG] Crowdsourced analysis response:', response);
+        return response;
+      },
     }),
 
     // Test Endpoints (for development)
@@ -1308,6 +1339,7 @@ export const {
 
   // Analytics hooks
   useGetAnalyticsQuery,
+  useAnalyzeCrowdsourcedReportsMutation,
 
   // Test hooks
   useUploadTestReportsMutation,

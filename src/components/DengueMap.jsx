@@ -855,13 +855,10 @@ const DengueMap = ({
                     <img src={stagnantIcon} alt="Stagnant Water" className="w-6 h-6" />
                     <span className="text-sm">Stagnant Water</span>
                   </div>
+
                   <div className="flex items-center space-x-2">
-                    <img src={standingIcon} alt="Standing Water" className="w-6 h-6" />
-                    <span className="text-sm">Standing Water</span>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <img src={garbageIcon} alt="Garbage" className="w-6 h-6" />
-                    <span className="text-sm">Garbage</span>
+                    <img src={garbageIcon} alt="Uncollected Garbage or Trash" className="w-6 h-6" />
+                    <span className="text-sm">Uncollected Garbage or Trash</span>
                   </div>
                   <div className="flex items-center space-x-2">
                     <img src={othersIcon} alt="Others" className="w-6 h-6" />

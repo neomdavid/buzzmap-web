@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   ReportCard,
   ReportTable2,
@@ -42,6 +42,18 @@ const Dashboard = () => {
 
   // Fetching the alerts from the API
   const { data: alertsData, isLoading: alertsLoading, isError: alertsError } = useGetAllAlertsQuery();
+
+  // State for showing analysis loading
+  const [showAnalysisModal, setShowAnalysisModal] = useState(false);
+
+  // Show analysis modal when posts are loading for admin users
+  useEffect(() => {
+    if (user?.role === 'admin' && postsLoading) {
+      setShowAnalysisModal(true);
+    } else {
+      setShowAnalysisModal(false);
+    }
+  }, [user, postsLoading]);
 
   // Get current date string in the format: Today is <weekday>, <day> <month> <year>
   const today = new Date();
@@ -120,6 +132,23 @@ const Dashboard = () => {
 
   return (
     <main className="flex flex-col w-full">
+      {/* Analysis Loading Modal */}
+      {showAnalysisModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-8 max-w-md w-full mx-4">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-primary mx-auto mb-4"></div>
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                Analyzing Reports...
+              </h3>
+              <p className="text-gray-600">
+                Processing crowdsourced data for insights. This may take a moment.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="bg-primary text-white flex flex-col p-6 rounded-2xl mb-4">
         <p className="text-5xl font-[Koulen] lowercase">
           Hello, {user.name}
