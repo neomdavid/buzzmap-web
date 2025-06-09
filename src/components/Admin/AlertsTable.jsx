@@ -93,6 +93,8 @@ const AlertsTable = () => {
       {
         headerName: "Actions",
         field: "actions",
+        filter: false,
+        sortable: false,
         cellRenderer: (params) => (
           <div className="flex w-full h-full items-center justify-center  gap-2">
             <button

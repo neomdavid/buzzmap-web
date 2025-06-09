@@ -40,6 +40,7 @@ const ArchivedAdminPosts = () => {
         field: "images",
         flex: 1,
         filter: false,
+        sortable: false,
         cellRenderer: (params) => {
           return params.value && params.value.length > 0 ? (
             <img

@@ -62,22 +62,34 @@ const ArchivedUsers = () => {
         },
       },
       {
-        headerName: "Auth Provider",
-        field: "authProvider",
-        flex: 1,
-        filter: 'agSetColumnFilter',
-      },
-      {
         headerName: "Created At",
         field: "createdAt",
         flex: 1,
         filter: 'agDateColumnFilter',
+        cellRenderer: (params) => {
+          if (!params.value) return "N/A";
+          const date = new Date(params.value);
+          return date.toLocaleDateString("en-US", {
+            year: "numeric",
+            month: "long",
+            day: "numeric",
+          });
+        },
       },
       {
         headerName: "Deleted At",
         field: "deletedAt",
         flex: 1,
         filter: 'agDateColumnFilter',
+        cellRenderer: (params) => {
+          if (!params.value) return "N/A";
+          const date = new Date(params.value);
+          return date.toLocaleDateString("en-US", {
+            year: "numeric",
+            month: "long",
+            day: "numeric",
+          });
+        },
       },
     ],
     []

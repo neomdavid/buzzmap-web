@@ -155,6 +155,7 @@ function InterventionsTable({
         headerName: "Actions",
         minWidth: 100,
         filter: false,
+        sortable: false,
         cellRenderer: ActionsCell,
       });
     }
