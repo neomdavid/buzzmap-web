@@ -87,8 +87,28 @@ const authSlice = createSlice({
       sessionStorage.removeItem("user");
       sessionStorage.removeItem("token");
     },
+    updateUser: (state, action) => {
+      const updatedUserData = action.payload;
+      
+      // Update Redux state
+      state.user = { ...state.user, ...updatedUserData };
+      
+      // Update storage - check which storage is being used
+      const userFromLocal = localStorage.getItem("user");
+      const userFromSession = sessionStorage.getItem("user");
+      
+      if (userFromLocal) {
+        // Using localStorage
+        localStorage.setItem("user", JSON.stringify(state.user));
+      } else if (userFromSession) {
+        // Using sessionStorage
+        sessionStorage.setItem("user", JSON.stringify(state.user));
+      }
+      
+      console.log('[DEBUG] User data updated:', state.user);
+    },
   },
 });
 
-export const { setAuthCredentials, logout } = authSlice.actions;
+export const { setAuthCredentials, logout, updateUser } = authSlice.actions;
 export default authSlice.reducer;

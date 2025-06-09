@@ -2,18 +2,28 @@ import { Camera, PencilLine, PencilSimple } from 'phosphor-react';
 import profile1 from '../../assets/profile1.png';
 import profile_bg from '../../assets/profile_bg.png';
 import { PostCard } from '@/components';
-import { useEffect, useState } from 'react';
-import { useSelector } from 'react-redux';
+import { useEffect, useState, useRef } from 'react';
+import { useSelector, useDispatch } from 'react-redux';
 import axios from 'axios';
-import { toastInfo } from '../../utils.jsx';
+import { toastInfo, toastSuccess, toastError } from '../../utils.jsx';
 import { CustomInput, NewPostModal } from '../../components';
+import { useUpdateProfilePhotoMutation } from '../../api/dengueApi';
+import { updateUser } from '../../features/authSlice';
 
 function Profile(){
     const [profileData, setProfileData] = useState(null);
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState('validated');
+    const [uploadingPhoto, setUploadingPhoto] = useState(false);
+    const [selectedFile, setSelectedFile] = useState(null);
+    const [previewUrl, setPreviewUrl] = useState(null);
     const user = useSelector((state) => state.auth.user);
     const token = useSelector((state) => state.auth.token);
+    const dispatch = useDispatch();
+    const fileInputRef = useRef(null);
+    const confirmModalRef = useRef(null);
+    const editProfileModalRef = useRef(null);
+    const [updateProfilePhoto] = useUpdateProfilePhotoMutation();
 
     const fetchProfileData = async () => {
         try {
@@ -38,6 +48,92 @@ function Profile(){
             fetchProfileData();
         }
     }, [user, token]);
+
+    const handleCameraClick = () => {
+        editProfileModalRef.current?.showModal();
+    };
+
+    const handleChangePhotoClick = () => {
+        editProfileModalRef.current?.close();
+        fileInputRef.current?.click();
+    };
+
+    const handleFileChange = (event) => {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        // Validate file type
+        const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
+        if (!allowedTypes.includes(file.type)) {
+            toastError('Please select a valid image file (JPEG, PNG, or GIF)');
+            return;
+        }
+
+        // Validate file size (e.g., 5MB limit)
+        const maxSize = 5 * 1024 * 1024; // 5MB in bytes
+        if (file.size > maxSize) {
+            toastError('Image size must be less than 5MB');
+            return;
+        }
+
+        // Create preview URL
+        const url = URL.createObjectURL(file);
+        setSelectedFile(file);
+        setPreviewUrl(url);
+        
+        // Show confirmation modal
+        confirmModalRef.current?.showModal();
+    };
+
+    const handleConfirmUpload = async () => {
+        if (!selectedFile) return;
+
+        setUploadingPhoto(true);
+
+        try {
+            const formData = new FormData();
+            formData.append('email', user.email);
+            formData.append('profilePhoto', selectedFile);
+
+            const result = await updateProfilePhoto(formData).unwrap();
+            
+            toastSuccess('Profile photo updated successfully!');
+            
+            // Refresh profile data to get the new photo URL
+            await fetchProfileData();
+            
+            // Close dialog and cleanup
+            handleCancelUpload();
+            
+            // Update Redux store with new profile photo URL
+            // The API response should contain the new profile photo URL
+            if (result?.profilePhotoUrl) {
+                dispatch(updateUser({ profilePhotoUrl: result.profilePhotoUrl }));
+            } else if (result?.user?.profilePhotoUrl) {
+                dispatch(updateUser({ profilePhotoUrl: result.user.profilePhotoUrl }));
+            }
+            
+        } catch (error) {
+            console.error('Error updating profile photo:', error);
+            toastError(error?.data?.message || 'Failed to update profile photo');
+        } finally {
+            setUploadingPhoto(false);
+        }
+    };
+
+    const handleCancelUpload = () => {
+        setSelectedFile(null);
+        if (previewUrl) {
+            URL.revokeObjectURL(previewUrl);
+            setPreviewUrl(null);
+        }
+        // Clear the file input
+        if (fileInputRef.current) {
+            fileInputRef.current.value = '';
+        }
+        // Close modal
+        confirmModalRef.current?.close();
+    };
 
     if (loading) {
         return <div>Loading...</div>;
@@ -98,9 +194,25 @@ function Profile(){
                     alt="profile" 
                     className='rounded-full w-59 h-59 bg-primary border-5 border-primary shadow-sm object-cover' 
                 />
-                <div className='absolute text-white bottom-[5%] right-[5%] bg-primary p-2.5 rounded-full hover:cursor-pointer hover:bg-primary/80 transition-all duration-300 '>
-                    <Camera size={24} />
+                <div 
+                    onClick={handleCameraClick}
+                    className={`absolute text-white bottom-[5%] right-[5%] bg-primary p-2.5 rounded-full hover:cursor-pointer hover:bg-primary/80 transition-all duration-300 ${uploadingPhoto ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    disabled={uploadingPhoto}
+                >
+                    {uploadingPhoto ? (
+                        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white"></div>
+                    ) : (
+                        <Camera size={24} />
+                    )}
                 </div>
+                {/* Hidden file input */}
+                <input
+                    type="file"
+                    ref={fileInputRef}
+                    onChange={handleFileChange}
+                    accept="image/jpeg,image/jpg,image/png,image/gif"
+                    className="hidden"
+                />
             </div>
             <p className='text-5xl font-bold'>{profileData?.account?.username}</p>
             <p className='text-xl text-primary mb-8'>{profileData?.account?.email}</p>
@@ -141,6 +253,84 @@ function Profile(){
                 </div>
             </div>
         </section>
+
+        {/* Edit Profile Modal - First Modal */}
+        <dialog ref={editProfileModalRef} className="modal">
+            <div className="modal-box w-11/12 max-w-md p-10">
+                <p className="font-extrabold text-3xl text-center mb-6">Edit Profile</p>
+                
+                {/* Profile Photo with Edit Overlay */}
+                <div className="flex justify-center mb-6">
+                    <div className="relative">
+                        <img 
+                            src={profileData?.account?.profilePhotoUrl || profile1} 
+                            alt="profile" 
+                            className="w-32 h-32 rounded-full object-cover border-4 border-primary"
+                        />
+                        <div 
+                            onClick={handleChangePhotoClick}
+                            className="absolute inset-0 bg-black bg-opacity-50 rounded-full flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity duration-300 cursor-pointer"
+                        >
+                            <Camera size={32} className="text-white" />
+                        </div>
+                    </div>
+                </div>
+                
+                <p className="text-center text-gray-600 mb-6">
+                    Click on your photo to change it
+                </p>
+                
+                <div className="modal-action justify-center">
+                    <button
+                        onClick={() => editProfileModalRef.current?.close()}
+                        className="btn btn-outline"
+                    >
+                        Cancel
+                    </button>
+                </div>
+            </div>
+        </dialog>
+
+        {/* Profile Photo Confirmation Modal - DaisyUI Style */}
+        <dialog ref={confirmModalRef} className="modal">
+            <div className="modal-box w-11/12 max-w-md p-10">
+                <p className="font-extrabold text-3xl text-center mb-4">Update Profile Photo</p>
+                
+                {/* Preview Image */}
+                {previewUrl && (
+                    <div className="flex justify-center mb-6">
+                        <img 
+                            src={previewUrl} 
+                            alt="Preview" 
+                            className="w-40 h-40 rounded-full object-cover border-4 border-primary"
+                        />
+                    </div>
+                )}
+                
+                <p className="text-center text-gray-600 mb-6">
+                    Are you sure you want to update your profile photo with this image?
+                </p>
+                
+                {/* Action Buttons */}
+                <div className="modal-action justify-center">
+                    <button
+                        onClick={handleCancelUpload}
+                        className="btn btn-outline"
+                        disabled={uploadingPhoto}
+                    >
+                        Cancel
+                    </button>
+                    <button
+                        onClick={handleConfirmUpload}
+                        className={`btn btn-primary ${uploadingPhoto ? 'loading' : ''}`}
+                        disabled={uploadingPhoto}
+                    >
+                        {uploadingPhoto ? 'Uploading...' : 'Confirm'}
+                    </button>
+                </div>
+            </div>
+        </dialog>
+
         <section className='hidden max-w-5xl z-5 lg:block lg:flex-1 pt-55'>
             <div className='bg-white p-6 rounded-xl flex flex-col shadow-md mb-6'>
                 <p className='font-bold text-xl mb-4'>Share your experience to the Community</p>

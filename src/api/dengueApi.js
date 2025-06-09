@@ -1246,6 +1246,16 @@ export const dengueApi = createApi({
         return response;
       }
     }),
+
+    // Update profile photo
+    updateProfilePhoto: builder.mutation({
+      query: (formData) => ({
+        url: "accounts/profile-photo",
+        method: "POST",
+        body: formData,
+      }),
+      invalidatesTags: ["Accounts"],
+    }),
   }),
 });
 
@@ -1377,4 +1387,7 @@ export const {
 
   // Add this to the exported hooks
   useGetRecentReportsForBarangayMutation,
+
+  // Profile photo update
+  useUpdateProfilePhotoMutation,
 } = dengueApi;
