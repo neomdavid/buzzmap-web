@@ -43,7 +43,6 @@ const Community = () => {
   const [filter, setFilter] = useState("latest"); // 'latest', 'popular', 'myPosts'
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearching, setIsSearching] = useState(false);
-  const [page, setPage] = useState(1);
   const userFromStore = useSelector((state) => state.auth?.user);
   const [searchParams, setSearchParams] = useState({
     barangay: '',
@@ -83,20 +82,14 @@ const Community = () => {
     console.log('[DEBUG] Is Error:', isError);
   }, [data, isLoading, isError]);
 
-  // Intersection Observer for infinite scroll
+  // Intersection Observer for infinite scroll (disabled since pagination was removed)
   const observer = useRef();
   
   // Memoize the intersection observer callback
   const lastPostElementRef = useCallback(node => {
-    if (isLoading) return;
-    if (observer.current) observer.current.disconnect();
-    observer.current = new IntersectionObserver(entries => {
-      if (entries[0].isIntersecting && data?.pagination?.hasMore) {
-        setPage(prevPage => prevPage + 1);
-      }
-    });
-    if (node) observer.current.observe(node);
-  }, [isLoading, data?.pagination?.hasMore]);
+    // Pagination disabled - no longer needed
+    return;
+  }, []);
 
   // Memoize filtered posts
   const filteredPosts = useMemo(() => {
@@ -378,7 +371,7 @@ const Community = () => {
         </section>
         <NewPostModal onSubmit={handleClearSearch} />
         <section className="bg-base-200 px-8 py-6 rounded-lg flex flex-col gap-y-6">
-          {isLoading && page === 1 ? (
+          {isLoading ? (
             <div className="text-center">Loading posts...</div>
           ) : isError ? (
             <div className="text-center text-error">Error loading posts</div>
@@ -394,13 +387,10 @@ const Community = () => {
             <>
               {searchQuery && (
                 <p className="text-sm text-gray-500 mb-4">
-                  Found {data?.pagination?.totalItems || 0} result{data?.pagination?.totalItems !== 1 ? 's' : ''}
+                  Found {filteredPosts.length} result{filteredPosts.length !== 1 ? 's' : ''}
                 </p>
               )}
               {filteredPosts.map((post, index) => renderPostCard(post, index))}
-              {isLoading && page > 1 && (
-                <div className="text-center py-4">Loading more posts...</div>
-              )}
             </>
           )}
         </section>
