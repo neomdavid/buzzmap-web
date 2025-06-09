@@ -4,7 +4,7 @@ import { useLocation, useParams, useNavigate } from "react-router-dom";
 import { useGoogleMaps } from "../../components/GoogleMapsProvider";
 import { useGetPostByIdQuery, useGetPostsQuery, useGetBasicProfilesQuery, useGetBarangaysQuery } from "../../api/dengueApi";
 import { skipToken } from "@reduxjs/toolkit/query";
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef, useMemo, useCallback } from "react";
 import Slider from "rc-slider";
 import "rc-slider/assets/index.css";
 import profile1 from "../../assets/profile1.png";
@@ -208,8 +208,46 @@ const SpecificLocation = () => {
   // Get all reports
   const { data: allReports = [] } = useGetPostsQuery();
 
-  // Calculate nearby reports on frontend
-  const [nearbyReports, setNearbyReports] = useState([]);
+  // Calculate nearby reports using frontend distance calculation
+  const nearbyReports = useMemo(() => {
+    if (report?.specific_location?.coordinates && allReports?.length > 0) {
+      const [currentLng, currentLat] = report.specific_location.coordinates;
+      const radiusKm = 1; // 1 km radius
+      
+      const nearby = allReports.filter(r => {
+        // Skip the current report
+        if (r._id === report._id) return false;
+        
+        // Skip reports without coordinates
+        if (!r.specific_location?.coordinates) return false;
+        
+        const [rLng, rLat] = r.specific_location.coordinates;
+        const distance = calculateDistance(currentLat, currentLng, rLat, rLng);
+        
+        return distance <= radiusKm;
+      });
+      
+      return nearby;
+    } else {
+      return [];
+    }
+  }, [report?._id, report?.specific_location?.coordinates?.[0], report?.specific_location?.coordinates?.[1], allReports]);
+
+  // Use nearby reports (calculated on frontend) and filter by validation status
+  const filteredReports = useMemo(() => {
+    return Array.isArray(nearbyReports) 
+      ? nearbyReports.filter((r) => r.status === "Validated")
+      : [];
+  }, [nearbyReports]);
+
+
+
+  // Filter out the current report from recent reports and only show validated posts
+  const recentReports = useMemo(() => {
+    return report 
+      ? filteredReports.filter(r => r._id !== report._id)
+      : [];
+  }, [filteredReports, report?._id]);
 
   // Get basic profiles
   const { data: basicProfiles = [] } = useGetBasicProfilesQuery();
@@ -250,46 +288,6 @@ const SpecificLocation = () => {
     return profile?.profilePhotoUrl || defaultProfile;
   };
 
-  // Calculate nearby reports using frontend distance calculation
-  useEffect(() => {
-    console.log('[DEBUG] useEffect triggered for nearby calculation');
-    console.log('[DEBUG] Has report coordinates:', !!report?.specific_location?.coordinates);
-    console.log('[DEBUG] All reports count:', allReports.length);
-    
-    if (report?.specific_location?.coordinates && allReports.length > 0) {
-      const [currentLng, currentLat] = report.specific_location.coordinates;
-      const radiusKm = 1; // 1 km radius
-      
-      console.log('[DEBUG] Calculating nearby reports for coordinates:', { currentLng, currentLat, radiusKm });
-      console.log('[DEBUG] Total reports to check:', allReports.length);
-      
-      const nearby = allReports.filter(r => {
-        // Skip the current report
-        if (r._id === report._id) return false;
-        
-        // Skip reports without coordinates
-        if (!r.specific_location?.coordinates) return false;
-        
-        const [rLng, rLat] = r.specific_location.coordinates;
-        const distance = calculateDistance(currentLat, currentLng, rLat, rLng);
-        
-        console.log('[DEBUG] Report distance:', { reportId: r._id, distance, withinRadius: distance <= radiusKm });
-        
-        return distance <= radiusKm;
-      });
-      
-      console.log('[DEBUG] Found nearby reports:', nearby.length);
-      console.log('[DEBUG] Setting nearbyReports to array with length:', nearby.length);
-      setNearbyReports(nearby);
-    } else {
-      console.log('[DEBUG] Setting nearbyReports to empty array');
-      setNearbyReports([]);
-    }
-  }, [report, allReports]);
-
-  console.log("[DEBUG] SpecificLocation: report =", report);
-  console.log("[DEBUG] SpecificLocation: report coordinates =", report?.specific_location?.coordinates);
-
   // State for timeline
   const [range, setRange] = useState([0, 0]);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -322,23 +320,6 @@ const SpecificLocation = () => {
     }, 500);
     return () => clearTimeout(timer);
   }, [isPlaying, range, maxDate]);
-
-  // Use nearby reports (calculated on frontend) and filter by validation status
-  const filteredReports = Array.isArray(nearbyReports) 
-    ? nearbyReports.filter((r) => r.status === "Validated")
-    : [];
-
-  // Add debugging for nearby reports
-  console.log('[DEBUG] nearbyReports:', nearbyReports);
-  console.log('[DEBUG] nearbyReports is array:', Array.isArray(nearbyReports));
-  console.log('[DEBUG] nearbyReports length:', Array.isArray(nearbyReports) ? nearbyReports.length : 'N/A');
-  console.log('[DEBUG] filteredReports length:', filteredReports.length);
-  console.log('[DEBUG] nearbyReports statuses:', Array.isArray(nearbyReports) ? nearbyReports.map(r => ({ id: r._id, status: r.status })) : []);
-
-  // Filter out the current report from recent reports and only show validated posts
-  const recentReports = report 
-    ? filteredReports.filter(r => r._id !== report._id)
-    : [];
 
   // Initialize map
   useEffect(() => {
@@ -718,6 +699,57 @@ const SpecificLocation = () => {
     });
   }
 
+  // Memoize the onBarangaySelect callback to prevent unnecessary re-renders
+  const handleBarangaySelect = useCallback((barangay) => {
+    console.log('[DEBUG] Barangay selected:', barangay);
+    console.log('[DEBUG] Barangay keys:', Object.keys(barangay));
+    console.log('[DEBUG] Full barangay object:', JSON.stringify(barangay, null, 2));
+    
+    if (mapRef.current && barangay && barangayGeoJsonData) {
+      // Use the same approach as intervention modal - find barangay in GeoJSON and calculate center
+      const barangayName = barangay.displayName || barangay.name;
+      console.log('[DEBUG] Looking for barangay name:', barangayName);
+      
+      const selectedFeature = barangayGeoJsonData.features.find(
+        (feature) => feature.properties.name === barangayName
+      );
+      
+      if (selectedFeature && selectedFeature.geometry) {
+        try {
+          const center = turf.centerOfMass(selectedFeature);
+          if (center && center.geometry && center.geometry.coordinates) {
+            const [lng, lat] = center.geometry.coordinates;
+            console.log('[DEBUG] Calculated center using turf:', { lat, lng });
+            
+            // Pan to the calculated center
+            const centerLatLng = new window.google.maps.LatLng(lat, lng);
+            mapRef.current.panTo(centerLatLng);
+            mapRef.current.setZoom(15);
+            
+            // Set highlighted barangay for border highlighting
+            setHighlightedBarangay(barangayName);
+            console.log('[DEBUG] Pan completed to calculated center and highlighted:', barangayName);
+          } else {
+            console.warn('[DEBUG] Failed to get center coordinates from turf calculation');
+          }
+        } catch (err) {
+          console.error('[DEBUG] Error calculating center with turf:', err);
+        }
+      } else {
+        console.warn('[DEBUG] Barangay feature not found in GeoJSON:', barangayName);
+        console.log('[DEBUG] Available barangay names in GeoJSON:', 
+          barangayGeoJsonData.features.map(f => f.properties.name)
+        );
+      }
+    } else {
+      console.warn('[DEBUG] Missing requirements:', { 
+        hasMapRef: !!mapRef.current, 
+        hasBarangay: !!barangay, 
+        hasGeoJsonData: !!barangayGeoJsonData 
+      });
+    }
+  }, [barangayGeoJsonData]);
+
   if (!isLoaded) {
     return <div>Loading map...</div>;
   }
@@ -735,8 +767,8 @@ const SpecificLocation = () => {
   }
 
   return (
-    <main className="text-2xl mt-[-69px]">
-      <div className="w-full h-[100vh] relative">
+    <main className="text-2xl mt-[-69px] ">
+      <div className="w-full h-[100-vh] relative">
         {/* Timeline Range Slider UI */}
         {/* {allReports.length >= 5 && (
           <div className="absolute top-6 left-1/2 -translate-x-1/2 z-[1000] bg-white/90 rounded-lg shadow-lg px-6 py-4 flex flex-col gap-2 items-center max-w-xl w-[90vw]">
@@ -778,7 +810,7 @@ const SpecificLocation = () => {
             )}
           </div>
         )} */}
-        <div id="map" style={containerStyle}></div>
+        <div id="map" style={containerStyle} className="h-[100vh]"></div>
       </div>
       <SideNavDetails
         report={report}
@@ -787,55 +819,7 @@ const SpecificLocation = () => {
         radius={1}
         onViewCommunityClick={() => navigate('/community')}
         onPreventionTipsClick={() => navigate('/buzzline')}
-        onBarangaySelect={(barangay) => {
-          console.log('[DEBUG] Barangay selected:', barangay);
-          console.log('[DEBUG] Barangay keys:', Object.keys(barangay));
-          console.log('[DEBUG] Full barangay object:', JSON.stringify(barangay, null, 2));
-          
-          if (mapRef.current && barangay && barangayGeoJsonData) {
-            // Use the same approach as intervention modal - find barangay in GeoJSON and calculate center
-            const barangayName = barangay.displayName || barangay.name;
-            console.log('[DEBUG] Looking for barangay name:', barangayName);
-            
-            const selectedFeature = barangayGeoJsonData.features.find(
-              (feature) => feature.properties.name === barangayName
-            );
-            
-            if (selectedFeature && selectedFeature.geometry) {
-              try {
-                const center = turf.centerOfMass(selectedFeature);
-                if (center && center.geometry && center.geometry.coordinates) {
-                  const [lng, lat] = center.geometry.coordinates;
-                  console.log('[DEBUG] Calculated center using turf:', { lat, lng });
-                  
-                  // Pan to the calculated center
-                  const centerLatLng = new window.google.maps.LatLng(lat, lng);
-                  mapRef.current.panTo(centerLatLng);
-                  mapRef.current.setZoom(15);
-                  
-                  // Set highlighted barangay for border highlighting
-                  setHighlightedBarangay(barangayName);
-                  console.log('[DEBUG] Pan completed to calculated center and highlighted:', barangayName);
-                } else {
-                  console.warn('[DEBUG] Failed to get center coordinates from turf calculation');
-                }
-              } catch (err) {
-                console.error('[DEBUG] Error calculating center with turf:', err);
-              }
-            } else {
-              console.warn('[DEBUG] Barangay feature not found in GeoJSON:', barangayName);
-              console.log('[DEBUG] Available barangay names in GeoJSON:', 
-                barangayGeoJsonData.features.map(f => f.properties.name)
-              );
-            }
-          } else {
-            console.warn('[DEBUG] Missing requirements:', { 
-              hasMapRef: !!mapRef.current, 
-              hasBarangay: !!barangay, 
-              hasGeoJsonData: !!barangayGeoJsonData 
-            });
-          }
-        }}
+        onBarangaySelect={handleBarangaySelect}
       />
       <article className="absolute z-100000 flex flex-col text-primary right-[10px] bottom-0 md:max-w-[60vw] lg:max-w-[62vw] xl:max-w-[69vw] 2xl:max-w-[72vw]">
         <p className="text-[20px] text-white shadow-sm font-semibold text-left mb-2 w-full">

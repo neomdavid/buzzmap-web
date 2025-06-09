@@ -263,7 +263,9 @@ const Community = () => {
   };
 
   if (isLoadingAdminPosts || isLoading) {
-    return <div>Loading...</div>;
+    return <div className="w-full h-[100vh] flex justify-center items-center">
+      <span className="loading loading-spinner loading-2xl"></span>
+    </div>;
   }
 
   return (

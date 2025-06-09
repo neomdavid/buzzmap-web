@@ -406,7 +406,10 @@ function AdminsTable({ statusFilter, roleFilter, searchQuery }) {
       >
         {isLoading ? (
           <div className="h-full flex items-center justify-center">
-            <p className="text-lg">Loading accounts...</p>
+            <div className="text-center">
+              <span className="loading loading-spinner loading-lg text-primary"></span>
+              <p className="mt-4 text-lg text-gray-600">Loading accounts...</p>
+            </div>
           </div>
         ) : error ? (
           <div className="h-full flex items-center justify-center">

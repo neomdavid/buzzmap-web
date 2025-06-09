@@ -260,7 +260,7 @@ function SprAdmins() {
   };
 
   return (
-    <main className="flex flex-col w-full">
+    <main className="flex flex-col w-full py-8">
       {/* Add Statistics Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         <div className="bg-white p-6 rounded-xl shadow-sm">
@@ -347,7 +347,7 @@ function SprAdmins() {
             </div>
             <div className="flex gap-4">
               <select 
-                className="select select-bordered w-full max-w-xs"
+                className="select select-bordered w-full max-w-xs hover:cursor-pointer"
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
               >
@@ -358,7 +358,7 @@ function SprAdmins() {
               </select>
 
               <select 
-                className="select select-bordered w-full max-w-xs"
+                className="select select-bordered w-full max-w-xs hover:cursor-pointer"
                 value={roleFilter}
                 onChange={(e) => setRoleFilter(e.target.value)}
               >

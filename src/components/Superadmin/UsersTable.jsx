@@ -318,7 +318,10 @@ function UsersTable({ statusFilter, roleFilter, searchQuery }) {
       >
         {isLoading ? (
           <div className="h-full flex items-center justify-center">
-            <p className="text-lg">Loading users...</p>
+            <div className="text-center">
+              <span className="loading loading-spinner loading-lg text-primary"></span>
+              <p className="mt-4 text-lg text-gray-600">Loading users...</p>
+            </div>
           </div>
         ) : error ? (
           <div className="h-full flex items-center justify-center">

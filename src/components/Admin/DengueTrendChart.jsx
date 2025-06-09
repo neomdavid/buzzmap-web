@@ -203,7 +203,7 @@ export default function DengueTrendChart({ selectedBarangay, onBarangayChange })
 
   if (isLoading || barangaysLoading) {
     return (
-      <div className="flex flex-col p-5 gap-4">
+      <div className="flex flex-col p-5 gap-4 items-center justify-center h-[400px]">
         <span className="loading loading-spinner loading-lg text-primary"></span>
       </div>
     );

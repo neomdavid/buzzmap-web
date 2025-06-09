@@ -1,6 +1,6 @@
 import { CustomDropDown, SecondaryButton, LogoNamed } from "../";
 import UPBuilding from "../../assets/UPbuilding.jpg";
-import { useEffect, useState, useMemo, useRef } from "react";
+import { useEffect, useState, useMemo, useRef, useCallback } from "react";
 import { useGetPostsQuery, useGetBarangaysQuery } from "../../api/dengueApi";
 import NewPostModal from "../Community/NewPostModal";
 import { useSelector } from "react-redux";
@@ -32,19 +32,18 @@ const SideNavDetails = ({
   onPreventionTipsClick,
   onBarangaySelect // Add callback for when barangay is selected
 }) => {
-  console.log("SideNavDetails nearbyReports prop:", nearbyReports);
-  console.log("SideNavDetails report prop:", report);
-
   // Get user from Redux store
   const userFromStore = useSelector((state) => state.auth?.user);
 
-  // Extract coordinates for geocoding and street view
-  const coordinates = report?.specific_location
-    ? {
-        lat: report.specific_location.coordinates[1],
-        lng: report.specific_location.coordinates[0],
-      }
-    : undefined;
+  // Extract coordinates for geocoding and street view - memoize to prevent re-calculations
+  const coordinates = useMemo(() => {
+    return report?.specific_location
+      ? {
+          lat: report.specific_location.coordinates[1],
+          lng: report.specific_location.coordinates[0],
+        }
+      : undefined;
+  }, [report?.specific_location?.coordinates]);
 
   const [address, setAddress] = useState("Loading address...");
 
@@ -53,13 +52,8 @@ const SideNavDetails = ({
   
   // Fetch all barangays for the dropdown
   const { data: barangays = [], isLoading: isLoadingBarangays } = useGetBarangaysQuery();
-  
-  // Debug barangays data
-  console.log('[DEBUG] Barangays data:', barangays);
-  console.log('[DEBUG] Barangays loading:', isLoadingBarangays);
-  console.log('[DEBUG] Barangays count:', barangays.length);
 
-  // Calculate number of nearby reports (within 2,000 meters, excluding self)
+  // Calculate number of nearby reports (within 2,000 meters, excluding self) - memoize calculation
   const nearbyCountCalculated = useMemo(() => {
     if (!allReports || !coordinates) return 0;
     return allReports.filter((r) => {
@@ -78,44 +72,47 @@ const SideNavDetails = ({
       );
       return dist <= 1000; // 2,000 meters (2 km) radius
     }).length;
-  }, [allReports, coordinates, report?._id]);
+  }, [allReports, coordinates?.lat, coordinates?.lng, report?._id]);
 
-  // Compute most common type
-  const mostCommonType = (() => {
+  // Compute most common type - memoize calculation
+  const mostCommonType = useMemo(() => {
     if (!nearbyReports.length) return "N/A";
     const counts = {};
     nearbyReports.forEach(r => {
       counts[r.report_type] = (counts[r.report_type] || 0) + 1;
     });
     return Object.entries(counts).sort((a, b) => b[1] - a[1])[0][0];
-  })();
+  }, [nearbyReports]);
 
-  // Compute most recent date
-  const mostRecentDate = nearbyReports.length
-    ? (() => {
-        const maxDate = new Date(
-          Math.max(...nearbyReports.map(r => new Date(r.date_and_time).getTime()))
-        );
-        return (
-          maxDate.toLocaleDateString("en-US", {
-            year: "numeric",
-            month: "long",
-            day: "numeric",
-          }) +
-          " " +
-          maxDate.toLocaleTimeString("en-US", {
-            hour: "numeric",
-            minute: "2-digit",
-            hour12: true,
-          })
-        );
-      })()
-    : "N/A";
+  // Compute most recent date - memoize calculation
+  const mostRecentDate = useMemo(() => {
+    if (!nearbyReports.length) return "N/A";
+    
+    const maxDate = new Date(
+      Math.max(...nearbyReports.map(r => new Date(r.date_and_time).getTime()))
+    );
+    return (
+      maxDate.toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      }) +
+      " " +
+      maxDate.toLocaleTimeString("en-US", {
+        hour: "numeric",
+        minute: "2-digit",
+        hour12: true,
+      })
+    );
+  }, [nearbyReports]);
 
-  // Compute unique barangays and their names
-  const barangaySet = new Set(nearbyReports.map(r => r.barangay));
-  const uniqueBarangays = barangaySet.size;
-  const barangayList = Array.from(barangaySet).filter(Boolean);
+  // Compute unique barangays and their names - memoize calculation
+  const barangayData = useMemo(() => {
+    const barangaySet = new Set(nearbyReports.map(r => r.barangay));
+    const uniqueBarangays = barangaySet.size;
+    const barangayList = Array.from(barangaySet).filter(Boolean);
+    return { uniqueBarangays, barangayList };
+  }, [nearbyReports]);
 
   // Tooltip state
   const [showTooltip, setShowTooltip] = useState(false);
@@ -125,11 +122,23 @@ const SideNavDetails = ({
   const [showNewPostModal, setShowNewPostModal] = useState(false);
   const newPostModalRef = useRef(null);
 
-  // Google Street View Static API URL
-  const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
-  const streetViewUrl = coordinates
-    ? `https://maps.googleapis.com/maps/api/streetview?size=600x300&location=${coordinates.lat},${coordinates.lng}&fov=80&heading=70&pitch=0&key=${apiKey}`
-    : UPBuilding;
+  // Google Street View Static API URL - memoize to prevent re-calculations
+  const streetViewUrl = useMemo(() => {
+    const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+    return coordinates
+      ? `https://maps.googleapis.com/maps/api/streetview?size=600x300&location=${coordinates.lat},${coordinates.lng}&fov=80&heading=70&pitch=0&key=${apiKey}`
+      : UPBuilding;
+  }, [coordinates]);
+
+  // Memoize the barangay selection handler
+  const handleBarangayChange = useCallback((e) => {
+    const selectedValue = e.target.value;
+    if (selectedValue && onBarangaySelect) {
+      const barangay = barangays.find(b => b._id === selectedValue);
+      console.log('[DEBUG] Selected barangay:', barangay);
+      onBarangaySelect(barangay);
+    }
+  }, [barangays, onBarangaySelect]);
 
   useEffect(() => {
     if (!coordinates) {
@@ -153,7 +162,7 @@ const SideNavDetails = ({
       }
     };
     fetchAddress();
-  }, [coordinates]);
+  }, [coordinates?.lat, coordinates?.lng]);
 
   // Open the dialog when showNewPostModal becomes true
   useEffect(() => {
@@ -185,14 +194,7 @@ md:w-[35vw]   max-w-[370px] "
           <select
             className="w-full p-3 border-[1.5px] border-white rounded-full bg-white text-primary text-sm focus:outline-none focus:ring-1 focus:ring-base-200"
             defaultValue=""
-            onChange={(e) => {
-              const selectedValue = e.target.value;
-              if (selectedValue && onBarangaySelect) {
-                const barangay = barangays.find(b => b._id === selectedValue);
-                console.log('[DEBUG] Selected barangay:', barangay);
-                onBarangaySelect(barangay);
-              }
-            }}
+            onChange={handleBarangayChange}
           >
             <option value="" disabled>Select Barangay</option>
             {isLoadingBarangays ? (
@@ -249,28 +251,28 @@ md:w-[35vw]   max-w-[370px] "
             tabIndex={0}
             onFocus={() => setShowTooltip(true)}
             onBlur={() => setShowTooltip(false)}
-            style={{ cursor: barangayList.length > 0 ? "pointer" : "default" }}
+            style={{ cursor: barangayData.barangayList.length > 0 ? "pointer" : "default" }}
           >
             <p>
               🏘️ Barangays Represented Nearby:{" "}
               <span
                 className="underline cursor-pointer"
                 style={{ textDecorationThickness: "2px" }}
-                onClick={() => barangayList.length > 0 && setModalMode("barangays")}
+                onClick={() => barangayData.barangayList.length > 0 && setModalMode("barangays")}
                 tabIndex={0}
                 onKeyDown={e => {
-                  if ((e.key === "Enter" || e.key === " ") && barangayList.length > 0) setModalMode("barangays");
+                  if ((e.key === "Enter" || e.key === " ") && barangayData.barangayList.length > 0) setModalMode("barangays");
                 }}
                 aria-label="Show barangays represented nearby"
               >
-                {uniqueBarangays}
+                {barangayData.uniqueBarangays}
               </span>
             </p>
-            {showTooltip && barangayList.length > 0 && (
+            {showTooltip && barangayData.barangayList.length > 0 && (
               <div className="absolute left-2/3 -translate-x-1/2 mt-2 bg-white text-primary text-md rounded shadow-lg px-3 py-2 z-50 min-w-[120px] max-w-[200px]">
                 <div className="font-semibold mb-1">Nearby Barangays:</div>
                 <ul className="text-center">
-                  {barangayList.map((b, i) => (
+                  {barangayData.barangayList.map((b, i) => (
                     <li key={i}>• {b}</li>
                   ))}
                 </ul>
@@ -348,9 +350,9 @@ md:w-[35vw]   max-w-[370px] "
             ✕
           </button>
           <p className="font-extrabold text-xl mb-3">Barangays Represented Nearby</p>
-          {barangayList.length > 0 ? (
+          {barangayData.barangayList.length > 0 ? (
             <ul className="text-left text-lg text-base">
-              {barangayList.map((b, i) => (
+              {barangayData.barangayList.map((b, i) => (
                 <li key={i}>• {b}</li>
               ))}
             </ul>
