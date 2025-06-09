@@ -31,8 +31,13 @@ function Profile(){
 
     const fetchProfileData = async () => {
         try {
+            // Use the same BASE_URL logic as dengueApi
+            const BASE_URL = import.meta.env.VITE_MODE === 'PROD' || import.meta.env.MODE === 'PROD'
+                ? import.meta.env.VITE_API_BASE_URL 
+                : 'http://localhost:4000/';
+            
             const response = await axios.get(
-                `http://localhost:4000/api/v1/accounts/profile/${user._id}`,
+                `${BASE_URL}api/v1/accounts/profile/${user._id}`,
                 {
                     headers: {
                         'Authorization': `Bearer ${token}`
