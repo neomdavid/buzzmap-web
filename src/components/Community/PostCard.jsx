@@ -6,7 +6,7 @@ import { useSelector } from "react-redux";
 import CommentModal from "./CommentModal";
 import { toastInfo } from "../../utils.jsx";
 import { useGetCommentsQuery } from "../../api/dengueApi";
-import axios from "axios";
+import defaultProfile from "../../assets/default_profile.png";
 
 const PostCard = ({
   profileImage,
@@ -31,6 +31,7 @@ const PostCard = ({
   userId, // Add userId prop
   currentUserId, // Add currentUserId prop
   onVoteUpdate, // Add onVoteUpdate prop
+  basicProfiles = [], // Add basicProfiles prop
 }) => {
   // Debug logging for PostCard props
   console.log('[DEBUG] PostCard received props:', {
@@ -44,7 +45,28 @@ const PostCard = ({
 
   const userFromStore = useSelector((state) => state.auth?.user);
   const commentModalRef = useRef(null);
-  const [userProfile, setUserProfile] = useState({ username, profilePhotoUrl: profileImage });
+  
+  // Get user profile from basicProfiles if available, otherwise use props
+  const getUserProfile = () => {
+    if (basicProfiles.length > 0 && userId) {
+      const profile = basicProfiles.find(p => p._id === userId);
+      if (!profile) {
+        // If no profile found, check if profileImage is empty and use default
+        const fallbackImage = profileImage && profileImage.trim() !== "" ? profileImage : defaultProfile;
+        return { username, profilePhotoUrl: fallbackImage };
+      }
+      // If profilePhotoUrl is empty string or null/undefined, use default
+      const profilePhotoUrl = profile.profilePhotoUrl && profile.profilePhotoUrl.trim() !== "" 
+        ? profile.profilePhotoUrl 
+        : defaultProfile;
+      return { ...profile, profilePhotoUrl };
+    }
+    // Check if profileImage is empty and use default
+    const fallbackImage = profileImage && profileImage.trim() !== "" ? profileImage : defaultProfile;
+    return { username, profilePhotoUrl: fallbackImage };
+  };
+  
+  const userProfile = getUserProfile();
   
   // Fetch actual comments to get real count
   const { data: actualComments } = useGetCommentsQuery(postId, {
@@ -77,21 +99,7 @@ const PostCard = ({
     });
   }, [commentsCount, _commentCount, actualCommentCount, localCommentCount, postId]);
 
-  // Fetch user profile data
-  useEffect(() => {
-    const fetchUserProfile = async () => {
-      if (userId) {
-        try {
-          const response = await axios.get(`http://localhost:4000/api/v1/accounts/basic/${userId}`);
-          setUserProfile(response.data);
-        } catch (error) {
-          console.error('Error fetching user profile:', error);
-        }
-      }
-    };
-
-    fetchUserProfile();
-  }, [userId]);
+  // No longer need to fetch user profile data individually since we get it from basicProfiles
 
   // Only update local state when props change and they're different
   useEffect(() => {

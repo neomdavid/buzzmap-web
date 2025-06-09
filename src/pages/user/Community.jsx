@@ -6,6 +6,7 @@ import post2 from "../../assets/post2.jpg";
 import post3 from "../../assets/post3.jpg";
 import post4 from "../../assets/post4.jpg";
 import post5 from "../../assets/post5.jpg";
+import defaultProfile from "../../assets/default_profile.png";
 import { formatDistanceToNow } from "date-fns";
 import {
   PostCard,
@@ -23,6 +24,7 @@ import {
   useCreatePostMutation,
   useCreatePostWithImageMutation,
   useGetAllAdminPostsQuery,
+  useGetBasicProfilesQuery,
 } from "../../api/dengueApi.js";
 import { useSelector } from "react-redux";
 import { toastInfo } from "../../utils.jsx";
@@ -56,6 +58,9 @@ const Community = () => {
 
   // Fetch admin posts
   const { data: adminPosts, isLoading: isLoadingAdminPosts } = useGetAllAdminPostsQuery();
+
+  // Get basic profiles for all users
+  const { data: basicProfiles = [] } = useGetBasicProfilesQuery();
 
   // Add debug logging
   useEffect(() => {
@@ -135,42 +140,60 @@ const Community = () => {
     return activePosts[0];
   }, [adminPosts]);
 
+  // Helper function to get user profile from basic profiles
+  const getUserProfile = useCallback((userId) => {
+    const profile = basicProfiles.find(p => p._id === userId);
+    if (!profile) {
+      return { username: "Unknown", profilePhotoUrl: defaultProfile };
+    }
+    // If profilePhotoUrl is empty string or null/undefined, use default
+    const profilePhotoUrl = profile.profilePhotoUrl && profile.profilePhotoUrl.trim() !== "" 
+      ? profile.profilePhotoUrl 
+      : defaultProfile;
+    return { ...profile, profilePhotoUrl };
+  }, [basicProfiles]);
+
   // Memoize the post card render function
-  const renderPostCard = useCallback((post, index) => (
-    <div 
-      key={post._id}
-      ref={index === filteredPosts.length - 1 ? lastPostElementRef : null}
-    >
-      <PostCard
-        profileImage={post.user?.profilePhotoUrl || 'https://i.ibb.co/0VvffYVH/a1c820a6453b.png'}
-        username={post.anonymous ? "Anonymous" : post.user?.username || "User"}
-        timestamp={formatDistanceToNow(new Date(post.createdAt), { addSuffix: true })}
-        barangay={post.barangay}
-        coordinates={post.specific_location?.coordinates || []}
-        dateTime={new Date(post.date_and_time).toLocaleString()}
-        reportType={post.report_type}
-        description={post.description}
-        likes={post.likesCount || "0"}
-        comments={post.commentsCount || "0"}
-        shares={post.sharesCount || "0"}
-        images={post.images}
-        postId={post._id}
-        upvotes={post.upvotes}
-        downvotes={post.downvotes}
-        commentsCount={post.commentsCount}
-        upvotesArray={post.upvotes}
-        downvotesArray={post.downvotes}
-        _commentCount={post.commentsCount}
-        userId={post.user?._id}
-        currentUserId={userFromStore?._id}
-        onVoteUpdate={(newUpvotes, newDownvotes) => {
-          console.log('[DEBUG] Community onVoteUpdate called for post:', post._id, { newUpvotes, newDownvotes });
-          // For Community page, we rely on RTK Query cache updates
-          // The mutations in dengueApi.js already handle cache updates automatically
-        }}
-      />
-    </div>
-  ), [lastPostElementRef, userFromStore]);
+  const renderPostCard = useCallback((post, index) => {
+    const userProfile = getUserProfile(post.user?._id);
+    
+    return (
+      <div 
+        key={post._id}
+        ref={index === filteredPosts.length - 1 ? lastPostElementRef : null}
+      >
+        <PostCard
+          profileImage={post.isAnonymous ? defaultProfile : userProfile.profilePhotoUrl}
+          username={post.isAnonymous ? post.anonymousId : userProfile.username || "User"}
+          timestamp={formatDistanceToNow(new Date(post.createdAt), { addSuffix: true })}
+          barangay={post.barangay}
+          coordinates={post.specific_location?.coordinates || []}
+          dateTime={new Date(post.date_and_time).toLocaleString()}
+          reportType={post.report_type}
+          description={post.description}
+          likes={post.likesCount || "0"}
+          comments={post.commentsCount || "0"}
+          shares={post.sharesCount || "0"}
+          images={post.images}
+          postId={post._id}
+          upvotes={post.upvotes}
+          downvotes={post.downvotes}
+          commentsCount={post.commentsCount}
+          upvotesArray={post.upvotes}
+          downvotesArray={post.downvotes}
+          _commentCount={post.commentsCount}
+          userId={post.user?._id}
+          currentUserId={userFromStore?._id}
+          basicProfiles={basicProfiles}
+          onVoteUpdate={(newUpvotes, newDownvotes) => {
+            console.log('[DEBUG] Community onVoteUpdate called for post:', post._id, { newUpvotes, newDownvotes });
+            // For Community page, we rely on RTK Query cache updates
+            // The mutations in dengueApi.js already handle cache updates automatically
+          }}
+        />
+      </div>
+    );
+  }, [lastPostElementRef, userFromStore, getUserProfile, basicProfiles]);
 
   const getCurrentLocation = () => {
     if (navigator.geolocation) {
@@ -346,7 +369,7 @@ const Community = () => {
             className="w-full hover:cursor-pointer"
           >
             <CustomInput 
-              profileSrc={userFromStore?.profilePhotoUrl || 'https://i.ibb.co/0VvffYVH/a1c820a6453b.png'} 
+              profileSrc={userFromStore?.profilePhotoUrl && userFromStore.profilePhotoUrl.trim() !== "" ? userFromStore.profilePhotoUrl : defaultProfile} 
               showImagePicker={true} 
               className="hover:cursor-pointer" 
               readOnly

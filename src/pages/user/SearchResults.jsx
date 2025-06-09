@@ -4,6 +4,7 @@ import { useGetPostsQuery, useGetBarangaysQuery } from '../../api/dengueApi';
 import { PostCard, CustomSearchBar, Navbar } from '../../components';
 import { formatDistanceToNow } from 'date-fns';
 import profile1 from '../../assets/profile1.png';
+import defaultProfile from '../../assets/default_profile.png';
 import { Browser, MagnifyingGlass, User } from "phosphor-react";
 import { NewspaperClipping } from "phosphor-react";
 import { Users } from "phosphor-react";
@@ -354,8 +355,8 @@ const SearchResults = () => {
                       ref={index === data.posts.length - 1 ? lastPostElementRef : null}
                     >
                       <PostCard
-                        profileImage={profile1}
-                        username={post.anonymous ? "Anonymous" : post.user?.username || "User"}
+                        profileImage={post.isAnonymous ? defaultProfile : (post.user?.profilePhotoUrl && post.user.profilePhotoUrl.trim() !== "" ? post.user.profilePhotoUrl : defaultProfile)}
+                        username={post.isAnonymous ? post.anonymousId : post.user?.username || "User"}
                         timestamp={formatDistanceToNow(new Date(post.createdAt), { addSuffix: true })}
                         barangay={post.barangay}
                         coordinates={post.specific_location?.coordinates || []}

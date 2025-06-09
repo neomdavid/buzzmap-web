@@ -274,7 +274,7 @@ const CommentModal = forwardRef(({
                       )}
                       <div className="flex flex-col text-lg">
                         <p className="font-bold">
-                          {post?.isAnonymous ? "Anonymous" : (userProfileMap[post?.user?._id]?.username || post?.user?.username || "User")}
+                          {post?.isAnonymous ? post?.anonymousId : (userProfileMap[post?.user?._id]?.username || post?.user?.username || "User")}
                         </p>
                         <p>{formatTimestamp(post?.createdAt)}</p>
                       </div>

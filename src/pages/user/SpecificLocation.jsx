@@ -2,7 +2,7 @@
 // It must be rewritten to use the plain Google Maps JS API if needed.
 import { useLocation, useParams, useNavigate } from "react-router-dom";
 import { useGoogleMaps } from "../../components/GoogleMapsProvider";
-import { useGetPostByIdQuery, useGetPostsQuery, useGetNearbyReportsMutation, useGetBasicProfilesQuery } from "../../api/dengueApi";
+import { useGetPostByIdQuery, useGetPostsQuery, useGetBasicProfilesQuery } from "../../api/dengueApi";
 import { skipToken } from "@reduxjs/toolkit/query";
 import React, { useEffect, useState, useRef } from "react";
 import Slider from "rc-slider";
@@ -101,8 +101,7 @@ const SpecificLocation = () => {
   // Get all reports
   const { data: allReports = [] } = useGetPostsQuery();
 
-  // Get nearby reports
-  const [getNearbyReports] = useGetNearbyReportsMutation();
+  // Calculate nearby reports on frontend
   const [nearbyReports, setNearbyReports] = useState([]);
 
   // Get basic profiles
@@ -114,22 +113,42 @@ const SpecificLocation = () => {
     return profile?.profilePhotoUrl || defaultProfile;
   };
 
+  // Calculate nearby reports using frontend distance calculation
   useEffect(() => {
-    if (report?.specific_location?.coordinates) {
-      const [lng, lat] = report.specific_location.coordinates;
-      getNearbyReports({
-        coordinates: [lng, lat],
-        radius: 1, // Changed from 2 to 1 for 1km radius
-      })
-        .unwrap()
-        .then((data) => {
-          setNearbyReports(data);
-        })
-        .catch((error) => {
-          console.error("Error fetching nearby reports:", error);
-        });
+    console.log('[DEBUG] useEffect triggered for nearby calculation');
+    console.log('[DEBUG] Has report coordinates:', !!report?.specific_location?.coordinates);
+    console.log('[DEBUG] All reports count:', allReports.length);
+    
+    if (report?.specific_location?.coordinates && allReports.length > 0) {
+      const [currentLng, currentLat] = report.specific_location.coordinates;
+      const radiusKm = 1; // 1 km radius
+      
+      console.log('[DEBUG] Calculating nearby reports for coordinates:', { currentLng, currentLat, radiusKm });
+      console.log('[DEBUG] Total reports to check:', allReports.length);
+      
+      const nearby = allReports.filter(r => {
+        // Skip the current report
+        if (r._id === report._id) return false;
+        
+        // Skip reports without coordinates
+        if (!r.specific_location?.coordinates) return false;
+        
+        const [rLng, rLat] = r.specific_location.coordinates;
+        const distance = calculateDistance(currentLat, currentLng, rLat, rLng);
+        
+        console.log('[DEBUG] Report distance:', { reportId: r._id, distance, withinRadius: distance <= radiusKm });
+        
+        return distance <= radiusKm;
+      });
+      
+      console.log('[DEBUG] Found nearby reports:', nearby.length);
+      console.log('[DEBUG] Setting nearbyReports to array with length:', nearby.length);
+      setNearbyReports(nearby);
+    } else {
+      console.log('[DEBUG] Setting nearbyReports to empty array');
+      setNearbyReports([]);
     }
-  }, [report, getNearbyReports]);
+  }, [report, allReports]);
 
   console.log("[DEBUG] SpecificLocation: report =", report);
   console.log("[DEBUG] SpecificLocation: report coordinates =", report?.specific_location?.coordinates);
@@ -167,13 +186,17 @@ const SpecificLocation = () => {
     return () => clearTimeout(timer);
   }, [isPlaying, range, maxDate]);
 
-  // Filter reports by range and validation status
-  const filteredReports = allReports.filter((r) => {
-    if (allReports.length < 5) return r.status === "Validated";
-    if (!range || !range.length) return r.status === "Validated";
-    const t = new Date(r.date_and_time).getTime();
-    return t >= range[0] && t <= range[1] && r.status === "Validated";
-  });
+  // Use nearby reports (calculated on frontend) and filter by validation status
+  const filteredReports = Array.isArray(nearbyReports) 
+    ? nearbyReports.filter((r) => r.status === "Validated")
+    : [];
+
+  // Add debugging for nearby reports
+  console.log('[DEBUG] nearbyReports:', nearbyReports);
+  console.log('[DEBUG] nearbyReports is array:', Array.isArray(nearbyReports));
+  console.log('[DEBUG] nearbyReports length:', Array.isArray(nearbyReports) ? nearbyReports.length : 'N/A');
+  console.log('[DEBUG] filteredReports length:', filteredReports.length);
+  console.log('[DEBUG] nearbyReports statuses:', Array.isArray(nearbyReports) ? nearbyReports.map(r => ({ id: r._id, status: r.status })) : []);
 
   // Filter out the current report from recent reports and only show validated posts
   const recentReports = report 
@@ -348,7 +371,7 @@ const SpecificLocation = () => {
               <span class="font-bold">Barangay:</span> ${report.barangay}
             </p>
             <p class="text-xl">
-              <span class="font-bold">Reported by:</span> ${report.isAnonymous ? "Anonymous" : report.user?.username || "Unknown"}
+              <span class="font-bold">Reported by:</span> ${report.isAnonymous ? report.anonymousId : report.user?.username || "Unknown"}
             </p>
             <p class="text-xl">
               <span class="font-bold">Reported:</span> ${getRelativeTime(report.date_and_time)}
@@ -413,7 +436,7 @@ const SpecificLocation = () => {
                 <span class="font-bold">Barangay:</span> ${r.barangay}
               </p>
               <p class="text-xl">
-                <span class="font-bold">Reported by:</span> ${r.isAnonymous ? "Anonymous" : r.user?.username || "Unknown"}
+                <span class="font-bold">Reported by:</span> ${r.isAnonymous ? r.anonymousId : r.user?.username || "Unknown"}
               </p>
               <p class="text-xl">
                 <span class="font-bold">Reported:</span> ${getRelativeTime(r.date_and_time)}
@@ -521,7 +544,7 @@ const SpecificLocation = () => {
     <main className="text-2xl mt-[-69px]">
       <div className="w-full h-[100vh] relative">
         {/* Timeline Range Slider UI */}
-        {allReports.length >= 5 && (
+        {/* {allReports.length >= 5 && (
           <div className="absolute top-6 left-1/2 -translate-x-1/2 z-[1000] bg-white/90 rounded-lg shadow-lg px-6 py-4 flex flex-col gap-2 items-center max-w-xl w-[90vw]">
             <div className="flex items-center gap-3 w-full">
               <label className="font-semibold text-base">Timeline:</label>
@@ -560,7 +583,7 @@ const SpecificLocation = () => {
               <div className="text-gray-500 text-sm mt-2">No reports available for timeline.</div>
             )}
           </div>
-        )}
+        )} */}
         <div id="map" style={containerStyle}></div>
       </div>
       <SideNavDetails
