@@ -143,7 +143,9 @@ const InterventionEffectivity = () => {
                 <div className="text-base font-medium text-gray-500 tracking-wide">Total After</div>
               </div>
               {/* Percentage Change */}
-              <div className="flex-1 min-w-0 w-full flex flex-col items-center bg-white shadow-sm p-8 rounded-2xl transition-transform hover:scale-[1.025]">
+              <div 
+                className="flex-1 min-w-0 w-full flex flex-col items-center bg-white shadow-sm p-8 rounded-2xl transition-transform hover:scale-[1.025] relative group cursor-help"
+              >
                 <div className={`mb-2 flex items-center justify-center w-14 h-14 rounded-full ${typeof stats.percentChange === 'number' && stats.percentChange < 0 ? 'bg-green-100' : stats.percentChange > 0 ? 'bg-red-100' : 'bg-gray-200'}`}>
                   {typeof stats.percentChange === 'number' && stats.percentChange < 0 ? (
                     <TrendDown size={32} className="text-green-600" />
@@ -155,6 +157,18 @@ const InterventionEffectivity = () => {
                 </div>
                 <div className={typeof stats.percentChange === 'number' && stats.percentChange < 0 ? 'text-green-600 text-4xl font-extrabold mb-1' : stats.percentChange > 0 ? 'text-red-600 text-4xl font-extrabold mb-1' : 'text-gray-600 text-4xl font-extrabold mb-1'}>{stats.percentChange}%</div>
                 <div className="text-base font-medium text-gray-500 tracking-wide">Percentage Change</div>
+                
+                {/* Custom Tooltip */}
+                <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-4 py-3 bg-gray-900 text-white text-sm rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none z-10 max-w-xs text-center">
+                  {typeof stats.percentChange === 'number' && stats.percentChange < 0
+                    ? `✅ ${Math.abs(stats.percentChange)}% decrease in dengue cases after intervention. This indicates the intervention was effective in reducing cases.`
+                    : typeof stats.percentChange === 'number' && stats.percentChange > 0
+                    ? `⚠️ ${stats.percentChange}% increase in dengue cases after intervention. This may indicate the intervention was not effective or other factors contributed to the increase.`
+                    : stats.percentChange === 0
+                    ? "➖ No change in dengue cases after intervention. The intervention had no measurable impact."
+                    : "ℹ️ No data available yet. Analysis is still in progress."}
+                  <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
+                </div>
               </div>
             </div>
           </div>
