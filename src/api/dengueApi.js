@@ -1256,6 +1256,16 @@ export const dengueApi = createApi({
       }),
       invalidatesTags: ["Accounts"],
     }),
+
+    // Update user bio
+    updateBio: builder.mutation({
+      query: ({ id, bio }) => ({
+        url: `accounts/${id}/bio`,
+        method: "PATCH",
+        body: { bio },
+      }),
+      invalidatesTags: ["Accounts"],
+    }),
   }),
 });
 
@@ -1390,4 +1400,7 @@ export const {
 
   // Profile photo update
   useUpdateProfilePhotoMutation,
+
+  // Update user bio
+  useUpdateBioMutation,
 } = dengueApi;

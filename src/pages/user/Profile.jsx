@@ -7,7 +7,7 @@ import { useSelector, useDispatch } from 'react-redux';
 import axios from 'axios';
 import { toastInfo, toastSuccess, toastError } from '../../utils.jsx';
 import { CustomInput, NewPostModal } from '../../components';
-import { useUpdateProfilePhotoMutation } from '../../api/dengueApi';
+import { useUpdateProfilePhotoMutation, useUpdateBioMutation } from '../../api/dengueApi';
 import { updateUser } from '../../features/authSlice';
 
 function Profile(){
@@ -17,13 +17,17 @@ function Profile(){
     const [uploadingPhoto, setUploadingPhoto] = useState(false);
     const [selectedFile, setSelectedFile] = useState(null);
     const [previewUrl, setPreviewUrl] = useState(null);
+    const [bioText, setBioText] = useState('');
+    const [updatingBio, setUpdatingBio] = useState(false);
     const user = useSelector((state) => state.auth.user);
     const token = useSelector((state) => state.auth.token);
     const dispatch = useDispatch();
     const fileInputRef = useRef(null);
     const confirmModalRef = useRef(null);
     const editProfileModalRef = useRef(null);
+    const bioModalRef = useRef(null);
     const [updateProfilePhoto] = useUpdateProfilePhotoMutation();
+    const [updateBio] = useUpdateBioMutation();
 
     const fetchProfileData = async () => {
         try {
@@ -49,6 +53,13 @@ function Profile(){
         }
     }, [user, token]);
 
+    // Initialize bio text when profile data loads
+    useEffect(() => {
+        if (profileData?.account?.bio !== undefined) {
+            setBioText(profileData.account.bio);
+        }
+    }, [profileData]);
+
     const handleCameraClick = () => {
         editProfileModalRef.current?.showModal();
     };
@@ -56,6 +67,48 @@ function Profile(){
     const handleChangePhotoClick = () => {
         editProfileModalRef.current?.close();
         fileInputRef.current?.click();
+    };
+
+    const handleEditBioClick = () => {
+        setBioText(profileData?.account?.bio || '');
+        bioModalRef.current?.showModal();
+    };
+
+    const handleSaveBio = async () => {
+        setUpdatingBio(true);
+        try {
+            const result = await updateBio({ 
+                id: user._id, 
+                bio: bioText 
+            }).unwrap();
+            
+            toastSuccess('Bio updated successfully!');
+            
+            // Update local profile data directly instead of refetching everything
+            setProfileData(prevData => ({
+                ...prevData,
+                account: {
+                    ...prevData.account,
+                    bio: bioText
+                }
+            }));
+            
+            // Update Redux store with new bio
+            dispatch(updateUser({ bio: bioText }));
+            
+            // Close modal
+            bioModalRef.current?.close();
+        } catch (error) {
+            console.error('Error updating bio:', error);
+            toastError(error?.data?.message || 'Failed to update bio');
+        } finally {
+            setUpdatingBio(false);
+        }
+    };
+
+    const handleCancelBioEdit = () => {
+        setBioText(profileData?.account?.bio || '');
+        bioModalRef.current?.close();
     };
 
     const handleFileChange = (event) => {
@@ -187,7 +240,7 @@ function Profile(){
 
     return <main className="text-primary flex justify-center gap-20 relative p-10 pt-20 sm:pt-20">
         <div className='absolute top-0 left-0 w-full h-100 bg-cover bg-center bg-no-repeat' style={{ backgroundImage: `url(${profile_bg})` }}></div>
-        <section className="flex flex-col max-w-xl shadow-lg gap-2 p-6 py-14 items-center rounded-t-2xl bg-white rounded-t-[35px] relative z-10 sticky top-24 h-fit max-h-[calc(100vh-6rem)] lg:overflow-y-auto lg:scrollbar-thin lg:scrollbar-thumb-primary sm:scrollbar-track-transparent pr-2">
+        <section className="flex flex-col w-[90vw] lg:w-[30vw] max-w-xl shadow-lg gap-2 p-6 py-14 items-center rounded-t-2xl bg-white rounded-t-[35px] relative z-10 sticky top-24 h-fit max-h-[calc(100vh-6rem)] lg:overflow-y-auto lg:scrollbar-thin lg:scrollbar-thumb-primary sm:scrollbar-track-transparent pr-2">
             <div className='relative mb-4 '>
                 <img 
                     src={profileData?.account?.profilePhotoUrl || profile1} 
@@ -229,10 +282,44 @@ function Profile(){
             <hr className='w-[80%] border-[1px] border-gray-300 mb-6'/>
             <div className='w-[80%] text-lg flex flex-col gap-6 mb-6'>
                 <p className='font-bold text-2xl'>About {profileData?.account?.username}</p>
-                <p>Active community member and dengue awareness advocate. Contributing to a healthier community through regular reporting and engagement.</p>
+                
+                {/* Bio Section */}
+                <div className="relative group w-full">
+                    <div className="min-h-[60px] flex items-start w-full p-3 rounded-lg border border-transparent group-hover:border-primary/30 group-hover:bg-gray-50 transition-all duration-200 cursor-pointer" onClick={handleEditBioClick}>
+                        <p className="text-gray-700 leading-relaxed flex-1 break-words overflow-wrap-anywhere w-full max-w-full overflow-hidden">
+                            {profileData?.account?.bio ? (
+                                profileData.account.bio
+                            ) : (
+                                <span className="text-gray-400 italic">
+                                    No bio added yet. Click here to add your bio.
+                                </span>
+                            )}
+                        </p>
+                        <div className="flex flex-col items-center gap-1 ml-2 flex-shrink-0">
+                            <button
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleEditBioClick();
+                                }}
+                                className="p-1.5 rounded-full hover:bg-primary/10 text-primary/70 hover:text-primary transition-all duration-200 cursor-pointer"
+                                title="Edit bio"
+                            >
+                                <PencilSimple size={18} />
+                            </button>
+                            <span className="text-xs text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                                Edit
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                
                 <div>
-                    <p><span className='font-bold'>Status: </span>{profileData?.account?.status}</p>
-                    <p><span className='font-bold'>Joined: </span>{new Date(profileData?.account?.lastUpdated).toLocaleDateString()}</p>
+                    {/* <p><span className='font-bold'>Status: </span>{profileData?.account?.status}</p> */}
+                    <p><span className='font-bold'>Joined: </span>{new Date(profileData?.account?.lastUpdated).toLocaleDateString('en-US', { 
+                        year: 'numeric', 
+                        month: 'long', 
+                        day: 'numeric' 
+                    })}</p>
                 </div>
             </div>
             <hr className='w-[80%] border-[1px] border-gray-300 mb-6'/>
@@ -241,15 +328,25 @@ function Profile(){
                 <div className="grid grid-cols-3 gap-4 w-full">
                     {profileData?.photos
                         ?.filter(photo => photo.status === "Validated")
-                        .map((photo, index) => (
-                            <div key={index} className="aspect-square overflow-hidden rounded-lg shadow-md hover:shadow-lg transition-shadow duration-300">
-                                <img 
-                                    src={photo.url} 
-                                    alt={`Validated photo ${index + 1}`}
-                                    className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
-                                />
-                            </div>
-                    ))}
+                        .length > 0 ? (
+                        profileData.photos
+                            .filter(photo => photo.status === "Validated")
+                            .map((photo, index) => (
+                                <div key={index} className="aspect-square overflow-hidden rounded-lg shadow-md hover:shadow-lg transition-shadow duration-300">
+                                    <img 
+                                        src={photo.url} 
+                                        alt={`Validated photo ${index + 1}`}
+                                        className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
+                                    />
+                                </div>
+                            ))
+                    ) : (
+                        <div className="col-span-3 text-center py-12">
+                            <div className="text-gray-400 text-6xl mb-4">📷</div>
+                            <p className="text-gray-500 text-lg font-medium">No photos posted yet</p>
+                            <p className="text-gray-400 text-sm mt-2">Share your community reports to see photos here</p>
+                        </div>
+                    )}
                 </div>
             </div>
         </section>
@@ -326,6 +423,47 @@ function Profile(){
                         disabled={uploadingPhoto}
                     >
                         {uploadingPhoto ? 'Uploading...' : 'Confirm'}
+                    </button>
+                </div>
+            </div>
+        </dialog>
+
+        {/* Bio Edit Modal */}
+        <dialog ref={bioModalRef} className="modal">
+            <div className="modal-box w-11/12 max-w-md p-10">
+                <p className="font-extrabold text-3xl text-center mb-6">Edit Bio</p>
+                
+                <div className="flex flex-col gap-4">
+                    <textarea
+                        value={bioText}
+                        onChange={(e) => setBioText(e.target.value)}
+                        placeholder="Tell the community about yourself..."
+                        maxLength={500}
+                        className="w-full p-4 border-2 border-primary/60 rounded-lg resize-none focus:border-primary outline-none text-base"
+                        rows={6}
+                    />
+                    
+                    <div className="flex justify-end">
+                        <span className="text-sm text-gray-500">
+                            {bioText.length}/500 characters
+                        </span>
+                    </div>
+                </div>
+                
+                <div className="modal-action justify-center">
+                    <button
+                        onClick={handleCancelBioEdit}
+                        className="btn btn-outline"
+                        disabled={updatingBio}
+                    >
+                        Cancel
+                    </button>
+                    <button
+                        onClick={handleSaveBio}
+                        className={`btn btn-primary ${updatingBio ? 'loading' : ''}`}
+                        disabled={updatingBio}
+                    >
+                        {updatingBio ? 'Saving...' : 'Save Bio'}
                     </button>
                 </div>
             </div>
