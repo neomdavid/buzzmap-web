@@ -120,16 +120,18 @@ const Community = () => {
       console.log('[DEBUG] No admin posts available');
       return null;
     }
-    // Filter for active posts only
-    const activePosts = Array.isArray(adminPosts) ? adminPosts.filter(post => post.status === "active") : [];
-    console.log('[DEBUG] Active posts:', activePosts);
+    // Filter for active posts with category 'announcement'
+    const activePosts = Array.isArray(adminPosts) 
+      ? adminPosts.filter(post => post.status === "active" && post.category === "announcement") 
+      : [];
+    console.log('[DEBUG] Active announcement posts:', activePosts);
     if (activePosts.length === 0) {
-      console.log('[DEBUG] No active posts found');
+      console.log('[DEBUG] No active announcement posts found');
       return null;
     }
     // Sort by publishDate to get the latest scheduled post
     activePosts.sort((a, b) => new Date(b.publishDate) - new Date(a.publishDate));
-    console.log('[DEBUG] Latest admin post:', activePosts[0]);
+    console.log('[DEBUG] Latest announcement post:', activePosts[0]);
     return activePosts[0];
   }, [adminPosts]);
 
@@ -415,11 +417,16 @@ const Community = () => {
           </button>
         </div>
         <div className="px-6 py-8">
-          {latestAnnouncement && (
+          {latestAnnouncement ? (
             <AnnouncementCard 
               announcement={latestAnnouncement} 
               key={latestAnnouncement._id}
             />
+          ) : (
+            <div className="bg-base-200 rounded-lg p-8 text-center">
+              <p className="text-primary text-xl font-semibold mb-2">No Announcements Available</p>
+              <p className="text-primary/70">There are no active announcements at the moment. Check back later for updates from the Quezon City Epidemiology & Surveillance Division.</p>
+            </div>
           )}
         </div>
       </aside>

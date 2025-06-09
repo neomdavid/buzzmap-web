@@ -31,7 +31,7 @@ const CustomInput = ({
             className="absolute right-3 top-1/2 transform -translate-y-1/2 cursor-pointer"
           >
             <Image size={24} className="text-gray-500 hover:text-primary" />
-            <input id="image-upload" type="file" className="hidden" />
+            <input id="image-upload" type="file" className="hidden" disabled={true} />
           </label>
         )}
       </div>
