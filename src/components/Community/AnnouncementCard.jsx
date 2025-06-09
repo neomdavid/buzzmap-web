@@ -150,7 +150,7 @@ const AnnouncementCard = ({ announcement }) => {
               <p className="font-semibold text-[12px]">{formatTimestamp(announcement?.publishDate)}</p>
             </div>
           </div>
-          <DotsThree size={32} />
+          {/* <DotsThree size={32} /> */}
         </div>
 
         <div className="mb-4">

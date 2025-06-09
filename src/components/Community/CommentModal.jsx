@@ -279,7 +279,7 @@ const CommentModal = forwardRef(({
                         <p>{formatTimestamp(post?.createdAt)}</p>
                       </div>
                     </div>
-                  <DotsThree size={28} />
+                  {/* <DotsThree size={28} /> */}
                 </div>
                 <p className="text-black">{post?.description}</p>
               </div>
