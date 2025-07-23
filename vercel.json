@@ -1,18 +1,3 @@
 {
-  "version": 2,
-  "builds": [
-    {
-      "src": "backend/index.js",
-      "use": "@vercel/node"
-    }
-  ],
-  "routes": [
-    {
-      "src": "/api/(.*)",
-      "dest": "backend/index.js"
-    }
-  ],
-  "env": {
-    "UPLOAD_DIR": "/tmp/uploads"
-  }
-} 
+  "rewrites": [{ "source": "/(.*)", "destination": "/" }]
+}
