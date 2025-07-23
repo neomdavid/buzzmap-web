@@ -1,10 +1,6 @@
 import React, { useState, useEffect } from "react";
-import {
-  ReportCard,
-  ReportTable2,
-  DengueChartCard,
-} from "../../components";
-import MapOnly from '../../components/Mapping/MapOnly';
+import { ReportCard, ReportTable2, DengueChartCard } from "../../components";
+import MapOnly from "../../components/Mapping/MapOnly";
 import {
   useGetPostsQuery,
   useGetAllInterventionsQuery,
@@ -41,14 +37,18 @@ const Dashboard = () => {
   } = useGetAllInterventionsQuery();
 
   // Fetching the alerts from the API
-  const { data: alertsData, isLoading: alertsLoading, isError: alertsError } = useGetAllAlertsQuery();
+  const {
+    data: alertsData,
+    isLoading: alertsLoading,
+    isError: alertsError,
+  } = useGetAllAlertsQuery();
 
   // State for showing analysis loading
   const [showAnalysisModal, setShowAnalysisModal] = useState(false);
 
   // Show analysis modal when posts are loading for admin users
   useEffect(() => {
-    if (user?.role === 'admin' && postsLoading) {
+    if (user?.role === "admin" && postsLoading) {
       setShowAnalysisModal(true);
     } else {
       setShowAnalysisModal(false);
@@ -57,11 +57,11 @@ const Dashboard = () => {
 
   // Get current date string in the format: Today is <weekday>, <day> <month> <year>
   const today = new Date();
-  const formattedDate = today.toLocaleDateString('en-US', {
-    weekday: 'long',
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
+  const formattedDate = today.toLocaleDateString("en-US", {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
   });
 
   // Handle loading and error states for both posts and interventions
@@ -79,7 +79,11 @@ const Dashboard = () => {
     return <div>Error fetching data...</div>;
 
   // Make sure posts and interventions are arrays
-  const safePosts = Array.isArray(posts?.posts) ? posts.posts : (Array.isArray(posts) ? posts : []);
+  const safePosts = Array.isArray(posts?.posts)
+    ? posts.posts
+    : Array.isArray(posts)
+    ? posts
+    : [];
   const safeInterventions = Array.isArray(interventions) ? interventions : [];
 
   // Calculate counts for reports
@@ -110,16 +114,23 @@ const Dashboard = () => {
   console.log(interventionCounts);
 
   // Calculate total alerts
-  const totalAlerts = Array.isArray(alertsData?.data) ? alertsData.data.length : 0;
+  const totalAlerts = Array.isArray(alertsData?.data)
+    ? alertsData.data.length
+    : 0;
 
   // Get the most recent 3 alerts (adjust as needed)
   const recentAlerts = Array.isArray(alertsData?.data)
     ? alertsData.data.slice(0, 3)
     : [];
 
-  const alertItems = recentAlerts.map(alert => ({
-    label: (alert.barangays || []).map(b => typeof b === "string" ? b : b.name).join(", "),
-    value: (alert.messages && alert.messages.length > 0) ? alert.messages[0] : "No message"
+  const alertItems = recentAlerts.map((alert) => ({
+    label: (alert.barangays || [])
+      .map((b) => (typeof b === "string" ? b : b.name))
+      .join(", "),
+    value:
+      alert.messages && alert.messages.length > 0
+        ? alert.messages[0]
+        : "No message",
   }));
 
   // Handler to redirect to /admin/denguemapping when a barangay is clicked
@@ -151,7 +162,8 @@ const Dashboard = () => {
                 Analyzing Reports...
               </h3>
               <p className="text-gray-600">
-                Processing crowdsourced data for insights. This may take a moment.
+                Processing crowdsourced data for insights. This may take a
+                moment.
               </p>
             </div>
           </div>
@@ -159,9 +171,7 @@ const Dashboard = () => {
       )}
 
       <div className="bg-primary text-white flex flex-col p-6 rounded-2xl mb-4">
-        <p className="text-5xl font-[Koulen] lowercase">
-          Hello, {user.name}
-        </p>
+        <p className="text-5xl font-[Koulen] lowercase">Hello, {user.name}</p>
         <p className="text-lg">Today is {formattedDate}</p>
       </div>
 
@@ -197,10 +207,7 @@ const Dashboard = () => {
         </div>
 
         {/* ReportCard for Total Alerts Sent */}
-        <div
-          className="cursor-pointer"
-          onClick={() => navigate("/admin/CEA")}
-        >
+        <div className="cursor-pointer" onClick={() => navigate("/admin/CEA")}>
           <ReportCard
             title="Total Alerts Sent"
             count={totalAlerts}
@@ -259,7 +266,11 @@ const Dashboard = () => {
         </p>
         <hr className="mb-6 border-[1.5px] border-gray-200" />
         <div className="h-120">
-          <ReportTable2 posts={safePosts} isActionable={false} onlyRecent={true} />
+          <ReportTable2
+            posts={safePosts}
+            isActionable={false}
+            onlyRecent={true}
+          />
         </div>
       </section>
 
@@ -269,7 +280,7 @@ const Dashboard = () => {
         </div>
         <div className="flex  md:flex-row  gap-6 lg:flex-3">
           <div className="flex-1 min-w-[150px] shadow-sm rounded-2xl h-auto overflow-hidden  ">
-            <MapOnly style={{height: '300px', width: '100%'}} />
+            <MapOnly style={{ height: "300px", width: "100%" }} />
           </div>
           {/* <div className="flex flex-col ">
             <p className="text-3xl font-extrabold text-primary mb-3">
