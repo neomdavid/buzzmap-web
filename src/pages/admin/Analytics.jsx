@@ -125,6 +125,7 @@ const Analytics = () => {
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [uploadedFileName, setUploadedFileName] = useState("");
   const [uploadSuccessMessage, setUploadSuccessMessage] = useState("");
+  const [importSuccess, setImportSuccess] = useState(false);
   const { refetch: refetchAnalytics } = useGetAnalyticsQuery();
   const { refetch: refetchPosts } = useGetPostsQuery();
   const { refetch: refetchInterventions } = useGetAllInterventionsQuery();
@@ -132,6 +133,7 @@ const Analytics = () => {
   const [isImporting, setIsImporting] = useState(false);
   const [showBreedingSites, setShowBreedingSites] = useState(true);
   const [showInterventions, setShowInterventions] = useState(true);
+
   const [importProgress, setImportProgress] = useState(0);
 
   const { data: patternResultsData, isLoading: isLoadingPatterns } =
@@ -238,7 +240,7 @@ const Analytics = () => {
       formData.append("file", file);
 
       const response = await fetch(
-        `${import.meta.env.VITE_API_BASE_URL}/api/v1/analytics/submit-csv-file`,
+        `${import.meta.env.VITE_API_BASE_URL}api/v1/analytics/submit-csv-file`,
         {
           method: "POST",
           body: formData,
@@ -288,6 +290,7 @@ const Analytics = () => {
         "Dengue case data has been successfully imported and analyzed. The system has updated all risk assessments and pattern recognition for affected barangays."
       );
       setUploadedFileName(result.data?.file_info?.original_filename || "");
+      setShowSuccessModal(true);
     } catch (error) {
       console.error("Import error:", error);
       setImportError(error.message || "Failed to import CSV file");
