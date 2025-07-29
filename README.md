@@ -1,11 +1,11 @@
-# 🦟 BuzzMap - Dengue Surveillance & Community Engagement Platform
+# 🦟 BuzzMap: A Crowd-Sourced Dengue Outbreak Prevention and Intervention System with Prescriptive Analytics
 
 [![React](https://img.shields.io/badge/React-18.3.1-blue.svg)](https://reactjs.org/)
 [![Vite](https://img.shields.io/badge/Vite-6.2.0-purple.svg)](https://vitejs.dev/)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind-4.0.15-38B2AC.svg)](https://tailwindcss.com/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-> A comprehensive web platform for dengue surveillance, community engagement, and public health management in Quezon City.
+> A comprehensive web platform for dengue surveillance, community engagement, and public health management in Quezon City with advanced analytics and intervention capabilities.
 
 ## 📋 Table of Contents
 
@@ -15,16 +15,15 @@
 - [Screenshots](#screenshots)
 - [Live Demo](#live-demo)
 - [Key Features](#key-features)
-- [Technical Architecture](#technical-architecture)
 - [Contributing](#contributing)
 - [License](#license)
 
 ## 🎯 Overview
 
-BuzzMap is a modern web application designed to combat dengue fever through community-driven surveillance, real-time mapping, and public health interventions. The platform serves three distinct user roles:
+BuzzMap is a comprehensive dengue outbreak prevention and intervention system that leverages crowd-sourced data and prescriptive analytics to combat dengue fever in Quezon City. The platform combines community engagement with advanced data analytics to provide actionable insights for public health officials.
 
 - **👥 Community Members**: Report dengue cases, engage in discussions, and access prevention resources
-- **👨‍⚕️ Health Administrators**: Manage reports, coordinate interventions, and analyze data
+- **👨‍⚕️ Health Administrators**: Manage reports, coordinate interventions, and analyze data with prescriptive analytics
 - **🔧 Super Administrators**: Oversee user accounts and system administration
 
 ## ✨ Features
@@ -44,7 +43,7 @@ BuzzMap is a modern web application designed to combat dengue fever through comm
 ### 📊 Administrative Dashboard
 - **Report Verification**: Validate and manage community-submitted reports
 - **Intervention Management**: Plan and track dengue prevention interventions
-- **Analytics Dashboard**: Comprehensive data visualization and trend analysis
+- **Prescriptive Analytics**: Advanced data analysis with actionable recommendations
 - **Alert System**: Real-time notifications for new cases and outbreaks
 
 ### 🔐 Multi-Role Authentication
@@ -93,8 +92,6 @@ BuzzMap is a modern web application designed to combat dengue fever through comm
 
 *[Demo link will be added here]*
 
-> **Note**: This is a portfolio project showcasing modern web development skills and public health technology solutions.
-
 ## 📖 Key Features
 
 ### For Community Members
@@ -111,34 +108,9 @@ BuzzMap is a modern web application designed to combat dengue fever through comm
 - **User Management**: Oversee accounts and permissions across the platform
 - **System Analytics**: Access comprehensive platform performance metrics
 
-## 📁 Project Structure
 
-```
-buzzmap-web/
-├── src/
-│   ├── components/        # Reusable UI components
-│   ├── pages/            # Page components
-│   ├── features/         # Redux state management
-│   ├── hooks/            # Custom React hooks
-│   └── utils/            # Utility functions
-├── public/               # Static assets
-└── package.json
-```
 
-*Clean, modular architecture following React best practices*
 
-## 🔌 Technical Architecture
-
-### Frontend Architecture
-- **Component-Based Design**: Modular React components for maintainability
-- **State Management**: Redux Toolkit for centralized state management
-- **Routing**: React Router for seamless navigation
-- **Responsive Design**: Mobile-first approach with Tailwind CSS
-
-### Data Flow
-- **Real-time Updates**: Live data synchronization across components
-- **Caching Strategy**: Optimized data fetching and caching
-- **Error Handling**: Comprehensive error boundaries and user feedback
 
 ## 🤝 Contributing
 
@@ -167,11 +139,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - **Open Source Community** - For the amazing libraries and tools
 - **Contributors** - For their valuable contributions
 
-## 📞 Support
 
-- **Issues**: [GitHub Issues](https://github.com/yourusername/buzzmap-web/issues)
-- **Documentation**: [Wiki](https://github.com/yourusername/buzzmap-web/wiki)
-- **Email**: support@buzzmap.com
 
 ---
 
