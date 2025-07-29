@@ -7,13 +7,14 @@
 
 > A comprehensive web platform for dengue surveillance, community engagement, and public health management in Quezon City with advanced analytics and intervention capabilities.
 
+**🌐 Live Demo: [https://buzzmap-client.vercel.app/home](https://buzzmap-client.vercel.app/home)**
+
 ## 📋 Table of Contents
 
 - [Overview](#overview)
 - [Features](#features)
 - [Tech Stack](#tech-stack)
 - [Screenshots](#screenshots)
-- [Live Demo](#live-demo)
 - [Key Features](#key-features)
 - [Contributing](#contributing)
 - [License](#license)
@@ -88,9 +89,7 @@ BuzzMap is a comprehensive dengue outbreak prevention and intervention system th
 
 *[Screenshots will be added here]*
 
-## 🚀 Live Demo
 
-*[Demo link will be added here]*
 
 ## 📖 Key Features
 
@@ -115,19 +114,6 @@ BuzzMap is a comprehensive dengue outbreak prevention and intervention system th
 ## 🤝 Contributing
 
 We welcome contributions! Please read our [Contributing Guidelines](CONTRIBUTING.md) before submitting pull requests.
-
-### Development Setup
-1. Fork the repository
-2. Create a feature branch: `git checkout -b feature/amazing-feature`
-3. Commit changes: `git commit -m 'Add amazing feature'`
-4. Push to branch: `git push origin feature/amazing-feature`
-5. Open a Pull Request
-
-### Code Style
-- Follow ESLint configuration
-- Use Prettier for code formatting
-- Write meaningful commit messages
-- Add tests for new features
 
 ## 📄 License
 
