@@ -275,13 +275,19 @@ const Analytics = () => {
     try {
       // Step 1: Upload CSV (50% progress)
       setImportProgress(25);
+      await new Promise((resolve) => setTimeout(resolve, 500));
+
       const result = await handleFileUpload(csvFile);
       setImportProgress(50);
+      await new Promise((resolve) => setTimeout(resolve, 500));
 
-      // Step 2: Process data (remaining 50%)
+      // Step 2: Simulate Processing
       setImportProgress(75);
-      // Add any additional processing here
+      await new Promise((resolve) => setTimeout(resolve, 500));
+
+      // Final step
       setImportProgress(100);
+      await new Promise((resolve) => setTimeout(resolve, 300));
 
       // Success handling
       setCsvFile(null);

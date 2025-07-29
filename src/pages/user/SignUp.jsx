@@ -164,7 +164,7 @@ const SignUp = () => {
               error={password && !isPasswordValid()}
             />
             {password && !isPasswordValid() && (
-              <div className="text-error text-[12px] mt-1 text-left">
+              <div className="text-[#ffaaa4] text-[12px] mt-2 text-left">
                 {passwordErrors.length && (
                   <p>• Password must be at least 8 characters long</p>
                 )}

@@ -14,7 +14,6 @@
 - [Overview](#overview)
 - [Features](#features)
 - [Tech Stack](#tech-stack)
-- [Screenshots](#screenshots)
 - [Key Features](#key-features)
 - [Contributing](#contributing)
 - [License](#license)
@@ -85,12 +84,6 @@ BuzzMap is a comprehensive dengue outbreak prevention and intervention system th
 - **Prettier** - Code formatting
 - **Vite Plugin React** - React support
 
-## 📸 Screenshots
-
-*[Screenshots will be added here]*
-
-
-
 ## 📖 Key Features
 
 ### For Community Members
@@ -107,14 +100,6 @@ BuzzMap is a comprehensive dengue outbreak prevention and intervention system th
 - **User Management**: Oversee accounts and permissions across the platform
 - **System Analytics**: Access comprehensive platform performance metrics
 
-
-
-
-
-## 🤝 Contributing
-
-We welcome contributions! Please read our [Contributing Guidelines](CONTRIBUTING.md) before submitting pull requests.
-
 ## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
@@ -123,9 +108,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 - **Quezon City Health Department** - For domain expertise and guidance
 - **Open Source Community** - For the amazing libraries and tools
-- **Contributors** - For their valuable contributions
-
-
 
 ---
 
