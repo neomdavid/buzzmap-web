@@ -13,11 +13,9 @@
 - [Features](#features)
 - [Tech Stack](#tech-stack)
 - [Screenshots](#screenshots)
-- [Installation](#installation)
-- [Environment Variables](#environment-variables)
-- [Usage](#usage)
-- [Project Structure](#project-structure)
-- [API Documentation](#api-documentation)
+- [Live Demo](#live-demo)
+- [Key Features](#key-features)
+- [Technical Architecture](#technical-architecture)
 - [Contributing](#contributing)
 - [License](#license)
 
@@ -91,131 +89,56 @@ BuzzMap is a modern web application designed to combat dengue fever through comm
 
 *[Screenshots will be added here]*
 
-## 🚀 Installation
+## 🚀 Live Demo
 
-### Prerequisites
-- Node.js (v18 or higher)
-- npm or yarn package manager
-- Google Maps API key
+*[Demo link will be added here]*
 
-### Quick Start
+> **Note**: This is a portfolio project showcasing modern web development skills and public health technology solutions.
 
-1. **Clone the repository**
-   ```bash
-   git clone https://github.com/yourusername/buzzmap-web.git
-   cd buzzmap-web
-   ```
-
-2. **Install dependencies**
-   ```bash
-   npm install
-   ```
-
-3. **Set up environment variables**
-   ```bash
-   cp .env.example .env.local
-   ```
-   Edit `.env.local` with your configuration (see [Environment Variables](#environment-variables))
-
-4. **Start development server**
-   ```bash
-   npm run dev
-   ```
-
-5. **Open your browser**
-   Navigate to `http://localhost:5173`
-
-## 🔧 Environment Variables
-
-Create a `.env.local` file in the root directory:
-
-```env
-# Google Maps API
-VITE_GOOGLE_MAPS_API_KEY=your_google_maps_api_key_here
-
-# API Configuration
-VITE_API_BASE_URL=your_api_base_url_here
-
-# Feature Flags
-VITE_ENABLE_ANALYTICS=true
-VITE_ENABLE_DEBUG_MODE=false
-```
-
-### Required API Keys
-- **Google Maps API Key**: For mapping and geocoding features
-- **API Base URL**: Backend API endpoint (if applicable)
-
-## 📖 Usage
+## 📖 Key Features
 
 ### For Community Members
-1. **Sign up/Login**: Create an account or log in
-2. **Report Cases**: Submit dengue case reports with location details
-3. **Engage**: Participate in community discussions and share prevention tips
-4. **Stay Informed**: Access latest updates and prevention resources
+- **Case Reporting**: Submit dengue case reports with precise location mapping
+- **Community Engagement**: Participate in discussions and share prevention tips
+- **Real-time Updates**: Access latest health alerts and prevention resources
 
-### For Administrators
-1. **Dashboard Access**: View comprehensive analytics and reports
-2. **Report Management**: Verify and process community-submitted reports
-3. **Intervention Planning**: Coordinate prevention and response activities
-4. **Data Analysis**: Monitor trends and generate insights
+### For Health Administrators
+- **Comprehensive Dashboard**: View analytics, reports, and intervention management
+- **Data Visualization**: Monitor trends and generate insights through interactive charts
+- **Intervention Coordination**: Plan and track prevention activities
 
-### For Super Administrators
-1. **User Management**: Oversee all user accounts and permissions
-2. **System Administration**: Manage platform settings and configurations
-3. **Data Oversight**: Access comprehensive system analytics
+### For System Administrators
+- **User Management**: Oversee accounts and permissions across the platform
+- **System Analytics**: Access comprehensive platform performance metrics
 
 ## 📁 Project Structure
 
 ```
 buzzmap-web/
-├── public/                 # Static assets
-│   ├── quezon_city_boundaries.geojson
-│   └── quezon_barangays_boundaries.geojson
 ├── src/
-│   ├── api/               # API integration
-│   ├── assets/            # Images, icons, and media
 │   ├── components/        # Reusable UI components
-│   │   ├── Admin/         # Admin-specific components
-│   │   ├── Community/     # Community features
-│   │   ├── Mapping/       # Map-related components
-│   │   └── ui/            # Base UI components
-│   ├── features/          # Redux slices
-│   ├── hooks/             # Custom React hooks
-│   ├── pages/             # Page components
-│   │   ├── admin/         # Admin pages
-│   │   ├── superadmin/    # Super admin pages
-│   │   └── user/          # User pages
-│   ├── services/          # API services
-│   ├── store/             # Redux store configuration
-│   └── utils/             # Utility functions
-├── package.json
-├── vite.config.js
-└── tailwind.config.js
+│   ├── pages/            # Page components
+│   ├── features/         # Redux state management
+│   ├── hooks/            # Custom React hooks
+│   └── utils/            # Utility functions
+├── public/               # Static assets
+└── package.json
 ```
 
-## 🔌 API Documentation
+*Clean, modular architecture following React best practices*
 
-### Authentication Endpoints
-- `POST /auth/login` - User authentication
-- `POST /auth/register` - User registration
-- `POST /auth/logout` - User logout
+## 🔌 Technical Architecture
 
-### Report Management
-- `GET /reports` - Fetch all reports
-- `POST /reports` - Submit new report
-- `PUT /reports/:id` - Update report status
+### Frontend Architecture
+- **Component-Based Design**: Modular React components for maintainability
+- **State Management**: Redux Toolkit for centralized state management
+- **Routing**: React Router for seamless navigation
+- **Responsive Design**: Mobile-first approach with Tailwind CSS
 
-### Community Features
-- `GET /posts` - Fetch community posts
-- `POST /posts` - Create new post
-- `GET /comments` - Fetch post comments
-
-### Admin Features
-- `GET /interventions` - Fetch interventions
-- `POST /interventions` - Create intervention
-- `GET /analytics` - Fetch analytics data
-
-*[Complete API documentation available in `/docs/API.md`]*
+### Data Flow
+- **Real-time Updates**: Live data synchronization across components
+- **Caching Strategy**: Optimized data fetching and caching
+- **Error Handling**: Comprehensive error boundaries and user feedback
 
 ## 🤝 Contributing
 
