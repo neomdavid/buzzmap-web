@@ -751,11 +751,17 @@ const SpecificLocation = () => {
   }, [barangayGeoJsonData]);
 
   if (!isLoaded) {
-    return <div>Loading map...</div>;
+    return <div className="h-screen w-screen flex flex-col gap-6 items-center justify-center">
+    <span className="loading loading-spinner loading-xl"></span>
+    <p className="text-primary text-3xl font-semibold">Loading map...</p>
+  </div>;
   }
 
   if (!report && isLoading) {
-    return <div>Loading report...</div>;
+    return <div className="h-screen w-screen flex flex-col gap-2 items-center justify-center">
+    <span className="loading loading-spinner loading-xl"></span>
+    <p className="text-primary text-3xl font-semibold">Loading report...</p>
+  </div>;
   }
 
   if (!report && error) {
@@ -767,7 +773,7 @@ const SpecificLocation = () => {
   }
 
   return (
-    <main className="text-2xl mt-[-69px] ">
+    <main className="text-2xl mt-[-68px] ">
       <div className="w-full h-[100-vh] relative">
         {/* Timeline Range Slider UI */}
         {/* {allReports.length >= 5 && (

@@ -9,6 +9,7 @@ const CustomFormInput = ({
   theme = "light",
   className = "",
   error = false,
+  isRequired = false,
 }) => {
   const [isFocused, setIsFocused] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -45,9 +46,10 @@ const CustomFormInput = ({
           ${className}`}
       >
         <input
-          type={isPassword && !showPassword ? "password" : "text"}
+          type={ type? type: isPassword && !showPassword ? "password" : "text"}
           value={value}
           onChange={onChange}
+          required={isRequired}
           onFocus={() => setIsFocused(true)}
           onBlur={() => setIsFocused(false)}
           className={`w-full text-xl p-2 outline-none bg-transparent text-base ${

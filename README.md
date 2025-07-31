@@ -82,7 +82,7 @@ BuzzMap is a comprehensive dengue outbreak prevention and intervention system th
 ### Development Tools
 - **ESLint** - Code linting
 - **Prettier** - Code formatting
-- **Vite Plugin React** - React support
+- **Vite Plugin Rbeact** - React support
 
 ## 📖 Key Features
 

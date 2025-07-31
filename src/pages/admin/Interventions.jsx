@@ -444,14 +444,14 @@ const Interventions = () => {
           <p className="text-base-content text-4xl font-bold mb-2">
             Prescriptive Action Recommendations
           </p>
-          <div className="flex gap-4 mb-2 flex-wrap items-center">
+          <div className="flex gap-4 flex-wrap items-center">
             {initialTabs.map((tab) => (
               <button
                 key={tab.value}
-                className={`px-6 py-2 rounded-full font-semibold border-2 transition-colors duration-200 ${
+                className={`px-6 py-2 rounded-full font-semibold border-2 transition-colors duration-200 shadow-sm hover:cursor-pointer ${
                   activeTab === tab.value
                     ? `${tab.color} ${tab.border} bg-white`
-                    : "text-gray-500 border-transparent bg-gray-100 hover:bg-white"
+                    : "text-gray-500 border-transparent bg-gray-100 hover:bg-gray-200"
                 }`}
                 onClick={() => setActiveTab(tab.value)}
               >
@@ -460,7 +460,7 @@ const Interventions = () => {
             ))}
             <div className="flex items-center">
               <div
-                className={`flex flex-row items-center overflow-hidden transition-all duration-300 ease-in-out ${
+                className={`flex flex-row items-center overflow-hidden transition-all pb-2 duration-300 ease-in-out ${
                   showAllTabs ? "max-w-2xl ml-2" : "max-w-0"
                 }`}
                 style={{ gap: "1rem" }}
@@ -468,10 +468,10 @@ const Interventions = () => {
                 {extraTabs.map((tab) => (
                   <button
                     key={tab.value}
-                    className={`px-6 py-2 rounded-full font-semibold border-2 transition-colors duration-200 ${
+                    className={`px-6 py-2 rounded-full font-semibold border-2 transition-colors shadow-sm duration-200 hover:cursor-pointer ${
                       activeTab === tab.value
                         ? `${tab.color} ${tab.border} bg-white`
-                        : "text-gray-500 border-transparent bg-gray-100 hover:bg-white"
+                        : "text-gray-500 border-transparent bg-gray-100 hover:bg-gray-200"
                     }`}
                     onClick={() => setActiveTab(tab.value)}
                     style={{ transition: "all 0.3s cubic-bezier(0.4,0,0.2,1)" }}
@@ -482,7 +482,7 @@ const Interventions = () => {
               </div>
               {extraTabs.length > 0 && (
                 <button
-                  className="px-2 py-2 rounded-full border-2 border-gray-300 bg-gray-100 hover:bg-white flex items-center justify-center ml-2 transition-all duration-300 ease-in-out"
+                  className="px-2 py-2 rounded-full border-2 border-gray-300 bg-gray-100 hover:bg-white hover:cursor-pointer flex items-center justify-center ml-2 transition-all duration-300 ease-in-out"
                   onClick={() => setShowAllTabs((v) => !v)}
                   title={
                     showAllTabs ? "Hide extra patterns" : "Show more patterns"

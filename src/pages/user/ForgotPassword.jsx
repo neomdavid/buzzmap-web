@@ -189,11 +189,12 @@ const ForgotPassword = () => {
         )}
 
         {step === 1 ? (
-          <form onSubmit={handleForgotPassword} className="flex flex-col items-center gap-y-3 lg:gap-y-4 w-[85%]">
+          <form onSubmit={handleForgotPassword} className="flex flex-col items-center gap-y-6 lg:gap-y-4 w-[85%]">
             <CustomFormInput
               label="Email"
               type="email"
               theme="light"
+              isRequired={true}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
             />
