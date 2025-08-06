@@ -110,33 +110,31 @@ const Landing = () => {
   return (
     <main className="flex flex-col overflow-hidden mt-12 pt-10">
       {/* <StreetViewMap /> */}
-      <div className="text-primary font-[Koulen] uppercase flex flex-col text-7xl  px-10 mb-14 lg:max-w-[80vw] lg:items-center lg:self-center text-center">
+      <div className="text-primary font-[Koulen] uppercase flex flex-col text-7xl  sm:px-10 mb-6 sm:mb-14 lg:max-w-[80vw] lg:items-center lg:self-center text-center">
         <Heading
-          className="text-[46px] text-left sm:text-7xl md:text-8xl md:leading-24 lg:-translate-x-50 xl:-translate-x-50 xl:text-9xl xl:leading-40"
+          className="text-center text-5xl px-2 sm:px-0 sm:text-[46px] sm:text-left sm:text-7xl md:text-8xl md:leading-24 lg:-translate-x-50 xl:-translate-x-50 xl:text-9xl xl:leading-40"
           text="Buzzing /with awareness/"
         />
         <Heading
-          className="text-[46px] mt-[-17px] sm:mt-0 text-right sm:text-7xl md:text-8xl lg:translate-x-50 xl:translate-x-50 xl:text-9xl"
+          className="text-center text-5xl px-2 sm:px-0 sm:text-[46px] mt-[-17px] sm:mt-0 sm:text-right sm:text-7xl md:text-8xl lg:translate-x-50 xl:translate-x-50 xl:text-9xl"
           text="Mapping /for prevention/"
         />
       </div>
 
-      <div className="text-primary text-center text-xl font-semibold mb-8">
-        <h3 className="text-2xl italic uppercase font-bold mb-10 font-[Inter]">
+      <div className="text-primary text-center text-xl font-normal mb-8">
+        <h3 className="text-xl sm:text-2xl italic uppercase font-bold mb-10 font-[Inter]">
           Stay protected from dengue.
         </h3>
-        <p className="px-10">
+        <p className="px-6 text-md sm:px-10">
           Join the community in&nbsp;
-          <span className="font-bold italic">
+          <span className="font-semibold ">
             mapping dengue hotspots, sharing reports,
           </span>{" "}
           and&nbsp;
-          <span className="font-bold italic">
-            preventing outbreaks together.
-          </span>
+          <span className="font-semibold ">preventing outbreaks together.</span>
         </p>
       </div>
-      <div className="flex flex-col gap-4 sm:flex-row w-[80%] m-auto mt-2 gap-x-3 justify-center items-center">
+      <div className="flex flex-col text-lg font-semibold gap-4 sm:flex-row w-[80%] m-auto mt-2 gap-x-3 justify-center items-center">
         <SecondaryButton
           text={"Check Dengue Hotspots"}
           to="/mapping"
@@ -165,16 +163,16 @@ const Landing = () => {
         }}
       />
 
-      <section className="flex flex-col lg:flex-row  justify-center max-w-[95vw] m-auto px-6 sm:px-6 gap-x-4">
+      <section className="flex flex-col lg:flex-row  justify-center sm:max-w-[95vw] m-auto px-6 sm:px-6 gap-x-4">
         <div className="rounded-xl overflow-hidden h-[400px] lg:h-[500px] mb-6 lg:mb-0 lg:flex-13 flex items-center justify-center bg-gray-100">
           <MapOnly style={{ height: "100%", width: "100%" }} />
         </div>
-        <div className="mb-16 flex flex-col flex-10  mx-6 items-center text-center lg:items-end lg:text-right">
+        <div className="mb-16 flex flex-col flex-10 text-lg  sm:mx-6 items-center text-center lg:items-end lg:text-right">
           <Heading
             text="see the /danger zones/"
             className="text-5xl sm:text-7xl"
           />
-          <p className="text-primary text-xl font-semibold mt-5">
+          <p className="text-primary text-lg font-semibold mt-5">
             By tracking and visualizing dengue hotspots, users can stay
             informed, take preventive actions, and avoid high-risk areas,
             ultimately reducing their chances of exposure and contributing to
@@ -216,9 +214,11 @@ const Landing = () => {
           </div>
         </div>
       </section>
-      <div className="flex flex-col text-center items-center mx-14  p-10 py-16 bg-gradient-to-r from-[#245261] to-[#4AA8C7] text-white rounded-2xl my-10">
-        <h1 className="text-5xl sm:text-7xl mb-2">YOUR COMMUNITY SPEAKS</h1>
-        <p className="font-bold italic mb-8 text-lg">
+      <div className="flex flex-col text-center items-center mx-6 sm:mx-14  p-2 sm:p-10 py-16 bg-gradient-to-r from-[#245261] to-[#4AA8C7] text-white rounded-2xl my-8 mb-14">
+        <h1 className="text-4xl sm:text-5xl sm:text-7xl mb-2">
+          YOUR COMMUNITY SPEAKS
+        </h1>
+        <p className="font-semibold italic mb-8 text-lg sm:text-lg">
           Spread Awareness. Check the Latest Dengue Updates!{" "}
         </p>
         <div
@@ -247,7 +247,7 @@ const Landing = () => {
           Read more dengue reports <span className="font-extrabold">here</span>.
         </Link>
       </div>
-      <article className="bg-primary mt-8 flex flex-col items-center py-20">
+      <article className="bg-primary mt-8 flex flex-col items-center py-26">
         <h1 className="uppercase text-5xl sm:text-9xl text-white">
           WHAT'S THE BUZZ?
         </h1>
