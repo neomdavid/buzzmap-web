@@ -163,8 +163,8 @@ const Landing = () => {
         }}
       />
 
-      <section className="flex flex-col lg:flex-row  justify-center sm:max-w-[95vw] m-auto px-6 sm:px-6 gap-x-4">
-        <div className="rounded-xl overflow-hidden h-[400px] lg:h-[500px] mb-6 lg:mb-0 lg:flex-13 flex items-center justify-center bg-gray-100">
+      <section className="flex flex-col lg:flex-row  justify-center  sm:max-w-[95vw] m-auto px-6 sm:px-6 gap-x-4 ">
+        <div className="rounded-xl overflow-hidden h-[400px] lg:h-[550px]  mb-6 lg:mb-0 lg:flex-13 flex items-center justify-center bg-red-100">
           <MapOnly style={{ height: "100%", width: "100%" }} />
         </div>
         <div className="mb-16 flex flex-col flex-10 text-lg  sm:mx-6 items-center text-center lg:items-end lg:text-right">
