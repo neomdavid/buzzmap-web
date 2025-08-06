@@ -33,7 +33,7 @@ import NewPostModal from "../../components/Community/NewPostModal";
 import { useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { toastInfo, toastSuccess } from "../../utils";
-import MapOnly from '../../components/Mapping/MapOnly';
+import MapOnly from "../../components/Mapping/MapOnly";
 
 const Landing = () => {
   const modalRef = useRef(null);
@@ -46,7 +46,10 @@ const Landing = () => {
     if (token) {
       // If there's a user in Redux state, use that
       if (user) {
-        console.log("[DEBUG] Landing - Redirecting based on Redux user role:", user.role);
+        console.log(
+          "[DEBUG] Landing - Redirecting based on Redux user role:",
+          user.role
+        );
         switch (user.role) {
           case "admin":
             navigate("/admin/dashboard");
@@ -65,7 +68,10 @@ const Landing = () => {
         const storedUser = localStorage.getItem("user");
         if (storedUser) {
           const parsedUser = JSON.parse(storedUser);
-          console.log("[DEBUG] Landing - Redirecting based on localStorage user role:", parsedUser.role);
+          console.log(
+            "[DEBUG] Landing - Redirecting based on localStorage user role:",
+            parsedUser.role
+          );
           switch (parsedUser.role) {
             case "admin":
               navigate("/admin/dashboard");
@@ -131,9 +137,21 @@ const Landing = () => {
         </p>
       </div>
       <div className="flex flex-col gap-4 sm:flex-row w-[80%] m-auto mt-2 gap-x-3 justify-center items-center">
-        <SecondaryButton text={"Check Dengue Hotspots"} to="/mapping" className="w-md " />
-        <SecondaryButton text={"Report a Breeding Site"} to="/community" className="w-md " />
-        <SecondaryButton text={"Get Prevention Tips"} to="/buzzline" className="w-md " />
+        <SecondaryButton
+          text={"Check Dengue Hotspots"}
+          to="/mapping"
+          className="w-md "
+        />
+        <SecondaryButton
+          text={"Report a Breeding Site"}
+          to="/community"
+          className="w-md "
+        />
+        <SecondaryButton
+          text={"Get Prevention Tips"}
+          to="/buzzline"
+          className="w-md "
+        />
       </div>
 
       <img
@@ -149,7 +167,7 @@ const Landing = () => {
 
       <section className="flex flex-col lg:flex-row  justify-center max-w-[95vw] m-auto px-6 sm:px-6 gap-x-4">
         <div className="rounded-xl overflow-hidden h-[400px] lg:h-[500px] mb-6 lg:mb-0 lg:flex-13 flex items-center justify-center bg-gray-100">
-          <MapOnly style={{height: '100%', width: '100%'}} />
+          <MapOnly style={{ height: "100%", width: "100%" }} />
         </div>
         <div className="mb-16 flex flex-col flex-10  mx-6 items-center text-center lg:items-end lg:text-right">
           <Heading
@@ -197,11 +215,12 @@ const Landing = () => {
             />
           </div>
         </div>
-
       </section>
       <div className="flex flex-col text-center items-center mx-14  p-10 py-16 bg-gradient-to-r from-[#245261] to-[#4AA8C7] text-white rounded-2xl my-10">
         <h1 className="text-5xl sm:text-7xl mb-2">YOUR COMMUNITY SPEAKS</h1>
-        <p className="font-bold italic mb-8 text-lg">Spread Awareness. Check the Latest Dengue Updates! </p>
+        <p className="font-bold italic mb-8 text-lg">
+          Spread Awareness. Check the Latest Dengue Updates!{" "}
+        </p>
         <div
           className="flex items-center justify-center sm:w-[60%] max-w-[600px] px-10 py-5 bg-white rounded-2xl gap-3 mb-8 cursor-pointer hover:bg-gray-50 transition-colors"
           onClick={handleReportClick}
@@ -209,7 +228,11 @@ const Landing = () => {
           <img src={landing2} className="h-12 w-12 rounded-full" />
           <input
             type="text"
-            placeholder={!user || user.name === "Guest" ? "Login to share your report..." : "Share your report here..."}
+            placeholder={
+              !user || user.name === "Guest"
+                ? "Login to share your report..."
+                : "Share your report here..."
+            }
             className="flex-1 input input-lg my-1 text-lg rounded-2xl input-primary placeholder:text-primary placeholder:italic"
             readOnly
           />
@@ -217,15 +240,21 @@ const Landing = () => {
             <ArrowFatLineRight size={25} weight="fill" />
           </div>
         </div>
-        <Link to="/community" className="bg-gradient-to-b from-[#FADD37] to-[#F8A900] italic text-primary font-semibold px-6 py-3 rounded-xl hover:scale-105 transition-transform duration-300 active:opacity-70 hover:cursor-pointer text-lg">Read more dengue reports <span className="font-extrabold">here</span>.</Link>
+        <Link
+          to="/community"
+          className="bg-gradient-to-b from-[#FADD37] to-[#F8A900] italic text-primary font-semibold px-6 py-3 rounded-xl hover:scale-105 transition-transform duration-300 active:opacity-70 hover:cursor-pointer text-lg"
+        >
+          Read more dengue reports <span className="font-extrabold">here</span>.
+        </Link>
       </div>
       <article className="bg-primary mt-8 flex flex-col items-center py-20">
         <h1 className="uppercase text-5xl sm:text-9xl text-white">
           WHAT'S THE BUZZ?
         </h1>
         {/* <ScrambledText text="outbreak!" /> */}
-        <p className="italic text-lg text-white mt-4 mb-8">
-          Stay updated and take action with these prevention tips from Quezon City Epidemiology and Surveillance Division.
+        <p className="italic text-lg text-center px-14 sm:w-[80%] text-white mt-4 mb-2">
+          Stay updated and take action with these prevention tips from Quezon
+          City Epidemiology and Surveillance Division.
         </p>
         {/* <div className="grid grid-cols-2 md:flex justify-center flex-wrap gap-6 px-4">
           <PreventionCard
@@ -283,19 +312,17 @@ const Landing = () => {
         style={{
           clipPath: "polygon(0 0, 100% 0, 100% 100%, 0 75%)",
         }}
-        className="z-20 bg-primary mt-[-5px] pt-22 pb-65 w-full flex justify-center text-7xl md:text-8xl items-center flex-col text-white"
+        className="z-20 bg-primary mt-[-5px] pt-22 pb-65 w-full flex justify-center text-5xl sm:text-7xl md:text-8xl items-center flex-col text-white"
       >
         <p className=" relative">
           Speak up, stay
           <Quotes
-            className="absolute left-[-110px] top-[-80px] sm:left-[-190px] sm:top-[-30px] rotate-183"
+            className="absolute left-[-80px] text-[70px]  top-[-80px] sm:left-[-140px] sm:top-[-70px] md:left-[-140px] md:top-[-80px] md:text-[120px] lg:left-[-250px] lg:text-[150px] lg:top-[-90px] xl:left-[-420px] xl:text-[180px]  rotate-183"
             weight="fill"
-            size={90}
           />
           <Quotes
-            className="absolute right-[-100px] bottom-[-275px] sm:right-[-215px] sm:bottom-[-287px] rotate-2"
+            className="absolute right-[-80px] text-[70px] bottom-[-180px] sm:right-[-135px] sm:bottom-[-278px] md:right-[-120px] md:text-[120px] lg:right-[-250px] lg:text-[150px] lg:bottom-[-300px] xl:right-[-420px] xl:text-[180px] rotate-2"
             weight="fill"
-            size={160}
           />
         </p>
         <p>
