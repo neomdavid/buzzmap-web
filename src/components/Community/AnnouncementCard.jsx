@@ -8,26 +8,31 @@ import ImageGrid from "./ImageGrid";
 import ReactionsTab from "./ReactionsTab";
 import Comment2 from "./Comment2";
 import { useSelector } from "react-redux";
-import { 
-  useGetAdminPostCommentsQuery, 
+import {
+  useGetAdminPostCommentsQuery,
   useAddAdminPostCommentMutation,
   useUpvoteAdminPostCommentMutation,
   useDownvoteAdminPostCommentMutation,
   useRemoveAdminPostCommentUpvoteMutation,
   useRemoveAdminPostCommentDownvoteMutation,
-  useGetBasicProfilesQuery
+  useGetBasicProfilesQuery,
 } from "../../api/dengueApi";
 import { showCustomToast } from "../../utils.jsx";
 import { formatDistanceToNow } from "date-fns";
 
 const AnnouncementCard = ({ announcement }) => {
-  console.log('[DEBUG] AnnouncementCard - Initial announcement:', announcement);
-  
+  console.log("[DEBUG] AnnouncementCard - Initial announcement:", announcement);
+
   const [comment, setComment] = useState("");
   const userFromStore = useSelector((state) => state.auth?.user);
-  
+
   // Use the admin post comments endpoint
-  const { data: comments, isLoading: isLoadingComments, refetch, error } = useGetAdminPostCommentsQuery(announcement?._id, {
+  const {
+    data: comments,
+    isLoading: isLoadingComments,
+    refetch,
+    error,
+  } = useGetAdminPostCommentsQuery(announcement?._id, {
     skip: !announcement?._id,
     pollingInterval: 5000,
   });
@@ -48,17 +53,20 @@ const AnnouncementCard = ({ announcement }) => {
 
   // Debug effect for comments
   useEffect(() => {
-    console.log('[DEBUG] AnnouncementCard - Fetching comments for announcement:', announcement?._id);
-    console.log('[DEBUG] AnnouncementCard - Comments data:', comments);
-    console.log('[DEBUG] AnnouncementCard - Is loading:', isLoadingComments);
-    console.log('[DEBUG] AnnouncementCard - Error:', error);
+    console.log(
+      "[DEBUG] AnnouncementCard - Fetching comments for announcement:",
+      announcement?._id
+    );
+    console.log("[DEBUG] AnnouncementCard - Comments data:", comments);
+    console.log("[DEBUG] AnnouncementCard - Is loading:", isLoadingComments);
+    console.log("[DEBUG] AnnouncementCard - Error:", error);
   }, [announcement?._id, comments, isLoadingComments, error]);
 
   // Add local state for announcement votes
   const [localUpvotes, setLocalUpvotes] = useState(announcement?.upvotes || []);
-  const [localDownvotes, setLocalDownvotes] = useState(announcement?.downvotes || []);
-
-
+  const [localDownvotes, setLocalDownvotes] = useState(
+    announcement?.downvotes || []
+  );
 
   // Update local state when props change
   useEffect(() => {
@@ -66,12 +74,10 @@ const AnnouncementCard = ({ announcement }) => {
     setLocalDownvotes(announcement?.downvotes || []);
   }, [announcement?.upvotes, announcement?.downvotes]);
 
-
-
   // Use dynamic data if available, otherwise fallback to static/default values
   const title = announcement?.title || "Important Announcement";
   // Split content by newline characters for rendering paragraphs
-  const contentParts = announcement?.content?.split('\n') || [
+  const contentParts = announcement?.content?.split("\n") || [
     "🚨 DENGUE OUTBREAK IN QUEZON CITY! 🚨",
     "",
     "Quezon City is currently facing a dengue outbreak, with cases surging by 200% from January 1 to February 14. Residents are urged to take immediate precautions to prevent the spread of the disease.",
@@ -80,7 +86,10 @@ const AnnouncementCard = ({ announcement }) => {
     "✅ Dengue cases have drastically increased—stay alert!",
     "Read more...",
   ];
-  const images = announcement?.images && announcement.images.length > 0 ? announcement.images : [announcementImg];
+  const images =
+    announcement?.images && announcement.images.length > 0
+      ? announcement.images
+      : [announcementImg];
   // For simplicity, reactions are kept static for now, but could also be dynamic
   const likes = announcement?.likesCount || "100k"; // Assuming likesCount might come from data
   const commentsCount = announcement?.commentsCount || "43k"; // Assuming commentsCount might come from data
@@ -92,7 +101,7 @@ const AnnouncementCard = ({ announcement }) => {
       const now = new Date();
       const diffTime = Math.abs(now - date);
       const diffMinutes = Math.floor(diffTime / (1000 * 60));
-      
+
       if (diffMinutes < 1) {
         return "just now";
       }
@@ -105,10 +114,10 @@ const AnnouncementCard = ({ announcement }) => {
 
   const handleCommentSubmit = async (e) => {
     e.preventDefault();
-    console.log('[DEBUG] AnnouncementCard - Submitting comment:', {
+    console.log("[DEBUG] AnnouncementCard - Submitting comment:", {
       postId: announcement._id,
       content: comment.trim(),
-      user: userFromStore
+      user: userFromStore,
     });
 
     if (!userFromStore) {
@@ -117,12 +126,18 @@ const AnnouncementCard = ({ announcement }) => {
     }
     if (!comment.trim()) return;
     try {
-      const result = await addComment({ postId: announcement._id, content: comment.trim() }).unwrap();
-      console.log('[DEBUG] AnnouncementCard - Comment submission result:', result);
+      const result = await addComment({
+        postId: announcement._id,
+        content: comment.trim(),
+      }).unwrap();
+      console.log(
+        "[DEBUG] AnnouncementCard - Comment submission result:",
+        result
+      );
       setComment("");
       refetch();
     } catch (error) {
-      console.error('[DEBUG] AnnouncementCard - Failed to add comment:', error);
+      console.error("[DEBUG] AnnouncementCard - Failed to add comment:", error);
       showCustomToast("Failed to add comment", "error");
     }
   };
@@ -132,13 +147,11 @@ const AnnouncementCard = ({ announcement }) => {
     setLocalDownvotes(newDownvotes);
   };
 
-
-
   const [showAside, setShowAside] = useState(true);
 
   return (
     <div className="flex flex-col">
-      <section className="bg-primary text-white flex flex-col p-6 py-6 rounded-2xl">
+      <section className="bg-primary text-white flex flex-col p-4 sm:p-6 py-6 rounded-2xl">
         <div className="flex justify-between mb-8">
           <div className="flex gap-x-3">
             <div className="flex flex-col">
@@ -147,7 +160,9 @@ const AnnouncementCard = ({ announcement }) => {
                 <span className="font-normal">From</span> Quezon City
                 Epidemiology & Surveillance Division (CESU)
               </p>
-              <p className="font-semibold text-[12px]">{formatTimestamp(announcement?.publishDate)}</p>
+              <p className="font-semibold text-[12px]">
+                {formatTimestamp(announcement?.publishDate)}
+              </p>
             </div>
           </div>
           {/* <DotsThree size={32} /> */}
@@ -155,13 +170,23 @@ const AnnouncementCard = ({ announcement }) => {
 
         <div className="mb-4">
           {contentParts.map((part, index) => (
-            <p key={index} className={part.includes("Read more...") ? "italic underline font-semibold" : ""}>
+            <p
+              key={index}
+              className={
+                part.includes("Read more...")
+                  ? "italic underline font-semibold text-[13px]"
+                  : "text-[13px]"
+              }
+            >
               {part === "" ? <br /> : part}
             </p>
           ))}
           {images.length > 0 && (
             <div className="mt-4">
-              <ImageGrid images={images} sourceType={announcement?.images ? "url" : "import"} />
+              <ImageGrid
+                images={images}
+                sourceType={announcement?.images ? "url" : "import"}
+              />
             </div>
           )}
         </div>
@@ -187,15 +212,19 @@ const AnnouncementCard = ({ announcement }) => {
           />
           <hr className="text-white opacity-35 mb-4" />
           <form onSubmit={handleCommentSubmit} className="flex">
-            <img 
-              src={userFromStore?.profilePhotoUrl || defaultProfile} 
-              className="h-11 w-11 rounded-full mr-3 object-cover" 
+            <img
+              src={userFromStore?.profilePhotoUrl || defaultProfile}
+              className="h-11 w-11 rounded-full mr-3 object-cover"
               alt="profile"
             />
             <div className="flex-1 flex items-center">
               <input
                 className="bg-white opacity-93 rounded-2xl placeholder-primary/70 px-4 w-full h-full text-primary focus:outline-none"
-                placeholder={!userFromStore || userFromStore.role !== "user" ? "Log in to comment on this post..." : "Comment on this post..."}
+                placeholder={
+                  !userFromStore || userFromStore.role !== "user"
+                    ? "Log in to comment on this post..."
+                    : "Comment on this post..."
+                }
                 type="text"
                 value={comment}
                 onChange={(e) => setComment(e.target.value)}
@@ -203,7 +232,11 @@ const AnnouncementCard = ({ announcement }) => {
               />
               <button
                 type="submit"
-                disabled={!userFromStore || userFromStore.role !== "user" || !comment.trim()}
+                disabled={
+                  !userFromStore ||
+                  userFromStore.role !== "user" ||
+                  !comment.trim()
+                }
                 className="ml-2 p-2 cursor-pointer text-white hover:text-white/80 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
               >
                 <PaperPlaneRight size={24} weight="fill" />
@@ -212,7 +245,7 @@ const AnnouncementCard = ({ announcement }) => {
           </form>
         </div>
       </section>
-          
+
       <section className="py-4 px-4">
         <p className="text-primary mb-4 opacity-65 font-semibold text-lg">
           Comments from the Community
@@ -224,7 +257,7 @@ const AnnouncementCard = ({ announcement }) => {
             ) : error ? (
               <div className="text-center py-4 text-error">
                 <p>Error loading comments</p>
-                <button 
+                <button
                   onClick={() => refetch()}
                   className="mt-2 text-primary hover:underline"
                 >
@@ -235,10 +268,19 @@ const AnnouncementCard = ({ announcement }) => {
               comments.map((comment) => {
                 const userProfile = userProfileMap[comment.user?._id];
                 return (
-                  <div key={comment._id} className="break-words self-start w-fit max-w-full">
+                  <div
+                    key={comment._id}
+                    className="break-words self-start w-fit max-w-full"
+                  >
                     <Comment2
-                      username={userProfile?.username || comment.user?.username || 'Anonymous'}
-                      profileImg={userProfile?.profilePhotoUrl || defaultProfile}
+                      username={
+                        userProfile?.username ||
+                        comment.user?.username ||
+                        "Anonymous"
+                      }
+                      profileImg={
+                        userProfile?.profilePhotoUrl || defaultProfile
+                      }
                       comment={comment.content}
                       timestamp={formatTimestamp(comment.createdAt)}
                     />
@@ -246,7 +288,9 @@ const AnnouncementCard = ({ announcement }) => {
                 );
               })
             ) : (
-              <div className="text-center py-4 text-gray-500">No comments yet</div>
+              <div className="text-center py-4 text-gray-500">
+                No comments yet
+              </div>
             )}
           </div>
         </div>

@@ -112,11 +112,11 @@ const Landing = () => {
       {/* <StreetViewMap /> */}
       <div className="text-primary font-[Koulen] uppercase flex flex-col text-7xl  sm:px-10 mb-6 sm:mb-14 lg:max-w-[80vw] lg:items-center lg:self-center text-center">
         <Heading
-          className="text-center text-5xl px-2 sm:px-0 sm:text-[46px] sm:text-left sm:text-7xl md:text-8xl md:leading-24 lg:-translate-x-50 xl:-translate-x-50 xl:text-9xl xl:leading-40"
+          className="text-left text-5xl px-[7%] max  sm:mb-0 sm:px-0 sm:text-[46px] sm:text-left sm:text-7xl md:text-8xl md:leading-24 lg:-translate-x-50 xl:-translate-x-50 xl:text-9xl xl:leading-40"
           text="Buzzing /with awareness/"
         />
         <Heading
-          className="text-center text-5xl px-2 sm:px-0 sm:text-[46px] mt-[-17px] sm:mt-0 sm:text-right sm:text-7xl md:text-8xl lg:translate-x-50 xl:translate-x-50 xl:text-9xl"
+          className="text-right text-5xl px-[7%] sm:px-0 sm:text-[46px] mt-[-17px] sm:mt-0 sm:text-right sm:text-7xl md:text-8xl lg:translate-x-50 xl:translate-x-50 xl:text-9xl"
           text="Mapping /for prevention/"
         />
       </div>
@@ -163,7 +163,7 @@ const Landing = () => {
         }}
       />
 
-      <section className="flex flex-col lg:flex-row  justify-center  sm:max-w-[95vw] m-auto px-6 sm:px-6 gap-x-4 ">
+      <section className="flex flex-col lg:flex-row lg:mt-10  justify-center  sm:max-w-[95vw] m-auto px-6 sm:px-6 gap-x-4 ">
         <div className="rounded-xl overflow-hidden h-[400px] lg:h-[550px]  mb-6 lg:mb-0 lg:flex-13 flex items-center justify-center bg-red-100">
           <MapOnly style={{ height: "100%", width: "100%" }} />
         </div>
@@ -179,7 +179,7 @@ const Landing = () => {
             the fight against dengue.
           </p>
           <br />
-          <p className="text-primary text-lg mb-6">
+          <p className="text-primary text-lg mb-8">
             BuzzMap's dengue mapping feature uses real-time crowdsourced data to
             track and visualize dengue outbreaks in your area. Users report
             dengue cases and mosquito breeding sites, which are then plotted on
@@ -191,6 +191,7 @@ const Landing = () => {
             maxWidth={"max-w-[230px]"}
             Icon={ArrowRight}
             to="/mapping"
+            className="mb-2"
           />
           <div className="flex flex-col  sm:flex-row justify-around gap-4 w-full mt-8">
             <GoalCard
@@ -247,7 +248,7 @@ const Landing = () => {
           Read more dengue reports <span className="font-extrabold">here</span>.
         </Link>
       </div>
-      <article className="bg-primary mt-8 flex flex-col items-center py-26">
+      <article className="bg-primary mt-8 flex flex-col items-center py-26 lg:py-32">
         <h1 className="uppercase text-5xl sm:text-9xl text-white">
           WHAT'S THE BUZZ?
         </h1>
@@ -257,62 +258,62 @@ const Landing = () => {
           City Epidemiology and Surveillance Division.
         </p>
         {/* <div className="grid grid-cols-2 md:flex justify-center flex-wrap gap-6 px-4">
-          <PreventionCard
-            title="Eliminate Mosquito Breeding Sites"
-            category="Control and Sanitation"
-            bgImg={tubImg}
-            to="/buzzline/details"
-          />
-          <AltPreventionCard
-            title="Personal Protection Measures"
-            subtext="Using repellents, wearing protective clothing, and installing mosquito screens."
-            category="Sanitation"
-            Icon={ShieldCheck}
-            iconSize={115}
-            iconPosition="top-[-15px] right-[-20px] xl:top-[-46px] xl:right-[-27px]"
-            iconRotation={-15}
-            titlePosition="top-30 left-8 lg:top-37 lg:left-10 xl:top-37 xl:left-11.5 2xl:top-46 2xl:left-14"
-            subtextPosition="top-57 left-8 lg:top-67 lg:left-12.5 xl:top-72 xl:left-14 2xl:top-82 2xl:left-16.5"
-            categoryPosition="top-20 left-8 lg:top-26 lg:left-12.5 xl:top-26 xl:left-13 2xl:top-33 2xl:left-15"
-            bgColor="bg-secondary"
-            to="/sanitation"
-          />
-          <AltPreventionCard
-            title="Recognizing Dengue Symptoms Early"
-            subtext="Common signs of dengue and when to seek medical help."
-            category="Awareness & Detection"
-            Icon={Heartbeat}
-            iconSize={115}
-            iconPosition="bottom-[-30px] left-5 xl:bottom-[-45px] xl:left-0"
-            iconRotation={-15}
-            titlePosition="top-18 left-0 lg:top-24.5 xl:left-2 2xl:top-39"
-            subtextPosition="top-53 left-9.5 lg:top-63.5  lg:left-18 xl:left-26.5 xl:top-72.5 2xl:top-87.5 2xl:left-27.5 "
-            categoryPosition="top-6 left-[40px] lg:left-21.5 lg:top-13.5 lg:left-26.5 lg:top-13.5 2xl:top-27 2xl:left-29"
-            bgColor="bg-base-200"
-            to="/sanitation"
-            titleAlign="center"
-            subtextAlign="center"
-          />
-          <PreventionCard
-            title="Community Efforts to Prevent Dengue"
-            category="Community"
-            bgImg={cleaningImg}
-            to="/buzzline/details"
-          />
-        </div> */}
+            <PreventionCard
+              title="Eliminate Mosquito Breeding Sites"
+              category="Control and Sanitation"
+              bgImg={tubImg}
+              to="/buzzline/details"
+            />
+            <AltPreventionCard
+              title="Personal Protection Measures"
+              subtext="Using repellents, wearing protective clothing, and installing mosquito screens."
+              category="Sanitation"
+              Icon={ShieldCheck}
+              iconSize={115}
+              iconPosition="top-[-15px] right-[-20px] xl:top-[-46px] xl:right-[-27px]"
+              iconRotation={-15}
+              titlePosition="top-30 left-8 lg:top-37 lg:left-10 xl:top-37 xl:left-11.5 2xl:top-46 2xl:left-14"
+              subtextPosition="top-57 left-8 lg:top-67 lg:left-12.5 xl:top-72 xl:left-14 2xl:top-82 2xl:left-16.5"
+              categoryPosition="top-20 left-8 lg:top-26 lg:left-12.5 xl:top-26 xl:left-13 2xl:top-33 2xl:left-15"
+              bgColor="bg-secondary"
+              to="/sanitation"
+            />
+            <AltPreventionCard
+              title="Recognizing Dengue Symptoms Early"
+              subtext="Common signs of dengue and when to seek medical help."
+              category="Awareness & Detection"
+              Icon={Heartbeat}
+              iconSize={115}
+              iconPosition="bottom-[-30px] left-5 xl:bottom-[-45px] xl:left-0"
+              iconRotation={-15}
+              titlePosition="top-18 left-0 lg:top-24.5 xl:left-2 2xl:top-39"
+              subtextPosition="top-53 left-9.5 lg:top-63.5  lg:left-18 xl:left-26.5 xl:top-72.5 2xl:top-87.5 2xl:left-27.5 "
+              categoryPosition="top-6 left-[40px] lg:left-21.5 lg:top-13.5 lg:left-26.5 lg:top-13.5 2xl:top-27 2xl:left-29"
+              bgColor="bg-base-200"
+              to="/sanitation"
+              titleAlign="center"
+              subtextAlign="center"
+            />
+            <PreventionCard
+              title="Community Efforts to Prevent Dengue"
+              category="Community"
+              bgImg={cleaningImg}
+              to="/buzzline/details"
+            />
+          </div> */}
         {/* <Link
-          to="/buzzline"
-          className="flex font-normal underline italic justify-center items-center gap-x-2 text-white mt-12"
-        >
-          <p>View more prevention and tips here</p>
-          <ArrowRight />
-        </Link> */}
+            to="/buzzline"
+            className="flex font-normal underline italic justify-center items-center gap-x-2 text-white mt-12"
+          >
+            <p>View more prevention and tips here</p>
+            <ArrowRight />
+          </Link> */}
       </article>
       <article
         style={{
           clipPath: "polygon(0 0, 100% 0, 100% 100%, 0 75%)",
         }}
-        className="z-20 bg-primary mt-[-5px] pt-22 pb-65 w-full flex justify-center text-5xl sm:text-7xl md:text-8xl items-center flex-col text-white"
+        className="z-20 bg-primary mt-[-5px] pt-22 pb-65 sm:pb-75 w-full flex justify-center text-5xl sm:text-7xl md:text-8xl items-center flex-col text-white"
       >
         <p className=" relative">
           Speak up, stay

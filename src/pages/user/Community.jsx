@@ -45,150 +45,175 @@ const Community = () => {
   const [isSearching, setIsSearching] = useState(false);
   const userFromStore = useSelector((state) => state.auth?.user);
   const [searchParams, setSearchParams] = useState({
-    barangay: '',
-    report_type: '',
-    status: 'Validated',
-    username: '',
-    description: '',
-    sortBy: 'createdAt',
-    sortOrder: 'desc'
+    barangay: "",
+    report_type: "",
+    status: "Validated",
+    username: "",
+    description: "",
+    sortBy: "createdAt",
+    sortOrder: "desc",
   });
   const navigate = useNavigate();
 
   // Fetch admin posts
-  const { data: adminPosts, isLoading: isLoadingAdminPosts } = useGetAllAdminPostsQuery();
+  const { data: adminPosts, isLoading: isLoadingAdminPosts } =
+    useGetAllAdminPostsQuery();
 
   // Get basic profiles for all users
   const { data: basicProfiles = [] } = useGetBasicProfilesQuery();
 
   // Add debug logging
   useEffect(() => {
-    console.log('[DEBUG] Admin Posts:', adminPosts);
-    console.log('[DEBUG] Is Loading Admin Posts:', isLoadingAdminPosts);
+    console.log("[DEBUG] Admin Posts:", adminPosts);
+    console.log("[DEBUG] Is Loading Admin Posts:", isLoadingAdminPosts);
   }, [adminPosts, isLoadingAdminPosts]);
 
   // Get posts with pagination
   const { data, isLoading, isError } = useGetPostsQuery({
-    status: 'Validated',
+    status: "Validated",
     sortBy: searchParams.sortBy,
     sortOrder: searchParams.sortOrder,
-    ...searchParams
+    ...searchParams,
   });
 
   // Add debug logging for the API response
   useEffect(() => {
-    console.log('[DEBUG] API Response:', data);
-    console.log('[DEBUG] Is Loading:', isLoading);
-    console.log('[DEBUG] Is Error:', isError);
+    console.log("[DEBUG] API Response:", data);
+    console.log("[DEBUG] Is Loading:", isLoading);
+    console.log("[DEBUG] Is Error:", isError);
   }, [data, isLoading, isError]);
 
   // Intersection Observer for infinite scroll (disabled since pagination was removed)
   const observer = useRef();
-  
+
   // Memoize the intersection observer callback
-  const lastPostElementRef = useCallback(node => {
+  const lastPostElementRef = useCallback((node) => {
     // Pagination disabled - no longer needed
     return;
   }, []);
 
   // Memoize filtered posts
   const filteredPosts = useMemo(() => {
-    console.log('[DEBUG] Raw data:', data);
+    console.log("[DEBUG] Raw data:", data);
     if (!data) return [];
-    
+
     let filtered = Array.isArray(data) ? data : [];
-    
+
     // Apply search filter if there's a search query
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(post => 
-        (post.user?.username?.toLowerCase().includes(query)) ||
-        (post.barangay?.toLowerCase().includes(query)) ||
-        (post.report_type?.toLowerCase().includes(query)) ||
-        (post.description?.toLowerCase().includes(query))
+      filtered = filtered.filter(
+        (post) =>
+          post.user?.username?.toLowerCase().includes(query) ||
+          post.barangay?.toLowerCase().includes(query) ||
+          post.report_type?.toLowerCase().includes(query) ||
+          post.description?.toLowerCase().includes(query)
       );
     }
-    
-    console.log('[DEBUG] Filtered posts:', filtered);
+
+    console.log("[DEBUG] Filtered posts:", filtered);
     return filtered;
   }, [data, searchQuery]);
 
   // Memoize the latest admin post
   const latestAnnouncement = useMemo(() => {
-    console.log('[DEBUG] Getting latest admin post from:', adminPosts);
+    console.log("[DEBUG] Getting latest admin post from:", adminPosts);
     if (!adminPosts) {
-      console.log('[DEBUG] No admin posts available');
+      console.log("[DEBUG] No admin posts available");
       return null;
     }
     // Filter for active posts with category 'announcement'
-    const activePosts = Array.isArray(adminPosts) 
-      ? adminPosts.filter(post => post.status === "active" && post.category === "announcement") 
+    const activePosts = Array.isArray(adminPosts)
+      ? adminPosts.filter(
+          (post) => post.status === "active" && post.category === "announcement"
+        )
       : [];
-    console.log('[DEBUG] Active announcement posts:', activePosts);
+    console.log("[DEBUG] Active announcement posts:", activePosts);
     if (activePosts.length === 0) {
-      console.log('[DEBUG] No active announcement posts found');
+      console.log("[DEBUG] No active announcement posts found");
       return null;
     }
     // Sort by publishDate to get the latest scheduled post
-    activePosts.sort((a, b) => new Date(b.publishDate) - new Date(a.publishDate));
-    console.log('[DEBUG] Latest announcement post:', activePosts[0]);
+    activePosts.sort(
+      (a, b) => new Date(b.publishDate) - new Date(a.publishDate)
+    );
+    console.log("[DEBUG] Latest announcement post:", activePosts[0]);
     return activePosts[0];
   }, [adminPosts]);
 
   // Helper function to get user profile from basic profiles
-  const getUserProfile = useCallback((userId) => {
-    const profile = basicProfiles.find(p => p._id === userId);
-    if (!profile) {
-      return { username: "Unknown", profilePhotoUrl: defaultProfile };
-    }
-    // If profilePhotoUrl is empty string or null/undefined, use default
-    const profilePhotoUrl = profile.profilePhotoUrl && profile.profilePhotoUrl.trim() !== "" 
-      ? profile.profilePhotoUrl 
-      : defaultProfile;
-    return { ...profile, profilePhotoUrl };
-  }, [basicProfiles]);
+  const getUserProfile = useCallback(
+    (userId) => {
+      const profile = basicProfiles.find((p) => p._id === userId);
+      if (!profile) {
+        return { username: "Unknown", profilePhotoUrl: defaultProfile };
+      }
+      // If profilePhotoUrl is empty string or null/undefined, use default
+      const profilePhotoUrl =
+        profile.profilePhotoUrl && profile.profilePhotoUrl.trim() !== ""
+          ? profile.profilePhotoUrl
+          : defaultProfile;
+      return { ...profile, profilePhotoUrl };
+    },
+    [basicProfiles]
+  );
 
   // Memoize the post card render function
-  const renderPostCard = useCallback((post, index) => {
-    const userProfile = getUserProfile(post.user?._id);
-    
-    return (
-      <div 
-        key={post._id}
-        ref={index === filteredPosts.length - 1 ? lastPostElementRef : null}
-      >
-        <PostCard
-          profileImage={post.isAnonymous ? defaultProfile : userProfile.profilePhotoUrl}
-          username={post.isAnonymous ? post.anonymousId : userProfile.username || "User"}
-          timestamp={formatDistanceToNow(new Date(post.createdAt), { addSuffix: true })}
-          barangay={post.barangay}
-          coordinates={post.specific_location?.coordinates || []}
-          dateTime={new Date(post.date_and_time).toLocaleString()}
-          reportType={post.report_type}
-          description={post.description}
-          likes={post.likesCount || "0"}
-          comments={post.commentsCount || "0"}
-          shares={post.sharesCount || "0"}
-          images={post.images}
-          postId={post._id}
-          upvotes={post.upvotes}
-          downvotes={post.downvotes}
-          commentsCount={post.commentsCount}
-          upvotesArray={post.upvotes}
-          downvotesArray={post.downvotes}
-          _commentCount={post.commentsCount}
-          userId={post.user?._id}
-          currentUserId={userFromStore?._id}
-          basicProfiles={basicProfiles}
-          onVoteUpdate={(newUpvotes, newDownvotes) => {
-            console.log('[DEBUG] Community onVoteUpdate called for post:', post._id, { newUpvotes, newDownvotes });
-            // For Community page, we rely on RTK Query cache updates
-            // The mutations in dengueApi.js already handle cache updates automatically
-          }}
-        />
-      </div>
-    );
-  }, [lastPostElementRef, userFromStore, getUserProfile, basicProfiles]);
+  const renderPostCard = useCallback(
+    (post, index) => {
+      const userProfile = getUserProfile(post.user?._id);
+
+      return (
+        <div
+          key={post._id}
+          ref={index === filteredPosts.length - 1 ? lastPostElementRef : null}
+        >
+          <PostCard
+            profileImage={
+              post.isAnonymous ? defaultProfile : userProfile.profilePhotoUrl
+            }
+            username={
+              post.isAnonymous
+                ? post.anonymousId
+                : userProfile.username || "User"
+            }
+            timestamp={formatDistanceToNow(new Date(post.createdAt), {
+              addSuffix: true,
+            })}
+            barangay={post.barangay}
+            coordinates={post.specific_location?.coordinates || []}
+            dateTime={new Date(post.date_and_time).toLocaleString()}
+            reportType={post.report_type}
+            description={post.description}
+            likes={post.likesCount || "0"}
+            comments={post.commentsCount || "0"}
+            shares={post.sharesCount || "0"}
+            images={post.images}
+            postId={post._id}
+            upvotes={post.upvotes}
+            downvotes={post.downvotes}
+            commentsCount={post.commentsCount}
+            upvotesArray={post.upvotes}
+            downvotesArray={post.downvotes}
+            _commentCount={post.commentsCount}
+            userId={post.user?._id}
+            currentUserId={userFromStore?._id}
+            basicProfiles={basicProfiles}
+            onVoteUpdate={(newUpvotes, newDownvotes) => {
+              console.log(
+                "[DEBUG] Community onVoteUpdate called for post:",
+                post._id,
+                { newUpvotes, newDownvotes }
+              );
+              // For Community page, we rely on RTK Query cache updates
+              // The mutations in dengueApi.js already handle cache updates automatically
+            }}
+          />
+        </div>
+      );
+    },
+    [lastPostElementRef, userFromStore, getUserProfile, basicProfiles]
+  );
 
   const getCurrentLocation = () => {
     if (navigator.geolocation) {
@@ -252,28 +277,30 @@ const Community = () => {
       e.preventDefault();
     }
     setSearchParams({
-      barangay: '',
-      report_type: '',
-      status: 'Validated',
-      username: '',
-      description: '',
-      sortBy: 'createdAt',
-      sortOrder: 'desc'
+      barangay: "",
+      report_type: "",
+      status: "Validated",
+      username: "",
+      description: "",
+      sortBy: "createdAt",
+      sortOrder: "desc",
     });
-    setSearchQuery('');
+    setSearchQuery("");
     setIsSearching(false);
   };
 
   if (isLoadingAdminPosts || isLoading) {
-    return <div className="w-full h-[100vh] flex justify-center items-center">
-      <span className="loading loading-spinner loading-2xl"></span>
-    </div>;
+    return (
+      <div className="w-full h-[100vh] flex justify-center items-center">
+        <span className="loading loading-spinner loading-2xl"></span>
+      </div>
+    );
   }
 
   return (
-    <main className="pl-6 pt-14 text-primary text-lg flex gap-x-6 max-w-[1350px] m-auto relative mt-12">
-      <article className="flex-8 shadow-xl p-12 rounded-lg w-[90vw] max-w-500 lg:w-[30vw]">
-        <form onSubmit={handleSearch} className="mb-6">
+    <main className="sm:pl-6 pt-14 text-primary text-lg flex gap-x-6 max-w-[1350px] m-auto relative mt-12">
+      <article className="flex-8 shadow-xl p-1 sm:p-12 rounded-lg sm:w-[90vw] max-w-500 lg:w-[30vw]">
+        <form onSubmit={handleSearch} className="mb-6 px-3 sm:px-0">
           <div className="relative">
             <input
               type="text"
@@ -289,16 +316,16 @@ const Community = () => {
         </form>
 
         {!searchQuery && (
-          <section className="flex gap-x-2 font-semibold w-full mb-8">
+          <section className="flex gap-x-2 font-semibold w-full mb-8 px-3 sm:px-0">
             <FilterButton
               text="Popular"
               active={filter === "popular"}
               onClick={() => {
                 setFilter("popular");
-                setSearchParams(prev => ({
+                setSearchParams((prev) => ({
                   ...prev,
-                  sortBy: 'likesCount',
-                  sortOrder: 'desc'
+                  sortBy: "likesCount",
+                  sortOrder: "desc",
                 }));
               }}
             />
@@ -307,10 +334,10 @@ const Community = () => {
               active={filter === "latest"}
               onClick={() => {
                 setFilter("latest");
-                setSearchParams(prev => ({
+                setSearchParams((prev) => ({
                   ...prev,
-                  sortBy: 'createdAt',
-                  sortOrder: 'desc'
+                  sortBy: "createdAt",
+                  sortOrder: "desc",
                 }));
               }}
             />
@@ -320,9 +347,9 @@ const Community = () => {
                 active={filter === "myPosts"}
                 onClick={() => {
                   setFilter("myPosts");
-                  setSearchParams(prev => ({
+                  setSearchParams((prev) => ({
                     ...prev,
-                    username: userFromStore.username
+                    username: userFromStore.username,
                   }));
                 }}
               />
@@ -332,9 +359,7 @@ const Community = () => {
 
         {isSearching && (
           <div className="flex justify-between items-center mb-8">
-            <p className="text-gray-600">
-              Search results for "{searchQuery}"
-            </p>
+            <p className="text-gray-600">Search results for "{searchQuery}"</p>
             <button
               onClick={handleClearSearch}
               className="text-primary hover:text-accent"
@@ -346,9 +371,9 @@ const Community = () => {
 
         <Heading
           text="Stay /ahead/ of dengue."
-          className="text-[47px] sm:text-7xl lg:text-8xl text-center mb-4 leading-21"
+          className="text-[47px] sm:text-7xl lg:text-8xl text-center mb-4 leading-[46px] px-3 sm:px-0"
         />
-        <p className="text-lg sm:text-xl sm:mt-0 text-center font-semibold text-primary mb-6">
+        <p className="text-lg sm:text-xl sm:mt-0 text-center font-semibold text-primary mb-6 px-3 sm:px-0">
           Real-Time Dengue Updates from the Community.
         </p>
         <section className="bg-base-200 px-8 py-5 rounded-lg mb-4">
@@ -365,16 +390,21 @@ const Community = () => {
             }}
             className="w-full hover:cursor-pointer"
           >
-            <CustomInput 
-              profileSrc={userFromStore?.profilePhotoUrl && userFromStore.profilePhotoUrl.trim() !== "" ? userFromStore.profilePhotoUrl : defaultProfile} 
-              showImagePicker={true} 
-              className="hover:cursor-pointer" 
+            <CustomInput
+              profileSrc={
+                userFromStore?.profilePhotoUrl &&
+                userFromStore.profilePhotoUrl.trim() !== ""
+                  ? userFromStore.profilePhotoUrl
+                  : defaultProfile
+              }
+              showImagePicker={true}
+              className="hover:cursor-pointer"
               readOnly
             />
           </button>
         </section>
         <NewPostModal onSubmit={handleClearSearch} />
-        <section className="bg-base-200 px-8 py-6 rounded-lg flex flex-col gap-y-6">
+        <section className="bg-base-200 px-1.5 sm:px-8 py-6 rounded-lg flex flex-col gap-y-8">
           {isLoading ? (
             <div className="text-center">Loading posts...</div>
           ) : isError ? (
@@ -384,14 +414,15 @@ const Community = () => {
               {searchQuery
                 ? "No posts found matching your search."
                 : filter === "myPosts"
-                  ? "You haven't made any posts yet."
-                  : "No validated posts available."}
+                ? "You haven't made any posts yet."
+                : "No validated posts available."}
             </p>
           ) : (
             <>
               {searchQuery && (
                 <p className="text-sm text-gray-500 mb-4">
-                  Found {filteredPosts.length} result{filteredPosts.length !== 1 ? 's' : ''}
+                  Found {filteredPosts.length} result
+                  {filteredPosts.length !== 1 ? "s" : ""}
                 </p>
               )}
               {filteredPosts.map((post, index) => renderPostCard(post, index))}
@@ -402,13 +433,15 @@ const Community = () => {
 
       <aside
         className={`bg-base-300 shadow-2xl rounded-sm overflow-y-scroll transition-transform duration-300 ease-in-out 
-        fixed inset-y-0 right-0 w-[80vw] top-[58px] sm:top-[65px] pb-4 max-w-170 z-10 lg:z-0 lg:sticky lg:top-19 lg:h-[calc(100vh-1.5rem)] 
+        fixed inset-y-0 right-0 w-[90vw] sm:w-[80vw] top-[58px] sm:top-[65px] pb-4 max-w-170 z-10 lg:z-0 lg:sticky lg:top-19 lg:h-[calc(100vh-1.5rem)] 
         lg:w-[40vw] lg:max-w-[450px] lg:shadow-sm ${
           showAside ? "translate-x-0" : "translate-x-full"
         } lg:translate-x-0`}
       >
         <div className="sticky top-0 bg-base-300  px-6 py-4 flex justify-between items-center z-100 border-b border-gray-300 pt-6 pb-4">
-          <p className="text-3xl font-bold text-primary">Official Announcement</p>
+          <p className="text-3xl font-bold text-primary">
+            Official Announcement
+          </p>
           <button
             onClick={() => setShowAside(false)}
             className="lg:hidden bg-primary text-white p-2 rounded-full hover:cursor-pointer hover:bg-white hover:text-primary transition-all duration-200"
@@ -416,16 +449,22 @@ const Community = () => {
             <ArrowLeft size={18} className="rotate-180" />
           </button>
         </div>
-        <div className="px-6 py-8">
+        <div className="px-3 sm:px-6 py-3 sm:py-8">
           {latestAnnouncement ? (
-            <AnnouncementCard 
-              announcement={latestAnnouncement} 
+            <AnnouncementCard
+              announcement={latestAnnouncement}
               key={latestAnnouncement._id}
             />
           ) : (
             <div className="bg-base-200 rounded-lg p-8 text-center">
-              <p className="text-primary text-xl font-semibold mb-2">No Announcements Available</p>
-              <p className="text-primary/70">There are no active announcements at the moment. Check back later for updates from the Quezon City Epidemiology & Surveillance Division.</p>
+              <p className="text-primary text-xl font-semibold mb-2">
+                No Announcements Available
+              </p>
+              <p className="text-primary/70">
+                There are no active announcements at the moment. Check back
+                later for updates from the Quezon City Epidemiology &
+                Surveillance Division.
+              </p>
             </div>
           )}
         </div>
