@@ -9,16 +9,16 @@ import quezonSurveillance from "../../assets/icons/quezon_surveillance.png";
 
 const About = () => {
   return (
-    <main className="overflow-visible">
-      <article className="relative bg-primary w-[100vw] md:w-[70vw] max-w-[800px] ml-auto min-h-[95vh] md:mt-0 md:pb-4">
+    <main className="overflow-hidden">
+      <article className="relative bg-primary w-[100vw] md:w-[70vw] max-w-[800px] sm:ml-auto min-h-[95vh] md:mt-0 md:pb-4">
         <img
           src={womanWithHand}
           className="w-140 absolute left-[-197px] hidden md:block bottom-[23%] lg:w-165 lg:left-[-233px] xl:w-190 xl:left-[-268px] 2xl:w-205 2xl:left-[-289px] 2xl:bottom-[19%]"
         />
 
-        <section className="text-white p-12 font-light mb-8">
+        <section className="text-white pl-6 pr-6 py-8  sm:p-12 font-light ">
           {/* QCESD Partnership Card - At the top */}
-          <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/30 w-[80%] mx-auto">
+          <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/30 w-full sm:w-[80%] mx-auto">
             <div className="flex justify-center  md:items-center gap-4 mb-6">
               <img
                 src={quezonSurveillance}
@@ -43,12 +43,12 @@ const About = () => {
             </p>
           </div>
 
-          <div className="text-center py-12">
-            <h1 className="text-8xl font-light mb-4">
+          <div className="text-center pt-12">
+            <h1 className="text-7xl sm:text-8xl font-light mb-6 sm:mb-4">
               About{" "}
               <span className="italic font-[900] tracking-wider">BuzzMap</span>
             </h1>
-            <p className="max-w-[80%] mx-auto mb-10">
+            <p className="max-w-full sm:max-w-[80%] mx-auto mb-10">
               <b className="font-bold">BuzzMap</b> is proud to partner with the
               Quezon City Epidemiology & Surveillance Division, specifically
               Quezon City Environmental and Sanitation Unit <b>(QC CESU)</b> in
@@ -60,7 +60,7 @@ const About = () => {
             <div className=" mx-auto flex flex-col gap-y-12 mb-8 sm:mb-0 gap-x-2 mx-4">
               <div className="flex-1">
                 <h1 className="text-6xl mb-4">Mission</h1>
-                <p className="max-w-[70%] mx-auto">
+                <p className="max-w-full sm:max-w-[70%] mx-auto">
                   <b className="font-bold">
                     BuzzMap is dedicated to empowering communities through
                     dengue tracking, crowdsourced reports, and data-driven
@@ -75,7 +75,7 @@ const About = () => {
 
               <div className="flex-1">
                 <h1 className="text-6xl mb-4">vision</h1>
-                <p className="max-w-[65%] mx-auto">
+                <p className="max-w-full sm:max-w-[65%] mx-auto">
                   To be the leading community-driven dengue prevention platform,
                   harnessing technology and collective action to create a safer,
                   healthier, and dengue-free future for all.
