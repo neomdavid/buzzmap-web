@@ -46,10 +46,6 @@ const Landing = () => {
     if (token) {
       // If there's a user in Redux state, use that
       if (user) {
-        console.log(
-          "[DEBUG] Landing - Redirecting based on Redux user role:",
-          user.role
-        );
         switch (user.role) {
           case "admin":
             navigate("/admin/dashboard");
@@ -68,10 +64,7 @@ const Landing = () => {
         const storedUser = localStorage.getItem("user");
         if (storedUser) {
           const parsedUser = JSON.parse(storedUser);
-          console.log(
-            "[DEBUG] Landing - Redirecting based on localStorage user role:",
-            parsedUser.role
-          );
+
           switch (parsedUser.role) {
             case "admin":
               navigate("/admin/dashboard");
