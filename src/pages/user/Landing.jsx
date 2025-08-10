@@ -324,11 +324,14 @@ const Landing = () => {
         </p>
         <p className="font-bold italic">dengue together!</p>
       </article>
-      <footer className="flex  text-primary justify-between px-6 py-10 sm:py-6 pb-12 mt-[-25px] w-full  mr-6">
-        <div className="flex gap-x-16">
-          <div className="flex gap-x-6 items-center">
-            <img src={logoFooter} className="w-28 sm:w-33 h-auto" />
-            <img src={logoSurveillance} className="w-28 sm:w-33  h-auto" />
+      <footer className="flex  flex-col gap-y-6 items-center sm:flex-row text-primary sm:items-start justify-between px-6 py-10 sm:py-6 pb-12 mt-[-30px] sm:mt-[-25px] w-full  mr-6">
+        <div className="flex flex-col gap-y-8 text-center sm:text-left sm:gap-y-0 w-full  items-center sm:items-start  sm:flex-row gap-x-16">
+          <div className="flex flex-col sm:flex-row gap-y-6 sm:gap-y-0  w-full sm:w-auto  gap-x-6 items-center">
+            <img src={logoFooter} className="flex-1 w-42 sm:w-33 h-auto" />
+            <img
+              src={logoSurveillance}
+              className="flex-1 w-42 sm:w-33  h-auto"
+            />
           </div>
 
           <div className="flex flex-col gap-y-6 text-md ">
@@ -349,7 +352,9 @@ const Landing = () => {
           </div>
         </div>
 
-        <div className="font-bold self-end text-md">©2025</div>
+        <div className="font-bold self-end text-md w-full text-center sm:w-auto sm:text-left">
+          ©2025
+        </div>
       </footer>
       <NewPostModal ref={modalRef} />
     </main>
