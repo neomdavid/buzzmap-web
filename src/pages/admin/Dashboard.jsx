@@ -151,7 +151,7 @@ const Dashboard = () => {
   }
 
   return (
-    <main className="flex flex-col w-full">
+    <main className="flex flex-col w-full mt-[-10px]">
       {/* Analysis Loading Modal */}
       {showAnalysisModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">

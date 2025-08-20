@@ -591,6 +591,19 @@ export const dengueApi = createApi({
       providesTags: ["Analytics"],
     }),
 
+    // Generate AI recommendation for barangay
+    generateRecommendation: builder.mutation({
+      query: ({ userRole, barangay }) => ({
+        url: "analytics/generate-recommendation",
+        method: "POST",
+        body: {
+          userRole,
+          barangay,
+        },
+      }),
+      invalidatesTags: ["Analytics"],
+    }),
+
     // Get a single admin post by ID
     getSingleAdminPost: builder.query({
       query: (id) => `adminPosts/${id}`,
@@ -1495,6 +1508,9 @@ export const {
 
   // Add this new endpoint
   useGetBasicProfilesQuery,
+
+  // Add this new endpoint
+  useGenerateRecommendationMutation,
 
   // Add this to the exported hooks
   useGetRecentReportsForBarangayMutation,

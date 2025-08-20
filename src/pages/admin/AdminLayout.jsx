@@ -135,7 +135,7 @@ const AdminLayout = () => {
       )}
 
       {/* Content */}
-      <div className=" flex flex-1 flex-col overflow-auto w-full bg-neutral-content">
+      <div className=" flex flex-1 flex-col overflow-auto w-full pt-10 bg-neutral-content">
         {/* Top navbar */}
         <div className="fixed  w-full px-7 py-6 bg-transparent flex justify-between items-center z-[100]">
           <div className="md:hidden">
@@ -166,7 +166,7 @@ const AdminLayout = () => {
         </div>
 
         <section
-          className={` px-6 py-4 bg-neutral-content  ${
+          className={` px-6 py-4  bg-neutral-content  ${
             currentRoute === "/admin/dashboard"
               ? "md:pt-[75px] md:mt-[-64px]"
               : " md:pt-[57px] md:mt-[-64px]"

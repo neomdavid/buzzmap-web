@@ -1,11 +1,43 @@
 import { useState, useMemo } from "react";
-import { useGetBarangaysQuery, useGetPatternRecognitionResultsQuery } from "../../api/dengueApi";
+import { useGetBarangaysQuery, useGetPatternRecognitionResultsQuery, useGenerateRecommendationMutation } from "../../api/dengueApi";
 import { MagnifyingGlass } from "phosphor-react";
 
 export default function PatternAlerts({ selectedBarangay, selectedTab, onAlertSelect }) {
   const { data: barangaysData, isLoading, error } = useGetBarangaysQuery();
   const { data: patternResultsData, isLoading: patternResultsLoading } = useGetPatternRecognitionResultsQuery();
+  const [generateRecommendation, { isLoading: isGeneratingRecommendation }] = useGenerateRecommendationMutation();
+  
+  // State for AI recommendations
+  const [aiRecommendations, setAiRecommendations] = useState({});
+  const [recommendationLoading, setRecommendationLoading] = useState({});
 
+  // Function to generate AI recommendation for a barangay
+  const handleGenerateRecommendation = async (barangayName) => {
+    if (aiRecommendations[barangayName]) {
+      return; // Already generated
+    }
+
+    setRecommendationLoading(prev => ({ ...prev, [barangayName]: true }));
+    
+    try {
+      const response = await generateRecommendation({
+        userRole: "admin",
+        barangay: barangayName
+      }).unwrap();
+      
+      // The API returns the data directly, no need to check for success
+      if (response && response.recommendation) {
+        setAiRecommendations(prev => ({
+          ...prev,
+          [barangayName]: response
+        }));
+      }
+    } catch (error) {
+      console.error("Failed to generate recommendation:", error);
+    } finally {
+      setRecommendationLoading(prev => ({ ...prev, [barangayName]: false }));
+    }
+  };
 
 
   // Merge pattern data with barangay data (now only barangaysData)
@@ -140,6 +172,11 @@ export default function PatternAlerts({ selectedBarangay, selectedTab, onAlertSe
               last_analysis_time={barangayData?.last_analysis_time}
               barangayName={item.name}
               onSelect={onAlertSelect}
+              aiRecommendations={aiRecommendations}
+              recommendationLoading={recommendationLoading}
+              onGenerateRecommendation={handleGenerateRecommendation}
+              isGeneratingRecommendation={isGeneratingRecommendation}
+              setRecommendationLoading={setRecommendationLoading}
             />
           );
         })
@@ -179,6 +216,11 @@ const AlertCard = ({
   last_analysis_time,
   barangayName,
   onSelect,
+  aiRecommendations,
+  recommendationLoading,
+  onGenerateRecommendation,
+  isGeneratingRecommendation,
+  setRecommendationLoading,
 }) => {
   const hasContent = (obj, extraCheck = null) => {
     if (!obj) return false;
@@ -238,62 +280,6 @@ const AlertCard = ({
         </div>
       )}
 
-      {/* Pattern-based section */}
-      {hasContent(pattern_based) && (
-        <div className="mb-2 pt-2 border-t border-gray-200">
-          <div className="font-bold mb-1 text-base-content text-lg">Pattern-Based</div>
-          {pattern_based.alert && (
-            <div className="mb-2">
-              <span className="font-bold">Alert:</span> {pattern_based.alert}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Report-based section */}
-      {report_based && hasContent(report_based) && (
-        <div className="mb-2 pt-2 border-t border-gray-200">
-          <div className="font-bold mb-1 text-base-content text-lg">Report-Based</div>
-          {typeof report_based.count === 'number' && report_based.count > 0 && (
-            <div className="mb-2">
-              <span className="font-bold">Reports:</span> {report_based.count}
-            </div>
-          )}
-          {report_based.alert && (
-            <div className="mb-2">
-              <span className="font-bold">Alert:</span> {report_based.alert}
-            </div>
-          )}
-          {report_based.admin_recommendation && (
-            <div className="mb-2">
-              <span className="font-bold">Recommendation:</span>
-              <ul className="list-disc list-inside ml-2 mt-1">
-                {report_based.admin_recommendation.split('\n').map((rec, index) => (
-                  rec.trim() && <li key={index}>{rec.trim()}</li>
-                ))}
-              </ul>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Death-based section */}
-      {death_priority && hasContent(death_priority) && (
-        <div className="mb-2 pt-2 border-t border-gray-200">
-          <div className="font-bold mb-1 text-base-content text-lg">Death-Based</div>
-          {typeof death_priority.count === 'number' && death_priority.count > 0 && (
-            <div className="mb-2">
-              <span className="font-bold">Death Cases:</span> {death_priority.count}
-            </div>
-          )}
-          {death_priority.alert && (
-            <div className="mb-2">
-              <span className="font-bold">Alert:</span> {death_priority.alert}
-            </div>
-          )}
-        </div>
-      )}
-
       {/* Last analysis time */}
       {last_analysis_time && (
         <div className="mb-2 pt-2 border-t border-gray-200">
@@ -302,14 +288,24 @@ const AlertCard = ({
       )}
 
       <div className="flex justify-end gap-2 mt-1">
-        {pattern_based?.admin_recommendation && (
-          <button
-            onClick={() => document.getElementById(`recommendations_modal_${barangayName}`).showModal()}
-            className="px-3 py-1.5 bg-white border border-primary text-primary rounded-full hover:bg-primary/5 transition-colors text-sm cursor-pointer"
-          >
-            View Recommendations
-          </button>
-        )}
+        <button
+          onClick={() => {
+            // Set loading state immediately and open modal
+            setRecommendationLoading(prev => ({ ...prev, [barangayName]: true }));
+            document.getElementById(`recommendations_modal_${barangayName}`).showModal();
+            
+            // Generate AI recommendation if not already generated
+            if (!aiRecommendations[barangayName]) {
+              onGenerateRecommendation(barangayName);
+            } else {
+              // If already generated, just stop loading
+              setRecommendationLoading(prev => ({ ...prev, [barangayName]: false }));
+            }
+          }}
+          className="px-3 py-1.5 bg-white border border-primary text-primary rounded-full hover:bg-primary/5 transition-colors text-sm cursor-pointer"
+        >
+          View Recommendations
+        </button>
         <button 
           onClick={() => onSelect(title)}
           className="px-3 py-1.5 bg-primary text-white rounded-full hover:bg-primary/90 transition-colors text-sm cursor-pointer"
@@ -330,9 +326,9 @@ const AlertCard = ({
 
           <p className="text-center text-3xl font-bold mb-6 text-primary">Recommendations</p>
           <p className="text-left text-2xl font-bold mb-6">For <span className={`text-white px-4 py-1 font-normal text-xl font-semibold ml-1 rounded-full ${PATTERN_COLORS[getPatternKey(pattern_based.status)].badge}`}>{barangayName}</span></p>
-          <hr className="text-accent/50 mb-[-2px]" />
+          <hr className="text-accent/50 mb-6" />
 
-          {/* Pattern and Alert Section */}
+          {/* Pattern and Alert Section
           <div className="mb-4">
             <span className={`px-4 py-1 rounded-full text-white text-sm font-semibold ${getPatternBadgeColor(pattern_based.status)}`}>
               {getPatternLabel(pattern_based.status)}
@@ -343,10 +339,10 @@ const AlertCard = ({
                 <span className="font-semibold">Alert:</span> {pattern_based.alert}
               </div>
             )}
-          </div>
+          </div> */}
 
           {/* Death Priority Section */}
-          {death_priority && death_priority.count > 0 && (
+          {/* {death_priority && death_priority.count > 0 && (
             <div className="mb-6  p-4 rounded-lg text-lg border border-error">
               <p 
                 className="text-error mb-3"
@@ -365,23 +361,85 @@ const AlertCard = ({
                 </div>
               )}
             </div>
-          )}
+          )} */}
 
           <div className="max-h-[60vh] overflow-y-auto">
-            <p className="text-xl font-semibold mb-4">Recommendations:</p>
-            <ul className="list-disc list-inside space-y-4">
-              {pattern_based?.admin_recommendation ? (
-                pattern_based.admin_recommendation.split('\n')
-                  .filter(rec => rec.trim())
-                  .map((rec, index) => (
-                    <li key={index} className="text-gray-700 text-lg">
-                      {rec.trim().replace(/^- /, '')}
-                    </li>
-                  ))
-              ) : (
-                <li className="text-gray-700 text-lg">No recommendations available.</li>
-              )}
-            </ul>
+            {/* AI Recommendations Section */}
+            <p className="text-xl font-semibold mb-4 text-primary">AI-Powered Recommendations</p>
+            
+            {recommendationLoading[barangayName] && (
+              <div className="flex items-center justify-center p-8">
+                <span className="loading loading-spinner loading-lg text-primary mr-3"></span>
+                <span className="text-gray-600 text-lg">Generating AI recommendations...</span>
+              </div>
+            )}
+
+            {aiRecommendations[barangayName] && !recommendationLoading[barangayName] && (
+              <div className="space-y-4">
+                {/* Summary */}
+                {aiRecommendations[barangayName].summary && (
+                  <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+                    <h4 className="font-semibold text-lg mb-2 text-gray-800">Summary</h4>
+                    <p className="text-gray-700">{aiRecommendations[barangayName].summary}</p>
+                  </div>
+                )}
+
+                {/* Main Recommendation */}
+                {aiRecommendations[barangayName].recommendation && (
+                  <div className="p-4 bg-white rounded-lg border border-gray-200">
+                    <h4 className="font-semibold text-lg mb-2 text-gray-800">Detailed Recommendations</h4>
+                    <div 
+                      className="text-gray-700 prose prose-sm max-w-none"
+                      dangerouslySetInnerHTML={{
+                        __html: aiRecommendations[barangayName].recommendation
+                          .replace(/\n/g, '<br>')
+                          .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                          .replace(/\*(.*?)\*/g, '<em>$1</em>')
+                      }}
+                    />
+                  </div>
+                )}
+
+                {/* Key Factors */}
+                {aiRecommendations[barangayName].factors && aiRecommendations[barangayName].factors.length > 0 && (
+                  <div className="p-4 bg-yellow-50 rounded-lg border border-yellow-200">
+                    <h4 className="font-semibold text-lg mb-2 text-yellow-800">Key Factors Considered</h4>
+                    <ul className="list-disc list-inside space-y-1">
+                      {aiRecommendations[barangayName].factors.map((factor, index) => (
+                        <li key={index} className="text-yellow-700">{factor}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {/* Sources */}
+                {aiRecommendations[barangayName].sources && aiRecommendations[barangayName].sources.length > 0 && (
+                  <div className="p-4 bg-green-50 rounded-lg border border-green-200">
+                    <h4 className="font-semibold text-lg mb-2 text-green-800">Sources</h4>
+                    <ul className="space-y-1">
+                      {aiRecommendations[barangayName].sources.map((source, index) => (
+                        <li key={index} className="text-green-700">
+                          <a 
+                            href={source.uri} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="hover:underline"
+                          >
+                            {source.title}
+                          </a>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {!aiRecommendations[barangayName] && !recommendationLoading[barangayName] && (
+              <div className="text-center py-8">
+                <p className="text-gray-500 text-lg">No AI recommendations available.</p>
+              </div>
+            )}
           </div>
 
           <div className="modal-action mt-8">
