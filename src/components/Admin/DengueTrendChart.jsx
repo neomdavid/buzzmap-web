@@ -113,12 +113,12 @@ export default function DengueTrendChart({
   // Transform the API data to match the chart format
   const chartData = useMemo(() => {
     try {
-      if (!trendsData?.data?.weekly_counts) {
-        console.log("[DEBUG] No weekly counts data available");
+      if (!trendsData?.data?.complete_weeks) {
+        console.log("[DEBUG] No complete weeks data available");
         return [];
       }
 
-      const completeWeeks = trendsData.data.weekly_counts.complete_weeks || {};
+      const completeWeeks = trendsData.data.complete_weeks || {};
 
       // Transform complete weeks
       let weekEntries = Object.entries(completeWeeks)
