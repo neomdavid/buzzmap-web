@@ -12,6 +12,13 @@ export const GoogleMapsProvider = ({ children }) => {
   const [loadError, setLoadError] = useState(null);
   
   useEffect(() => {
+    // Check if Google Maps is already loaded
+    if (window.google?.maps?.Map) {
+      console.log("[DEBUG] GoogleMapsProvider: Google Maps already loaded");
+      setIsLoaded(true);
+      return;
+    }
+
     loadGoogleMapsScript(import.meta.env.VITE_GOOGLE_MAPS_API_KEY)
       .then(() => {
         console.log("[DEBUG] GoogleMapsProvider: Script loaded successfully");

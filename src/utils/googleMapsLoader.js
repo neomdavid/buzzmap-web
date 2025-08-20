@@ -6,11 +6,13 @@ let activeMapInstances = new Set();
 export function loadGoogleMapsScript(apiKey) {
   // If already loaded, return resolved promise
   if (window.google?.maps?.Map) {
+    console.log('[GoogleMapsLoader] Google Maps already loaded, skipping...');
     return Promise.resolve();
   }
 
   // If already loading, return existing promise
   if (googleMapsScriptLoadingPromise) {
+    console.log('[GoogleMapsLoader] Script already loading, returning existing promise...');
     return googleMapsScriptLoadingPromise;
   }
 
@@ -18,8 +20,10 @@ export function loadGoogleMapsScript(apiKey) {
   googleMapsScriptLoadingPromise = new Promise((resolve, reject) => {
     // Check if script element already exists
     if (document.getElementById('google-maps-script')) {
+      console.log('[GoogleMapsLoader] Script element exists, waiting for load...');
       const check = () => {
         if (window.google?.maps?.Map) {
+          console.log('[GoogleMapsLoader] Script loaded from existing element');
           resolve();
         } else {
           setTimeout(check, 50);
@@ -29,6 +33,7 @@ export function loadGoogleMapsScript(apiKey) {
       return;
     }
 
+    console.log('[GoogleMapsLoader] Creating new script element...');
     // Create and append script element
     const script = document.createElement('script');
     script.id = 'google-maps-script';

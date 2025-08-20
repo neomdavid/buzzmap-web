@@ -126,6 +126,7 @@ const Mapping = () => {
   const [selectedBarangayFeature, setSelectedBarangayFeature] = useState(null);
   const [selectedBarangayCenter, setSelectedBarangayCenter] = useState(null);
   const [showLegends, setShowLegends] = useState(true);
+  const [mapReady, setMapReady] = useState(false);
 
   // Fetch data
   const { data: barangaysList } = useGetBarangaysQuery();
@@ -137,15 +138,18 @@ const Mapping = () => {
   const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
   const mapId = import.meta.env.VITE_GOOGLE_MAPS_MAP_ID;
 
-  console.log("=== Map Debug Info ===");
-  console.log("API Key:", apiKey ? "Present" : "Missing");
-  console.log("Map ID:", mapId || "Not set");
-  console.log("Map Ref:", mapRef.current ? "Initialized" : "Not initialized");
-  console.log("Map Instance:", mapInstance.current ? "Created" : "Not created");
-  console.log("Loading:", loading);
-  console.log("Error:", error);
-  console.log("Barangay Data:", barangayData ? "Loaded" : "Not loaded");
-  console.log("Breeding Sites:", breedingSites.length);
+  // Debug info only when needed
+  const logDebugInfo = () => {
+    console.log("=== Map Debug Info ===");
+    console.log("API Key:", apiKey ? "Present" : "Missing");
+    console.log("Map ID:", mapId || "Not set");
+    console.log("Map Ref:", mapRef.current ? "Initialized" : "Not initialized");
+    console.log("Map Instance:", mapInstance.current ? "Created" : "Not created");
+    console.log("Loading:", loading);
+    console.log("Error:", error);
+    console.log("Barangay Data:", barangayData ? "Loaded" : "Not loaded");
+    console.log("Breeding Sites:", breedingSites.length);
+  };
 
   // Cleanup on unmount
   useEffect(() => {
@@ -173,15 +177,22 @@ const Mapping = () => {
     };
   }, []);
 
+  // Track if we've already fetched initial data
+  const hasInitialData = useRef(false);
+
   // Fetch and process geojson and posts
   useEffect(() => {
     const fetchData = async () => {
       if (!isMountedRef.current) return;
 
-      try {
+      // Only set loading true if we don't have barangay data yet and map is not ready
+      if (!hasInitialData.current && !mapReady) {
         setLoading(true);
         setError(null);
-        console.log("Fetching barangay data...");
+      }
+      
+      console.log("Fetching barangay data...");
+      try {
         // Fetch barangay geojson
         const barangayResponse = await fetch(
           "/quezon_barangays_boundaries.geojson"
@@ -196,7 +207,9 @@ const Mapping = () => {
         );
         if (isMountedRef.current) {
           setBarangayData(barangayGeoJson);
+          hasInitialData.current = true;
         }
+        
         // Process breeding sites
         if (posts) {
           const validPosts = Array.isArray(posts?.posts)
@@ -269,204 +282,365 @@ const Mapping = () => {
       return;
     }
 
+    logDebugInfo();
+
+    // Prevent multiple initializations
+    if (mapInstance.current && isValidMapInstance(mapInstance.current)) {
+      console.log("Map already initialized, skipping...");
+      return;
+    }
+
     console.log("Starting map initialization...");
     let overlays = [];
-    loadGoogleMapsScript(apiKey)
-      .then(() => {
-        if (!isMountedRef.current) return;
+    
+    // Use the existing Google Maps script if already loaded
+    const initializeMap = () => {
+      if (!isMountedRef.current) return;
 
-        console.log("Google Maps script loaded");
-        // Clean up previous overlays
-        overlaysRef.current.forEach((o) => {
-          if (o && typeof o.setMap === "function") {
-            o.setMap(null);
+      // Ensure map ref is available and attached to DOM
+      if (!mapRef.current) {
+        console.log("Map ref not ready, retrying in 100ms...");
+        setTimeout(() => {
+          if (isMountedRef.current) {
+            initializeMap();
           }
-        });
-        overlaysRef.current = [];
+        }, 100);
+        return;
+      }
 
-        // Only create map if not already created or invalid
-        if (!mapInstance.current || !isValidMapInstance(mapInstance.current)) {
-          console.log("Creating new map instance...");
-          try {
-            mapInstance.current = createMapInstance(mapRef.current, {
-              center: QC_CENTER,
-              zoom: 13,
-              mapId: mapId || undefined,
-              mapTypeControl: false,
-              streetViewControl: false,
-              fullscreenControl: false,
-            });
-            console.log("Map instance created successfully");
-          } catch (err) {
-            console.error("Error creating map instance:", err);
-            if (isMountedRef.current) {
-              setError("Failed to initialize map");
-            }
-            return;
+      console.log("Google Maps script loaded");
+      
+      // Only create map if not already created or invalid
+      if (!mapInstance.current || !isValidMapInstance(mapInstance.current)) {
+        console.log("Creating new map instance...");
+        
+        // Ensure map ref is available
+        if (!mapRef.current) {
+          console.error("Map ref not available");
+          if (isMountedRef.current) {
+            setError("Map container not available");
           }
+          return;
         }
-
-        const map = mapInstance.current;
-        console.log("Drawing barangay polygons...");
-
-        // --- InfoWindow instance (only one open at a time) ---
-        if (!infoWindowRef.current) {
-          infoWindowRef.current = new window.google.maps.InfoWindow({
-            maxWidth: 500,
+        
+        try {
+          mapInstance.current = createMapInstance(mapRef.current, {
+            center: QC_CENTER,
+            zoom: 13,
+            mapId: mapId || undefined,
+            mapTypeControl: false,
+            streetViewControl: false,
+            fullscreenControl: false,
           });
+          console.log("Map instance created successfully");
+          setMapReady(true);
+        } catch (err) {
+          console.error("Error creating map instance:", err);
+          if (isMountedRef.current) {
+            setError("Failed to initialize map");
+          }
+          return;
         }
-        const infoWindow = infoWindowRef.current;
-        infoWindow.close();
+      }
 
-        // --- Draw barangay polygons ---
-        barangayData.features.forEach((feature) => {
-          const geometry = feature.geometry;
-          const coordsArray =
-            geometry.type === "Polygon"
-              ? [geometry.coordinates]
-              : geometry.type === "MultiPolygon"
-              ? geometry.coordinates
-              : [];
-          // Find matching barangay in barangaysList
-          let barangayObj = barangaysList?.find(
-            (b) =>
-              normalizeBarangayName(b.name) ===
-              normalizeBarangayName(feature.properties.name)
-          );
-          let patternType = (
-            barangayObj?.status_and_recommendation?.pattern_based?.status ||
-            feature.properties.patternType ||
-            feature.properties.pattern_type ||
-            "none"
-          ).toLowerCase();
-          if (!patternType || patternType === "") patternType = "none";
-          const patternColor =
-            PATTERN_COLORS[patternType] || PATTERN_COLORS.default;
-          coordsArray.forEach((polygonCoords) => {
-            const path = polygonCoords[0].map(([lng, lat]) => ({ lat, lng }));
-            // Highlight if selected
-            const isSelected =
-              selectedBarangayFeature &&
-              normalizeBarangayName(selectedBarangayFeature.properties.name) ===
-                normalizeBarangayName(feature.properties.name);
-            const polygon = new window.google.maps.Polygon({
-              paths: path,
-              strokeColor: isSelected ? patternColor : "#333",
-              strokeOpacity: isSelected ? 1 : 0.6,
-              strokeWeight: isSelected ? 4 : 1,
-              fillOpacity: 0.5,
-              fillColor: patternColor,
-              map,
-              zIndex: isSelected ? 2 : 1,
-            });
-            polygon.addListener("click", (e) => {
-              // Don't show barangay info if breeding sites or interventions are being displayed
-              if (showBreedingSites || showInterventions) {
-                return;
-              }
-              // Center of polygon
-              const center = turf.center(feature.geometry);
-              const [lng, lat] = center.geometry.coordinates;
-              if (mapInstance.current) {
-                mapInstance.current.panTo({ lat, lng });
-                mapInstance.current.setZoom(15);
-              }
-              // Hide control panel on md screens and lower
-              if (
-                window.matchMedia &&
-                window.matchMedia("(max-width: 768px)").matches
-              ) {
-                setShowControlPanel(false);
-              }
-              setSelectedBarangayFeature(feature); // highlight
-              let barangayObj = barangaysList?.find(
-                (b) =>
-                  normalizeBarangayName(b.name) ===
-                  normalizeBarangayName(feature.properties.name)
-              );
-              let patternBased =
-                barangayObj?.status_and_recommendation?.pattern_based;
-              let patternType = (
-                patternBased?.status ||
-                feature.properties.patternType ||
-                "none"
-              ).toLowerCase();
-              if (!patternType || patternType === "") patternType = "none";
-              const patternCardColor =
-                PATTERN_COLORS[patternType] || PATTERN_COLORS.default;
-              let reportBased =
-                barangayObj?.status_and_recommendation?.report_based;
-              let reportAlert = reportBased?.alert;
-              let reportStatus = (
-                reportBased?.status || "unknown"
-              ).toLowerCase();
-              let reportCardColor =
-                REPORT_STATUS_COLORS[reportStatus] ||
-                REPORT_STATUS_COLORS.unknown;
-              // Use a div with Tailwind classes for InfoWindow content
-              const content = document.createElement("div");
-              content.innerHTML = `
-              <div class="bg-white p-4 rounded-lg text-center h-auto">
-                <p class="text-4xl font-[900]" style="color:${patternCardColor}">Barangay ${
-                feature.properties.displayName ||
-                feature.properties.name ||
-                "Unknown Barangay"
-              }</p>
-                <div class="mt-3 flex flex-col gap-3 text-black">
-                  <div class="p-3 rounded-lg border-2" style="border-color:${patternCardColor}">
-                        <div>
-                      <p class="text-sm font-medium text-gray-600 uppercase">Pattern</p>
-                      <p class="text-lg font-semibold">
-                        ${
-                          patternType === "none"
-                            ? "No pattern detected"
-                            : patternType.charAt(0).toUpperCase() +
-                              patternType.slice(1).replace("_", " ")
-                        }
-                          </p>
-                        </div>
+      const map = mapInstance.current;
+      console.log("Drawing barangay polygons...");
+
+      // --- InfoWindow instance (only one open at a time) ---
+      if (!infoWindowRef.current) {
+        infoWindowRef.current = new window.google.maps.InfoWindow({
+          maxWidth: 500,
+        });
+      }
+      const infoWindow = infoWindowRef.current;
+      infoWindow.close();
+
+      // --- Draw barangay polygons ---
+      barangayData.features.forEach((feature) => {
+        const geometry = feature.geometry;
+        const coordsArray =
+          geometry.type === "Polygon"
+            ? [geometry.coordinates]
+            : geometry.type === "MultiPolygon"
+            ? geometry.coordinates
+            : [];
+        // Find matching barangay in barangaysList
+        let barangayObj = barangaysList?.find(
+          (b) =>
+            normalizeBarangayName(b.name) ===
+            normalizeBarangayName(feature.properties.name)
+        );
+        let patternType = (
+          barangayObj?.status_and_recommendation?.pattern_based?.status ||
+          feature.properties.patternType ||
+          feature.properties.pattern_type ||
+          "none"
+        ).toLowerCase();
+        if (!patternType || patternType === "") patternType = "none";
+        const patternColor =
+          PATTERN_COLORS[patternType] || PATTERN_COLORS.default;
+        coordsArray.forEach((polygonCoords) => {
+          const path = polygonCoords[0].map(([lng, lat]) => ({ lat, lng }));
+          // Highlight if selected
+          const isSelected =
+            selectedBarangayFeature &&
+            normalizeBarangayName(selectedBarangayFeature.properties.name) ===
+              normalizeBarangayName(feature.properties.name);
+          const polygon = new window.google.maps.Polygon({
+            paths: path,
+            strokeColor: isSelected ? patternColor : "#333",
+            strokeOpacity: isSelected ? 1 : 0.6,
+            strokeWeight: isSelected ? 4 : 1,
+            fillOpacity: 0.5,
+            fillColor: patternColor,
+            map,
+            zIndex: isSelected ? 2 : 1,
+          });
+          polygon.addListener("click", (e) => {
+            // Don't show barangay info if breeding sites or interventions are being displayed
+            if (showBreedingSites || showInterventions) {
+              return;
+            }
+            // Center of polygon
+            const center = turf.center(feature.geometry);
+            const [lng, lat] = center.geometry.coordinates;
+            if (mapInstance.current) {
+              mapInstance.current.panTo({ lat, lng });
+              mapInstance.current.setZoom(15);
+            }
+            // Hide control panel on md screens and lower
+            if (
+              window.matchMedia &&
+              window.matchMedia("(max-width: 768px)").matches
+            ) {
+              setShowControlPanel(false);
+            }
+            setSelectedBarangayFeature(feature); // highlight
+            let barangayObj = barangaysList?.find(
+              (b) =>
+                normalizeBarangayName(b.name) ===
+                normalizeBarangayName(feature.properties.name)
+            );
+            let patternBased =
+              barangayObj?.status_and_recommendation?.pattern_based;
+            let patternType = (
+              patternBased?.status ||
+              feature.properties.patternType ||
+              "none"
+            ).toLowerCase();
+            if (!patternType || patternType === "") patternType = "none";
+            const patternCardColor =
+              PATTERN_COLORS[patternType] || PATTERN_COLORS.default;
+            let reportBased =
+              barangayObj?.status_and_recommendation?.report_based;
+            let reportAlert = reportBased?.alert;
+            let reportStatus = (
+              reportBased?.status || "unknown"
+            ).toLowerCase();
+            let reportCardColor =
+              REPORT_STATUS_COLORS[reportStatus] ||
+              REPORT_STATUS_COLORS.unknown;
+            // Use a div with Tailwind classes for InfoWindow content
+            const content = document.createElement("div");
+            content.innerHTML = `
+            <div class="bg-white p-4 rounded-lg text-center h-auto">
+              <p class="text-4xl font-[900]" style="color:${patternCardColor}">Barangay ${
+              feature.properties.displayName ||
+              feature.properties.name ||
+              "Unknown Barangay"
+            }</p>
+              <div class="mt-3 flex flex-col gap-3 text-black">
+                <div class="p-3 rounded-lg border-2" style="border-color:${patternCardColor}">
+                      <div>
+                    <p class="text-sm font-medium text-gray-600 uppercase">Pattern</p>
+                    <p class="text-lg font-semibold">
+                      ${
+                        patternType === "none"
+                          ? "No pattern detected"
+                          : patternType.charAt(0).toUpperCase() +
+                            patternType.slice(1).replace("_", " ")
+                      }
+                        </p>
                       </div>
-                  <div class="p-3 rounded-lg border-2 ${reportCardColor}">
-                        <div>
-                      <p class="text-sm font-medium text-gray-600 uppercase">Breeding Site Reports</p>
-                      <p class="text-lg font-semibold">
-                        ${
-                          reportAlert && reportAlert.toLowerCase() !== "none"
-                            ? reportAlert
-                            : "No breeding site reported in this barangay."
-                        }
-                          </p>
-                        </div>
+                    </div>
+                <div class="p-3 rounded-lg border-2 ${reportCardColor}">
+                      <div>
+                    <p class="text-sm font-medium text-gray-600 uppercase">Breeding Site Reports</p>
+                    <p class="text-lg font-semibold">
+                      ${
+                        reportAlert && reportAlert.toLowerCase() !== "none"
+                          ? reportAlert
+                          : "No breeding site reported in this barangay."
+                      }
+                        </p>
                       </div>
                     </div>
                   </div>
-            `;
-              infoWindow.setContent(content);
-              infoWindow.setPosition({ lat, lng });
-              infoWindow.open(map);
-              // Remove highlight and InfoWindow when closed
-              infoWindow.addListener("closeclick", () => {
-                setSelectedBarangayFeature(null);
-              });
+                </div>
+          `;
+            infoWindow.setContent(content);
+            infoWindow.setPosition({ lat, lng });
+            infoWindow.open(map);
+            // Remove highlight and InfoWindow when closed
+            infoWindow.addListener("closeclick", () => {
+              setSelectedBarangayFeature(null);
             });
-            overlays.push(polygon);
           });
+          overlays.push(polygon);
         });
+      });
 
-        // --- Draw breeding site markers with clustering ---
-        let breedingMarkers = [];
+      // --- Draw breeding site markers with clustering ---
+      let breedingMarkers = [];
+      if (
+        showBreedingSites &&
+        breedingSites.length > 0 &&
+        window.google.maps.marker
+      ) {
+        const { AdvancedMarkerElement, PinElement } =
+          window.google.maps.marker;
+        breedingMarkers = breedingSites.map((site) => {
+          // Use the correct SVG icon for the breeding site type
+          const iconUrl =
+            BREEDING_SITE_TYPE_ICONS[site.report_type] ||
+            BREEDING_SITE_TYPE_ICONS.default;
+          const glyphImg = document.createElement("img");
+          glyphImg.src = iconUrl;
+          glyphImg.style.width = "28px";
+          glyphImg.style.height = "28px";
+          glyphImg.style.objectFit = "contain";
+          glyphImg.style.backgroundColor = "#FFFFFF";
+          glyphImg.style.borderRadius = "100%";
+          glyphImg.style.padding = "2px";
+
+          const pin = new PinElement({
+            glyph: glyphImg,
+            background: "#FF6347",
+            borderColor: "#FF6347",
+            scale: 1.5,
+          });
+          const marker = new AdvancedMarkerElement({
+            map,
+            position: {
+              lat: site.specific_location.coordinates[1],
+              lng: site.specific_location.coordinates[0],
+            },
+            content: pin.element,
+            title: site.report_type || "Breeding Site",
+          });
+          marker.addListener("click", () => {
+            // Close barangay info window if open
+            if (infoWindowRef.current) {
+              infoWindowRef.current.close();
+              setSelectedBarangayFeature(null);
+            }
+            // Pan to marker position and zoom in
+            if (mapInstance.current) {
+              mapInstance.current.panTo({
+                lat: site.specific_location.coordinates[1],
+                lng: site.specific_location.coordinates[0],
+              });
+              mapInstance.current.setZoom(17);
+            }
+            // Hide control panel on md screens and lower
+            if (
+              window.matchMedia &&
+              window.matchMedia("(max-width: 768px)").matches
+            ) {
+              setShowControlPanel(false);
+            }
+            // Use a div with Tailwind classes for InfoWindow content
+            const content = document.createElement("div");
+            content.innerHTML = `
+            <div class=\"bg-white p-4 rounded-lg text-primary text-center max-w-120 w-[50vw]\">
+              <p class=\"font-bold text-4xl font-extrabold mb-4 text-primary\">
+                ${site.report_type || "Breeding Site"}
+              </p>
+              <div class=\"flex flex-col items-center mt-2 space-y-1 font-normal text-center\">
+                <p class=\"text-xl\">
+                  <span class=\"font-bold\">Barangay:</span> ${
+                    site.barangay || ""
+                  }
+                </p>
+                <p class=\"text-xl\">
+                  <span class=\"font-bold\">Reported by:</span> ${
+                    site.user?.username || ""
+                  }
+                </p>
+                <p class=\"text-xl\">
+                  <span class=\"font-bold\">Date:</span> ${
+                    site.date_and_time
+                      ? new Date(site.date_and_time).toLocaleDateString()
+                      : ""
+                  }
+                </p>
+                <p class=\"text-xl\">
+                  <span class=\"font-bold\">Description:</span> ${
+                    site.description || ""
+                  }
+                </p>
+                ${
+                  site.images && site.images.length > 0
+                    ? `<div class='mt-2 flex justify-center gap-2'>${site.images
+                        .map(
+                          (img) =>
+                            `<img src='${img}' class='w-35 h-25 object-cover rounded border'/>`
+                        )
+                        .join("")}</div>`
+                    : ""
+                }
+              </div>
+              <button class=\"mt-4 px-4 py-2 bg-primary w-[40%] text-white rounded-lg shadow hover:bg-primary/80 hover:cursor-pointer font-bold\" onclick=\"window.location.href='/mapping/${
+                site._id
+              }'\">View Details</button>
+            </div>
+          `;
+            infoWindow.setContent(content);
+            infoWindow.open(map, marker);
+          });
+          return marker;
+        });
+        // Cluster the markers
         if (
-          showBreedingSites &&
-          breedingSites.length > 0 &&
-          window.google.maps.marker
+          window.markerClusterer &&
+          window.markerClusterer.MarkerClusterer
         ) {
-          const { AdvancedMarkerElement, PinElement } =
-            window.google.maps.marker;
-          breedingMarkers = breedingSites.map((site) => {
-            // Use the correct SVG icon for the breeding site type
+          if (markerClusterRef.current) markerClusterRef.current.setMap(null);
+          markerClusterRef.current =
+            new window.markerClusterer.MarkerClusterer({
+              markers: breedingMarkers,
+              map,
+            });
+        } else {
+          // fallback: just show markers
+          breedingMarkers.forEach((m) => m.setMap(map));
+        }
+        overlays.push(...breedingMarkers);
+      }
+
+      // --- Draw intervention markers ---
+      if (showInterventions && interventions.length > 0) {
+        console.log("[DEBUG] Drawing intervention markers:", interventions);
+
+        // Check if marker library is available
+        if (!window.google?.maps?.marker) {
+          console.error("[DEBUG] Marker library not available");
+          return;
+        }
+
+        const { AdvancedMarkerElement, PinElement } =
+          window.google.maps.marker;
+
+        interventions.forEach((intervention) => {
+          console.log(
+            "[DEBUG] Creating marker for intervention:",
+            intervention
+          );
+
+          try {
             const iconUrl =
-              BREEDING_SITE_TYPE_ICONS[site.report_type] ||
-              BREEDING_SITE_TYPE_ICONS.default;
+              INTERVENTION_TYPE_ICONS[intervention.type] ||
+              INTERVENTION_TYPE_ICONS.default;
             const glyphImg = document.createElement("img");
             glyphImg.src = iconUrl;
             glyphImg.style.width = "28px";
@@ -478,19 +652,21 @@ const Mapping = () => {
 
             const pin = new PinElement({
               glyph: glyphImg,
-              background: "#FF6347",
-              borderColor: "#FF6347",
+              background: INTERVENTION_STATUS_COLORS[intervention.status] || INTERVENTION_STATUS_COLORS.default,
+              borderColor: INTERVENTION_STATUS_COLORS[intervention.status] || INTERVENTION_STATUS_COLORS.default,
               scale: 1.5,
             });
+
             const marker = new AdvancedMarkerElement({
               map,
               position: {
-                lat: site.specific_location.coordinates[1],
-                lng: site.specific_location.coordinates[0],
+                lat: intervention.specific_location.coordinates[1],
+                lng: intervention.specific_location.coordinates[0],
               },
               content: pin.element,
-              title: site.report_type || "Breeding Site",
+              title: intervention.type || "Intervention",
             });
+
             marker.addListener("click", () => {
               // Close barangay info window if open
               if (infoWindowRef.current) {
@@ -500,8 +676,8 @@ const Mapping = () => {
               // Pan to marker position and zoom in
               if (mapInstance.current) {
                 mapInstance.current.panTo({
-                  lat: site.specific_location.coordinates[1],
-                  lng: site.specific_location.coordinates[0],
+                  lat: intervention.specific_location.coordinates[1],
+                  lng: intervention.specific_location.coordinates[0],
                 });
                 mapInstance.current.setZoom(17);
               }
@@ -515,252 +691,521 @@ const Mapping = () => {
               // Use a div with Tailwind classes for InfoWindow content
               const content = document.createElement("div");
               content.innerHTML = `
-              <div class=\"bg-white p-4 rounded-lg text-primary text-center max-w-120 w-[50vw]\">
-                <p class=\"font-bold text-4xl font-extrabold mb-4 text-primary\">
-                  ${site.report_type || "Breeding Site"}
+              <div class="bg-white p-4 rounded-lg text-primary text-center max-w-120 w-[50vw]">
+                <p class="font-bold text-4xl font-extrabold mb-4 text-primary">
+                  ${intervention.type || "Intervention"}
                 </p>
-                <div class=\"flex flex-col items-center mt-2 space-y-1 font-normal text-center\">
-                  <p class=\"text-xl\">
-                    <span class=\"font-bold\">Barangay:</span> ${
-                      site.barangay || ""
-                    }
-                  </p>
-                  <p class=\"text-xl\">
-                    <span class=\"font-bold\">Reported by:</span> ${
-                      site.user?.username || ""
-                    }
-                  </p>
-                  <p class=\"text-xl\">
-                    <span class=\"font-bold\">Date:</span> ${
-                      site.date_and_time
-                        ? new Date(site.date_and_time).toLocaleDateString()
-                        : ""
-                    }
-                  </p>
-                  <p class=\"text-xl\">
-                    <span class=\"font-bold\">Description:</span> ${
-                      site.description || ""
-                    }
-                  </p>
-                  ${
-                    site.images && site.images.length > 0
-                      ? `<div class='mt-2 flex justify-center gap-2'>${site.images
-                          .map(
-                            (img) =>
-                              `<img src='${img}' class='w-35 h-25 object-cover rounded border'/>`
-                          )
-                          .join("")}</div>`
-                      : ""
-                  }
-                </div>
-                <button class=\"mt-4 px-4 py-2 bg-primary w-[40%] text-white rounded-lg shadow hover:bg-primary/80 hover:cursor-pointer font-bold\" onclick=\"window.location.href='/mapping/${
-                  site._id
-                }'\">View Details</button>
-              </div>
-            `;
-              infoWindow.setContent(content);
-              infoWindow.open(map, marker);
-            });
-            return marker;
-          });
-          // Cluster the markers
-          if (
-            window.markerClusterer &&
-            window.markerClusterer.MarkerClusterer
-          ) {
-            if (markerClusterRef.current) markerClusterRef.current.setMap(null);
-            markerClusterRef.current =
-              new window.markerClusterer.MarkerClusterer({
-                markers: breedingMarkers,
-                map,
-              });
-          } else {
-            // fallback: just show markers
-            breedingMarkers.forEach((m) => m.setMap(map));
-          }
-          overlays.push(...breedingMarkers);
-        }
-
-        // --- Draw intervention markers ---
-        if (showInterventions && interventions.length > 0) {
-          console.log("[DEBUG] Drawing intervention markers:", interventions);
-
-          // Check if marker library is available
-          if (!window.google?.maps?.marker) {
-            console.error("[DEBUG] Marker library not available");
-            return;
-          }
-
-          const { AdvancedMarkerElement, PinElement } =
-            window.google.maps.marker;
-
-          interventions.forEach((intervention) => {
-            console.log(
-              "[DEBUG] Creating marker for intervention:",
-              intervention
-            );
-            try {
-              if (
-                !intervention.specific_location?.coordinates ||
-                intervention.specific_location.coordinates.length !== 2
-              ) {
-                console.warn(
-                  "[DEBUG] Invalid coordinates for intervention:",
-                  intervention
-                );
-                return;
-              }
-
-              const iconUrl =
-                INTERVENTION_TYPE_ICONS[intervention.interventionType] ||
-                INTERVENTION_TYPE_ICONS.default;
-              const glyphImg = document.createElement("img");
-              glyphImg.src = iconUrl;
-              glyphImg.style.width = "28px";
-              glyphImg.style.height = "28px";
-              glyphImg.style.objectFit = "contain";
-              glyphImg.style.backgroundColor = "#FFFFFF";
-              glyphImg.style.borderRadius = "100%";
-              glyphImg.style.padding = "2px";
-
-              const pin = new PinElement({
-                glyph: glyphImg,
-                background: "#1893F8",
-                borderColor: "#1893F8",
-                scale: 1.5,
-              });
-
-              const marker = new AdvancedMarkerElement({
-                map,
-                position: {
-                  lat: intervention.specific_location.coordinates[1],
-                  lng: intervention.specific_location.coordinates[0],
-                },
-                content: pin.element,
-                title: intervention.interventionType,
-              });
-
-              console.log("[DEBUG] Marker created successfully:", marker);
-
-              marker.addListener("click", () => {
-                // Close barangay info window if open
-                if (infoWindowRef.current) {
-                  infoWindowRef.current.close();
-                  setSelectedBarangayFeature(null);
-                }
-
-                // Pan to marker position and zoom in
-                if (mapInstance.current) {
-                  mapInstance.current.panTo({
-                    lat: intervention.specific_location.coordinates[1],
-                    lng: intervention.specific_location.coordinates[0],
-                  });
-                  mapInstance.current.setZoom(17);
-                }
-
-                // Hide control panel on md screens and lower
-                if (
-                  window.matchMedia &&
-                  window.matchMedia("(max-width: 768px)").matches
-                ) {
-                  setShowControlPanel(false);
-                }
-
-                // Use a div with Tailwind classes for InfoWindow content
-                const content = document.createElement("div");
-                content.innerHTML = `
-                <div class="p-3 flex flex-col items-center gap-1 font-normal bg-white text-center rounded-md shadow-md text-primary">
-                  <p class="text-4xl font-extrabold text-primary mb-2">${
-                    intervention.interventionType || "Intervention"
+                <div class="flex flex-col items-center mt-2 space-y-1 font-normal text-center">
+                  <p class="text-lg"><span class="font-bold">Status:</span> ${
+                    intervention.status || ""
                   }</p>
-                  <div class="text-lg flex items-center gap-2">
-                    <span class="font-bold">Status:</span>
-                    <span class="px-3 py-1 rounded-full text-white font-bold text-sm" style="background-color:#FF6347;box-shadow:0 1px 4px rgba(0,0,0,0.08);">
-                      ${intervention.status || ""}
-                    </span>
-                  </div>
-                  <p class="text-lg text-center"><span class="font-bold">Barangay:</span> ${
-                    intervention.barangay || ""
-                  }</p>
-                  ${
-                    intervention.address
-                      ? `<p class="text-lg text-center"><span class="font-bold text-center">Address:</span> ${intervention.address}</p>`
-                      : ""
-                  }
                   <p class="text-lg"><span class="font-bold">Date:</span> ${
-                    intervention.date
-                      ? new Date(intervention.date).toLocaleString("en-US", {
-                          year: "numeric",
-                          month: "long",
-                          day: "numeric",
-                          hour: "numeric",
-                          minute: "2-digit",
-                          hour12: true,
-                        })
+                    intervention.date_and_time
+                      ? new Date(intervention.date_and_time).toLocaleDateString()
                       : ""
+                  }</p>
+                  <p class="text-lg"><span class="font-bold">Description:</span> ${
+                    intervention.description || ""
                   }</p>
                   <p class="text-lg"><span class="font-bold">Personnel:</span> ${
                     intervention.personnel || ""
                   }</p>
                 </div>
-              `;
+              </div>
+            `;
 
-                if (!infoWindowRef.current) {
-                  infoWindowRef.current = new window.google.maps.InfoWindow({
-                    maxWidth: 500,
-                  });
-                }
-                const infoWindow = infoWindowRef.current;
-                infoWindow.setContent(content);
-                infoWindow.setPosition({
-                  lat: intervention.specific_location.coordinates[1],
-                  lng: intervention.specific_location.coordinates[0],
+              if (!infoWindowRef.current) {
+                infoWindowRef.current = new window.google.maps.InfoWindow({
+                  maxWidth: 500,
                 });
-                infoWindow.open(map, marker);
+              }
+              const infoWindow = infoWindowRef.current;
+              infoWindow.setContent(content);
+              infoWindow.setContent(content);
+              infoWindow.setPosition({
+                lat: intervention.specific_location.coordinates[1],
+                lng: intervention.specific_location.coordinates[0],
               });
+              infoWindow.open(map, marker);
+            });
 
-              overlays.push(marker);
-            } catch (error) {
-              console.error("[DEBUG] Error creating marker:", error);
-            }
-          });
-        } else {
-          console.log("[DEBUG] Not drawing intervention markers:", {
-            showInterventions,
-            interventionsLength: interventions.length,
-            hasGoogleMapsMarker: !!window.google?.maps?.marker,
-          });
-        }
-        overlaysRef.current = overlays;
-      })
-      .catch((err) => {
-        console.error("Error loading Google Maps script:", err);
+            overlays.push(marker);
+          } catch (error) {
+            console.error("[DEBUG] Error creating marker:", error);
+          }
+        });
+      }
+      overlaysRef.current = overlays;
+    };
+
+    // Check if Google Maps is already loaded
+    if (window.google?.maps?.Map) {
+      // Small delay to ensure DOM is ready
+      setTimeout(() => {
         if (isMountedRef.current) {
-          setError("Failed to load Google Maps");
+          initializeMap();
         }
-      });
+      }, 100);
+    } else {
+      // Load Google Maps script if not already loaded
+      loadGoogleMapsScript(apiKey)
+        .then(() => {
+          if (isMountedRef.current) {
+            // Small delay to ensure DOM is ready
+            setTimeout(() => {
+              if (isMountedRef.current) {
+                initializeMap();
+              }
+            }, 100);
+          }
+        })
+        .catch((err) => {
+          console.error("Error loading Google Maps script:", err);
+          if (isMountedRef.current) {
+            setError("Failed to load Google Maps");
+          }
+        });
+    }
 
     // Cleanup overlays on unmount or data change
     return () => {
-      console.log("Cleaning up map overlays...");
+      if (!isMountedRef.current) {
+        console.log("Cleaning up map overlays...");
+        overlaysRef.current.forEach((o) => {
+          if (o && typeof o.setMap === "function") {
+            o.setMap(null);
+          }
+        });
+        overlaysRef.current = [];
+      }
+    };
+  }, [
+    loading,
+    error,
+    barangayData,
+    apiKey,
+    mapId,
+  ]);
+
+  // Separate useEffect for updating map content when data changes
+  useEffect(() => {
+    if (!mapInstance.current || !isValidMapInstance(mapInstance.current) || !barangayData) {
+      return;
+    }
+
+    logDebugInfo();
+
+    // Re-run map initialization with new data
+    const initializeMap = () => {
+      // Clean up previous overlays
       overlaysRef.current.forEach((o) => {
         if (o && typeof o.setMap === "function") {
           o.setMap(null);
         }
       });
       overlaysRef.current = [];
+
+      const map = mapInstance.current;
+      console.log("Updating map with new data...");
+
+      // --- InfoWindow instance (only one open at a time) ---
+      if (!infoWindowRef.current) {
+        infoWindowRef.current = new window.google.maps.InfoWindow({
+          maxWidth: 500,
+        });
+      }
+      const infoWindow = infoWindowRef.current;
+      infoWindow.close();
+
+      // --- Draw barangay polygons ---
+      barangayData.features.forEach((feature) => {
+        const geometry = feature.geometry;
+        const coordsArray =
+          geometry.type === "Polygon"
+            ? [geometry.coordinates]
+            : geometry.type === "MultiPolygon"
+            ? geometry.coordinates
+            : [];
+        // Find matching barangay in barangaysList
+        let barangayObj = barangaysList?.find(
+          (b) =>
+            normalizeBarangayName(b.name) ===
+            normalizeBarangayName(feature.properties.name)
+        );
+        let patternType = (
+          barangayObj?.status_and_recommendation?.pattern_based?.status ||
+          feature.properties.patternType ||
+          feature.properties.pattern_type ||
+          "none"
+        ).toLowerCase();
+        if (!patternType || patternType === "") patternType = "none";
+        const patternColor =
+          PATTERN_COLORS[patternType] || PATTERN_COLORS.default;
+        coordsArray.forEach((polygonCoords) => {
+          const path = polygonCoords[0].map(([lng, lat]) => ({ lat, lng }));
+          // Highlight if selected
+          const isSelected =
+            selectedBarangayFeature &&
+            normalizeBarangayName(selectedBarangayFeature.properties.name) ===
+              normalizeBarangayName(feature.properties.name);
+          const polygon = new window.google.maps.Polygon({
+            paths: path,
+            strokeColor: isSelected ? patternColor : "#333",
+            strokeOpacity: isSelected ? 1 : 0.6,
+            strokeWeight: isSelected ? 4 : 1,
+            fillOpacity: 0.5,
+            fillColor: patternColor,
+            map,
+            zIndex: isSelected ? 2 : 1,
+          });
+          polygon.addListener("click", (e) => {
+            // Don't show barangay info if breeding sites or interventions are being displayed
+            if (showBreedingSites || showInterventions) {
+              return;
+            }
+            // Center of polygon
+            const center = turf.center(feature.geometry);
+            const [lng, lat] = center.geometry.coordinates;
+            if (mapInstance.current) {
+              mapInstance.current.panTo({ lat, lng });
+              mapInstance.current.setZoom(15);
+            }
+            // Hide control panel on md screens and lower
+            if (
+              window.matchMedia &&
+              window.matchMedia("(max-width: 768px)").matches
+            ) {
+              setShowControlPanel(false);
+            }
+            setSelectedBarangayFeature(feature); // highlight
+            let barangayObj = barangaysList?.find(
+              (b) =>
+                normalizeBarangayName(b.name) ===
+                normalizeBarangayName(feature.properties.name)
+            );
+            let patternBased =
+              barangayObj?.status_and_recommendation?.pattern_based;
+            let patternType = (
+              patternBased?.status ||
+              feature.properties.patternType ||
+              "none"
+            ).toLowerCase();
+            if (!patternType || patternType === "") patternType = "none";
+            const patternCardColor =
+              PATTERN_COLORS[patternType] || PATTERN_COLORS.default;
+            let reportBased =
+              barangayObj?.status_and_recommendation?.report_based;
+            let reportAlert = reportBased?.alert;
+            let reportStatus = (
+              reportBased?.status || "unknown"
+            ).toLowerCase();
+            let reportCardColor =
+              REPORT_STATUS_COLORS[reportStatus] ||
+              REPORT_STATUS_COLORS.unknown;
+            // Use a div with Tailwind classes for InfoWindow content
+            const content = document.createElement("div");
+            content.innerHTML = `
+            <div class="bg-white p-4 rounded-lg text-center h-auto">
+              <p class="text-4xl font-[900]" style="color:${patternCardColor}">Barangay ${
+              feature.properties.displayName ||
+              feature.properties.name ||
+              "Unknown Barangay"
+            }</p>
+              <div class="mt-3 flex flex-col gap-3 text-black">
+                <div class="p-3 rounded-lg border-2" style="border-color:${patternCardColor}">
+                      <div>
+                    <p class="text-sm font-medium text-gray-600 uppercase">Pattern</p>
+                    <p class="text-lg font-semibold">
+                      ${
+                        patternType === "none"
+                          ? "No pattern detected"
+                          : patternType.charAt(0).toUpperCase() +
+                            patternType.slice(1).replace("_", " ")
+                      }
+                        </p>
+                      </div>
+                    </div>
+                <div class="p-3 rounded-lg border-2 ${reportCardColor}">
+                      <div>
+                    <p class="text-sm font-medium text-gray-600 uppercase">Breeding Site Reports</p>
+                    <p class="text-lg font-semibold">
+                      ${
+                        reportAlert && reportAlert.toLowerCase() !== "none"
+                          ? reportAlert
+                          : "No breeding site reported in this barangay."
+                      }
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+          `;
+            infoWindow.setContent(content);
+            infoWindow.setPosition({ lat, lng });
+            infoWindow.open(map);
+            // Remove highlight and InfoWindow when closed
+            infoWindow.addListener("closeclick", () => {
+              setSelectedBarangayFeature(null);
+            });
+          });
+          overlaysRef.current.push(polygon);
+        });
+      });
+
+      // --- Draw breeding site markers with clustering ---
+      let breedingMarkers = [];
+      if (
+        showBreedingSites &&
+        breedingSites.length > 0 &&
+        window.google.maps.marker
+      ) {
+        const { AdvancedMarkerElement, PinElement } =
+          window.google.maps.marker;
+        breedingMarkers = breedingSites.map((site) => {
+          // Use the correct SVG icon for the breeding site type
+          const iconUrl =
+            BREEDING_SITE_TYPE_ICONS[site.report_type] ||
+            BREEDING_SITE_TYPE_ICONS.default;
+          const glyphImg = document.createElement("img");
+          glyphImg.src = iconUrl;
+          glyphImg.style.width = "28px";
+          glyphImg.style.height = "28px";
+          glyphImg.style.objectFit = "contain";
+          glyphImg.style.backgroundColor = "#FFFFFF";
+          glyphImg.style.borderRadius = "100%";
+          glyphImg.style.padding = "2px";
+
+          const pin = new PinElement({
+            glyph: glyphImg,
+            background: "#FF6347",
+            borderColor: "#FF6347",
+            scale: 1.5,
+          });
+          const marker = new AdvancedMarkerElement({
+            map,
+            position: {
+              lat: site.specific_location.coordinates[1],
+              lng: site.specific_location.coordinates[0],
+            },
+            content: pin.element,
+            title: site.report_type || "Breeding Site",
+          });
+          marker.addListener("click", () => {
+            // Close barangay info window if open
+            if (infoWindowRef.current) {
+              infoWindowRef.current.close();
+              setSelectedBarangayFeature(null);
+            }
+            // Pan to marker position and zoom in
+            if (mapInstance.current) {
+              mapInstance.current.panTo({
+                lat: site.specific_location.coordinates[1],
+                lng: site.specific_location.coordinates[0],
+              });
+              mapInstance.current.setZoom(17);
+            }
+            // Hide control panel on md screens and lower
+            if (
+              window.matchMedia &&
+              window.matchMedia("(max-width: 768px)").matches
+            ) {
+              setShowControlPanel(false);
+            }
+            // Use a div with Tailwind classes for InfoWindow content
+            const content = document.createElement("div");
+            content.innerHTML = `
+            <div class=\"bg-white p-4 rounded-lg text-primary text-center max-w-120 w-[50vw]\">
+              <p class=\"font-bold text-4xl font-extrabold mb-4 text-primary\">
+                ${site.report_type || "Breeding Site"}
+              </p>
+              <div class=\"flex flex-col items-center mt-2 space-y-1 font-normal text-center\">
+                <p class=\"text-xl\">
+                  <span class=\"font-bold\">Barangay:</span> ${
+                    site.barangay || ""
+                  }
+                </p>
+                <p class=\"text-xl\">
+                  <span class=\"font-bold\">Reported by:</span> ${
+                    site.user?.username || ""
+                  }
+                </p>
+                <p class=\"text-xl\">
+                  <span class=\"font-bold\">Date:</span> ${
+                    site.date_and_time
+                      ? new Date(site.date_and_time).toLocaleDateString()
+                      : ""
+                  }
+                </p>
+                <p class=\"text-xl\">
+                  <span class=\"font-bold\">Description:</span> ${
+                    site.description || ""
+                  }
+                </p>
+                ${
+                  site.images && site.images.length > 0
+                    ? `<div class='mt-2 flex justify-center gap-2'>${site.images
+                        .map(
+                          (img) =>
+                            `<img src='${img}' class='w-35 h-25 object-cover rounded border'/>`
+                        )
+                        .join("")}</div>`
+                    : ""
+                }
+              </div>
+              <button class=\"mt-4 px-4 py-2 bg-primary w-[40%] text-white rounded-lg shadow hover:bg-primary/80 hover:cursor-pointer font-bold\" onclick=\"window.location.href='/mapping/${
+                site._id
+              }'\">View Details</button>
+            </div>
+          `;
+            infoWindow.setContent(content);
+            infoWindow.open(map, marker);
+          });
+          return marker;
+        });
+        // Cluster the markers
+        if (
+          window.markerClusterer &&
+          window.markerClusterer.MarkerClusterer
+        ) {
+          if (markerClusterRef.current) markerClusterRef.current.setMap(null);
+          markerClusterRef.current =
+            new window.markerClusterer.MarkerClusterer({
+              markers: breedingMarkers,
+              map,
+            });
+        } else {
+          // fallback: just show markers
+          breedingMarkers.forEach((m) => m.setMap(map));
+        }
+        overlaysRef.current.push(...breedingMarkers);
+      }
+
+      // --- Draw intervention markers ---
+      if (showInterventions && interventions.length > 0) {
+        console.log("[DEBUG] Drawing intervention markers:", interventions);
+
+        // Check if marker library is available
+        if (!window.google?.maps?.marker) {
+          console.error("[DEBUG] Marker library not available");
+          return;
+        }
+
+        const { AdvancedMarkerElement, PinElement } =
+          window.google.maps.marker;
+
+        interventions.forEach((intervention) => {
+          console.log(
+            "[DEBUG] Creating marker for intervention:",
+            intervention
+          );
+
+          try {
+            const iconUrl =
+              INTERVENTION_TYPE_ICONS[intervention.type] ||
+              INTERVENTION_TYPE_ICONS.default;
+            const glyphImg = document.createElement("img");
+            glyphImg.src = iconUrl;
+            glyphImg.style.width = "28px";
+            glyphImg.style.height = "28px";
+            glyphImg.style.objectFit = "contain";
+            glyphImg.style.backgroundColor = "#FFFFFF";
+            glyphImg.style.borderRadius = "100%";
+            glyphImg.style.padding = "2px";
+
+            const pin = new PinElement({
+              glyph: glyphImg,
+              background: INTERVENTION_STATUS_COLORS[intervention.status] || INTERVENTION_STATUS_COLORS.default,
+              borderColor: INTERVENTION_STATUS_COLORS[intervention.status] || INTERVENTION_STATUS_COLORS.default,
+              scale: 1.5,
+            });
+
+            const marker = new AdvancedMarkerElement({
+              map,
+              position: {
+                lat: intervention.specific_location.coordinates[1],
+                lng: intervention.specific_location.coordinates[0],
+              },
+              content: pin.element,
+              title: intervention.type || "Intervention",
+            });
+
+            marker.addListener("click", () => {
+              // Close barangay info window if open
+              if (infoWindowRef.current) {
+                infoWindowRef.current.close();
+                setSelectedBarangayFeature(null);
+              }
+              // Pan to marker position and zoom in
+              if (mapInstance.current) {
+                mapInstance.current.panTo({
+                  lat: intervention.specific_location.coordinates[1],
+                  lng: intervention.specific_location.coordinates[0],
+                });
+                mapInstance.current.setZoom(17);
+              }
+              // Hide control panel on md screens and lower
+              if (
+                window.matchMedia &&
+                window.matchMedia("(max-width: 768px)").matches
+              ) {
+                setShowControlPanel(false);
+              }
+              // Use a div with Tailwind classes for InfoWindow content
+              const content = document.createElement("div");
+              content.innerHTML = `
+              <div class="bg-white p-4 rounded-lg text-primary text-center max-w-120 w-[50vw]">
+                <p class="font-bold text-4xl font-extrabold mb-4 text-primary">
+                  ${intervention.type || "Intervention"}
+                </p>
+                <div class="flex flex-col items-center mt-2 space-y-1 font-normal text-center">
+                  <p class="text-lg"><span class="font-bold">Status:</span> ${
+                    intervention.status || ""
+                  }</p>
+                  <p class="text-lg"><span class="font-bold">Date:</span> ${
+                    intervention.date_and_time
+                      ? new Date(intervention.date_and_time).toLocaleDateString()
+                      : ""
+                  }</p>
+                  <p class="text-lg"><span class="font-bold">Description:</span> ${
+                    intervention.description || ""
+                  }</p>
+                  <p class="text-lg"><span class="font-bold">Personnel:</span> ${
+                    intervention.personnel || ""
+                  }</p>
+                </div>
+              </div>
+            `;
+
+              if (!infoWindowRef.current) {
+                infoWindowRef.current = new window.google.maps.InfoWindow({
+                  maxWidth: 500,
+                });
+              }
+                             const infoWindow = infoWindowRef.current;
+               infoWindow.setContent(content);
+               infoWindow.setPosition({
+                lat: intervention.specific_location.coordinates[1],
+                lng: intervention.specific_location.coordinates[0],
+              });
+              infoWindow.open(map, marker);
+            });
+
+            overlaysRef.current.push(marker);
+          } catch (error) {
+            console.error("[DEBUG] Error creating marker:", error);
+          }
+        });
+      }
     };
+
+    initializeMap();
   }, [
-    loading,
-    error,
-    barangayData,
     breedingSites,
     showBreedingSites,
     showInterventions,
     interventions,
-    apiKey,
-    mapId,
     selectedBarangayFeature,
+    barangaysList,
   ]);
 
   // Show InfoWindow when selectedBarangayFeature changes
@@ -956,7 +1401,8 @@ const Mapping = () => {
     setSelectedIntervention(null);
   };
 
-  if (loading) {
+  // Only show loading spinner if we don't have a map instance yet
+  if (loading && !mapReady) {
     console.log("Rendering loading spinner...");
     return (
       <LoadingSpinner
@@ -1034,14 +1480,14 @@ const Mapping = () => {
                 className="w-full px-4 py-2 hover:cursor-pointer rounded-md shadow bg-transparent text-primary border border-primary/20 focus:border-primary focus:outline-none"
               >
                 <option value="">Select a barangay</option>
-                {barangayData?.features.map((feature) => (
-                  <option
-                    key={feature.properties.name}
-                    value={feature.properties.name}
-                  >
-                    {feature.properties.name}
-                  </option>
-                ))}
+                              {barangayData?.features.map((feature, index) => (
+                <option
+                  key={`barangay-${feature.properties.name || index}`}
+                  value={feature.properties.name || ""}
+                >
+                  {feature.properties.name || `Unknown Barangay ${index + 1}`}
+                </option>
+              ))}
               </select>
 
               {/* Legends */}
@@ -1057,7 +1503,7 @@ const Mapping = () => {
                           </p>
                           <div className="flex flex-wrap gap-4">
                             <div
-                              key="stagnant"
+                              key="stagnant-water"
                               className="flex items-center space-x-2"
                             >
                               <img
@@ -1071,7 +1517,21 @@ const Mapping = () => {
                             </div>
 
                             <div
-                              key="garbage"
+                              key="standing-water"
+                              className="flex items-center space-x-2"
+                            >
+                              <img
+                                src={standingIcon}
+                                alt="Standing Water"
+                                className="w-6 h-6"
+                              />
+                              <span className="text-xs text-primary">
+                                Standing Water
+                              </span>
+                            </div>
+
+                            <div
+                              key="garbage-trash"
                               className="flex items-center space-x-2"
                             >
                               <img
@@ -1084,7 +1544,7 @@ const Mapping = () => {
                               </span>
                             </div>
                             <div
-                              key="others"
+                              key="others-type"
                               className="flex items-center space-x-2"
                             >
                               <img
@@ -1119,7 +1579,7 @@ const Mapping = () => {
                               </span>
                             </div>
                             <div
-                              key="trapping"
+                              key="trapping-intervention"
                               className="flex items-center space-x-2"
                             >
                               <img
@@ -1132,7 +1592,7 @@ const Mapping = () => {
                               </span>
                             </div>
                             <div
-                              key="cleanup"
+                              key="cleanup-intervention"
                               className="flex items-center space-x-2"
                             >
                               <img
@@ -1145,7 +1605,7 @@ const Mapping = () => {
                               </span>
                             </div>
                             <div
-                              key="education"
+                              key="education-intervention"
                               className="flex items-center space-x-2"
                             >
                               <img
