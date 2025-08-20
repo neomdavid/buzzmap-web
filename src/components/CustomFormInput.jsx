@@ -46,7 +46,7 @@ const CustomFormInput = ({
           ${className}`}
       >
         <input
-          type={ type? type: isPassword && !showPassword ? "password" : "text"}
+          type={isPassword && !showPassword ? "password" : "text"}
           value={value}
           onChange={onChange}
           required={isRequired}

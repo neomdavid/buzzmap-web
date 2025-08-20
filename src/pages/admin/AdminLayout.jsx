@@ -146,10 +146,10 @@ const AdminLayout = () => {
               <List size={23} />
             </button>
           </div>
-
+{/* 
           <div className="">
             <UserCircleIcon />
-          </div>
+          </div> */}
 
           {/* <div className="flex items-center gap-x-4 ml-auto">
             <div className="relative flex items-center">
