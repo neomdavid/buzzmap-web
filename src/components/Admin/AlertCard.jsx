@@ -1,4 +1,6 @@
 import React from 'react';
+import GradientText from '../../../Reactbits/GradientText/GradientText.jsx';
+import { Sparkle } from 'phosphor-react';
 
 // Pattern color mapping for both border and badge
 const PATTERN_COLORS = {
@@ -111,9 +113,18 @@ const AlertCard = ({
               setRecommendationLoading(prev => ({ ...prev, [barangayName]: false }));
             }
           }}
-          className="px-3 py-1.5 bg-white border border-primary text-primary rounded-full hover:bg-primary/5 transition-colors text-sm cursor-pointer"
-        >
-          View Recommendations
+          className={`px-4 py-2 rounded-full text-sm font-semibold  flex gap-2 border border-primary/80  transition-all hover:border-primary hover:border-1.5 duration-300`}
+          >
+
+          <Sparkle size={16} className="text-primary opacity-60" />
+          <GradientText
+  colors={["#245261", "#245261", "#245261", "#F8A900", "#F8A900"]}
+  animationSpeed={6}
+  showBorder={false}
+  className=""
+>
+ View AI Recommendations
+</GradientText>
         </button>
         <button 
           onClick={() => onSelect(title)}

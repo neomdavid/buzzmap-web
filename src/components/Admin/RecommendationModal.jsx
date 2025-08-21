@@ -1,15 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { Thermometer, Drop, Wind, CloudRain, CloudLightning, SunDim, WarningCircle, Clock } from 'phosphor-react';
+import { Thermometer, Drop, Wind, CloudRain, CloudLightning, SunDim, WarningCircle, Clock, Megaphone, FirstAid, Skull } from 'phosphor-react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 // Pattern color mapping for both border and badge
 const PATTERN_COLORS = {
-  spike: { border: 'border-error', badge: 'bg-error' },
-  gradual_rise: { border: 'border-warning', badge: 'bg-warning' },
-  stability: { border: 'border-info', badge: 'bg-info' },
-  decline: { border: 'border-success', badge: 'bg-success' },
-  low_level_activity: { border: 'border-gray-400', badge: 'bg-gray-400' },
-  default: { border: 'border-gray-400', badge: 'bg-gray-400' }
+  spike: { border: 'border-error', badge: 'bg-error', base:'error' },
+  gradual_rise: { border: 'border-warning', badge: 'bg-warning', base:'warning' },
+  stability: { border: 'border-info', badge: 'bg-info' ,base:'info'},
+  decline: { border: 'border-success', badge: 'bg-success', base:'success'  },
+  low_level_activity: { border: 'border-gray-400', badge: 'bg-gray-400', base:'gray-400' },
+  default: { border: 'border-gray-400', badge: 'bg-gray-400', base:'gray-400' }
 };
 
 const getPatternKey = (pattern) => {
@@ -48,20 +49,64 @@ const RecommendationModal = ({
   death_priority,
   aiRecommendations,
   recommendationLoading,
+  recommendationError,
   showDetailedRecommendations,
   setShowDetailedRecommendations,
+  onGenerateRecommendation,
 }) => {
   const borderColor = PATTERN_COLORS[getPatternKey(pattern_based?.status)]?.border || 'border-gray-400';
+  
   const badgeBgClass = borderColor.replace('border-', 'bg-');
+  const textColorClass = borderColor.replace('border-', 'text-');
+  // Pattern badge classes based on the actual pattern value
+  const patternBadgeBorderClass = PATTERN_COLORS[getPatternKey(pattern_data?.pattern)]?.border || 'border-gray-300';
+  const patternBadgeTextClass = patternBadgeBorderClass.replace('border-', 'text-');
+  const patternBadgeDotBgClass = patternBadgeBorderClass.replace('border-', 'bg-');
   const [preview, setPreview] = useState({ visible: false, uri: '', x: 0, y: 0, error: false });
-  const [activeTab, setActiveTab] = useState('recs');
-  const hasWeather = !!(aiRecommendations[barangayName]?.weatherDetails) && !recommendationLoading[barangayName];
+  const loadingMessages = [
+    'Thinking…',
+    'Considering key factors…',
+    `Inspecting  ${barangayName}...`,
+    `Consdering  ${getPatternLabel(pattern_data.pattern).toLowerCase()}...`,
+    'Analyzing weather conditions…',
+    'Checking death-based priority…',
+    'Checking community-based reports...',
+    'Gathering resources…',
+    'Synthesizing action plan…',
+  ];
+  const [loadingMsgIndex, setLoadingMsgIndex] = useState(0);
+  const [showWeatherDetails, setShowWeatherDetails] = useState(false);
+
+  // Normalized recommendation data (supports snake_case and camelCase)
+  const reco = aiRecommendations?.[barangayName] || {};
+  const weather = reco.weather_details || reco.weatherDetails || null;
+  const summary = reco.summary || null;
+  const recommendationHtml = reco.recommendation || null;
+  const analysis = reco.analysis || null;
+  const predictions = reco.predictions || null;
+  const sources = reco.sources || [];
+  const pattern = reco.pattern || pattern_data?.pattern;
+  const reports = (typeof reco.reports === 'number' ? reco.reports : pattern_data?.reports) || 0;
+  const deaths = (typeof reco.deaths === 'number' ? reco.deaths : death_priority?.count) || 0;
+  const riskScores = {
+    weather: reco.weather_risk_score ?? reco.weatherRiskScore ?? null,
+    reports: reco.reports_risk_score ?? reco.reportsRiskScore ?? null,
+    fatalities: reco.fatalities_risk_score ?? reco.fatalitiesRiskScore ?? null,
+  };
+  const availableRiskScores = Object.values(riskScores).filter(v => typeof v === 'number');
+  const overallRisk = availableRiskScores.length
+    ? Math.round(availableRiskScores.reduce((a, b) => a + b, 0) / availableRiskScores.length)
+    : null;
 
   useEffect(() => {
-    if (activeTab === 'weather' && !hasWeather) {
-      setActiveTab('recs');
+    if (recommendationLoading[barangayName]) {
+      setLoadingMsgIndex(0);
+      const id = setInterval(() => {
+        setLoadingMsgIndex((i) => (i + 1) % loadingMessages.length);
+      }, 4000);
+      return () => clearInterval(id);
     }
-  }, [activeTab, hasWeather]);
+  }, [recommendationLoading[barangayName], barangayName]);
 
   return (
     <>
@@ -74,85 +119,216 @@ const RecommendationModal = ({
           ✕
         </button>
 
-        <p className="text-center text-3xl font-bold mb-6 text-primary">Recommendations</p>
-        <p className="text-left text-2xl font-bold mb-6">
-          For <span className={`text-white px-4 py-1 font-normal text-xl font-semibold ml-1 rounded-full ${badgeBgClass}`}>
+        <p className="text-center text-3xl font-bold mb-3 text-primary">AI-Powered Recommendations</p>
+        <p className="text-center text-2xl font-bold mb-5">
+           <span className={`text-white px-4 py-1 font-normal text-xl font-semibold ml-1 rounded-full ${badgeBgClass}`}>
             {barangayName}
           </span>
         </p>
         
         {/* Stats Badges in Modal */}
         <div className="flex flex-wrap gap-3 mb-6 justify-center">
-          {/* Pattern Badge */}
+          {/* Pattern Badge - white background, colored border/text */}
           {pattern_data?.pattern && (
-            <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-white text-sm font-semibold ${badgeBgClass}`}>
-              <span className="w-2 h-2 rounded-full bg-white/30"></span>
+            <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white text-xs font-normal border ${patternBadgeBorderClass} ${patternBadgeTextClass}`}>
+              <span className={`w-2 h-2 rounded-full ${patternBadgeDotBgClass}`}></span>
               {getPatternLabel(pattern_data.pattern)}
             </div>
           )}
           
-          {/* Reports Badge */}
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-blue-500 text-white text-sm font-semibold">
-            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-              <path fillRule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z" clipRule="evenodd" />
-            </svg>
+          {/* Reports Badge - white background */}
+          <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white border border-primary text-primary text-xs font-normal">
+           <Megaphone size={14}/>
             {pattern_data?.reports || 0} Reports
           </div>
           
-          {/* Deaths/Fatality Badge */}
+          {/* Deaths/Fatality Badge - white background */}
           {death_priority?.count > 0 && (
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-red-500 text-white text-sm font-semibold">
-              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-6-3a2 2 0 11-4 0 2 2 0 014 0zm-2 4a5 5 0 00-4.546 2.916A5.986 5.986 0 0010 16a5.986 5.986 0 004.546-2.084A5 5 0 0010 11z" clipRule="evenodd" />
-              </svg>
-              {death_priority.count} Fatality{death_priority.count === 1 ? '' : 'ies'}
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white border border-red-500 text-red-600 text-xs font-normal">
+              <Skull size={14}  />
+              {death_priority.count} {death_priority.count === 1 ? 'Fatality' : 'Fatalities'}
             </div>
           )}
         </div>
         
         <hr className="text-accent/50 mb-6" />
 
-        <div className="flex justify-center mb-6 gap-2">
-          <button
-            className={`px-4 py-2 rounded-full text-sm font-semibold border ${activeTab === 'recs' ? 'bg-primary text-white border-primary' : 'bg-white text-primary border-primary/40 hover:bg-primary/5'}`}
-            onClick={() => setActiveTab('recs')}
-          >
-            Recommendations
-          </button>
-          {hasWeather && (
-            <button
-              className={`px-4 py-2 rounded-full text-sm font-semibold border ${activeTab === 'weather' ? 'bg-primary text-white border-primary' : 'bg-white text-primary border-primary/40 hover:bg-primary/5'}`}
-              onClick={() => setActiveTab('weather')}
-            >
-              Weather Details
-            </button>
-          )}
-        </div>
+        
 
-        {activeTab === 'recs' && (
         <div className="max-h-[60vh] overflow-y-auto">
-          {/* AI Recommendations Section */}
-          <p className="text-xl font-semibold mb-4 text-primary">AI-Powered Recommendations</p>
-          
+
           {recommendationLoading[barangayName] && (
-            <div className="flex items-center justify-center p-8">
-              <span className="loading loading-spinner loading-lg text-primary mr-3"></span>
-              <span className="text-gray-600 text-lg">Generating AI recommendations...</span>
+            <div className="flex flex-col items-center justify-center p-8 gap-2">
+              <div className="flex items-center">
+                <span className="loading loading-spinner loading-lg text-primary mr-3"></span>
+                <span className="text-gray-700 text-lg font-medium">Generating AI recommendations…</span>
+              </div>
+              <div className="text-gray-500 text-sm">{loadingMessages[loadingMsgIndex]}</div>
             </div>
           )}
 
-          {aiRecommendations[barangayName] && !recommendationLoading[barangayName] && (
+          {recommendationError?.[barangayName] && !recommendationLoading[barangayName] && (
+            <div className="p-4 rounded-lg border border-red-200 bg-red-50 text-red-700">
+              <div className="flex items-start gap-2">
+                <WarningCircle size={18} className="mt-0.5" />
+                <div>
+                  <div className="font-semibold mb-1">Failed to generate AI recommendations</div>
+                  <div className="text-sm mb-3">{String(recommendationError[barangayName])}</div>
+                  <button
+                    className="btn btn-xs btn-error text-white"
+                    onClick={() => onGenerateRecommendation?.(barangayName)}
+                  >
+                    Retry
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {Object.keys(reco).length > 0 && !recommendationLoading[barangayName] && (
             <div className="space-y-4">
               {/* Summary - Always visible */}
-              {aiRecommendations[barangayName].summary && (
+              {summary && (
                 <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
                   <h4 className="font-semibold text-lg mb-2 text-gray-800">Summary</h4>
-                  <p className="text-gray-700">{aiRecommendations[barangayName].summary}</p>
+                  <p className="text-gray-700">{summary}</p>
+                </div>
+              )}
+
+              {/* Risk Assessment (compact) */}
+              {(overallRisk !== null || availableRiskScores.length > 0) && (
+                <div className="p-4 bg-rose-50 rounded-lg border border-rose-200">
+                  <div className="flex items-center">
+                    <h4 className="font-semibold text-lg text-rose-800">Risk Assessment</h4>
+                  </div>
+                  <div className="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    {overallRisk !== null && (
+                      <div className="p-3 rounded-lg border border-rose-200 bg-white">
+                        <div className="text-[11px] uppercase tracking-wide text-rose-600 mb-1">Overall Risk</div>
+                        <div className="flex items-center gap-3">
+                          <div className="h-2 flex-1 bg-rose-100 rounded">
+                            <div className="h-2 rounded bg-rose-500" style={{ width: `${Math.min(100, (overallRisk/10)*100)}%` }} />
+                          </div>
+                          <div className="text-rose-800 font-semibold text-sm w-8 text-right">{overallRisk}/10</div>
+                        </div>
+                      </div>
+                    )}
+                    {typeof riskScores.weather === 'number' && (
+                      <div className="p-3 rounded-lg border border-blue-200 bg-white">
+                        <div className="text-[11px] uppercase tracking-wide text-blue-600 mb-1">Weather</div>
+                        <div className="flex items-center gap-3">
+                          <div className="h-2 flex-1 bg-blue-100 rounded">
+                            <div className="h-2 rounded bg-blue-500" style={{ width: `${Math.min(100, (riskScores.weather/10)*100)}%` }} />
+                          </div>
+                          <div className="text-blue-800 font-semibold text-sm w-8 text-right">{riskScores.weather}/10</div>
+                        </div>
+                      </div>
+                    )}
+                    {typeof riskScores.reports === 'number' && (
+                      <div className="p-3 rounded-lg border border-amber-200 bg-white">
+                        <div className="text-[11px] uppercase tracking-wide text-amber-600 mb-1">Reports</div>
+                        <div className="flex items-center gap-3">
+                          <div className="h-2 flex-1 bg-amber-100 rounded">
+                            <div className="h-2 rounded bg-amber-500" style={{ width: `${Math.min(100, (riskScores.reports/10)*100)}%` }} />
+                          </div>
+                          <div className="text-amber-800 font-semibold text-sm w-8 text-right">{riskScores.reports}/10</div>
+                        </div>
+                      </div>
+                    )}
+                    {typeof riskScores.fatalities === 'number' && (
+                      <div className="p-3 rounded-lg border border-red-200 bg-white">
+                        <div className="text-[11px] uppercase tracking-wide text-red-600 mb-1">Fatalities</div>
+                        <div className="flex items-center gap-3">
+                          <div className="h-2 flex-1 bg-red-100 rounded">
+                            <div className="h-2 rounded bg-red-500" style={{ width: `${Math.min(100, (riskScores.fatalities/10)*100)}%` }} />
+                          </div>
+                          <div className="text-red-800 font-semibold text-sm w-8 text-right">{riskScores.fatalities}/10</div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Weather - compact summary with expandable details */}
+              {weather && (
+                <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+                  <div className="flex items-center justify-between mb-1">
+                    <h4 className="font-semibold text-lg text-blue-800">Weather</h4>
+                    <button onClick={() => setShowWeatherDetails(v => !v)} className="btn btn-xs btn-outline btn-ghost text-blue-800">
+                      {showWeatherDetails ? 'Hide' : 'View'} details
+                    </button>
+                  </div>
+                  {(() => {
+                    const w = weather;
+                    const verdict = w.verdict;
+                    const verdictClass = verdict?.toLowerCase().includes('high')
+                      ? 'bg-red-50 border-red-200 text-red-800'
+                      : verdict?.toLowerCase().includes('moderate')
+                      ? 'bg-yellow-50 border-yellow-200 text-yellow-800'
+                      : 'bg-green-50 border-green-200 text-green-800';
+                    const compact = [
+                      { label: 'Temp', value: w.temperature, icon: <Thermometer size={14} className="text-gray-500" /> },
+                      { label: 'Humidity', value: w.humidity, icon: <Drop size={14} className="text-gray-500" /> },
+                      { label: 'Chance of Rain', value: w.chance_of_rain, icon: <CloudRain size={14} className="text-gray-500" /> },
+                      { label: 'Condition', value: w.condition, icon: <CloudLightning size={14} className="text-gray-500" /> },
+                    ].filter(i => i.value).slice(0, 3);
+                    return (
+                      <div className="space-y-3">
+                        {verdict && (
+                          <div className={`p-3 rounded-lg border ${verdictClass}`}>
+                            <div className="flex items-start gap-2">
+                              <WarningCircle size={18} className="mt-0.5" />
+                              <div>
+                                <div className="text-sm font-semibold mb-1">AI Insights</div>
+                                <div className="text-sm leading-relaxed">{verdict}</div>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                        <div className="flex flex-wrap gap-2">
+                          {compact.map((it, idx) => (
+                            <div key={idx} className="px-3 py-1.5 rounded-full bg-white border border-gray-200 text-sm text-gray-800 inline-flex items-center gap-2">
+                              {it.icon}
+                              <span className="text-gray-500 text-xs">{it.label}:</span>
+                              <span className="font-semibold">{it.value}</span>
+                            </div>
+                          ))}
+                        </div>
+                        <AnimatePresence initial={false}>
+                          {showWeatherDetails && (
+                            <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.25 }} className="overflow-hidden">
+                              <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                {[
+                                  { label: 'Date & Time', value: w.date_and_time, icon: <Clock size={16} className="text-gray-500" /> },
+                                  { label: 'Temperature', value: w.temperature, icon: <Thermometer size={16} className="text-gray-500" /> },
+                                  { label: 'Humidity', value: w.humidity, icon: <Drop size={16} className="text-gray-500" /> },
+                                  { label: 'Wind Speed', value: w.wind_speed, icon: <Wind size={16} className="text-gray-500" /> },
+                                  { label: 'Precipitation', value: w.precipitation_level, icon: <CloudRain size={16} className="text-gray-500" /> },
+                                  { label: 'Chance of Rain', value: w.chance_of_rain, icon: <CloudRain size={16} className="text-gray-500" /> },
+                                  { label: 'Condition', value: w.condition, icon: <CloudLightning size={16} className="text-gray-500" /> },
+                                  { label: 'UV Index', value: w.others?.uv_index ?? w.others?.realfeel_heat_index, icon: <SunDim size={16} className="text-gray-500" /> },
+                                ].filter(it => it.value).map((it, idx) => (
+                                  <div key={idx} className="p-3 rounded-lg border border-gray-200 bg-white flex items-start gap-2">
+                                    <div className="mt-0.5">{it.icon}</div>
+                                    <div>
+                                      <div className="text-[11px] uppercase tracking-wide text-gray-500 mb-0.5">{it.label}</div>
+                                      <div className="text-gray-800 font-semibold text-sm">{it.value}</div>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                      </div>
+                    );
+                  })()}
                 </div>
               )}
 
               {/* View Detailed Recommendations Button */}
-              {aiRecommendations[barangayName].recommendation && (
+              {recommendationHtml && (
                 <div className="text-center">
                   <button
                     onClick={() => setShowDetailedRecommendations(prev => !prev)}
@@ -164,7 +340,7 @@ const RecommendationModal = ({
               )}
 
               {/* Detailed Content - Conditionally visible */}
-              {showDetailedRecommendations && aiRecommendations[barangayName].recommendation && (
+              {showDetailedRecommendations && recommendationHtml && (
                 <div className="space-y-4">
                   {/* Main Recommendation */}
                   <div className="p-4 bg-white rounded-lg border border-gray-200">
@@ -172,30 +348,43 @@ const RecommendationModal = ({
                     <div 
                       className="text-gray-700 prose prose-sm max-w-none"
                       dangerouslySetInnerHTML={{
-                        __html: aiRecommendations[barangayName].recommendation
+                        __html: recommendationHtml
                           .replace(/\r\n/g, '\n')
-                          // Treat two or more newlines as paragraph breaks
                           .replace(/\n{2,}/g, '<br><br>')
-                          // Ensure section headings like "Day 1:", "Day 2:" start on a new paragraph
                           .replace(/([.!?])\s*(Day\s\d+:)/g, '$1<br><br>$2')
-                          // Collapse single newlines into a single space to prevent unintended line breaks
                           .replace(/(?<!<br>)\n(?!<br>)/g, ' ')
                           .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
                           .replace(/\*(.*?)\*/g, '<em>$1</em>')
-                          // Numeric inline citations -> IEEE style [1] with proper spacing and alignment
                           .replace(/\[(\d+)\]\((https?:\/\/[^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer" class="inline-block align-middle mx-1 text-primary font-semibold hover:underline">[$1]<\/a>')
-                          // General markdown links
                           .replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer" class="text-primary hover:underline">$1<\/a>')
                       }}
                     />
                   </div>
 
+                  {/* Analysis and Predictions (optional) */}
+                  {(analysis || predictions) && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {analysis && (
+                        <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+                          <h4 className="font-semibold text-lg mb-2 text-gray-800">Analysis</h4>
+                          <p className="text-gray-700 whitespace-pre-line">{analysis}</p>
+                        </div>
+                      )}
+                      {predictions && (
+                        <div className="p-4 bg-indigo-50 rounded-lg border border-indigo-200">
+                          <h4 className="font-semibold text-lg mb-2 text-indigo-800">Predictions</h4>
+                          <p className="text-indigo-900 whitespace-pre-line">{predictions}</p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
                   {/* Key Factors */}
-                  {aiRecommendations[barangayName].factors && aiRecommendations[barangayName].factors.length > 0 && (
+                  {reco.factors && reco.factors.length > 0 && (
                     <div className="p-4 bg-yellow-50 rounded-lg border border-yellow-200">
                       <h4 className="font-semibold text-lg mb-2 text-yellow-800">Key Factors Considered</h4>
                       <ul className="list-disc list-inside space-y-1">
-                        {aiRecommendations[barangayName].factors.map((factor, index) => (
+                        {reco.factors.map((factor, index) => (
                           <li key={index} className="text-yellow-700">{factor}</li>
                         ))}
                       </ul>
@@ -203,11 +392,11 @@ const RecommendationModal = ({
                   )}
 
                   {/* Sources as badges with hover preview (via fixed portal) */}
-                  {aiRecommendations[barangayName].sources && aiRecommendations[barangayName].sources.length > 0 && (
+                  {sources && sources.length > 0 && (
                     <div className="p-4 bg-green-50 rounded-lg border border-green-200">
                       <h4 className="font-semibold text-lg mb-2 text-green-800">Sources</h4>
                       <div className="flex flex-wrap gap-2">
-                        {aiRecommendations[barangayName].sources.map((source, index) => (
+                        {sources.map((source, index) => (
                           <a
                             key={index}
                             href={source.uri}
@@ -245,64 +434,8 @@ const RecommendationModal = ({
             </div>
           )}
         </div>
-        )}
 
-        {activeTab === 'weather' && (
-          <div className="max-h-[60vh] overflow-y-auto">
-            <p className="text-xl font-semibold text-primary">Weather Details</p>
-            {aiRecommendations[barangayName]?.weatherDetails ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
-                {(() => {
-                  const w = aiRecommendations[barangayName].weatherDetails;
-                  const verdict = w.verdict;
-                  const verdictClass = verdict?.toLowerCase().includes('high')
-                    ? 'bg-red-50 border-red-200 text-red-800'
-                    : verdict?.toLowerCase().includes('moderate')
-                    ? 'bg-yellow-50 border-yellow-200 text-yellow-800'
-                    : 'bg-green-50 border-green-200 text-green-800';
-
-                  const items = [
-                    { label: 'Date & Time', value: w.date_and_time, icon: <Clock size={18} className="text-gray-500" /> },
-                    { label: 'Temperature', value: w.temperature, icon: <Thermometer size={18} className="text-gray-500" /> },
-                    { label: 'Humidity', value: w.humidity, icon: <Drop size={18} className="text-gray-500" /> },
-                    { label: 'Wind Speed', value: w.wind_speed, icon: <Wind size={18} className="text-gray-500" /> },
-                    { label: 'Precipitation', value: w.precipitation_level, icon: <CloudRain size={18} className="text-gray-500" /> },
-                    { label: 'Chance of Rain', value: w.chance_of_rain, icon: <CloudRain size={18} className="text-gray-500" /> },
-                    { label: 'Condition', value: w.condition, icon: <CloudLightning size={18} className="text-gray-500" /> },
-                    { label: 'Heat Index', value: w.others?.realfeel_heat_index, icon: <SunDim size={18} className="text-gray-500" /> },
-                  ].filter(it => it.value);
-
-                  return (
-                    <>
-                      {verdict && (
-                        <div className={`sm:col-span-2 p-4 rounded-lg border ${verdictClass}`}>
-                          <div className="flex items-start gap-2">
-                            <WarningCircle size={20} className="mt-0.5" />
-                            <div>
-                              <div className="text-sm font-semibold mb-1">AI Insights</div>
-                              <div className="text-sm leading-relaxed">{verdict}</div>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                      {items.map((it, idx) => (
-                        <div key={idx} className="p-4 rounded-lg border border-gray-200 bg-white flex items-start gap-3">
-                          <div className="mt-0.5">{it.icon}</div>
-                          <div>
-                            <div className="text-xs uppercase tracking-wide text-gray-500 mb-1">{it.label}</div>
-                            <div className="text-gray-800 font-semibold">{it.value}</div>
-                          </div>
-                        </div>
-                      ))}
-                    </>
-                  );
-                })()}
-              </div>
-            ) : (
-              <div className="text-gray-500">No weather details provided.</div>
-            )}
-          </div>
-        )}
+        
 
         <div className="modal-action mt-8">
           <form method="dialog">

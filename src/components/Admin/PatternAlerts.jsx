@@ -12,6 +12,7 @@ export default function PatternAlerts({ selectedBarangay, selectedTab, onAlertSe
   // State for AI recommendations
   const [aiRecommendations, setAiRecommendations] = useState({});
   const [recommendationLoading, setRecommendationLoading] = useState({});
+  const [recommendationError, setRecommendationError] = useState({});
   const [showDetailedRecommendations, setShowDetailedRecommendations] = useState(false);
 
   // Function to generate AI recommendation for a barangay
@@ -21,6 +22,7 @@ export default function PatternAlerts({ selectedBarangay, selectedTab, onAlertSe
     }
 
     setRecommendationLoading(prev => ({ ...prev, [barangayName]: true }));
+    setRecommendationError(prev => ({ ...prev, [barangayName]: null }));
     setShowDetailedRecommendations(false); // Reset to show summary only
     
     try {
@@ -38,6 +40,8 @@ export default function PatternAlerts({ selectedBarangay, selectedTab, onAlertSe
       }
     } catch (error) {
       console.error("Failed to generate recommendation:", error);
+      const message = error?.data?.message || error?.error || error?.message || 'Unknown error';
+      setRecommendationError(prev => ({ ...prev, [barangayName]: message }));
     } finally {
       setRecommendationLoading(prev => ({ ...prev, [barangayName]: false }));
     }
@@ -179,8 +183,10 @@ export default function PatternAlerts({ selectedBarangay, selectedTab, onAlertSe
                 death_priority={barangayData?.status_and_recommendation?.death_priority}
                 aiRecommendations={aiRecommendations}
                 recommendationLoading={recommendationLoading}
+                recommendationError={recommendationError}
                 showDetailedRecommendations={showDetailedRecommendations}
                 setShowDetailedRecommendations={setShowDetailedRecommendations}
+                onGenerateRecommendation={handleGenerateRecommendation}
               />
             </div>
           );
