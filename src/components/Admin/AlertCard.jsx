@@ -1,26 +1,125 @@
+import React from 'react';
+
+// Pattern color mapping for both border and badge
+const PATTERN_COLORS = {
+  spike: { border: 'border-error', badge: 'bg-error' },
+  gradual_rise: { border: 'border-warning', badge: 'bg-warning' },
+  stability: { border: 'border-info', badge: 'bg-info' },
+  decline: { border: 'border-success', badge: 'bg-success' },
+  low_level_activity: { border: 'border-gray-400', badge: 'bg-gray-400' },
+  default: { border: 'border-gray-400', badge: 'bg-gray-400' }
+};
+
+const getPatternKey = (pattern) => {
+  if (!pattern) return 'default';
+  const p = pattern.trim().toLowerCase();
+  if (p === 'spike') return 'spike';
+  if (p === 'gradual_rise') return 'gradual_rise';
+  if (p === 'stability') return 'stability';
+  if (p === 'decline') return 'decline';
+  if (p === 'low_level_activity') return 'low_level_activity';
+  return 'default';
+};
+
 const AlertCard = ({
   title,
-  messages = [],
-  borderColor = "border-error",
-  bgColor = "bg-error",
+  pattern_based,
+  report_based,
+  death_priority,
+  pattern_data,
+  last_analysis_time,
+  barangayName,
+  onSelect,
+  onGenerateRecommendation,
+  setRecommendationLoading,
+  recommendationLoading,
+  aiRecommendations,
 }) => {
+  const getPatternBadgeColor = (pattern) => {
+    if (!pattern) return 'border-gray-300';
+    switch (pattern.toLowerCase()) {
+      case 'spike':
+        return 'border-error';
+      case 'gradual_rise':
+        return 'border-warning';
+      case 'stability':
+        return 'border-info';
+      case 'decline':
+        return 'border-success';
+      case 'low_level_activity':
+        return 'border-gray-300';
+      default:
+        return 'border-gray-300';
+    }
+  };
+
+  const getPatternLabel = (pattern) => {
+    if (!pattern) return 'No Pattern';
+    switch (pattern.toLowerCase()) {
+      case 'spike':
+        return 'Spike';
+      case 'gradual_rise':
+        return 'Gradual Rise';
+      case 'stability':
+        return 'Stability';
+      case 'decline':
+        return 'Decline';
+      case 'low_level_activity':
+        return 'Low Level Activity';
+      default:
+        return 'No Pattern';
+    }
+  };
+
+  const borderColor = getPatternBadgeColor(pattern_data?.pattern);
+  const badgeBgClass = borderColor.replace('border-', 'bg-');
+
   return (
-    <div
-      className={`relative border-[2px] ${borderColor} rounded-4xl p-4 pt-10 text-black`}
-    >
-      <p
-        className={`absolute text-lg left-[-2px] top-[-6px] text-nowrap ${bgColor} rounded-2xl font-semibold text-white p-1 px-4`}
-      >
+    <div className={`relative border-[2px] ${borderColor} rounded-4xl p-4 pt-10 text-black`}>
+      <p className={`absolute text-lg left-[-2px] top-[-6px] text-nowrap ${badgeBgClass} rounded-2xl font-semibold text-white p-1 px-4`}>
         {title}
       </p>
-      {messages.map((msg, index) => (
-        <p key={index}>
-          <span className="font-bold">{msg.label}</span> {msg.text}
-        </p>
-      ))}
-      <div className="flex justify-end mt-1">
-        <button className="text-xs text-nowrap bg-base-content text-white font-light px-4 py-2 rounded-full transition-all duration-200 hover:brightness-110 active:scale-95">
-          View Details
+
+      {/* Pattern display */}
+      {pattern_data?.pattern && (
+        <div className="mb-2">
+          <span className="font-bold">Pattern:</span> {getPatternLabel(pattern_data.pattern)}
+        </div>
+      )}
+
+      {/* Stats badges removed from card. Shown in modal only. */}
+
+      {/* Last analysis time */}
+      {last_analysis_time && (
+        <div className="mb-2 pt-2 border-t border-gray-200">
+          <span className="font-bold mb-1 text-base-content text-lg">Last Analyzed:</span> {new Date(last_analysis_time).toLocaleString()}
+        </div>
+      )}
+
+      <div className="flex justify-end gap-2 mt-1">
+        <button
+          onClick={() => {
+            // Set loading state immediately and open modal
+            setRecommendationLoading(prev => ({ ...prev, [barangayName]: true }));
+            document.getElementById(`recommendations_modal_${barangayName}`).showModal();
+            
+            // Generate AI recommendation if not already generated
+            if (!aiRecommendations[barangayName]) {
+              onGenerateRecommendation(barangayName);
+            } else {
+              // If already generated, just stop loading
+              setRecommendationLoading(prev => ({ ...prev, [barangayName]: false }));
+            }
+          }}
+          className="px-3 py-1.5 bg-white border border-primary text-primary rounded-full hover:bg-primary/5 transition-colors text-sm cursor-pointer"
+        >
+          View Recommendations
+        </button>
+        <button 
+          onClick={() => onSelect(title)}
+          className="px-3 py-1.5 bg-primary text-white rounded-full hover:bg-primary/90 transition-colors text-sm cursor-pointer"
+        >
+          Select
         </button>
       </div>
     </div>
