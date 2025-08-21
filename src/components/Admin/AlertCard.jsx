@@ -1,6 +1,6 @@
 import React from 'react';
 import GradientText from '../../../Reactbits/GradientText/GradientText.jsx';
-import { Sparkle } from 'phosphor-react';
+import { Sparkle, Megaphone, Skull } from 'phosphor-react';
 
 // Pattern color mapping for both border and badge
 const PATTERN_COLORS = {
@@ -89,7 +89,25 @@ const AlertCard = ({
         </div>
       )}
 
-      {/* Stats badges removed from card. Shown in modal only. */}
+      {/* Counts (from route data, not AI) */}
+      {(typeof report_based?.count === 'number' || (typeof death_priority?.count === 'number' && death_priority.count > 0)) && (
+        <div className="flex flex-wrap gap-2 mb-2">
+          {typeof report_based?.count === 'number' && (
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white border border-primary text-primary text-xs font-medium">
+              <Megaphone size={14} />
+              <span className="font-semibold">{report_based.count}</span>
+              <span className="opacity-70">Reports</span>
+            </div>
+          )}
+          {typeof death_priority?.count === 'number' && death_priority.count > 0 && (
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white border border-red-500 text-red-600 text-xs font-medium">
+              <Skull size={14} />
+              <span className="font-semibold">{death_priority.count}</span>
+              <span className="opacity-70">{death_priority.count === 1 ? 'Death' : 'Deaths'}</span>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Last analysis time */}
       {last_analysis_time && (

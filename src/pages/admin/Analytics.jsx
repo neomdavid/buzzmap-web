@@ -588,7 +588,7 @@ const Analytics = () => {
           <p className="text-base-content text-xl font-semibold mb-6">
             Barangay Dengue Risk and Case Density Map
           </p>
-          <div className="rounded-xl shadow-sm h-140 overflow-hidden relative bg-gray-100">
+          <div className="rounded-xl shadow-sm h-140 overflow-hidden min-h-250 relative bg-gray-100">
             {isLoadingBarangays ? (
               <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
                 <span className="loading loading-spinner loading-lg text-primary"></span>

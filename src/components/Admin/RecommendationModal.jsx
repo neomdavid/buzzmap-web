@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { Thermometer, Drop, Wind, CloudRain, CloudLightning, SunDim, WarningCircle, Clock, Megaphone, FirstAid, Skull } from 'phosphor-react';
+import { Thermometer, Drop, Wind, CloudRain, CloudLightning, SunDim, WarningCircle, Clock, Megaphone, FirstAid, Skull, Sparkle, MagnifyingGlass, Lightbulb } from 'phosphor-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 // Pattern color mapping for both border and badge
@@ -76,6 +76,8 @@ const RecommendationModal = ({
   ];
   const [loadingMsgIndex, setLoadingMsgIndex] = useState(0);
   const [showWeatherDetails, setShowWeatherDetails] = useState(false);
+  const [showAnalysisDetails, setShowAnalysisDetails] = useState(false);
+  const [showPredictionDetails, setShowPredictionDetails] = useState(false);
 
   // Normalized recommendation data (supports snake_case and camelCase)
   const reco = aiRecommendations?.[barangayName] || {};
@@ -93,10 +95,72 @@ const RecommendationModal = ({
     reports: reco.reports_risk_score ?? reco.reportsRiskScore ?? null,
     fatalities: reco.fatalities_risk_score ?? reco.fatalitiesRiskScore ?? null,
   };
-  const availableRiskScores = Object.values(riskScores).filter(v => typeof v === 'number');
+  const availableRiskScores = Object.values(riskScores).filter(v => v !== null);
   const overallRisk = availableRiskScores.length
-    ? Math.round(availableRiskScores.reduce((a, b) => a + b, 0) / availableRiskScores.length)
+    ? Math.round(availableRiskScores.reduce((a, b) => {
+        const scoreA = typeof a === 'object' ? a.score : a;
+        const scoreB = typeof b === 'object' ? b.score : b;
+        return scoreA + scoreB;
+      }, 0) / availableRiskScores.length)
     : null;
+
+  // Helper function to convert markdown recommendations to HTML
+  const convertRecommendationsToHtml = (text) => {
+    if (!text) return '';
+    
+    // Split into lines and process each line
+    const lines = text.split('\n');
+    let html = '';
+    let inList = false;
+    
+    lines.forEach((line, index) => {
+      const trimmedLine = line.trim();
+      
+      // Check if line starts with a bullet point
+      if (trimmedLine.startsWith('*')) {
+        // Start list if not already in one
+        if (!inList) {
+          html += '<ul class="list-disc list-inside space-y-2 mb-4">';
+          inList = true;
+        }
+        
+        // Convert markdown to HTML
+        const content = trimmedLine
+          .replace(/^\*\s+/, '') // Remove the * and spaces
+          .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') // Bold text
+          .replace(/\*(.*?)\*/g, '<em>$1</em>'); // Italic text
+        
+        html += `<li>${content}</li>`;
+      } else if (trimmedLine === '') {
+        // Empty line - end list if we were in one
+        if (inList) {
+          html += '</ul>';
+          inList = false;
+        }
+        html += '<br>';
+      } else {
+        // Regular text line - end list if we were in one
+        if (inList) {
+          html += '</ul>';
+          inList = false;
+        }
+        
+        // Process regular text
+        const processedLine = trimmedLine
+          .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+          .replace(/\*(.*?)\*/g, '<em>$1</em>');
+        
+        html += `<p class="mb-2">${processedLine}</p>`;
+      }
+    });
+    
+    // Close any open list
+    if (inList) {
+      html += '</ul>';
+    }
+    
+    return html;
+  };
 
   useEffect(() => {
     if (recommendationLoading[barangayName]) {
@@ -111,7 +175,7 @@ const RecommendationModal = ({
   return (
     <>
     <dialog id={`recommendations_modal_${barangayName}`} className="modal">
-      <div className={`modal-box bg-white rounded-4xl shadow-2xl w-11/12 max-w-5xl p-12 relative border-3 ${borderColor}`}>
+      <div className={`modal-box bg-white rounded-4xl shadow-2xl w-11/12 max-w-5xl p-12 relative}`}>
         <button
           className="absolute top-10 right-10 text-2xl font-semibold hover:text-gray-500 transition-colors duration-200 hover:cursor-pointer"
           onClick={() => document.getElementById(`recommendations_modal_${barangayName}`).close()}
@@ -119,10 +183,13 @@ const RecommendationModal = ({
           ✕
         </button>
 
-        <p className="text-center text-3xl font-bold mb-3 text-primary">AI-Powered Recommendations</p>
+        <div className='flex gap-2 items-center justify-center mb-3'>
+          <Sparkle size={20} className='text-primary' weight='bold' />
+        <p className="text-center text-3xl font-bold text-primary">AI-Powered Recommendations</p>
+        </div>
         <p className="text-center text-2xl font-bold mb-5">
-           <span className={`text-white px-4 py-1 font-normal text-xl font-semibold ml-1 rounded-full ${badgeBgClass}`}>
-            {barangayName}
+           <span className={`text-white text-center px-4 py-1 font-normal text-xl font-semibold ml-1 rounded-full ${badgeBgClass}`}>
+            Barangay {barangayName}
           </span>
         </p>
         
@@ -130,21 +197,21 @@ const RecommendationModal = ({
         <div className="flex flex-wrap gap-3 mb-6 justify-center">
           {/* Pattern Badge - white background, colored border/text */}
           {pattern_data?.pattern && (
-            <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white text-xs font-normal border ${patternBadgeBorderClass} ${patternBadgeTextClass}`}>
+            <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white text-sm font-normal border ${patternBadgeBorderClass} ${patternBadgeTextClass}`}>
               <span className={`w-2 h-2 rounded-full ${patternBadgeDotBgClass}`}></span>
               {getPatternLabel(pattern_data.pattern)}
             </div>
           )}
           
           {/* Reports Badge - white background */}
-          <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white border border-primary text-primary text-xs font-normal">
+          <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white border border-primary text-primary text-sm font-normal">
            <Megaphone size={14}/>
             {pattern_data?.reports || 0} Reports
           </div>
           
           {/* Deaths/Fatality Badge - white background */}
           {death_priority?.count > 0 && (
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white border border-red-500 text-red-600 text-xs font-normal">
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white border border-red-500 text-red-600 text-sm font-normal">
               <Skull size={14}  />
               {death_priority.count} {death_priority.count === 1 ? 'Fatality' : 'Fatalities'}
             </div>
@@ -189,61 +256,95 @@ const RecommendationModal = ({
             <div className="space-y-4">
               {/* Summary - Always visible */}
               {summary && (
-                <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
-                  <h4 className="font-semibold text-lg mb-2 text-gray-800">Summary</h4>
-                  <p className="text-gray-700">{summary}</p>
+                <div className="p-4 bg-base-300/60 rounded-lg">
+                  <h4 className="font-semibold  mb-2 text-primary text-2xl font-bold">Brief Insight</h4>
+                  <p className="text-primary text-md">{summary}</p>
                 </div>
               )}
 
               {/* Risk Assessment (compact) */}
-              {(overallRisk !== null || availableRiskScores.length > 0) && (
-                <div className="p-4 bg-rose-50 rounded-lg border border-rose-200">
+              {availableRiskScores.length > 0 && (
+                <div className="p-4 bg-primary rounded-lg border border-rose-200">
                   <div className="flex items-center">
-                    <h4 className="font-semibold text-lg text-rose-800">Risk Assessment</h4>
+                    <h4 className="font-semibold text-2xl text-white">Risk Assessment</h4>
                   </div>
                   <div className="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    {overallRisk !== null && (
-                      <div className="p-3 rounded-lg border border-rose-200 bg-white">
-                        <div className="text-[11px] uppercase tracking-wide text-rose-600 mb-1">Overall Risk</div>
-                        <div className="flex items-center gap-3">
-                          <div className="h-2 flex-1 bg-rose-100 rounded">
-                            <div className="h-2 rounded bg-rose-500" style={{ width: `${Math.min(100, (overallRisk/10)*100)}%` }} />
-                          </div>
-                          <div className="text-rose-800 font-semibold text-sm w-8 text-right">{overallRisk}/10</div>
+                    {riskScores.weather && (
+                      <div 
+                        className="p-3 rounded-lg border border-blue-200 bg-white cursor-help relative group"
+                        title={typeof riskScores.weather === 'object' && riskScores.weather.reason ? riskScores.weather.reason : ''}
+                      >
+                        <div className="flex items-center gap-2 mb-1">
+                          <Thermometer size={16} className="text-blue-600" />
+                          <div className="text-[10px] uppercase font-semibold tracking-wide text-blue-600">Weather</div>
                         </div>
-                      </div>
-                    )}
-                    {typeof riskScores.weather === 'number' && (
-                      <div className="p-3 rounded-lg border border-blue-200 bg-white">
-                        <div className="text-[11px] uppercase tracking-wide text-blue-600 mb-1">Weather</div>
                         <div className="flex items-center gap-3">
                           <div className="h-2 flex-1 bg-blue-100 rounded">
-                            <div className="h-2 rounded bg-blue-500" style={{ width: `${Math.min(100, (riskScores.weather/10)*100)}%` }} />
+                            <div className="h-2 rounded bg-blue-500" style={{ width: `${Math.min(100, ((typeof riskScores.weather === 'object' ? riskScores.weather.score : riskScores.weather)/10)*100)}%` }} />
                           </div>
-                          <div className="text-blue-800 font-semibold text-sm w-8 text-right">{riskScores.weather}/10</div>
+                          <div className="text-blue-800 font-semibold text-sm w-8 text-right">
+                            {typeof riskScores.weather === 'object' ? riskScores.weather.score : riskScores.weather}/10
+                          </div>
                         </div>
+                        {/* Hover tooltip */}
+                        {typeof riskScores.weather === 'object' && riskScores.weather.reason && (
+                          <div className="absolute top-full left-0 right-0 mt-2 px-4 py-3 bg-gray-900 text-white text-sm rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-10 text-left">
+                            {riskScores.weather.reason}
+                            <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-b-4 border-transparent border-b-gray-900"></div>
+                          </div>
+                        )}
                       </div>
                     )}
-                    {typeof riskScores.reports === 'number' && (
-                      <div className="p-3 rounded-lg border border-amber-200 bg-white">
-                        <div className="text-[11px] uppercase tracking-wide text-amber-600 mb-1">Reports</div>
+                    {riskScores.reports && (
+                      <div 
+                        className="p-3 rounded-lg border border-amber-200 bg-white cursor-help relative group"
+                        title={typeof riskScores.reports === 'object' && riskScores.reports.reason ? riskScores.reports.reason : ''}
+                      >
+                        <div className="flex items-center gap-2 mb-1">
+                          <Megaphone size={16} className="text-amber-600" />
+                          <div className="text-[10px] uppercase font-semibold tracking-wide text-amber-600">Reports</div>
+                        </div>
                         <div className="flex items-center gap-3">
                           <div className="h-2 flex-1 bg-amber-100 rounded">
-                            <div className="h-2 rounded bg-amber-500" style={{ width: `${Math.min(100, (riskScores.reports/10)*100)}%` }} />
+                            <div className="h-2 rounded bg-amber-500" style={{ width: `${Math.min(100, ((typeof riskScores.reports === 'object' ? riskScores.reports.score : riskScores.reports)/10)*100)}%` }} />
                           </div>
-                          <div className="text-amber-800 font-semibold text-sm w-8 text-right">{riskScores.reports}/10</div>
+                          <div className="text-amber-800 font-semibold text-sm w-8 text-right">
+                            {typeof riskScores.reports === 'object' ? riskScores.reports.score : riskScores.reports}/10
+                          </div>
                         </div>
+                        {/* Hover tooltip */}
+                        {typeof riskScores.reports === 'object' && riskScores.reports.reason && (
+                          <div className="absolute top-full left-0 right-0 mt-2 px-4 py-3 bg-gray-900 text-white text-sm rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-10 text-left">
+                            {riskScores.reports.reason}
+                            <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-b-4 border-transparent border-b-gray-900"></div>
+                          </div>
+                        )}
                       </div>
                     )}
-                    {typeof riskScores.fatalities === 'number' && (
-                      <div className="p-3 rounded-lg border border-red-200 bg-white">
-                        <div className="text-[11px] uppercase tracking-wide text-red-600 mb-1">Fatalities</div>
+                    {riskScores.fatalities && (
+                      <div 
+                        className="p-3 rounded-lg border border-red-200 bg-white cursor-help relative group"
+                        title={typeof riskScores.fatalities === 'object' && riskScores.fatalities.reason ? riskScores.fatalities.reason : ''}
+                      >
+                        <div className="flex items-center gap-2 mb-1">
+                          <Skull size={16} className="text-red-600" />
+                          <div className="text-[10px] uppercase font-semibold tracking-wide text-red-600">Fatalities</div>
+                        </div>
                         <div className="flex items-center gap-3">
                           <div className="h-2 flex-1 bg-red-100 rounded">
-                            <div className="h-2 rounded bg-red-500" style={{ width: `${Math.min(100, (riskScores.fatalities/10)*100)}%` }} />
+                            <div className="h-2 rounded bg-red-500" style={{ width: `${Math.min(100, ((typeof riskScores.fatalities === 'object' ? riskScores.fatalities.score : riskScores.fatalities)/10)*100)}%` }} />
                           </div>
-                          <div className="text-red-800 font-semibold text-sm w-8 text-right">{riskScores.fatalities}/10</div>
+                          <div className="text-red-800 font-semibold text-sm w-8 text-right">
+                            {typeof riskScores.fatalities === 'object' ? riskScores.fatalities.score : riskScores.fatalities}/10
+                          </div>
                         </div>
+                        {/* Hover tooltip */}
+                        {typeof riskScores.fatalities === 'object' && riskScores.fatalities.reason && (
+                          <div className="absolute top-full left-0 right-0 mt-2 px-4 py-3 bg-gray-900 text-white text-sm rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-10 text-left">
+                            {riskScores.fatalities.reason}
+                            <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-b-4 border-transparent border-b-gray-900"></div>
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
@@ -252,10 +353,10 @@ const RecommendationModal = ({
 
               {/* Weather - compact summary with expandable details */}
               {weather && (
-                <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+                <div className="p-4 bg-gray-50 rounded-lg">
                   <div className="flex items-center justify-between mb-1">
-                    <h4 className="font-semibold text-lg text-blue-800">Weather</h4>
-                    <button onClick={() => setShowWeatherDetails(v => !v)} className="btn btn-xs btn-outline btn-ghost text-blue-800">
+                    <h4 className="font-bold text-2xl mb-2 ">Weather</h4>
+                    <button onClick={() => setShowWeatherDetails(v => !v)} className="bg-primary rounded-2xl px-4 py-1 text-sm text-white hover:bg-primary/80 transition-all duration-300 cursor-pointer">
                       {showWeatherDetails ? 'Hide' : 'View'} details
                     </button>
                   </div>
@@ -281,7 +382,7 @@ const RecommendationModal = ({
                               <WarningCircle size={18} className="mt-0.5" />
                               <div>
                                 <div className="text-sm font-semibold mb-1">AI Insights</div>
-                                <div className="text-sm leading-relaxed">{verdict}</div>
+                                <div className="text-md leading-relaxed">{verdict}</div>
                               </div>
                             </div>
                           </div>
@@ -290,7 +391,7 @@ const RecommendationModal = ({
                           {compact.map((it, idx) => (
                             <div key={idx} className="px-3 py-1.5 rounded-full bg-white border border-gray-200 text-sm text-gray-800 inline-flex items-center gap-2">
                               {it.icon}
-                              <span className="text-gray-500 text-xs">{it.label}:</span>
+                              <span className="text-gray-500 text-sm">{it.label}:</span>
                               <span className="font-semibold">{it.value}</span>
                             </div>
                           ))}
@@ -332,99 +433,147 @@ const RecommendationModal = ({
                 <div className="text-center">
                   <button
                     onClick={() => setShowDetailedRecommendations(prev => !prev)}
-                    className="btn btn-outline btn-primary"
+                    className="btn btn-outline btn-primary flex items-center gap-2"
                   >
-                    {showDetailedRecommendations ? 'Hide Detailed Recommendations' : 'View Detailed Recommendations'}
+                    <span>{showDetailedRecommendations ? 'Hide' : 'Read'} Detailed Recommendations</span>
+                    <motion.div
+                      animate={{ rotate: showDetailedRecommendations ? 180 : 0 }}
+                      transition={{ duration: 0.3 }}
+                    >
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="m6 9 6 6 6-6"/>
+                      </svg>
+                    </motion.div>
                   </button>
                 </div>
               )}
 
-              {/* Detailed Content - Conditionally visible */}
-              {showDetailedRecommendations && recommendationHtml && (
-                <div className="space-y-4">
-                  {/* Main Recommendation */}
-                  <div className="p-4 bg-white rounded-lg border border-gray-200">
-                    <h4 className="font-semibold text-lg mb-2 text-gray-800">Detailed Recommendations</h4>
-                    <div 
-                      className="text-gray-700 prose prose-sm max-w-none"
-                      dangerouslySetInnerHTML={{
-                        __html: recommendationHtml
-                          .replace(/\r\n/g, '\n')
-                          .replace(/\n{2,}/g, '<br><br>')
-                          .replace(/([.!?])\s*(Day\s\d+:)/g, '$1<br><br>$2')
-                          .replace(/(?<!<br>)\n(?!<br>)/g, ' ')
-                          .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-                          .replace(/\*(.*?)\*/g, '<em>$1</em>')
-                          .replace(/\[(\d+)\]\((https?:\/\/[^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer" class="inline-block align-middle mx-1 text-primary font-semibold hover:underline">[$1]<\/a>')
-                          .replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer" class="text-primary hover:underline">$1<\/a>')
-                      }}
-                    />
-                  </div>
+                  {/* Detailed Content - Conditionally visible */}
+                  <AnimatePresence initial={false}>
+                    {showDetailedRecommendations && recommendationHtml && (
+                      <motion.div
+                        id="detailed-recommendations"
+                        initial={{ height: 0, opacity: 0, y: -20 }}
+                        animate={{ height: 'auto', opacity: 1, y: 0 }}
+                        exit={{ height: 0, opacity: 0, y: -20 }}
+                        transition={{ 
+                          duration: 0.4, 
+                          ease: "easeInOut",
+                          height: { duration: 0.4 },
+                          opacity: { duration: 0.3 }
+                        }}
+                        className="overflow-hidden"
+                      >
+                        <div className="space-y-4 pt-4">
+                          {/* Main Recommendation */}
+                          <div className="p-4 bg-white rounded-lg border border-gray-200">
+                            <h4 className="font-bold text-2xl mb-3 text-primary">Detailed Recommendations</h4>
+                            <div 
+                              className="text-gray-700 prose prose-sm max-w-none"
+                              dangerouslySetInnerHTML={{
+                                __html: convertRecommendationsToHtml(recommendationHtml)
+                              }}
+                            />
+                          </div>
 
-                  {/* Analysis and Predictions (optional) */}
-                  {(analysis || predictions) && (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {analysis && (
-                        <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
-                          <h4 className="font-semibold text-lg mb-2 text-gray-800">Analysis</h4>
-                          <p className="text-gray-700 whitespace-pre-line">{analysis}</p>
+                          {/* Analysis and Predictions (optional) */}
+                          {(analysis || predictions) && (
+                            <div className="flex gap-4">
+                              {analysis && (
+                                <div className="flex-1 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                                  <div className="flex items-center gap-2 mb-2">
+                                    <MagnifyingGlass size={20} className="text-gray-600" />
+                                    <h4 className="font-semibold text-lg text-gray-800">Analysis</h4>
+                                  </div>
+                                  <div className="text-gray-700">
+                                    <div className={`${!showAnalysisDetails ? 'line-clamp-3' : ''}`}>
+                                      {analysis}
+                                    </div>
+                                    <button 
+                                      onClick={() => setShowAnalysisDetails(prev => !prev)}
+                                      className="text-primary hover:text-primary/80 text-sm font-medium mt-2 hover:underline"
+                                    >
+                                      {showAnalysisDetails ? 'Show Less' : 'Read More'}
+                                    </button>
+                                  </div>
+                                </div>
+                              )}
+                              {predictions && (
+                                <div className="flex-1 p-4 bg-base-300 border border-primary/10 rounded-sm text-primary">
+                                  <div className="flex items-center gap-2 mb-2">
+                                    <Lightbulb size={20} className="text-primary" />
+                                    <h4 className="font-semibold text-lg">Predictions</h4>
+                                  </div>
+                                  <div className="">
+                                    <div className={`${!showPredictionDetails ? 'line-clamp-3' : ''}`}>
+                                      {predictions}
+                                    </div>
+                                    <button 
+                                      onClick={() => setShowPredictionDetails(prev => !prev)}
+                                      className="text-primary hover:text-primary/80 text-sm font-medium mt-2 hover:underline"
+                                    >
+                                      {showPredictionDetails ? 'Show Less' : 'Read More'}
+                                    </button>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          )}
+
+                          {/* Key Factors */}
+                          {reco.factors && reco.factors.length > 0 && (
+                            <div className="p-4 rounded-lg">
+                              <h4 className="flex items-center gap-2 mb-2">
+                            
+                                <span className="font-bold text-2xl text-primary">Key Factors Considered</span>
+                              </h4>
+                              <ul className="flex flex-wrap gap-2">
+                                {reco.factors.map((factor, index) => (
+                                  <li key={index} className="inline-flex bg-primary text-white rounded-full px-3 py-1 text-sm font-medium">{factor}</li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+
+                          {/* Sources as badges with hover preview (via fixed portal) */}
+                          {sources && sources.length > 0 && (
+                            <div className="p-4 rounded-lg">
+                              <h4 className="flex items-center gap-2 mb-2">
+                            
+                                <span className="font-bold text-2xl text-primary">Sources</span>
+                              </h4>
+                              <div className="flex flex-wrap gap-2">
+                                {sources.map((source, index) => (
+                                  <a
+                                    key={index}
+                                    href={source.uri}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-gray-50 text-primary text-sm font-semibold hover:bg-primary hover:text-white"
+                                    title={source.title}
+                                    onMouseEnter={(e) => {
+                                      const x = Math.min(e.clientX + 16, window.innerWidth - 380);
+                                      const y = Math.min(e.clientY + 16, window.innerHeight - 280);
+                                      setPreview({ visible: true, uri: source.uri, x, y, error: false });
+                                    }}
+                                    onMouseMove={(e) => {
+                                      const x = Math.min(e.clientX + 16, window.innerWidth - 380);
+                                      const y = Math.min(e.clientY + 16, window.innerHeight - 280);
+                                      setPreview(prev => ({ ...prev, x, y }));
+                                    }}
+                                    onMouseLeave={() => setPreview({ visible: false, uri: '', x: 0, y: 0, error: false })}
+                                  >
+                                    <span className="font-mono">[{index + 1}]</span>
+                                    <span>{source.title}</span>
+                                  </a>
+                                ))}
+                              </div>
+                            </div>
+                          )}
                         </div>
-                      )}
-                      {predictions && (
-                        <div className="p-4 bg-indigo-50 rounded-lg border border-indigo-200">
-                          <h4 className="font-semibold text-lg mb-2 text-indigo-800">Predictions</h4>
-                          <p className="text-indigo-900 whitespace-pre-line">{predictions}</p>
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Key Factors */}
-                  {reco.factors && reco.factors.length > 0 && (
-                    <div className="p-4 bg-yellow-50 rounded-lg border border-yellow-200">
-                      <h4 className="font-semibold text-lg mb-2 text-yellow-800">Key Factors Considered</h4>
-                      <ul className="list-disc list-inside space-y-1">
-                        {reco.factors.map((factor, index) => (
-                          <li key={index} className="text-yellow-700">{factor}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-
-                  {/* Sources as badges with hover preview (via fixed portal) */}
-                  {sources && sources.length > 0 && (
-                    <div className="p-4 bg-green-50 rounded-lg border border-green-200">
-                      <h4 className="font-semibold text-lg mb-2 text-green-800">Sources</h4>
-                      <div className="flex flex-wrap gap-2">
-                        {sources.map((source, index) => (
-                          <a
-                            key={index}
-                            href={source.uri}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-green-600 text-white text-xs font-semibold hover:bg-green-700"
-                            title={source.title}
-                            onMouseEnter={(e) => {
-                              const x = Math.min(e.clientX + 16, window.innerWidth - 380);
-                              const y = Math.min(e.clientY + 16, window.innerHeight - 280);
-                              setPreview({ visible: true, uri: source.uri, x, y, error: false });
-                            }}
-                            onMouseMove={(e) => {
-                              const x = Math.min(e.clientX + 16, window.innerWidth - 380);
-                              const y = Math.min(e.clientY + 16, window.innerHeight - 280);
-                              setPreview(prev => ({ ...prev, x, y }));
-                            }}
-                            onMouseLeave={() => setPreview({ visible: false, uri: '', x: 0, y: 0, error: false })}
-                          >
-                            <span className="font-mono">[{index + 1}]</span>
-                            <span>{source.title}</span>
-                          </a>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
             </div>
           )}
 

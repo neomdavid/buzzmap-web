@@ -571,7 +571,7 @@ const DengueMap = ({
       </div>
     `;
     if (!infoWindowRef.current) {
-      infoWindowRef.current = new window.google.maps.InfoWindow({ maxWidth: 500 });
+      infoWindowRef.current = new window.google.maps.InfoWindow({ maxWidth: 1000 });
     }
     const infoWindow = infoWindowRef.current;
     infoWindow.setContent(content);
