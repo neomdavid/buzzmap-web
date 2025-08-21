@@ -622,7 +622,8 @@ const Analytics = () => {
             )}
           </div>
         </div>
-        {/* Selected Barangay Analytics Section */}
+        {/* Selected Barangay Analytics Section - Commented out and moved to component */}
+        {/* 
         <div className="w-full flex flex-col shadow-sm shadow-lg p-6 py-8 rounded-lg mt-6">
           <p className="mb-4 text-base-content text-3xl font-bold">
             Selected Barangay Analytics
@@ -750,7 +751,6 @@ const Analytics = () => {
 
               return (
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  {/* Reports Bar Chart */}
                   <div className="bg-white rounded-xl shadow p-5 flex flex-col gap-2 border border-primary/20">
                     <p className="font-bold text-lg text-primary mb-2">
                       Reports
@@ -768,13 +768,12 @@ const Analytics = () => {
                       )}
                     </div>
                   </div>
-                  {/* Interventions Bar Chart */}
                   <div className="bg-white rounded-xl shadow p-5 flex flex-col gap-2 border border-primary/20">
                     <p className="font-bold text-lg text-primary mb-2">
                       Interventions
                     </p>
                     <div className="h-48">
-                      {filteredInterventions.length === 0 ||
+                      {filteredPosts.length === 0 ||
                       (scheduledInterventions === 0 &&
                         ongoingInterventions === 0 &&
                         completedInterventions === 0 &&
@@ -790,19 +789,6 @@ const Analytics = () => {
                       )}
                     </div>
                   </div>
-                  {/* Pattern Recognition Card */}
-                  {/* <div className="bg-white rounded-xl shadow p-5 flex flex-col gap-2 border border-primary/20">
-                    <p className="font-bold text-lg text-primary mb-2">Pattern Recognition</p>
-                    {patternInfo ? (
-                      <div className="flex flex-col gap-1">
-                        <span className="font-semibold">Pattern: <span className="capitalize">{patternInfo.triggered_pattern || 'None'}</span></span>
-                        <span className="font-semibold">Alert: {patternInfo.alert || 'No recent data'}</span>
-                        <span className="font-semibold">Last Analyzed: {patternInfo.last_analysis_time ? new Date(patternInfo.last_analysis_time).toLocaleString() : 'N/A'}</span>
-                      </div>
-                    ) : (
-                      <span className="text-gray-500">No pattern data available.</span>
-                    )}
-                  </div> */}
                 </div>
               );
             })()
@@ -812,6 +798,16 @@ const Analytics = () => {
             </p>
           )}
         </div>
+        */}
+        
+        {/* Component usage - uncomment when ready to use */}
+        {/* 
+        <SelectedBarangayAnalytics 
+          mapSelectedBarangay={mapSelectedBarangay}
+          posts={posts}
+          allInterventionsData={allInterventionsData}
+        />
+        */}
       </article>
 
       {/* Import Modal */}
