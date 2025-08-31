@@ -154,7 +154,6 @@ const Dashboard = () => {
   return (
     <main className="flex flex-col w-full mt-[-10px]">
       {/* Analysis Loading Modal */}
-   
 
       {showAnalysisModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -283,7 +282,10 @@ const Dashboard = () => {
         </div>
         <div className="flex  md:flex-row  gap-6 lg:flex-3">
           <div className="flex-1 min-w-[150px] shadow-sm rounded-2xl h-auto overflow-hidden  ">
-            <MapOnly style={{ height: "300px", width: "100%" }} />
+            <MapOnly
+              style={{ height: "300px", width: "100%" }}
+              useAdminEndpoint={true}
+            />
           </div>
           {/* <div className="flex flex-col ">
             <p className="text-3xl font-extrabold text-primary mb-3">

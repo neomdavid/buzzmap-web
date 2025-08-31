@@ -2,7 +2,7 @@ import React, { useRef, useEffect } from "react";
 import { useGoogleMaps } from "../../hooks/useGoogleMaps";
 import { useInterventions } from "../../hooks/useInterventions";
 import {
-  PATTERN_COLORS_MAP,
+  USER_PATTERN_COLORS_MAP,
   INTERVENTION_STATUS_COLORS,
   INTERVENTION_TYPE_ICONS,
   BREEDING_SITE_TYPE_ICONS,
@@ -25,6 +25,9 @@ const MapContainer = ({
   setSelectedBarangayFeature,
   setShowControlPanel,
 }) => {
+  // Debug: Log the color map to verify it's loaded correctly
+  console.log("USER_PATTERN_COLORS_MAP loaded:", USER_PATTERN_COLORS_MAP);
+  console.log("no_change color value:", USER_PATTERN_COLORS_MAP.no_change);
   const mapRef = useRef(null);
   const overlaysRef = useRef([]);
   const infoWindowRef = useRef(null);
@@ -138,9 +141,50 @@ const MapContainer = ({
           "none"
         ).toLowerCase();
 
-        if (!patternType || patternType === "") patternType = "none";
-        const patternCardColor =
-          PATTERN_COLORS_MAP[patternType] || PATTERN_COLORS_MAP.default;
+        // Debug logging for pattern type
+        console.log("Pattern debug:", {
+          barangayName: selectedBarangayFeature.properties.name,
+          patternBased: patternBased,
+          patternType: patternType,
+          originalStatus: patternBased?.status,
+          fallbackPatternType: selectedBarangayFeature.properties.patternType,
+        });
+
+        if (!patternType || patternType === "") patternType = "no_change";
+
+        // Debug logging for color selection
+        console.log("Color selection debug:", {
+          patternType: patternType,
+          availableColors: Object.keys(USER_PATTERN_COLORS_MAP),
+          selectedColor: USER_PATTERN_COLORS_MAP[patternType],
+          fallbackColor: USER_PATTERN_COLORS_MAP.default,
+          noChangeColor: USER_PATTERN_COLORS_MAP.no_change,
+          finalColor:
+            patternType === "no_change" ||
+            !patternType ||
+            patternType === "" ||
+            patternType === "none"
+              ? USER_PATTERN_COLORS_MAP.no_change
+              : USER_PATTERN_COLORS_MAP[patternType] ||
+                USER_PATTERN_COLORS_MAP.default,
+        });
+
+        // Ensure no_change, empty status, and none status get the same blue color
+        let patternCardColor;
+        if (
+          patternType === "no_change" ||
+          !patternType ||
+          patternType === "" ||
+          patternType === "none"
+        ) {
+          patternCardColor = USER_PATTERN_COLORS_MAP.no_change;
+          console.log("Using no_change color:", patternCardColor);
+        } else {
+          patternCardColor =
+            USER_PATTERN_COLORS_MAP[patternType] ||
+            USER_PATTERN_COLORS_MAP.default;
+          console.log("Using pattern-specific color:", patternCardColor);
+        }
 
         let reportBased = barangayObj?.status_and_recommendation?.report_based;
         let reportAlert = reportBased?.alert;
@@ -166,13 +210,16 @@ const MapContainer = ({
             <div class="mt-3 flex flex-col gap-3 text-black">
               <div class="p-3 rounded-lg border-2" style="border-color:${patternCardColor}">
                 <div>
-                  <p class="text-sm font-medium text-gray-600 uppercase">Pattern</p>
+                  <p class="text-sm font-medium text-gray-600 uppercase">Status</p>
                   <p class="text-lg font-semibold">
                     ${
-                      patternType === "none"
-                        ? "No pattern detected"
-                        : patternType.charAt(0).toUpperCase() +
-                          patternType.slice(1).replace("_", " ")
+                      patternType === "no_change"
+                        ? "No Change"
+                        : patternType === "increase"
+                        ? "Increasing"
+                        : patternType === "decrease"
+                        ? "Decreasing"
+                        : "No Change"
                     }
                   </p>
                 </div>
@@ -272,9 +319,46 @@ const MapContainer = ({
         "none"
       ).toLowerCase();
 
-      if (!patternType || patternType === "") patternType = "none";
-      const patternColor =
-        PATTERN_COLORS_MAP[patternType] || PATTERN_COLORS_MAP.default;
+      // Debug logging for initial polygon pattern type
+      console.log("Initial polygon pattern debug:", {
+        barangayName: feature.properties.name,
+        patternType: patternType,
+        originalStatus:
+          barangayObj?.status_and_recommendation?.pattern_based?.status,
+        fallbackPatternType:
+          feature.properties.patternType || feature.properties.pattern_type,
+      });
+
+      if (!patternType || patternType === "" || patternType === "none")
+        patternType = "no_change";
+
+      // Debug logging for color selection
+      console.log("Initial polygon color debug:", {
+        patternType: patternType,
+        availableColors: Object.keys(USER_PATTERN_COLORS_MAP),
+        selectedColor: USER_PATTERN_COLORS_MAP[patternType],
+        fallbackColor: USER_PATTERN_COLORS_MAP.default,
+      });
+
+      // Ensure no_change, empty status, and none status get the same blue color
+      let patternColor;
+      if (
+        patternType === "no_change" ||
+        !patternType ||
+        patternType === "" ||
+        patternType === "none"
+      ) {
+        patternColor = USER_PATTERN_COLORS_MAP.no_change;
+        console.log("Initial polygon using no_change color:", patternColor);
+      } else {
+        patternColor =
+          USER_PATTERN_COLORS_MAP[patternType] ||
+          USER_PATTERN_COLORS_MAP.default;
+        console.log(
+          "Initial polygon using pattern-specific color:",
+          patternColor
+        );
+      }
 
       coordsArray.forEach((polygonCoords) => {
         const path = polygonCoords[0].map(([lng, lat]) => ({ lat, lng }));
@@ -334,9 +418,48 @@ const MapContainer = ({
             "none"
           ).toLowerCase();
 
-          if (!patternType || patternType === "") patternType = "none";
-          const patternCardColor =
-            PATTERN_COLORS_MAP[patternType] || PATTERN_COLORS_MAP.default;
+          // Debug logging for polygon click pattern type
+          console.log("Polygon click pattern debug:", {
+            barangayName: feature.properties.name,
+            patternBased: patternBased,
+            patternType: patternType,
+            originalStatus: patternBased?.status,
+            fallbackPatternType: feature.properties.patternType,
+          });
+
+          if (!patternType || patternType === "" || patternType === "none")
+            patternType = "no_change";
+
+          // Debug logging for color selection
+          console.log("Polygon click color debug:", {
+            patternType: patternType,
+            availableColors: Object.keys(USER_PATTERN_COLORS_MAP),
+            selectedColor: USER_PATTERN_COLORS_MAP[patternType],
+            fallbackColor: USER_PATTERN_COLORS_MAP.default,
+          });
+
+          // Ensure no_change, empty status, and none status get the same blue color
+          let patternCardColor;
+          if (
+            patternType === "no_change" ||
+            !patternType ||
+            patternType === "" ||
+            patternType === "none"
+          ) {
+            patternCardColor = USER_PATTERN_COLORS_MAP.no_change;
+            console.log(
+              "Polygon click using no_change color:",
+              patternCardColor
+            );
+          } else {
+            patternCardColor =
+              USER_PATTERN_COLORS_MAP[patternType] ||
+              USER_PATTERN_COLORS_MAP.default;
+            console.log(
+              "Polygon click using pattern-specific color:",
+              patternCardColor
+            );
+          }
 
           let reportBased =
             barangayObj?.status_and_recommendation?.report_based;
@@ -363,13 +486,16 @@ const MapContainer = ({
             <div class="mt-3 flex flex-col gap-3 text-black">
               <div class="p-3 rounded-lg border-2" style="border-color:${patternCardColor}">
                     <div>
-                  <p class="text-sm font-medium text-gray-600 uppercase">Pattern</p>
+                  <p class="text-sm font-medium text-gray-600 uppercase">Status</p>
                   <p class="text-lg font-semibold">
                     ${
-                      patternType === "none"
-                        ? "No pattern detected"
-                        : patternType.charAt(0).toUpperCase() +
-                          patternType.slice(1).replace("_", " ")
+                      patternType === "no_change"
+                        ? "No Change"
+                        : patternType === "increase"
+                        ? "Increasing"
+                        : patternType === "decrease"
+                        ? "Decreasing"
+                        : "No Change"
                     }
                       </p>
                     </div>

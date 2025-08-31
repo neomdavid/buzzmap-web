@@ -8,14 +8,27 @@ export const PATTERN_COLORS = {
   unknown: "border-gray-400 bg-gray-100",
 };
 
-export const PATTERN_COLORS_MAP = {
-  spike: "#e53e3e", // red (error)
-  gradual_rise: "#dd6b20", // orange (warning)
-  decline: "#38a169", // green (success)
-  stability: "#3182ce", // blue (info)
-  none: "#718096", // gray (default for no pattern)
+// Pattern colors for user map
+export const USER_PATTERN_COLORS_MAP = {
+  increase: "#e53e3e", // red (error) - for increasing cases
+  decrease: "#38a169", // green (success) - for decreasing cases
+  no_change: "#718096", // gray - for stable/no change/none status
   default: "#718096", // gray (fallback)
 };
+
+// Pattern colors for admin map
+export const ADMIN_PATTERN_COLORS_MAP = {
+  spike: "#e53e3e", // red
+  increase: "#dd6b20", // orange
+  decrease: "#38a169", // green
+  low_level_activity: "#3182ce", // blue
+  no_change: "#718096", // gray
+  none: "#718096", // gray - default for no pattern
+  default: "#718096", // gray - fallback
+};
+
+// Legacy export for backward compatibility
+export const PATTERN_COLORS_MAP = ADMIN_PATTERN_COLORS_MAP;
 
 export const INTERVENTION_STATUS_COLORS = {
   scheduled: "#8b5cf6", // Purple-500
@@ -33,7 +46,7 @@ export const INTERVENTION_TYPE_ICONS = {
 
 export const BREEDING_SITE_TYPE_ICONS = {
   "Stagnant Water": "/src/assets/icons/stagnant_water.svg",
-  "Standing Water": "/src/assets/icons/standing_water.svg",
+  "Standing Water": "/src/assets/icons/stagnant_water.svg", // Use same icon as stagnant water
   "Uncollected Garbage or Trash": "/src/assets/icons/garbage.svg",
   Others: "/src/assets/icons/others.svg",
   default: "/src/assets/icons/stagnant_water.svg",
@@ -42,15 +55,13 @@ export const BREEDING_SITE_TYPE_ICONS = {
 // Helper function to normalize barangay names for comparison
 export function normalizeBarangayName(name) {
   if (!name) return "";
-  return (
-    name
-      .toLowerCase()
-      .replace(/\bsr\.?\b/g, "") // Remove sr. or sr
-      .replace(/\bjr\.?\b/g, "") // Remove jr. or jr
-      .replace(/[.\-']/g, "") // Remove periods, hyphens, apostrophes
-      .replace(/\s+/g, " ") // Normalize multiple spaces to single space
-      .trim()
-  );
+  return name
+    .toLowerCase()
+    .replace(/\bsr\.?\b/g, "") // Remove sr. or sr
+    .replace(/\bjr\.?\b/g, "") // Remove jr. or jr
+    .replace(/[.\-']/g, "") // Remove periods, hyphens, apostrophes
+    .replace(/\s+/g, " ") // Normalize multiple spaces to single space
+    .trim();
 }
 
 // Helper function to pan to a position with offset

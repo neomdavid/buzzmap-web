@@ -18,7 +18,7 @@ import {
   useGetPostsQuery,
   useGetAllInterventionsQuery,
   useGetPatternRecognitionResultsQuery,
-  useGetBarangaysQuery,
+  useGetAdminBarangaysQuery,
 } from "../../api/dengueApi";
 import ActionRecommendationCard from "../../components/Admin/ActionRecommendationCard";
 import { Bar } from "react-chartjs-2";
@@ -142,7 +142,7 @@ const Analytics = () => {
     useGetAllInterventionsQuery();
   const { data: posts, isLoading: isLoadingPosts } = useGetPostsQuery();
   const { data: barangaysList, isLoading: isLoadingBarangays } =
-    useGetBarangaysQuery();
+    useGetAdminBarangaysQuery();
 
   // Get the barangay with spike pattern and highest death cases
   const spikeRecommendationDetails = useMemo(() => {
@@ -799,7 +799,7 @@ const Analytics = () => {
           )}
         </div>
         */}
-        
+
         {/* Component usage - uncomment when ready to use */}
         {/* 
         <SelectedBarangayAnalytics 

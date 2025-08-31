@@ -12,13 +12,12 @@ import {
   useGetInterventionsInProgressQuery,
   useGetPostsQuery,
   useGetAllInterventionsQuery,
-  useGetBarangaysQuery,
+  useGetAdminBarangaysQuery,
   useGetRecentReportsForBarangayMutation,
 } from "@/api/dengueApi";
 import * as turf from "@turf/turf";
 import MapOnly from "../../components/Mapping/MapOnly";
 import stagnantIcon from "../../assets/icons/stagnant_water.svg";
-import standingIcon from "../../assets/icons/standing_water.svg";
 import garbageIcon from "../../assets/icons/garbage.svg";
 import othersIcon from "../../assets/icons/others.svg";
 
@@ -41,7 +40,7 @@ const normalizeBarangayName = (name) => {
 // Add breeding site type icon mapping
 const BREEDING_SITE_TYPE_ICONS = {
   "Stagnant Water": stagnantIcon,
-  "Standing Water": standingIcon,
+  "Standing Water": stagnantIcon, // Use same icon as stagnant water
   "Uncollected Garbage or Trash": garbageIcon,
   Others: othersIcon,
   default: stagnantIcon,
@@ -70,7 +69,7 @@ const DengueMapping = () => {
   const { data: allInterventionsData, isLoading: isLoadingAllInterventions } =
     useGetAllInterventionsQuery();
   const { data: barangaysList, isLoading: isLoadingBarangays } =
-    useGetBarangaysQuery();
+    useGetAdminBarangaysQuery();
 
   // Add filtered barangays state
   const [filteredBarangays, setFilteredBarangays] = useState([]);
@@ -671,6 +670,7 @@ const DengueMapping = () => {
           onBarangaySelect={handleBarangaySelect}
           interventions={showInterventions ? activeInterventions : []}
           style={{ height: "100%", width: "100%" }}
+          useAdminEndpoint={true}
           onMarkerClick={(item, type) => {
             if (type === "report") {
               setSelectedFullReport(item);

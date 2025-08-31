@@ -1,13 +1,12 @@
-import React from 'react';
-import { CaretRight } from 'phosphor-react';
-import cleanUpIcon from '../../assets/icons/cleanup.svg';
-import foggingIcon from '../../assets/icons/fogging.svg';
-import educationIcon from '../../assets/icons/education.svg';
-import trappingIcon from '../../assets/icons/trapping.svg';
-import stagnantIcon from '../../assets/icons/stagnant_water.svg';
-import standingIcon from '../../assets/icons/standing_water.svg';
-import garbageIcon from '../../assets/icons/garbage.svg';
-import othersIcon from '../../assets/icons/others.svg';
+import React from "react";
+import { CaretRight } from "phosphor-react";
+import cleanUpIcon from "../../assets/icons/cleanup.svg";
+import foggingIcon from "../../assets/icons/fogging.svg";
+import educationIcon from "../../assets/icons/education.svg";
+import trappingIcon from "../../assets/icons/trapping.svg";
+import stagnantIcon from "../../assets/icons/stagnant_water.svg";
+import garbageIcon from "../../assets/icons/garbage.svg";
+import othersIcon from "../../assets/icons/others.svg";
 
 const MapControls = ({
   showControlPanel,
@@ -20,7 +19,7 @@ const MapControls = ({
   handleBarangaySelect,
   barangayData,
   selectedIntervention,
-  setSelectedIntervention
+  setSelectedIntervention,
 }) => {
   return (
     <div className="absolute top-6 left-0 md:left-10 z-10 w-full md:w-auto flex justify-center md:block">
@@ -117,20 +116,6 @@ const MapControls = ({
                           </div>
 
                           <div
-                            key="standing-water"
-                            className="flex items-center space-x-2"
-                          >
-                            <img
-                              src={standingIcon}
-                              alt="Standing Water"
-                              className="w-6 h-6"
-                            />
-                            <span className="text-xs text-primary">
-                              Standing Water
-                            </span>
-                          </div>
-
-                          <div
                             key="garbage-trash"
                             className="flex items-center space-x-2"
                           >
@@ -152,9 +137,7 @@ const MapControls = ({
                               alt="Others"
                               className="w-6 h-6"
                             />
-                            <span className="text-xs text-primary">
-                              Others
-                            </span>
+                            <span className="text-xs text-primary">Others</span>
                           </div>
                         </div>
                       </>

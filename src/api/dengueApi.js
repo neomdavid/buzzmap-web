@@ -464,8 +464,26 @@ export const dengueApi = createApi({
       providesTags: ["PatternRecognition"],
     }),
 
-    // Get all barangays
+    // Get all barangays for user route
     getBarangays: builder.query({
+      query: () => "barangays/get-all-barangays-for-user",
+      providesTags: ["Barangay"],
+      transformResponse: (response) => {
+        // If response is an array, sort it alphabetically by name/displayName
+        if (Array.isArray(response)) {
+          return response.sort((a, b) => {
+            // Use displayName if available, otherwise fallback to name
+            const nameA = (a.displayName || a.name || "").toLowerCase();
+            const nameB = (b.displayName || b.name || "").toLowerCase();
+            return nameA.localeCompare(nameB);
+          });
+        }
+        return response;
+      },
+    }),
+
+    // Get all barangays for admin route (includes admin-specific patterns)
+    getAdminBarangays: builder.query({
       query: () => "barangays/get-all-barangays",
       providesTags: ["Barangay"],
       transformResponse: (response) => {
@@ -1435,6 +1453,7 @@ export const {
 
   // Barangay hooks
   useGetBarangaysQuery,
+  useGetAdminBarangaysQuery,
 
   // Alert hooks
   useSendDengueAlertMutation,

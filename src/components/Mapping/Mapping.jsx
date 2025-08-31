@@ -146,10 +146,9 @@ const Mapping = () => {
       setSelectedBreedingSite(null);
       setSelectedIntervention(null);
     } else {
-      // When barangay is deselected, restore previous state
+      // When barangay is deselected, just clear the selection
+      // Don't automatically restore breeding sites/interventions state
       setSelectedBarangayFeature(null);
-      setShowBreedingSites(previousBreedingSitesState);
-      setShowInterventions(previousInterventionsState);
     }
   };
 
