@@ -561,12 +561,8 @@ const MapContainer = ({
 
           const pin = new PinElement({
             glyph: glyphImg,
-            background:
-              INTERVENTION_STATUS_COLORS[intervention.status] ||
-              INTERVENTION_STATUS_COLORS.default,
-            borderColor:
-              INTERVENTION_STATUS_COLORS[intervention.status] ||
-              INTERVENTION_STATUS_COLORS.default,
+            background: "#1893F8",
+            borderColor: "#1893F8",
             scale: 1.5,
           });
 
