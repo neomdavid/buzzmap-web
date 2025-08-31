@@ -208,6 +208,12 @@ const Community = () => {
               // For Community page, we rely on RTK Query cache updates
               // The mutations in dengueApi.js already handle cache updates automatically
             }}
+            onPostDeleted={(deletedPostId) => {
+              console.log("[DEBUG] Post deleted:", deletedPostId);
+              // The RTK Query cache will automatically update, but we can also
+              // manually remove the post from the local filtered posts if needed
+              // This is optional since RTK Query handles cache invalidation
+            }}
           />
         </div>
       );

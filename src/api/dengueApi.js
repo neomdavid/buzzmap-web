@@ -312,7 +312,7 @@ export const dengueApi = createApi({
 
     deletePost: builder.mutation({
       query: (id) => ({
-        url: `posts/${id}`,
+        url: `reports/${id}`,
         method: "DELETE",
       }),
       invalidatesTags: (result, error, id) => [{ type: "Post", id }],
