@@ -1,17 +1,17 @@
-import React, { useRef, useEffect } from 'react';
-import { useGoogleMaps } from '../../hooks/useGoogleMaps';
-import { useInterventions } from '../../hooks/useInterventions';
-import { 
-  PATTERN_COLORS_MAP, 
-  INTERVENTION_STATUS_COLORS, 
-  INTERVENTION_TYPE_ICONS, 
+import React, { useRef, useEffect } from "react";
+import { useGoogleMaps } from "../../hooks/useGoogleMaps";
+import { useInterventions } from "../../hooks/useInterventions";
+import {
+  PATTERN_COLORS_MAP,
+  INTERVENTION_STATUS_COLORS,
+  INTERVENTION_TYPE_ICONS,
   BREEDING_SITE_TYPE_ICONS,
   normalizeBarangayName,
-  QC_CENTER
-} from '../../utils/mapOverlays';
+  QC_CENTER,
+} from "../../utils/mapOverlays";
 import * as turf from "@turf/turf";
-import LoadingSpinner from '../ui/LoadingSpinner';
-import ErrorMessage from '../ui/ErrorMessage';
+import LoadingSpinner from "../ui/LoadingSpinner";
+import ErrorMessage from "../ui/ErrorMessage";
 
 const MapContainer = ({
   barangaysList,
@@ -23,7 +23,7 @@ const MapContainer = ({
   showInterventions,
   selectedBarangayFeature,
   setSelectedBarangayFeature,
-  setShowControlPanel
+  setShowControlPanel,
 }) => {
   const mapRef = useRef(null);
   const overlaysRef = useRef([]);
@@ -37,13 +37,13 @@ const MapContainer = ({
   // Process breeding sites from posts data
   const breedingSites = React.useMemo(() => {
     if (!posts) return [];
-    
+
     const validPosts = Array.isArray(posts?.posts)
       ? posts.posts
       : Array.isArray(posts)
       ? posts
       : [];
-    
+
     return validPosts.filter(
       (post) =>
         post.status === "Validated" &&
@@ -54,7 +54,11 @@ const MapContainer = ({
   }, [posts]);
 
   const { interventions } = useInterventions(allInterventionsData);
-  const { mapInstance, mapReady, createMap, isValidMap } = useGoogleMaps(apiKey, mapId, mapRef);
+  const { mapInstance, mapReady, createMap, isValidMap } = useGoogleMaps(
+    apiKey,
+    mapId,
+    mapRef
+  );
 
   // Cleanup on unmount
   useEffect(() => {
@@ -78,6 +82,144 @@ const MapContainer = ({
     createMap();
   }, [barangayData, createMap, mapInstance, isValidMap]);
 
+  // Show info window when barangay is selected from dropdown
+  useEffect(() => {
+    console.log("Dropdown selection effect triggered:", {
+      mapInstance: !!mapInstance,
+      isValidMap: isValidMap(),
+      selectedBarangayFeature: !!selectedBarangayFeature,
+      infoWindowRef: !!infoWindowRef.current,
+    });
+
+    if (
+      !mapInstance ||
+      !isValidMap() ||
+      !selectedBarangayFeature ||
+      !infoWindowRef.current
+    ) {
+      console.log("Early return from dropdown effect");
+      return;
+    }
+
+    const infoWindow = infoWindowRef.current;
+
+    // Close any existing info window
+    infoWindow.close();
+
+    // Find the center of the selected barangay
+    if (selectedBarangayFeature.geometry) {
+      try {
+        // Use turf.js to calculate the center properly
+        const center = turf.center(selectedBarangayFeature.geometry);
+        const [lng, lat] = center.geometry.coordinates;
+
+        // Validate coordinates before using them
+        if (isNaN(lat) || isNaN(lng) || !isFinite(lat) || !isFinite(lng)) {
+          console.error("Invalid coordinates calculated:", { lat, lng });
+          return;
+        }
+
+        // Pan to the selected barangay and zoom in
+        mapInstance.panTo({ lat, lng });
+        mapInstance.setZoom(15);
+
+        // Find matching barangay in barangaysList for pattern data
+        let barangayObj = barangaysList?.find(
+          (b) =>
+            normalizeBarangayName(b.name) ===
+            normalizeBarangayName(selectedBarangayFeature.properties.name)
+        );
+
+        let patternBased =
+          barangayObj?.status_and_recommendation?.pattern_based;
+        let patternType = (
+          patternBased?.status ||
+          selectedBarangayFeature.properties.patternType ||
+          "none"
+        ).toLowerCase();
+
+        if (!patternType || patternType === "") patternType = "none";
+        const patternCardColor =
+          PATTERN_COLORS_MAP[patternType] || PATTERN_COLORS_MAP.default;
+
+        let reportBased = barangayObj?.status_and_recommendation?.report_based;
+        let reportAlert = reportBased?.alert;
+        let reportStatus = (reportBased?.status || "unknown").toLowerCase();
+        let reportCardColor =
+          reportStatus === "high"
+            ? "border-error bg-error/5"
+            : reportStatus === "medium"
+            ? "border-warning bg-warning/5"
+            : reportStatus === "low"
+            ? "border-success bg-success/5"
+            : "border-gray-400 bg-gray-100";
+
+        // Create info window content
+        const content = document.createElement("div");
+        content.innerHTML = `
+          <div class="bg-white p-4 rounded-lg text-center h-auto">
+            <p class="text-4xl font-[900]" style="color:${patternCardColor}">Barangay ${
+          selectedBarangayFeature.properties.displayName ||
+          selectedBarangayFeature.properties.name ||
+          "Unknown Barangay"
+        }</p>
+            <div class="mt-3 flex flex-col gap-3 text-black">
+              <div class="p-3 rounded-lg border-2" style="border-color:${patternCardColor}">
+                <div>
+                  <p class="text-sm font-medium text-gray-600 uppercase">Pattern</p>
+                  <p class="text-lg font-semibold">
+                    ${
+                      patternType === "none"
+                        ? "No pattern detected"
+                        : patternType.charAt(0).toUpperCase() +
+                          patternType.slice(1).replace("_", " ")
+                    }
+                  </p>
+                </div>
+              </div>
+              <div class="p-3 rounded-lg border-2 ${reportCardColor}">
+                <div>
+                  <p class="text-sm font-medium text-gray-600 uppercase">Breeding Site Reports</p>
+                  <p class="text-lg font-semibold">
+                    ${
+                      reportAlert && reportAlert.toLowerCase() !== "none"
+                        ? reportAlert
+                        : "No breeding site reported in this barangay."
+                    }
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+
+        infoWindow.setContent(content);
+        infoWindow.setPosition({ lat, lng });
+
+        // Debug logging
+        console.log("Opening info window at:", { lat, lng });
+        console.log("Info window content:", content.innerHTML);
+
+        // Open the info window on the map
+        infoWindow.open(mapInstance);
+
+        // Remove highlight and InfoWindow when closed
+        infoWindow.addListener("closeclick", () => {
+          setSelectedBarangayFeature(null);
+        });
+      } catch (error) {
+        console.error("Error calculating barangay center:", error);
+        return;
+      }
+    }
+  }, [
+    selectedBarangayFeature,
+    mapInstance,
+    isValidMap,
+    barangaysList,
+    setSelectedBarangayFeature,
+  ]);
+
   // Update map content when data changes
   useEffect(() => {
     if (!mapInstance || !isValidMap() || !barangayData) {
@@ -85,7 +227,7 @@ const MapContainer = ({
     }
 
     console.log("Updating map with new data...");
-    
+
     // Clean up previous overlays
     overlaysRef.current.forEach((o) => {
       if (o && typeof o.setMap === "function") {
@@ -103,7 +245,8 @@ const MapContainer = ({
       });
     }
     const infoWindow = infoWindowRef.current;
-    infoWindow.close();
+    // Don't close the info window here as it might interfere with dropdown selection
+    // infoWindow.close();
 
     // --- Draw barangay polygons ---
     barangayData.features.forEach((feature) => {
@@ -114,33 +257,34 @@ const MapContainer = ({
           : geometry.type === "MultiPolygon"
           ? geometry.coordinates
           : [];
-      
+
       // Find matching barangay in barangaysList
       let barangayObj = barangaysList?.find(
         (b) =>
           normalizeBarangayName(b.name) ===
           normalizeBarangayName(feature.properties.name)
       );
-      
+
       let patternType = (
         barangayObj?.status_and_recommendation?.pattern_based?.status ||
         feature.properties.patternType ||
         feature.properties.pattern_type ||
         "none"
       ).toLowerCase();
-      
+
       if (!patternType || patternType === "") patternType = "none";
-      const patternColor = PATTERN_COLORS_MAP[patternType] || PATTERN_COLORS_MAP.default;
-      
+      const patternColor =
+        PATTERN_COLORS_MAP[patternType] || PATTERN_COLORS_MAP.default;
+
       coordsArray.forEach((polygonCoords) => {
         const path = polygonCoords[0].map(([lng, lat]) => ({ lat, lng }));
-        
+
         // Highlight if selected
         const isSelected =
           selectedBarangayFeature &&
           normalizeBarangayName(selectedBarangayFeature.properties.name) ===
             normalizeBarangayName(feature.properties.name);
-        
+
         const polygon = new window.google.maps.Polygon({
           paths: path,
           strokeColor: isSelected ? patternColor : "#333",
@@ -157,7 +301,7 @@ const MapContainer = ({
           if (showBreedingSites || showInterventions) {
             return;
           }
-          
+
           // Center of polygon
           const center = turf.center(feature.geometry);
           const [lng, lat] = center.geometry.coordinates;
@@ -165,7 +309,7 @@ const MapContainer = ({
             mapInstance.panTo({ lat, lng });
             mapInstance.setZoom(15);
           }
-          
+
           // Hide control panel on md screens and lower
           if (
             window.matchMedia &&
@@ -173,32 +317,39 @@ const MapContainer = ({
           ) {
             setShowControlPanel(false);
           }
-          
+
           setSelectedBarangayFeature(feature); // highlight
-          
+
           let barangayObj = barangaysList?.find(
             (b) =>
               normalizeBarangayName(b.name) ===
               normalizeBarangayName(feature.properties.name)
           );
-          
-          let patternBased = barangayObj?.status_and_recommendation?.pattern_based;
+
+          let patternBased =
+            barangayObj?.status_and_recommendation?.pattern_based;
           let patternType = (
             patternBased?.status ||
             feature.properties.patternType ||
             "none"
           ).toLowerCase();
-          
+
           if (!patternType || patternType === "") patternType = "none";
-          const patternCardColor = PATTERN_COLORS_MAP[patternType] || PATTERN_COLORS_MAP.default;
-          
-          let reportBased = barangayObj?.status_and_recommendation?.report_based;
+          const patternCardColor =
+            PATTERN_COLORS_MAP[patternType] || PATTERN_COLORS_MAP.default;
+
+          let reportBased =
+            barangayObj?.status_and_recommendation?.report_based;
           let reportAlert = reportBased?.alert;
           let reportStatus = (reportBased?.status || "unknown").toLowerCase();
-          let reportCardColor = reportStatus === "high" ? "border-error bg-error/5" : 
-                               reportStatus === "medium" ? "border-warning bg-warning/5" :
-                               reportStatus === "low" ? "border-success bg-success/5" :
-                               "border-gray-400 bg-gray-100";
+          let reportCardColor =
+            reportStatus === "high"
+              ? "border-error bg-error/5"
+              : reportStatus === "medium"
+              ? "border-warning bg-warning/5"
+              : reportStatus === "low"
+              ? "border-success bg-success/5"
+              : "border-gray-400 bg-gray-100";
 
           // Use a div with Tailwind classes for InfoWindow content
           const content = document.createElement("div");
@@ -241,13 +392,13 @@ const MapContainer = ({
           infoWindow.setContent(content);
           infoWindow.setPosition({ lat, lng });
           infoWindow.open(map);
-          
+
           // Remove highlight and InfoWindow when closed
           infoWindow.addListener("closeclick", () => {
             setSelectedBarangayFeature(null);
           });
         });
-        
+
         overlaysRef.current.push(polygon);
       });
     });
@@ -280,7 +431,7 @@ const MapContainer = ({
           borderColor: "#FF6347",
           scale: 1.5,
         });
-        
+
         const marker = new AdvancedMarkerElement({
           map,
           position: {
@@ -290,14 +441,14 @@ const MapContainer = ({
           content: pin.element,
           title: site.report_type || "Breeding Site",
         });
-        
+
         marker.addListener("click", () => {
           // Close barangay info window if open
           if (infoWindowRef.current) {
             infoWindowRef.current.close();
             setSelectedBarangayFeature(null);
           }
-          
+
           // Pan to marker position and zoom in
           if (mapInstance) {
             mapInstance.panTo({
@@ -306,7 +457,7 @@ const MapContainer = ({
             });
             mapInstance.setZoom(17);
           }
-          
+
           // Hide control panel on md screens and lower
           if (
             window.matchMedia &&
@@ -314,7 +465,7 @@ const MapContainer = ({
           ) {
             setShowControlPanel(false);
           }
-          
+
           // Use a div with Tailwind classes for InfoWindow content
           const content = document.createElement("div");
           content.innerHTML = `
@@ -327,7 +478,9 @@ const MapContainer = ({
                 <span class="font-bold">Barangay:</span> ${site.barangay || ""}
               </p>
               <p class="text-xl">
-                <span class="font-bold">Reported by:</span> ${site.user?.username || ""}
+                <span class="font-bold">Reported by:</span> ${
+                  site.user?.username || ""
+                }
               </p>
               <p class="text-xl">
                 <span class="font-bold">Date:</span> ${
@@ -337,7 +490,9 @@ const MapContainer = ({
                 }
               </p>
               <p class="text-xl">
-                <span class="font-bold">Description:</span> ${site.description || ""}
+                <span class="font-bold">Description:</span> ${
+                  site.description || ""
+                }
               </p>
               ${
                 site.images && site.images.length > 0
@@ -358,10 +513,10 @@ const MapContainer = ({
           infoWindow.setContent(content);
           infoWindow.open(map, marker);
         });
-        
+
         return marker;
       });
-      
+
       // Cluster the markers
       if (window.markerClusterer && window.markerClusterer.MarkerClusterer) {
         if (markerClusterRef.current) markerClusterRef.current.setMap(null);
@@ -406,8 +561,12 @@ const MapContainer = ({
 
           const pin = new PinElement({
             glyph: glyphImg,
-            background: INTERVENTION_STATUS_COLORS[intervention.status] || INTERVENTION_STATUS_COLORS.default,
-            borderColor: INTERVENTION_STATUS_COLORS[intervention.status] || INTERVENTION_STATUS_COLORS.default,
+            background:
+              INTERVENTION_STATUS_COLORS[intervention.status] ||
+              INTERVENTION_STATUS_COLORS.default,
+            borderColor:
+              INTERVENTION_STATUS_COLORS[intervention.status] ||
+              INTERVENTION_STATUS_COLORS.default,
             scale: 1.5,
           });
 
@@ -416,7 +575,7 @@ const MapContainer = ({
             position: {
               lat: intervention.specific_location.coordinates[1],
               lng: intervention.specific_location.coordinates[0],
-          },
+            },
             content: pin.element,
             title: intervention.type || "Intervention",
           });
@@ -427,7 +586,7 @@ const MapContainer = ({
               infoWindowRef.current.close();
               setSelectedBarangayFeature(null);
             }
-            
+
             // Pan to marker position and zoom in
             if (mapInstance) {
               mapInstance.panTo({
@@ -436,7 +595,7 @@ const MapContainer = ({
               });
               mapInstance.setZoom(17);
             }
-            
+
             // Hide control panel on md screens and lower
             if (
               window.matchMedia &&
@@ -444,7 +603,7 @@ const MapContainer = ({
             ) {
               setShowControlPanel(false);
             }
-            
+
             // Use a div with Tailwind classes for InfoWindow content
             const content = document.createElement("div");
             content.innerHTML = `
@@ -501,7 +660,7 @@ const MapContainer = ({
     selectedBarangayFeature,
     barangaysList,
     setShowControlPanel,
-    isValidMap
+    isValidMap,
   ]);
 
   // Show loading spinner if map isn't ready
