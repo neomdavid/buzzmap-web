@@ -1,18 +1,40 @@
 import React, { useState, useEffect, useRef } from "react";
-import { 
-  IconX, 
-  IconCheck, 
-  IconTrendingUp, 
-  IconTrendingUp2, 
+import {
+  IconX,
+  IconCheck,
+  IconTrendingUp,
+  IconTrendingUp2,
   IconChartLine,
   IconTrendingDown,
-  IconMinusVertical
+  IconMinusVertical,
 } from "@tabler/icons-react";
 import { useCreateInterventionMutation, dengueApi } from "../../api/dengueApi"; // Import dengueApi
 import InterventionLocationPicker from "./InterventionLocationPicker"; // Import the new component
-import * as turf from '@turf/turf'; // Import turf for calculations
+import * as turf from "@turf/turf"; // Import turf for calculations
 import dayjs from "dayjs";
 import { showCustomToast } from "../../utils"; // Import the custom toast function
+import {
+  useGetBarangaysQuery,
+  useGetAllInterventionsQuery,
+} from "../../api/dengueApi";
+import {
+  MapPin,
+  Calendar,
+  FileText,
+  AlertTriangle,
+  CheckCircle,
+  X,
+  Plus,
+  Trash2,
+  Upload,
+  Download,
+} from "lucide-react";
+import {
+  getPatternColor,
+  getPatternLabel,
+  normalizePatternType,
+  PATTERN_TYPES,
+} from "../../utils/patternConfig";
 
 // Default map center (Quezon City Hall)
 const defaultCenter = {
@@ -27,7 +49,14 @@ const mapContainerStyle = {
   marginBottom: "1rem",
 };
 
-const AddInterventionModal = ({ isOpen, onClose, preselectedBarangay, patternType, patternUrgency, transformedBarangays = [] }) => {
+const AddInterventionModal = ({
+  isOpen,
+  onClose,
+  preselectedBarangay,
+  patternType,
+  patternUrgency,
+  transformedBarangays = [],
+}) => {
   const modalRef = useRef(null);
   const [formData, setFormData] = useState({
     barangay: "",
@@ -58,11 +87,12 @@ const AddInterventionModal = ({ isOpen, onClose, preselectedBarangay, patternTyp
   // Add new state for current barangay's pattern data
   const [currentBarangayPattern, setCurrentBarangayPattern] = useState({
     type: patternType,
-    urgency: patternUrgency
+    urgency: patternUrgency,
   });
 
   // Add state for current highlighted barangay
-  const [highlightedBarangay, setHighlightedBarangay] = useState(preselectedBarangay);
+  const [highlightedBarangay, setHighlightedBarangay] =
+    useState(preselectedBarangay);
 
   // Update the intervention types array
   const interventionTypes = [
@@ -70,39 +100,43 @@ const AddInterventionModal = ({ isOpen, onClose, preselectedBarangay, patternTyp
     "Fogging",
     "Ovicidal-Larvicidal Trapping",
     "Clean-up Drive",
-    "Education Campaign"
+    "Education Campaign",
   ];
 
   // Update the getAllowedStatuses function
   const getAllowedStatuses = (dateStr) => {
     const now = new Date();
     const selectedDate = new Date(dateStr);
-    
+
     // Reset hours, minutes, seconds, and milliseconds for date comparison
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const selectedDay = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate());
-    
+    const selectedDay = new Date(
+      selectedDate.getFullYear(),
+      selectedDate.getMonth(),
+      selectedDate.getDate()
+    );
+
     // If date is in the past, only allow "Complete"
     if (selectedDay < today) {
       return ["Complete"];
     }
-    
+
     // If date is today, allow "Scheduled" and "Ongoing"
     if (selectedDay.getTime() === today.getTime()) {
       return ["Scheduled", "Ongoing"];
     }
-    
+
     // If date is in the future, only allow "Scheduled"
     return ["Scheduled"];
   };
 
   // Add loading state for boundary data
   useEffect(() => {
-    console.log('[Modal DEBUG] Fetching boundary data...');
+    console.log("[Modal DEBUG] Fetching boundary data...");
     fetch("/quezon_barangays_boundaries.geojson")
       .then((res) => res.json())
       .then((data) => {
-        console.log('[Modal DEBUG] Boundary data loaded successfully');
+        console.log("[Modal DEBUG] Boundary data loaded successfully");
         setBarangayGeoJsonData(data);
         setIsBoundaryDataLoaded(true);
         const barangayNames = data.features
@@ -111,17 +145,30 @@ const AddInterventionModal = ({ isOpen, onClose, preselectedBarangay, patternTyp
         setBarangayOptions(barangayNames);
       })
       .catch((error) => {
-        console.error('[Modal DEBUG] Error loading boundary data:', error);
-        setSubmissionError("Failed to load boundary data. Please refresh the page.");
+        console.error("[Modal DEBUG] Error loading boundary data:", error);
+        setSubmissionError(
+          "Failed to load boundary data. Please refresh the page."
+        );
       });
   }, []);
 
   // Set preselected barangay when modal opens
   useEffect(() => {
-    if (isOpen && preselectedBarangay && barangayGeoJsonData && barangayGeoJsonData.features && isBoundaryDataLoaded) {
+    if (
+      isOpen &&
+      preselectedBarangay &&
+      barangayGeoJsonData &&
+      barangayGeoJsonData.features &&
+      isBoundaryDataLoaded
+    ) {
       setFormData((prev) => ({ ...prev, barangay: preselectedBarangay }));
       // Set focusCommand to highlight the barangay on the map
-      console.log('[AddInterventionModal] useEffect: isOpen:', isOpen, 'preselectedBarangay:', preselectedBarangay);
+      console.log(
+        "[AddInterventionModal] useEffect: isOpen:",
+        isOpen,
+        "preselectedBarangay:",
+        preselectedBarangay
+      );
       const selectedFeature = barangayGeoJsonData.features.find(
         (feature) => feature.properties.name === preselectedBarangay
       );
@@ -130,27 +177,46 @@ const AddInterventionModal = ({ isOpen, onClose, preselectedBarangay, patternTyp
           const center = turf.centerOfMass(selectedFeature);
           if (center && center.geometry && center.geometry.coordinates) {
             const [lng, lat] = center.geometry.coordinates;
-            console.log('[AddInterventionModal] Found center for', preselectedBarangay, 'at', lat, lng);
+            console.log(
+              "[AddInterventionModal] Found center for",
+              preselectedBarangay,
+              "at",
+              lat,
+              lng
+            );
             setFocusCommand({
-              type: 'barangay',
+              type: "barangay",
               name: preselectedBarangay,
               center: { lat, lng },
               zoomLevel: 15,
             });
           } else {
-            console.log('[AddInterventionModal] No center found for', preselectedBarangay);
+            console.log(
+              "[AddInterventionModal] No center found for",
+              preselectedBarangay
+            );
           }
         } catch (err) {
-          console.log('[AddInterventionModal] Error calculating center for', preselectedBarangay, err);
+          console.log(
+            "[AddInterventionModal] Error calculating center for",
+            preselectedBarangay,
+            err
+          );
         }
       } else {
-        console.log('[AddInterventionModal] No feature/geometry found for', preselectedBarangay);
+        console.log(
+          "[AddInterventionModal] No feature/geometry found for",
+          preselectedBarangay
+        );
       }
     } else {
-      if (!isOpen) console.log('[AddInterventionModal] Modal not open');
-      if (!preselectedBarangay) console.log('[AddInterventionModal] No preselectedBarangay');
-      if (!barangayGeoJsonData) console.log('[AddInterventionModal] barangayGeoJsonData not loaded');
-      if (!isBoundaryDataLoaded) console.log('[AddInterventionModal] Boundary data not loaded');
+      if (!isOpen) console.log("[AddInterventionModal] Modal not open");
+      if (!preselectedBarangay)
+        console.log("[AddInterventionModal] No preselectedBarangay");
+      if (!barangayGeoJsonData)
+        console.log("[AddInterventionModal] barangayGeoJsonData not loaded");
+      if (!isBoundaryDataLoaded)
+        console.log("[AddInterventionModal] Boundary data not loaded");
     }
   }, [isOpen, preselectedBarangay, barangayGeoJsonData, isBoundaryDataLoaded]);
 
@@ -160,78 +226,84 @@ const AddInterventionModal = ({ isOpen, onClose, preselectedBarangay, patternTyp
       setHighlightedBarangay(preselectedBarangay);
       setCurrentBarangayPattern({
         type: patternType,
-        urgency: patternUrgency
+        urgency: patternUrgency,
       });
     }
   }, [isOpen, preselectedBarangay, patternType, patternUrgency]);
 
   // Helper function to get pattern data for a barangay
   const getBarangayPatternData = (barangayName) => {
-    console.log('[DEBUG] Getting pattern data for:', barangayName);
-    console.log('[DEBUG] Available barangays:', transformedBarangays);
-    
-    const barangayData = transformedBarangays.find(b => b.name === barangayName);
+    console.log("[DEBUG] Getting pattern data for:", barangayName);
+    console.log("[DEBUG] Available barangays:", transformedBarangays);
+
+    const barangayData = transformedBarangays.find(
+      (b) => b.name === barangayName
+    );
     if (barangayData) {
-      console.log('[DEBUG] Found barangay data:', {
+      console.log("[DEBUG] Found barangay data:", {
         name: barangayData.name,
         patternType: barangayData.patternType,
         issueDetected: barangayData.issueDetected,
         suggestedAction: barangayData.suggestedAction,
-        rawData: barangayData
+        rawData: barangayData,
       });
-      
+
       // Use the existing patternType from transformedBarangays
-      let patternType = barangayData.patternType || 'none';
+      let patternType = barangayData.patternType || "none";
       let urgency = null;
 
       // Map pattern types to urgency levels
       const patternUrgencyMap = {
-        spike: 'Immediate Action Required',
-        gradual_rise: 'Action Required Soon',
-        stability: 'Monitor Situation',
-        decline: 'Continue Monitoring',
-        none: null
+        [PATTERN_TYPES.SPIKE]: "Immediate Action Required",
+        [PATTERN_TYPES.INCREASE]: "Action Required Soon",
+        [PATTERN_TYPES.LOW_LEVEL_ACTIVITY]: "Monitor Situation",
+        [PATTERN_TYPES.DECREASE]: "Continue Monitoring",
+        [PATTERN_TYPES.NO_CHANGE]: "No Specific Pattern",
+        none: null,
       };
 
       urgency = patternUrgencyMap[patternType];
 
       // Also check death priority for additional urgency
-      if (barangayData.death_priority && barangayData.death_priority.count > 0) {
-        urgency = 'Immediate Action Required (Death Cases Detected)';
-        if (patternType === 'none') {
-          patternType = 'spike'; // Treat death cases as high priority
+      if (
+        barangayData.death_priority &&
+        barangayData.death_priority.count > 0
+      ) {
+        urgency = "Immediate Action Required (Death Cases Detected)";
+        if (patternType === "none") {
+          patternType = "spike"; // Treat death cases as high priority
         }
       }
 
-      console.log('[DEBUG] Final pattern determination:', {
+      console.log("[DEBUG] Final pattern determination:", {
         patternType,
         urgency,
-        barangayName
+        barangayName,
       });
 
       return {
         type: patternType,
-        urgency: urgency
+        urgency: urgency,
       };
     }
-    console.log('[DEBUG] No barangay data found for:', barangayName);
+    console.log("[DEBUG] No barangay data found for:", barangayName);
     return {
-      type: 'none',
-      urgency: null
+      type: "none",
+      urgency: null,
     };
   };
 
   // Update handleChange to update highlighted barangay and pan map
   const handleChange = (e) => {
     const { name, value } = e.target;
-    
-    setFormData(prev => ({
+
+    setFormData((prev) => ({
       ...prev,
-      [name]: value
+      [name]: value,
     }));
 
     // If barangay is changed, update the highlighted barangay, pattern data, and pan map
-    if (name === 'barangay') {
+    if (name === "barangay") {
       setHighlightedBarangay(value);
       const patternData = getBarangayPatternData(value);
       // Always update the pattern data, even if it's null/empty
@@ -247,16 +319,21 @@ const AddInterventionModal = ({ isOpen, onClose, preselectedBarangay, patternTyp
             const center = turf.centerOfMass(selectedFeature);
             if (center && center.geometry && center.geometry.coordinates) {
               const [lng, lat] = center.geometry.coordinates;
-              console.log('[DEBUG] Panning to barangay:', value, 'at coordinates:', { lat, lng });
-              setFocusCommand({ 
-                type: 'barangay',
+              console.log(
+                "[DEBUG] Panning to barangay:",
+                value,
+                "at coordinates:",
+                { lat, lng }
+              );
+              setFocusCommand({
+                type: "barangay",
                 name: value,
                 center: { lat, lng },
                 zoomLevel: 15,
               });
             }
-          } catch (err) { 
-            console.error("Error calculating center for barangay:", value, err); 
+          } catch (err) {
+            console.error("Error calculating center for barangay:", value, err);
           }
         }
       } else if (!value) {
@@ -268,28 +345,28 @@ const AddInterventionModal = ({ isOpen, onClose, preselectedBarangay, patternTyp
 
   // Update handlePinChange to update highlighted barangay
   const handlePinChange = (pinData) => {
-    console.log('[DEBUG] Pin data received:', pinData);
-    
+    console.log("[DEBUG] Pin data received:", pinData);
+
     if (pinData) {
-      console.log('[DEBUG] Valid pin data:', pinData);
-      
+      console.log("[DEBUG] Valid pin data:", pinData);
+
       // Update the form data with both location and specific_location
-      setFormData(prev => ({
+      setFormData((prev) => ({
         ...prev,
         location: {
           coordinates: pinData.coordinates,
           barangay: pinData.barangayName,
-          address: pinData.formattedAddress
+          address: pinData.formattedAddress,
         },
         specific_location: {
           coordinates: pinData.coordinates,
           barangay: pinData.barangayName,
-          address: pinData.formattedAddress
+          address: pinData.formattedAddress,
         },
         // Update the barangay dropdown
         barangay: pinData.barangayName,
         // Update the address field
-        address: pinData.formattedAddress
+        address: pinData.formattedAddress,
       }));
 
       // Update the highlighted barangay
@@ -305,49 +382,53 @@ const AddInterventionModal = ({ isOpen, onClose, preselectedBarangay, patternTyp
       setIsLocationValid(true);
       setSubmissionError(null);
     } else {
-      console.log('[DEBUG] Invalid pin data:', pinData);
+      console.log("[DEBUG] Invalid pin data:", pinData);
       setIsLocationValid(false);
-      setSubmissionError('Please pin a specific location on the map within the selected barangay.');
+      setSubmissionError(
+        "Please pin a specific location on the map within the selected barangay."
+      );
     }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log('[Modal DEBUG] Form submission attempt:', {
+    console.log("[Modal DEBUG] Form submission attempt:", {
       hasBarangay: !!formData.barangay,
       hasSpecificLocation: !!formData.specific_location,
       isLocationValid,
       isBoundaryDataLoaded: !!barangayGeoJsonData,
-      formData
+      formData,
     });
 
     if (!formData.barangay) {
-      setSubmissionError('Please select a barangay');
+      setSubmissionError("Please select a barangay");
       return;
     }
 
     if (!isLocationValid) {
-      setSubmissionError('Please pin a specific location on the map within the selected barangay.');
+      setSubmissionError(
+        "Please pin a specific location on the map within the selected barangay."
+      );
       return;
     }
 
     if (!formData.date) {
-      setSubmissionError('Please select a date');
+      setSubmissionError("Please select a date");
       return;
     }
 
     if (!formData.interventionType) {
-      setSubmissionError('Please select an intervention type');
+      setSubmissionError("Please select an intervention type");
       return;
     }
 
     if (!formData.personnel) {
-      setSubmissionError('Please enter personnel name');
+      setSubmissionError("Please enter personnel name");
       return;
     }
 
     if (!formData.status) {
-      setSubmissionError('Please select a status');
+      setSubmissionError("Please select a status");
       return;
     }
 
@@ -358,21 +439,26 @@ const AddInterventionModal = ({ isOpen, onClose, preselectedBarangay, patternTyp
       // Format the data before sending to the backend
       const formattedData = {
         ...formData,
-        status: formData.status === 'Completed' ? 'Complete' : formData.status, // Convert to correct case
+        status: formData.status === "Completed" ? "Complete" : formData.status, // Convert to correct case
         specific_location: {
           type: "Point", // Add the required type field
-          coordinates: formData.specific_location.coordinates
-        }
+          coordinates: formData.specific_location.coordinates,
+        },
       };
 
       await createIntervention(formattedData).unwrap();
-      console.log('[Modal DEBUG] Intervention created successfully');
-      showCustomToast('Intervention created successfully!', 'success');
+      console.log("[Modal DEBUG] Intervention created successfully");
+      showCustomToast("Intervention created successfully!", "success");
       onClose();
     } catch (error) {
-      console.error('[Modal DEBUG] Error creating intervention:', error);
-      setSubmissionError(error.data?.message || 'Failed to create intervention');
-      showCustomToast(error.data?.message || 'Failed to create intervention', 'error');
+      console.error("[Modal DEBUG] Error creating intervention:", error);
+      setSubmissionError(
+        error.data?.message || "Failed to create intervention"
+      );
+      showCustomToast(
+        error.data?.message || "Failed to create intervention",
+        "error"
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -385,14 +471,14 @@ const AddInterventionModal = ({ isOpen, onClose, preselectedBarangay, patternTyp
   useEffect(() => {
     if (isOpen && modalRef.current) {
       modalRef.current.showModal();
-      setSubmissionError(""); 
+      setSubmissionError("");
       // If opening and formData.barangay has a value (e.g. from previous edit session not yet submitted)
       // then try to focus the map on it, BUT only if no specific location is already pinned.
-      if(formData.barangay && barangayGeoJsonData) {
+      if (formData.barangay && barangayGeoJsonData) {
         // Only set focus command to a barangay if there's NO valid pin.
         // If there is a valid pin, the map should be focused on the pin via initialPin,
         // not the entire barangay boundary from here.
-        if (!formData.specific_location) { 
+        if (!formData.specific_location) {
           const selectedFeature = barangayGeoJsonData.features.find(
             (feature) => feature.properties.name === formData.barangay
           );
@@ -401,14 +487,19 @@ const AddInterventionModal = ({ isOpen, onClose, preselectedBarangay, patternTyp
               const center = turf.centerOfMass(selectedFeature);
               if (center && center.geometry && center.geometry.coordinates) {
                 const [lng, lat] = center.geometry.coordinates;
-                setFocusCommand({ 
-                  type: 'barangay',
+                setFocusCommand({
+                  type: "barangay",
                   name: formData.barangay,
                   center: { lat, lng },
                   zoomLevel: 15,
                 });
               }
-            } catch (err) { console.error("Error recentering on initial load for barangay focus", err); }
+            } catch (err) {
+              console.error(
+                "Error recentering on initial load for barangay focus",
+                err
+              );
+            }
           }
         } else {
           // If a specific location IS set, ensure focusCommand is not redundantly a barangay focus.
@@ -422,7 +513,12 @@ const AddInterventionModal = ({ isOpen, onClose, preselectedBarangay, patternTyp
         setFocusCommand(null); // Ensure no previous focus if barangay is cleared
       }
     }
-  }, [isOpen, formData.barangay, barangayGeoJsonData, formData.specific_location]); // Added formData.specific_location
+  }, [
+    isOpen,
+    formData.barangay,
+    barangayGeoJsonData,
+    formData.specific_location,
+  ]); // Added formData.specific_location
 
   if (!isOpen) return null;
 
@@ -455,14 +551,28 @@ const AddInterventionModal = ({ isOpen, onClose, preselectedBarangay, patternTyp
                   </p>
                   {/* Display key details for confirmation */}
                   <div className="text-left bg-base-200 p-4 rounded-lg w-full max-w-md mb-4 text-sm">
-                    <p><strong>Barangay:</strong> {formData.barangay}</p>
-                    <p><strong>Address:</strong> {formData.address}</p>
-                    <p><strong>Type:</strong> {formData.interventionType}</p>
-                    <p><strong>Date:</strong> {new Date(formData.date).toLocaleString()}</p>
-                    <p><strong>Personnel:</strong> {formData.personnel}</p>
+                    <p>
+                      <strong>Barangay:</strong> {formData.barangay}
+                    </p>
+                    <p>
+                      <strong>Address:</strong> {formData.address}
+                    </p>
+                    <p>
+                      <strong>Type:</strong> {formData.interventionType}
+                    </p>
+                    <p>
+                      <strong>Date:</strong>{" "}
+                      {new Date(formData.date).toLocaleString()}
+                    </p>
+                    <p>
+                      <strong>Personnel:</strong> {formData.personnel}
+                    </p>
                     {formData.specific_location && (
                       <p>
-                        <strong>Coordinates:</strong> Lng: {formData.specific_location.coordinates[0].toFixed(4)}, Lat: {formData.specific_location.coordinates[1].toFixed(4)}
+                        <strong>Coordinates:</strong> Lng:{" "}
+                        {formData.specific_location.coordinates[0].toFixed(4)},
+                        Lat:{" "}
+                        {formData.specific_location.coordinates[1].toFixed(4)}
                       </p>
                     )}
                   </div>
@@ -524,33 +634,73 @@ const AddInterventionModal = ({ isOpen, onClose, preselectedBarangay, patternTyp
                         Location Details
                       </label>
                       {/* Pattern Tag - Now shows for any barangay with pattern data */}
-                     
                     </div>
-                    {currentBarangayPattern && currentBarangayPattern.type && currentBarangayPattern.urgency && (
-                        <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium w-fit mb-2 mt-2
-                          ${currentBarangayPattern.type === 'spike' ? 'bg-error/10 text-error border border-error/20' : ''}
-                          ${currentBarangayPattern.type === 'gradual_rise' ? 'bg-warning/10 text-warning border border-warning/20' : ''}
-                          ${currentBarangayPattern.type === 'stability' ? 'bg-info/10 text-info border border-info/20' : ''}
-                          ${currentBarangayPattern.type === 'decline' ? 'bg-success/10 text-success border border-success/20' : ''}
-                          ${currentBarangayPattern.type === 'none' ? 'bg-gray-100 text-gray-500 border border-gray-200' : ''}
-                        `}>
-                          {currentBarangayPattern.type === 'spike' ? (
+                    {currentBarangayPattern &&
+                      currentBarangayPattern.type &&
+                      currentBarangayPattern.urgency && (
+                        <div
+                          className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium w-fit mb-2 mt-2
+                          ${
+                            currentBarangayPattern.type === "spike"
+                              ? "bg-error/10 text-error border border-error/20"
+                              : ""
+                          }
+                                              ${
+                                                currentBarangayPattern.type ===
+                                                PATTERN_TYPES.INCREASE
+                                                  ? "bg-warning/10 text-warning border border-warning/20"
+                                                  : ""
+                                              }
+                    ${
+                      currentBarangayPattern.type ===
+                      PATTERN_TYPES.LOW_LEVEL_ACTIVITY
+                        ? "bg-info/10 text-info border border-info/20"
+                        : ""
+                    }
+                    ${
+                      currentBarangayPattern.type === PATTERN_TYPES.DECREASE
+                        ? "bg-success/10 text-success border border-success/20"
+                        : ""
+                    }
+                          ${
+                            currentBarangayPattern.type === "none"
+                              ? "bg-gray-100 text-gray-500 border border-gray-200"
+                              : ""
+                          }
+                        `}
+                        >
+                          {currentBarangayPattern.type ===
+                          PATTERN_TYPES.SPIKE ? (
                             <IconTrendingUp size={18} className="text-error" />
-                          ) : currentBarangayPattern.type === 'gradual_rise' ? (
-                            <IconTrendingUp2 size={18} className="text-warning" />
-                          ) : currentBarangayPattern.type === 'stability' ? (
-                            <IconMinusVertical size={18} className="text-info" />
-                          ) : currentBarangayPattern.type === 'decline' ? (
-                            <IconTrendingDown size={18} className="text-success" />
+                          ) : currentBarangayPattern.type ===
+                            PATTERN_TYPES.INCREASE ? (
+                            <IconTrendingUp2
+                              size={18}
+                              className="text-warning"
+                            />
+                          ) : currentBarangayPattern.type ===
+                            PATTERN_TYPES.LOW_LEVEL_ACTIVITY ? (
+                            <IconMinusVertical
+                              size={18}
+                              className="text-info"
+                            />
+                          ) : currentBarangayPattern.type ===
+                            PATTERN_TYPES.DECREASE ? (
+                            <IconTrendingDown
+                              size={18}
+                              className="text-success"
+                            />
                           ) : null}
                           {currentBarangayPattern.urgency}
                         </div>
                       )}
-                    
+
                     <div className="space-y-4 ">
                       <div className="form-control">
                         <label className="label">
-                          <span className="label-text text-base font-medium">Barangay</span>
+                          <span className="label-text text-base font-medium">
+                            Barangay
+                          </span>
                         </label>
                         <select
                           name="barangay"
@@ -569,7 +719,9 @@ const AddInterventionModal = ({ isOpen, onClose, preselectedBarangay, patternTyp
                       </div>
                       <div className="form-control">
                         <label className="label">
-                          <span className="label-text text-base font-medium">Address</span>
+                          <span className="label-text text-base font-medium">
+                            Address
+                          </span>
                         </label>
                         <input
                           type="text"
@@ -587,7 +739,9 @@ const AddInterventionModal = ({ isOpen, onClose, preselectedBarangay, patternTyp
                   {/* Intervention Type Field */}
                   <div className="form-control">
                     <label className="label">
-                      <span className="label-text text-lg font-semibold">Intervention Type</span>
+                      <span className="label-text text-lg font-semibold">
+                        Intervention Type
+                      </span>
                     </label>
                     <select
                       className="select select-bordered w-full text-lg"
@@ -608,7 +762,9 @@ const AddInterventionModal = ({ isOpen, onClose, preselectedBarangay, patternTyp
                   {/* Personnel Field */}
                   <div className="form-control">
                     <label className="label">
-                      <span className="label-text text-lg font-semibold">Personnel</span>
+                      <span className="label-text text-lg font-semibold">
+                        Personnel
+                      </span>
                     </label>
                     <input
                       type="text"
@@ -623,7 +779,9 @@ const AddInterventionModal = ({ isOpen, onClose, preselectedBarangay, patternTyp
                   {/* Date Field */}
                   <div className="form-control">
                     <label className="label">
-                      <span className="label-text text-lg font-semibold">Date</span>
+                      <span className="label-text text-lg font-semibold">
+                        Date
+                      </span>
                     </label>
                     <input
                       type="datetime-local"
@@ -638,7 +796,9 @@ const AddInterventionModal = ({ isOpen, onClose, preselectedBarangay, patternTyp
                   {/* Status Field */}
                   <div className="form-control">
                     <label className="label">
-                      <span className="label-text text-lg font-semibold">Status</span>
+                      <span className="label-text text-lg font-semibold">
+                        Status
+                      </span>
                     </label>
                     <select
                       className="select select-bordered w-full text-lg"
@@ -660,12 +820,21 @@ const AddInterventionModal = ({ isOpen, onClose, preselectedBarangay, patternTyp
                 <div className="space-y-4">
                   <div className="form-control">
                     <label className="label">
-                      <span className="label-text text-lg font-semibold">Location</span>
+                      <span className="label-text text-lg font-semibold">
+                        Location
+                      </span>
                     </label>
                     <div className="rounded-xl overflow-hidden ">
-                      <InterventionLocationPicker 
+                      <InterventionLocationPicker
                         onPinChange={handlePinChange}
-                        initialPin={formData.specific_location ? { lat: formData.specific_location.coordinates[1], lng: formData.specific_location.coordinates[0] } : null}
+                        initialPin={
+                          formData.specific_location
+                            ? {
+                                lat: formData.specific_location.coordinates[1],
+                                lng: formData.specific_location.coordinates[0],
+                              }
+                            : null
+                        }
                         focusCommand={focusCommand}
                         patternType={patternType}
                         preselectedBarangay={preselectedBarangay}
@@ -677,15 +846,14 @@ const AddInterventionModal = ({ isOpen, onClose, preselectedBarangay, patternTyp
                   {/* Location Validation Message */}
                   {!isLocationValid && (
                     <div className="text-error text-sm">
-                      Please place a pin on the map to specify the exact location.
+                      Please place a pin on the map to specify the exact
+                      location.
                     </div>
                   )}
 
                   {/* Error Message */}
                   {submissionError && (
-                    <div className="text-error text-sm">
-                      {submissionError}
-                    </div>
+                    <div className="text-error text-sm">{submissionError}</div>
                   )}
                 </div>
               </div>

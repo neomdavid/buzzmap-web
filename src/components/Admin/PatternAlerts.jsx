@@ -1,19 +1,34 @@
 import { useState, useMemo } from "react";
-import { useGetBarangaysQuery, useGetPatternRecognitionResultsQuery, useGenerateRecommendationMutation } from "../../api/dengueApi";
+import {
+  useGetBarangaysQuery,
+  useGetPatternRecognitionResultsQuery,
+  useGenerateRecommendationMutation,
+} from "../../api/dengueApi";
 import { MagnifyingGlass } from "phosphor-react";
 import AlertCard from "./AlertCard";
 import RecommendationModal from "./RecommendationModal";
+import {
+  PATTERN_TAB_VALUES,
+  normalizePatternType,
+} from "../../utils/patternConfig";
 
-export default function PatternAlerts({ selectedBarangay, selectedTab, onAlertSelect }) {
+export default function PatternAlerts({
+  selectedBarangay,
+  selectedTab,
+  onAlertSelect,
+}) {
   const { data: barangaysData, isLoading, error } = useGetBarangaysQuery();
-  const { data: patternResultsData, isLoading: patternResultsLoading } = useGetPatternRecognitionResultsQuery();
-  const [generateRecommendation, { isLoading: isGeneratingRecommendation }] = useGenerateRecommendationMutation();
-  
+  const { data: patternResultsData, isLoading: patternResultsLoading } =
+    useGetPatternRecognitionResultsQuery();
+  const [generateRecommendation, { isLoading: isGeneratingRecommendation }] =
+    useGenerateRecommendationMutation();
+
   // State for AI recommendations
   const [aiRecommendations, setAiRecommendations] = useState({});
   const [recommendationLoading, setRecommendationLoading] = useState({});
   const [recommendationError, setRecommendationError] = useState({});
-  const [showDetailedRecommendations, setShowDetailedRecommendations] = useState(false);
+  const [showDetailedRecommendations, setShowDetailedRecommendations] =
+    useState(false);
 
   // Function to generate AI recommendation for a barangay
   const handleGenerateRecommendation = async (barangayName) => {
@@ -21,41 +36,45 @@ export default function PatternAlerts({ selectedBarangay, selectedTab, onAlertSe
       return; // Already generated
     }
 
-    setRecommendationLoading(prev => ({ ...prev, [barangayName]: true }));
-    setRecommendationError(prev => ({ ...prev, [barangayName]: null }));
+    setRecommendationLoading((prev) => ({ ...prev, [barangayName]: true }));
+    setRecommendationError((prev) => ({ ...prev, [barangayName]: null }));
     setShowDetailedRecommendations(false); // Reset to show summary only
-    
+
     try {
       const response = await generateRecommendation({
         userRole: "admin",
-        barangay: barangayName
+        barangay: barangayName,
       }).unwrap();
-      
+
       // The API returns the data directly, no need to check for success
       if (response && response.recommendation) {
-        setAiRecommendations(prev => ({
+        setAiRecommendations((prev) => ({
           ...prev,
-          [barangayName]: response
+          [barangayName]: response,
         }));
       }
     } catch (error) {
       console.error("Failed to generate recommendation:", error);
-      const message = error?.data?.message || error?.error || error?.message || 'Unknown error';
-      setRecommendationError(prev => ({ ...prev, [barangayName]: message }));
+      const message =
+        error?.data?.message ||
+        error?.error ||
+        error?.message ||
+        "Unknown error";
+      setRecommendationError((prev) => ({ ...prev, [barangayName]: message }));
     } finally {
-      setRecommendationLoading(prev => ({ ...prev, [barangayName]: false }));
+      setRecommendationLoading((prev) => ({ ...prev, [barangayName]: false }));
     }
   };
 
   // Merge pattern data with barangay data (now only barangaysData)
   const patternData = useMemo(() => {
     if (!barangaysData) return [];
-    
-    const processedData = barangaysData.map(barangay => {
+
+    const processedData = barangaysData.map((barangay) => {
       const patternBased = barangay.status_and_recommendation?.pattern_based;
       const reportBased = barangay.status_and_recommendation?.report_based;
       const deathPriority = barangay.status_and_recommendation?.death_priority;
-      
+
       return {
         _id: barangay._id,
         name: barangay.name,
@@ -63,7 +82,7 @@ export default function PatternAlerts({ selectedBarangay, selectedTab, onAlertSe
         report_based: reportBased,
         death_priority: deathPriority,
         pattern_data: barangay.pattern_data,
-        last_analysis_time: barangay.last_analysis_time
+        last_analysis_time: barangay.last_analysis_time,
       };
     });
 
@@ -76,36 +95,37 @@ export default function PatternAlerts({ selectedBarangay, selectedTab, onAlertSe
       return [];
     }
 
-    const filtered = patternResultsData.data.filter(item => {
-      const pattern = item.pattern?.toLowerCase();
-      
+    const filtered = patternResultsData.data.filter((item) => {
+      const pattern = normalizePatternType(item.pattern);
+
       let shouldInclude = false;
       switch (selectedTab) {
-        case 'selected':
-          shouldInclude = item.name.toLowerCase() === selectedBarangay?.toLowerCase();
+        case PATTERN_TAB_VALUES.SELECTED:
+          shouldInclude =
+            item.name.toLowerCase() === selectedBarangay?.toLowerCase();
           break;
-        case 'all':
+        case PATTERN_TAB_VALUES.ALL:
           shouldInclude = true;
           break;
-        case 'spikes':
-          shouldInclude = pattern === 'spike';
+        case PATTERN_TAB_VALUES.SPIKES:
+          shouldInclude = pattern === "spike";
           break;
-        case 'gradual':
-          shouldInclude = pattern === 'gradual_rise';
+        case PATTERN_TAB_VALUES.INCREASE:
+          shouldInclude = pattern === "increase";
           break;
-        case 'stability':
-          shouldInclude = pattern === 'stability';
+        case PATTERN_TAB_VALUES.DECREASE:
+          shouldInclude = pattern === "decrease";
           break;
-        case 'decline':
-          shouldInclude = pattern === 'decline';
+        case PATTERN_TAB_VALUES.LOW_LEVEL_ACTIVITY:
+          shouldInclude = pattern === "low_level_activity";
           break;
-        case 'low_activity':
-          shouldInclude = pattern === 'low_level_activity';
+        case PATTERN_TAB_VALUES.NO_CHANGE:
+          shouldInclude = pattern === "no_change";
           break;
         default:
           shouldInclude = true;
       }
-      
+
       return shouldInclude;
     });
 
@@ -132,7 +152,10 @@ export default function PatternAlerts({ selectedBarangay, selectedTab, onAlertSe
     <div className="space-y-4">
       {/* Search Bar */}
       <div className="relative">
-        <MagnifyingGlass className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+        <MagnifyingGlass
+          className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+          size={20}
+        />
         <input
           type="text"
           placeholder="Search barangays..."
@@ -147,19 +170,25 @@ export default function PatternAlerts({ selectedBarangay, selectedTab, onAlertSe
         </div>
       ) : (
         filteredAlerts.map((item) => {
-          const barangayData = barangaysData?.find(b => b.name === item.name);
-          
+          const barangayData = barangaysData?.find((b) => b.name === item.name);
+
           return (
             <div key={item.name}>
               <AlertCard
                 title={item.name}
-                pattern_based={barangayData?.status_and_recommendation?.pattern_based}
-                report_based={barangayData?.status_and_recommendation?.report_based}
-                death_priority={barangayData?.status_and_recommendation?.death_priority}
+                pattern_based={
+                  barangayData?.status_and_recommendation?.pattern_based
+                }
+                report_based={
+                  barangayData?.status_and_recommendation?.report_based
+                }
+                death_priority={
+                  barangayData?.status_and_recommendation?.death_priority
+                }
                 pattern_data={{
                   pattern: item.pattern,
                   alert: item.alert,
-                  recommendation: item.recommendation
+                  recommendation: item.recommendation,
                 }}
                 last_analysis_time={barangayData?.last_analysis_time}
                 barangayName={item.name}
@@ -169,18 +198,22 @@ export default function PatternAlerts({ selectedBarangay, selectedTab, onAlertSe
                 onGenerateRecommendation={handleGenerateRecommendation}
                 setRecommendationLoading={setRecommendationLoading}
               />
-              
+
               {/* Recommendation Modal */}
               <RecommendationModal
                 key={`modal-${item.name}`}
                 barangayName={item.name}
-                pattern_based={barangayData?.status_and_recommendation?.pattern_based}
+                pattern_based={
+                  barangayData?.status_and_recommendation?.pattern_based
+                }
                 pattern_data={{
                   pattern: item.pattern,
                   alert: item.alert,
-                  recommendation: item.recommendation
+                  recommendation: item.recommendation,
                 }}
-                death_priority={barangayData?.status_and_recommendation?.death_priority}
+                death_priority={
+                  barangayData?.status_and_recommendation?.death_priority
+                }
                 aiRecommendations={aiRecommendations}
                 recommendationLoading={recommendationLoading}
                 recommendationError={recommendationError}

@@ -489,12 +489,14 @@ const DengueMapping = () => {
     switch (patternType?.toLowerCase()) {
       case "spike":
         return "border-error";
-      case "gradual_rise":
+      case "increase":
         return "border-warning";
-      case "decline":
+      case "decrease":
         return "border-success";
-      case "stability":
+      case "low_level_activity":
         return "border-info";
+      case "no_change":
+        return "border-gray-400";
       default:
         return "border-gray-400";
     }
@@ -505,12 +507,14 @@ const DengueMapping = () => {
     switch (patternType?.toLowerCase()) {
       case "spike":
         return "text-error";
-      case "gradual_rise":
+      case "increase":
         return "text-warning";
-      case "decline":
+      case "decrease":
         return "text-success";
-      case "stability":
+      case "low_level_activity":
         return "text-info";
+      case "no_change":
+        return "text-gray-400";
       default:
         return "text-gray-400";
     }
@@ -535,12 +539,14 @@ const DengueMapping = () => {
     switch (patternType?.toLowerCase()) {
       case "spike":
         return "bg-error";
-      case "gradual_rise":
+      case "increase":
         return "bg-warning";
-      case "decline":
+      case "decrease":
         return "bg-success";
-      case "stability":
+      case "low_level_activity":
         return "bg-info";
+      case "no_change":
+        return "bg-gray-400";
       default:
         return "bg-gray-400";
     }

@@ -7,7 +7,7 @@ import {
 import {
   useGetAllInterventionsQuery,
   useGetPostsQuery,
-  useGetBarangaysQuery,
+  useGetAdminBarangaysQuery,
 } from "../../api/dengueApi";
 import { Bar, Pie } from "react-chartjs-2"; // Pie and Bar will be removed from render
 import {
@@ -29,9 +29,15 @@ import {
 } from "@tabler/icons-react"; // Replaced IconFileDescription with IconListDetails
 import { Circle, Lightbulb } from "phosphor-react";
 import dayjs from "dayjs"; // Import dayjs
-import { useEffect, useState } from "react"; // Import useState
-import React from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import AddInterventionModal from "../../components/Admin/AddInterventionModal";
+import {
+  PATTERN_TYPES,
+  PATTERN_LABELS,
+  getPatternColor,
+  getPatternLabel,
+  normalizePatternType,
+} from "../../utils/patternConfig";
 
 ChartJS.register(
   ArcElement,
@@ -59,7 +65,7 @@ const Interventions = () => {
     data: barangaysList,
     isLoading: isLoadingBarangays,
     error: errorBarangays,
-  } = useGetBarangaysQuery();
+  } = useGetAdminBarangaysQuery();
 
   // Log the raw API response data and transform it
   const transformedBarangays = React.useMemo(() => {
@@ -77,7 +83,7 @@ const Interventions = () => {
 
       return {
         name: b.name,
-        patternType: patternBased.status?.toLowerCase() || "none",
+        patternType: normalizePatternType(patternBased.status) || "none",
         issueDetected: patternBased.alert || "",
         suggestedAction:
           patternBased.admin_recommendation ||
@@ -104,6 +110,19 @@ const Interventions = () => {
         "[DEBUG] Transformed Barangays List:",
         JSON.stringify(transformedBarangays, null, 2)
       );
+
+      // Log pattern distribution
+      const patternCounts = transformedBarangays.reduce((acc, item) => {
+        acc[item.patternType] = (acc[item.patternType] || 0) + 1;
+        return acc;
+      }, {});
+      console.log("[DEBUG] Pattern Distribution:", patternCounts);
+
+      // Log spike patterns specifically
+      const spikeBarangays = transformedBarangays.filter(
+        (item) => normalizePatternType(item.patternType) === "spike"
+      );
+      console.log("[DEBUG] Spike Barangays:", spikeBarangays);
     }
   }, [transformedBarangays]);
 
@@ -184,10 +203,7 @@ const Interventions = () => {
   const uniquePatternTypes = React.useMemo(() => {
     if (!transformedBarangays) return [];
     const patterns = new Set(
-      transformedBarangays
-        .map((b) => b.patternType)
-        .filter(Boolean)
-        .map((s) => s.toLowerCase())
+      transformedBarangays.map((b) => b.patternType).filter(Boolean)
     );
     return Array.from(patterns).sort();
   }, [transformedBarangays]);
@@ -240,12 +256,13 @@ const Interventions = () => {
         if (a.death_priority.count !== b.death_priority.count) {
           return b.death_priority.count - a.death_priority.count;
         }
-        // If death counts are equal, sort by pattern type (spike first, then gradual_rise, etc.)
+        // If death counts are equal, sort by pattern type (spike first, then increase, etc.)
         const patternOrder = {
           spike: 0,
-          gradual_rise: 1,
-          stability: 2,
-          decline: 3,
+          increase: 1,
+          decrease: 2,
+          low_level_activity: 3,
+          no_change: 4,
           none: 4,
         };
         return patternOrder[a.patternType] - patternOrder[b.patternType];
@@ -254,7 +271,9 @@ const Interventions = () => {
     // Apply pattern filter
     if (patternFilter) {
       recommendations = recommendations.filter(
-        (item) => item.patternType === patternFilter.toLowerCase()
+        (item) =>
+          normalizePatternType(item.patternType) ===
+          normalizePatternType(patternFilter)
       );
     }
 
@@ -297,16 +316,30 @@ const Interventions = () => {
   // Log what is being rendered in ActionRecommendationCard for debugging
   console.log("ActionRecommendationCard data:", filteredRecommendations);
 
-  // Tab state hooks at the top level
-  const [activeTab, setActiveTab] = useState("spike");
+  // Tab state hooks at the top level - use centralized pattern types
+  const [activeTab, setActiveTab] = useState(PATTERN_TYPES.SPIKE);
   const [showAllTabs, setShowAllTabs] = useState(false);
 
   // Carousel state for recommendations
   const [cardStartIndex, setCardStartIndex] = useState(0);
   const [cardsPerPage, setCardsPerPage] = useState(3);
   const cards = filteredRecommendations.filter(
-    (item) => item.patternType === activeTab
+    (item) => normalizePatternType(item.patternType) === activeTab
   );
+
+  // Debug logging for cards filtering
+  console.log("[DEBUG] Cards Filtering:", {
+    activeTab,
+    filteredRecommendationsCount: filteredRecommendations.length,
+    cardsCount: cards.length,
+    activeTabPatterns: filteredRecommendations
+      .filter((item) => normalizePatternType(item.patternType) === activeTab)
+      .map((item) => ({
+        name: item.name,
+        patternType: item.patternType,
+        normalized: normalizePatternType(item.patternType),
+      })),
+  });
   const visibleCards = cards.slice(
     cardStartIndex,
     cardStartIndex + cardsPerPage
@@ -356,24 +389,40 @@ const Interventions = () => {
   const fairviewData = findRecommendationForBarangay("Fairview");
   // const holySpiritData = findRecommendationForBarangay("Holy Spirit"); // Will be replaced by dynamic rendering
 
-  // Tab logic
-  const tabOrder = ["spike", "gradual_rise", "stability", "decline", "none"];
+  // Tab logic - use centralized pattern configuration
+  const tabOrder = [
+    PATTERN_TYPES.SPIKE,
+    PATTERN_TYPES.INCREASE,
+    PATTERN_TYPES.DECREASE,
+    PATTERN_TYPES.LOW_LEVEL_ACTIVITY,
+    PATTERN_TYPES.NO_CHANGE,
+    "none",
+  ];
   const patternMeta = {
-    spike: { label: "Spike", color: "text-error", border: "border-error" },
-    gradual_rise: {
-      label: "Gradual Rise",
+    [PATTERN_TYPES.SPIKE]: {
+      label: PATTERN_LABELS[PATTERN_TYPES.SPIKE],
+      color: "text-error",
+      border: "border-error",
+    },
+    [PATTERN_TYPES.INCREASE]: {
+      label: PATTERN_LABELS[PATTERN_TYPES.INCREASE],
       color: "text-warning",
       border: "border-warning",
     },
-    stability: {
-      label: "Stability",
+    [PATTERN_TYPES.DECREASE]: {
+      label: PATTERN_LABELS[PATTERN_TYPES.DECREASE],
+      color: "text-success",
+      border: "border-success",
+    },
+    [PATTERN_TYPES.LOW_LEVEL_ACTIVITY]: {
+      label: PATTERN_LABELS[PATTERN_TYPES.LOW_LEVEL_ACTIVITY],
       color: "text-info",
       border: "border-info",
     },
-    decline: {
-      label: "Decline",
-      color: "text-success",
-      border: "border-success",
+    [PATTERN_TYPES.NO_CHANGE]: {
+      label: PATTERN_LABELS[PATTERN_TYPES.NO_CHANGE],
+      color: "text-gray-500",
+      border: "border-gray-300",
     },
     none: {
       label: "No Pattern",
@@ -381,15 +430,11 @@ const Interventions = () => {
       border: "border-gray-300",
     },
   };
-  // Only include patterns that exist in the recommendations
-  const availablePatterns = tabOrder.filter((p) =>
-    filteredRecommendations.some((item) => item.patternType === p)
-  );
+  // Show ALL standardized pattern types, even if they don't have data yet
+  const availablePatterns = tabOrder; // Show all patterns
   const tabOptions = availablePatterns.map((p) => ({
     value: p,
-    label:
-      patternMeta[p]?.label ||
-      p.charAt(0).toUpperCase() + p.slice(1).replace("_", " "),
+    label: patternMeta[p]?.label || "Unknown Pattern",
     color: patternMeta[p]?.color || "text-gray-500",
     border: patternMeta[p]?.border || "border-gray-300",
   }));
@@ -410,10 +455,11 @@ const Interventions = () => {
 
   // Pattern urgency map (should match ActionRecommendationCard)
   const patternUrgencyMap = {
-    spike: "Immediate Action Required",
-    gradual_rise: "Action Required Soon",
-    stability: "Monitor Situation",
-    decline: "Continue Monitoring",
+    [PATTERN_TYPES.SPIKE]: "Immediate Action Required",
+    [PATTERN_TYPES.INCREASE]: "Action Required Soon",
+    [PATTERN_TYPES.DECREASE]: "Continue Monitoring",
+    [PATTERN_TYPES.LOW_LEVEL_ACTIVITY]: "Monitor Situation",
+    [PATTERN_TYPES.NO_CHANGE]: "No Specific Pattern",
     none: "No Specific Pattern",
   };
 
@@ -503,45 +549,19 @@ const Interventions = () => {
                 {/* Centered, colored shared info box for the current pattern */}
                 <div
                   className={` flex flex-col items-center justify-center text-center rounded-2xl  px-6 py-4 w-full mx-auto
-                    ${sharedPattern === "spike" ? "border-error" : ""}
-                    ${sharedPattern === "gradual_rise" ? "border-warning" : ""}
-                    ${sharedPattern === "stability" ? "border-info" : ""}
-                    ${sharedPattern === "decline" ? "border-success" : ""}
-                    ${sharedPattern === "none" ? "border-gray-300" : ""}
+                    ${getPatternColor(sharedPattern, "border")}
                   `}
                   style={{ maxWidth: 600 }}
                 >
                   {/* Action Required label with bg color */}
                   <p
-                    className={`text-lg font-bold mb-3 px-4 py-1 rounded-xl inline-block
-                    ${sharedPattern === "spike" ? "bg-error text-white" : ""}
-                    ${
-                      sharedPattern === "gradual_rise"
-                        ? "bg-warning text-white"
-                        : ""
-                    }
-                    ${sharedPattern === "stability" ? "bg-info text-white" : ""}
-                    ${
-                      sharedPattern === "decline" ? "bg-success text-white" : ""
-                    }
-                    ${
-                      sharedPattern === "none"
-                        ? "bg-gray-300 text-gray-700"
-                        : ""
-                    }
-                  `}
+                    className={`text-lg font-bold mb-3 px-4 py-1 rounded-xl inline-block ${getPatternColor(
+                      sharedPattern,
+                      "badge"
+                    )} text-white`}
                   >
                     {/* Use urgency text from pattern styles */}
-                    {(() => {
-                      const patternUrgency = {
-                        spike: "Immediate Action Required",
-                        gradual_rise: "Action Required Soon",
-                        stability: "Monitor Situation",
-                        decline: "Continue Monitoring",
-                        none: "No Specific Pattern",
-                      };
-                      return patternUrgency[sharedPattern] || "Action Required";
-                    })()}
+                    {patternUrgencyMap[sharedPattern] || "Action Required"}
                   </p>
                   {sharedPattern && (
                     <p className="text-base font-semibold mb-1 flex items-center justify-center gap-2">
@@ -549,22 +569,12 @@ const Interventions = () => {
                         <Circle
                           weight="fill"
                           size={16}
-                          className={
-                            sharedPattern === "spike"
-                              ? "text-error"
-                              : sharedPattern === "gradual_rise"
-                              ? "text-warning"
-                              : sharedPattern === "stability"
-                              ? "text-info"
-                              : sharedPattern === "decline"
-                              ? "text-success"
-                              : "text-gray-400"
-                          }
+                          className={getPatternColor(sharedPattern, "text")}
                         />
                       </span>
                       <span>Pattern:</span>{" "}
                       <span className="capitalize">
-                        {sharedPattern.replace("_", " ")}
+                        {getPatternLabel(sharedPattern)}
                       </span>
                     </p>
                   )}
@@ -624,13 +634,45 @@ const Interventions = () => {
                 </div>
               </>
             ) : (
-              <p className="text-gray-500 p-4 text-center">
-                No{" "}
-                {tabOptions
-                  .find((t) => t.value === activeTab)
-                  ?.label?.toLowerCase() || activeTab}{" "}
-                recommendations available.
-              </p>
+              <>
+                {/* Show pattern info even when no cards exist */}
+                <div
+                  className={`flex flex-col items-center justify-center text-center rounded-2xl px-6 py-4 w-full mx-auto ${getPatternColor(
+                    activeTab,
+                    "border"
+                  )}`}
+                  style={{ maxWidth: 600 }}
+                >
+                  <p
+                    className={`text-lg font-bold mb-3 px-4 py-1 rounded-xl inline-block ${getPatternColor(
+                      activeTab,
+                      "badge"
+                    )} text-white`}
+                  >
+                    {patternUrgencyMap[activeTab] || "Action Required"}
+                  </p>
+                  <p className="text-base font-semibold mb-1 flex items-center justify-center gap-2">
+                    <span className="inline-flex items-center">
+                      <Circle
+                        weight="fill"
+                        size={16}
+                        className={getPatternColor(activeTab, "text")}
+                      />
+                    </span>
+                    <span>Pattern:</span>{" "}
+                    <span className="capitalize">
+                      {getPatternLabel(activeTab)}
+                    </span>
+                  </p>
+                </div>
+                <p className="text-gray-500 p-4 text-center mt-4">
+                  No{" "}
+                  {tabOptions
+                    .find((t) => t.value === activeTab)
+                    ?.label?.toLowerCase() || activeTab}{" "}
+                  recommendations available.
+                </p>
+              </>
             )}
           </div>
         </div>

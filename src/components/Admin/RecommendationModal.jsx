@@ -17,57 +17,13 @@ import {
   Lightbulb,
 } from "phosphor-react";
 import { motion, AnimatePresence } from "framer-motion";
+import {
+  getPatternColor,
+  getPatternLabel,
+  normalizePatternType,
+} from "../../utils/patternConfig";
 
-// Pattern color mapping for both border and badge
-const PATTERN_COLORS = {
-  spike: { border: "border-error", badge: "bg-error", base: "error" },
-  gradual_rise: {
-    border: "border-warning",
-    badge: "bg-warning",
-    base: "warning",
-  },
-  stability: { border: "border-info", badge: "bg-info", base: "info" },
-  decline: { border: "border-success", badge: "bg-success", base: "success" },
-  low_level_activity: {
-    border: "border-gray-400",
-    badge: "bg-gray-400",
-    base: "gray-400",
-  },
-  default: {
-    border: "border-gray-400",
-    badge: "bg-gray-400",
-    base: "gray-400",
-  },
-};
-
-const getPatternKey = (pattern) => {
-  if (!pattern) return "default";
-  const p = pattern.trim().toLowerCase();
-  if (p === "spike") return "spike";
-  if (p === "gradual_rise") return "gradual_rise";
-  if (p === "stability") return "stability";
-  if (p === "decline") return "decline";
-  if (p === "low_level_activity") return "low_level_activity";
-  return "default";
-};
-
-const getPatternLabel = (pattern) => {
-  if (!pattern) return "No Pattern";
-  switch (pattern.toLowerCase()) {
-    case "spike":
-      return "Spike";
-    case "gradual_rise":
-      return "Gradual Rise";
-    case "stability":
-      return "Stability";
-    case "decline":
-      return "Decline";
-    case "low_level_activity":
-      return "Low Level Activity";
-    default:
-      return "No Pattern";
-  }
-};
+// Pattern functions now use centralized configuration from patternConfig.js
 
 const RecommendationModal = ({
   barangayName,
@@ -81,23 +37,31 @@ const RecommendationModal = ({
   setShowDetailedRecommendations,
   onGenerateRecommendation,
 }) => {
-  const borderColor =
-    PATTERN_COLORS[getPatternKey(pattern_based?.status)]?.border ||
-    "border-gray-400";
-
-  const badgeBgClass = borderColor.replace("border-", "bg-");
-  const textColorClass = borderColor.replace("border-", "text-");
-  // Pattern badge classes based on the actual pattern value
-  const patternBadgeBorderClass =
-    PATTERN_COLORS[getPatternKey(pattern_data?.pattern)]?.border ||
-    "border-gray-300";
-  const patternBadgeTextClass = patternBadgeBorderClass.replace(
-    "border-",
-    "text-"
+  const borderColor = getPatternColor(
+    normalizePatternType(pattern_based?.status),
+    "border"
   );
-  const patternBadgeDotBgClass = patternBadgeBorderClass.replace(
-    "border-",
-    "bg-"
+  const badgeBgClass = getPatternColor(
+    normalizePatternType(pattern_based?.status),
+    "badge"
+  );
+  const textColorClass = getPatternColor(
+    normalizePatternType(pattern_based?.status),
+    "text"
+  );
+
+  // Pattern badge classes based on the actual pattern value
+  const patternBadgeBorderClass = getPatternColor(
+    normalizePatternType(pattern_data?.pattern),
+    "border"
+  );
+  const patternBadgeTextClass = getPatternColor(
+    normalizePatternType(pattern_data?.pattern),
+    "text"
+  );
+  const patternBadgeDotBgClass = getPatternColor(
+    normalizePatternType(pattern_data?.pattern),
+    "badge"
   );
   const [preview, setPreview] = useState({
     visible: false,
@@ -248,7 +212,7 @@ const RecommendationModal = ({
           </div>
           <p className="text-center text-2xl font-bold mb-5">
             <span
-              className={`text-white text-center px-4 py-1 font-normal text-xl font-semibold ml-1 rounded-full ${badgeBgClass}`}
+              className={`text-white text-center px-4 py-1 font-normal text-xl font-semibold ml-1 rounded-full ${patternBadgeDotBgClass}`}
             >
               Barangay {barangayName}
             </span>

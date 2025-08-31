@@ -20,55 +20,35 @@ import {
 import { useState, useMemo } from "react";
 import { ArrowClockwise } from "phosphor-react";
 import { IconReload } from "@tabler/icons-react";
+import { 
+  PATTERN_TYPES, 
+  PATTERN_COLORS, 
+  PATTERN_LABELS, 
+  getPatternColor, 
+  normalizePatternType 
+} from "../../utils/patternConfig";
 
-const getPatternColor = (patternType) => {
+const getPatternColorForChart = (patternType) => {
   // Convert pattern type to lowercase for case-insensitive comparison
-  const patternTypeLower = patternType?.toLowerCase();
-
-  if (patternTypeLower === "spike") {
-    return "#ef4444"; // Red
-  }
-  if (patternTypeLower === "gradual_rise") {
-    return "#f97316"; // Orange
-  }
-  if (patternTypeLower === "stability") {
-    return "#3b82f6"; // Blue (info)
-  }
-  if (patternTypeLower === "decline") {
-    return "#22c55e"; // Green
-  }
-  if (patternTypeLower === "low_level_activity") {
-    return "#9ca3af"; // Gray
-  }
-
-  // Default color if no pattern type
-  return "#9ca3af"; // Gray
+  const normalizedPattern = normalizePatternType(patternType);
+  return getPatternColor(normalizedPattern, 'stroke');
 };
 
-// Update the pattern levels
+// Update the pattern levels to use centralized configuration
 const patternLevels = [
-  { label: "Spike", color: "#ef4444" }, // error/red
-  { label: "Gradual Rise", color: "#f97316" }, // warning/orange
-  { label: "Stability", color: "#3b82f6" }, // info/blue
-  { label: "Decline", color: "#22c55e" }, // success/green
-  { label: "Low Level Activity", color: "#9ca3af" }, // gray
+  { label: PATTERN_LABELS[PATTERN_TYPES.SPIKE], color: getPatternColor(PATTERN_TYPES.SPIKE, 'stroke') },
+  { label: PATTERN_LABELS[PATTERN_TYPES.INCREASE], color: getPatternColor(PATTERN_TYPES.INCREASE, 'stroke') },
+  { label: PATTERN_LABELS[PATTERN_TYPES.DECREASE], color: getPatternColor(PATTERN_TYPES.DECREASE, 'stroke') },
+  { label: PATTERN_LABELS[PATTERN_TYPES.LOW_LEVEL_ACTIVITY], color: getPatternColor(PATTERN_TYPES.LOW_LEVEL_ACTIVITY, 'stroke') },
+  { label: PATTERN_LABELS[PATTERN_TYPES.NO_CHANGE], color: getPatternColor(PATTERN_TYPES.NO_CHANGE, 'stroke') },
 ];
 
 // Helper function to format pattern type for display
 const formatPatternType = (patternType) => {
   if (!patternType) return "No pattern detected";
-
-  const patternTypeLower = patternType.toLowerCase();
-  if (patternTypeLower === "spike") return "Spike";
-  if (patternTypeLower === "gradual_rise") return "Gradual Rise";
-  if (patternTypeLower === "stability") return "Stability";
-  if (patternTypeLower === "decline") return "Decline";
-  if (patternTypeLower === "low_level_activity") return "Low Level Activity";
-
-  return (
-    patternType.charAt(0).toUpperCase() +
-    patternType.slice(1).replace(/_/g, " ")
-  );
+  
+  const normalizedPattern = normalizePatternType(patternType);
+  return PATTERN_LABELS[normalizedPattern] || "No Pattern";
 };
 
 export default function DengueTrendChart({
@@ -130,7 +110,7 @@ export default function DengueTrendChart({
             patternType: selectedBarangayPattern,
             color:
               index >= array.length - 4
-                ? getPatternColor(selectedBarangayPattern)
+                ? getPatternColorForChart(selectedBarangayPattern)
                 : "#9ca3af",
             weekNumber: index, // Add week number for reference line calculation
           };
@@ -160,7 +140,7 @@ export default function DengueTrendChart({
               patternType: selectedBarangayPattern,
               color:
                 i >= weekEntries.length - 4
-                  ? getPatternColor(selectedBarangayPattern)
+                  ? getPatternColorForChart(selectedBarangayPattern)
                   : "#9ca3af",
               weekNumber: firstWeek.weekNumber, // Keep the first week's number for reference
             });
@@ -315,7 +295,7 @@ export default function DengueTrendChart({
             Pattern:{" "}
             <span
               style={{
-                color: getPatternColor(selectedBarangayPattern),
+                color: getPatternColorForChart(selectedBarangayPattern),
                 fontWeight: "bold",
               }}
             >
@@ -444,19 +424,19 @@ export default function DengueTrendChart({
             <Line
               type="monotone"
               dataKey="cases"
-              stroke={getPatternColor(selectedBarangayPattern)}
+              stroke={getPatternColorForChart(selectedBarangayPattern)}
               strokeWidth={3}
               dot={{
                 r: 5,
                 strokeWidth: 2,
-                fill: getPatternColor(selectedBarangayPattern),
-                stroke: getPatternColor(selectedBarangayPattern),
+                fill: getPatternColorForChart(selectedBarangayPattern),
+                stroke: getPatternColorForChart(selectedBarangayPattern),
               }}
               activeDot={{
                 r: 7,
                 strokeWidth: 2,
-                fill: getPatternColor(selectedBarangayPattern),
-                stroke: getPatternColor(selectedBarangayPattern),
+                fill: getPatternColorForChart(selectedBarangayPattern),
+                stroke: getPatternColorForChart(selectedBarangayPattern),
               }}
               label={({ x, y, value }) => (
                 <text
@@ -476,12 +456,12 @@ export default function DengueTrendChart({
             {selectedBarangay && patternData && (
               <ReferenceLine
                 x={patternData.start_date}
-                stroke={getPatternColor(patternData.pattern)}
+                stroke={getPatternColorForChart(patternData.pattern)}
                 strokeWidth={2}
                 label={{
                   value: formatPatternType(patternData.pattern),
                   position: "insideTopRight",
-                  fill: getPatternColor(patternData.pattern),
+                  fill: getPatternColorForChart(patternData.pattern),
                   fontSize: 12,
                   fontWeight: "bold",
                 }}

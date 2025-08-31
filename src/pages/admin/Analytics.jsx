@@ -32,19 +32,17 @@ import {
   Legend,
 } from "chart.js";
 import DengueMap from "../../components/DengueMap";
+import {
+  PATTERN_TABS,
+  getPatternColor,
+  getPatternLabel,
+  normalizePatternType,
+} from "@/utils/patternConfig";
 
 // import { IconCheck, IconHourglassEmpty, IconSearch } from "@tabler/icons-react";
 
-// Add the TABS array
-const TABS = [
-  { label: "Selected Barangay", value: "selected" },
-  { label: "All Alerts", value: "all" },
-  { label: "Spikes", value: "spikes" },
-  { label: "Gradual Rise", value: "gradual" },
-  { label: "Stability", value: "stability" },
-  { label: "Decline", value: "decline" },
-  { label: "No Pattern", value: "no_pattern" },
-];
+// Use centralized pattern configuration
+const TABS = PATTERN_TABS;
 
 ChartJS.register(
   CategoryScale,
@@ -55,62 +53,7 @@ ChartJS.register(
   Legend
 );
 
-// Pattern color mapping for both border and badge
-const PATTERN_COLORS = {
-  spike: { border: "border-error", badge: "bg-error" },
-  gradual_rise: { border: "border-warning", badge: "bg-warning" },
-  stability: { border: "border-info", badge: "bg-info" },
-  decline: { border: "border-success", badge: "bg-success" },
-  low_level_activity: { border: "border-gray-400", badge: "bg-gray-400" },
-  default: { border: "border-gray-400", badge: "bg-gray-400" },
-};
-
-const getPatternKey = (pattern) => {
-  if (!pattern) return "default";
-  const p = pattern.trim().toLowerCase();
-  if (p === "spike") return "spike";
-  if (p === "gradual_rise") return "gradual_rise";
-  if (p === "stability") return "stability";
-  if (p === "decline") return "decline";
-  if (p === "low_level_activity") return "low_level_activity";
-  return "default";
-};
-
-const getPatternBadgeColor = (pattern) => {
-  if (!pattern) return "border-gray-300";
-  switch (pattern.toLowerCase()) {
-    case "spike":
-      return "border-error";
-    case "gradual_rise":
-      return "border-warning";
-    case "stability":
-      return "border-info";
-    case "decline":
-      return "border-success";
-    case "low_level_activity":
-      return "border-gray-300";
-    default:
-      return "border-gray-300";
-  }
-};
-
-const getPatternLabel = (pattern) => {
-  if (!pattern) return "No Pattern";
-  switch (pattern.toLowerCase()) {
-    case "spike":
-      return "Spike";
-    case "gradual_rise":
-      return "Gradual Rise";
-    case "stability":
-      return "Stability";
-    case "decline":
-      return "Decline";
-    case "low_level_activity":
-      return "Low Level Activity";
-    default:
-      return "No Pattern";
-  }
-};
+// Pattern functions now use centralized configuration from patternConfig.js
 
 const Analytics = () => {
   const [searchBarangay, setSearchBarangay] = useState(null); // for programmatic search
@@ -420,16 +363,15 @@ const Analytics = () => {
                 : `Action Recommendation for ${spikeRecommendationDetails.barangay}`}
             </p>
             <div
-              className={`relative border-[2px] ${getPatternBadgeColor(
-                spikeRecommendationDetails.patternType
+              className={`relative border-[2px] ${getPatternColor(
+                spikeRecommendationDetails.patternType,
+                "border"
               )} rounded-4xl p-4 pt-10 text-black`}
             >
               <p
-                className={`absolute text-lg left-[-2px] top-[-6px] text-nowrap ${getPatternBadgeColor(
-                  spikeRecommendationDetails.patternType
-                ).replace(
-                  "border-",
-                  "bg-"
+                className={`absolute text-lg left-[-2px] top-[-6px] text-nowrap ${getPatternColor(
+                  spikeRecommendationDetails.patternType,
+                  "badge"
                 )} rounded-2xl font-semibold text-white p-1 px-4`}
               >
                 {spikeRecommendationDetails.barangay}
