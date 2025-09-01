@@ -5,10 +5,15 @@ const ClusterDropdown = ({
   showClusterDropdown,
   setShowClusterDropdown,
   flaggedClusters,
+  pendingClusters,
+  partiallyResolvedClusters,
+  fullyResolvedClusters,
   isLoadingClusters,
   zoomToCluster,
   handleViewClusterDetails,
   getSeverityColor,
+  getClusterStatus,
+  getClusterStatusColor,
   formatDateRange
 }) => {
   return (
@@ -24,8 +29,12 @@ const ClusterDropdown = ({
           <span>Loading clusters...</span>
         ) : flaggedClusters.length > 0 ? (
           <span>
-            {flaggedClusters.length} cluster
-            {flaggedClusters.length > 1 ? "s" : ""} reported
+            {pendingClusters.length > 0 && `${pendingClusters.length} pending`}
+            {pendingClusters.length > 0 && partiallyResolvedClusters.length > 0 && " • "}
+            {partiallyResolvedClusters.length > 0 && `${partiallyResolvedClusters.length} partial`}
+            {partiallyResolvedClusters.length > 0 && fullyResolvedClusters.length > 0 && " • "}
+            {fullyResolvedClusters.length > 0 && `${fullyResolvedClusters.length} resolved`}
+            {pendingClusters.length === 0 && partiallyResolvedClusters.length === 0 && fullyResolvedClusters.length === 0 && `${flaggedClusters.length} total`}
           </span>
         ) : (
           <span>No active clusters</span>
@@ -50,8 +59,15 @@ const ClusterDropdown = ({
               No clusters detected in the selected timeframe.
             </div>
           ) : (
-            <ul className="max-h-96 overflow-y-auto">
-              {flaggedClusters.map((c) => (
+            <div className="max-h-96 overflow-y-auto">
+              {/* Pending Clusters */}
+              {pendingClusters.length > 0 && (
+                <div>
+                  <div className="px-4 py-2 bg-red-50 border-b border-red-200 text-sm font-semibold text-red-700">
+                    🔴 Pending Resolution ({pendingClusters.length})
+                  </div>
+                  <ul>
+                    {pendingClusters.map((c) => (
                 <li
                   key={c.id}
                   className="px-4 py-3 hover:bg-gray-50 cursor-pointer flex items-start gap-3"
@@ -97,7 +113,134 @@ const ClusterDropdown = ({
                   </div>
                 </li>
               ))}
-            </ul>
+                  </ul>
+                </div>
+              )}
+
+              {/* Partially Resolved Clusters */}
+              {partiallyResolvedClusters.length > 0 && (
+                <div>
+                  <div className="px-4 py-2 bg-yellow-50 border-b border-yellow-200 text-sm font-semibold text-yellow-700">
+                    🟡 Partially Resolved ({partiallyResolvedClusters.length})
+                  </div>
+                  <ul>
+                    {partiallyResolvedClusters.map((c) => (
+                      <li
+                        key={c.id}
+                        className="px-4 py-3 hover:bg-gray-50 cursor-pointer flex items-start gap-3"
+                        onClick={() => zoomToCluster(c)}
+                      >
+                        <div
+                          className="mt-1 h-3 w-3 rounded-full flex-shrink-0"
+                          style={{ backgroundColor: getClusterStatusColor(getClusterStatus(c)) }}
+                          title={getClusterStatus(c)}
+                        />
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center justify-between gap-2">
+                            <p className="text-sm font-semibold text-primary truncate">
+                              {c.barangays[0]}
+                            </p>
+                            <span className="text-xs font-bold text-white bg-primary px-2 py-0.5 rounded-full">
+                              {c.count}
+                            </span>
+                          </div>
+                          <p className="text-xs text-gray-400">
+                            {formatDateRange(c.earliestReportAt, c.latestReportAt)}
+                          </p>
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className="text-xs text-yellow-600 bg-yellow-100 px-2 py-0.5 rounded">
+                              {c.processedCount} resolved, {c.unprocessedCount} pending
+                            </span>
+                          </div>
+                          <div className="flex gap-2 mt-2">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                zoomToCluster(c);
+                              }}
+                              className="text-xs bg-primary text-white px-2 py-1 rounded hover:bg-primary/80 transition-colors"
+                            >
+                              Show on Map
+                            </button>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleViewClusterDetails(c);
+                              }}
+                              className="text-xs bg-gray-500 text-white px-2 py-1 rounded hover:bg-gray-600 transition-colors"
+                            >
+                              View Details
+                            </button>
+                          </div>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {/* Fully Resolved Clusters */}
+              {fullyResolvedClusters.length > 0 && (
+                <div>
+                  <div className="px-4 py-2 bg-green-50 border-b border-green-200 text-sm font-semibold text-green-700">
+                    🟢 Fully Resolved ({fullyResolvedClusters.length})
+                  </div>
+                  <ul>
+                    {fullyResolvedClusters.map((c) => (
+                      <li
+                        key={c.id}
+                        className="px-4 py-3 hover:bg-gray-50 cursor-pointer flex items-start gap-3"
+                        onClick={() => zoomToCluster(c)}
+                      >
+                        <div
+                          className="mt-1 h-3 w-3 rounded-full flex-shrink-0"
+                          style={{ backgroundColor: getClusterStatusColor(getClusterStatus(c)) }}
+                          title={getClusterStatus(c)}
+                        />
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center justify-between gap-2">
+                            <p className="text-sm font-semibold text-primary truncate">
+                              {c.barangays[0]}
+                            </p>
+                            <span className="text-xs font-bold text-white bg-green-600 px-2 py-0.5 rounded-full">
+                              {c.count}
+                            </span>
+                          </div>
+                          <p className="text-xs text-gray-400">
+                            {formatDateRange(c.earliestReportAt, c.latestReportAt)}
+                          </p>
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className="text-xs text-green-600 bg-green-100 px-2 py-0.5 rounded">
+                              All {c.processedCount} reports resolved
+                            </span>
+                          </div>
+                          <div className="flex gap-2 mt-2">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                zoomToCluster(c);
+                              }}
+                              className="text-xs bg-green-600 text-white px-2 py-1 rounded hover:bg-green-700 transition-colors"
+                            >
+                              Show on Map
+                            </button>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleViewClusterDetails(c);
+                              }}
+                              className="text-xs bg-gray-500 text-white px-2 py-1 rounded hover:bg-gray-600 transition-colors"
+                            >
+                              View Details
+                            </button>
+                          </div>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
           )}
         </div>
       )}

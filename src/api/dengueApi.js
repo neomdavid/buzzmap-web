@@ -1408,6 +1408,36 @@ export const dengueApi = createApi({
         return response;
       },
     }),
+
+    // Create sub-cluster
+    createSubCluster: builder.mutation({
+      query: (data) => ({
+        url: "clusters/sub-clusters",
+        method: "POST",
+        body: data,
+      }),
+      invalidatesTags: ["Clusters"],
+    }),
+
+    // Add reports to sub-cluster
+    addReportsToSubCluster: builder.mutation({
+      query: ({ subClusterId, reportIds }) => ({
+        url: `clusters/sub-clusters/${subClusterId}/add-reports`,
+        method: "PATCH",
+        body: { reportIds },
+      }),
+      invalidatesTags: ["Clusters"],
+    }),
+
+    // Remove reports from sub-cluster
+    removeReportsFromSubCluster: builder.mutation({
+      query: ({ subClusterId, reportIds }) => ({
+        url: `clusters/sub-clusters/${subClusterId}/remove-reports`,
+        method: "PATCH",
+        body: { reportIds },
+      }),
+      invalidatesTags: ["Clusters"],
+    }),
   }),
 });
 
@@ -1553,4 +1583,7 @@ export const {
 
   // Clusters hooks
   useGetClustersWithSubclustersQuery,
+  useCreateSubClusterMutation,
+  useAddReportsToSubClusterMutation,
+  useRemoveReportsFromSubClusterMutation,
 } = dengueApi;

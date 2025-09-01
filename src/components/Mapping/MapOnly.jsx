@@ -278,34 +278,12 @@ const MapOnly = forwardRef(
               if (patternType.includes("spike")) patternType = "spike";
               if (patternType.includes("no_change") || patternType === "none")
                 patternType = "no_change";
-
-              // Debug logging for admin patterns
-              console.log("Admin Map Pattern Debug:", {
-                barangayName: feature.properties.name,
-                originalStatus:
-                  barangayObj?.status_and_recommendation?.pattern_based?.status,
-                normalizedPatternType: patternType,
-                availableColors: Object.keys(PATTERN_COLORS),
-                selectedColor: PATTERN_COLORS[patternType],
-                fallbackColor: PATTERN_COLORS.default,
-                patternTypeExists: patternType in PATTERN_COLORS,
-              });
             }
 
             const patternColor =
               PATTERN_COLORS[patternType] || PATTERN_COLORS.default;
             const patternColorDark =
               PATTERN_COLORS_DARK[patternType] || PATTERN_COLORS_DARK.default;
-
-            // Additional debug for color selection
-            if (useAdminEndpoint) {
-              console.log("Color Selection Debug:", {
-                finalPatternType: patternType,
-                patternColor: patternColor,
-                patternColorDark: patternColorDark,
-                isDefaultColor: patternColor === PATTERN_COLORS.default,
-              });
-            }
 
             // Check if this feature is the selected barangay
             const isSelected =
@@ -600,9 +578,7 @@ const MapOnly = forwardRef(
     }, []);
 
     // Add debug for selectedBarangay changes
-    useEffect(() => {
-      // console.log('[DEBUG] Selected barangay changed:', selectedBarangay);
-    }, [selectedBarangay]);
+    useEffect(() => {}, [selectedBarangay]);
 
     return (
       <div

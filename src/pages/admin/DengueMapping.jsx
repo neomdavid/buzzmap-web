@@ -17,6 +17,9 @@ import {
   useGetAdminBarangaysQuery,
   useGetRecentReportsForBarangayMutation,
   useGetClustersWithSubclustersQuery,
+  useCreateSubClusterMutation,
+  useAddReportsToSubClusterMutation,
+  useRemoveReportsFromSubClusterMutation,
 } from "@/api/dengueApi";
 import * as turf from "@turf/turf";
 import {
@@ -35,6 +38,7 @@ import {
   IconExclamationMark,
 } from "@tabler/icons-react";
 import { InfoIcon } from "lucide-react";
+import { toast } from "react-toastify";
 
 // Define QC_CENTER constant for default map position
 const QC_CENTER = {
@@ -99,6 +103,13 @@ const DengueMapping = () => {
   const [filteredBarangays, setFilteredBarangays] = useState([]);
 
   const [getRecentReports] = useGetRecentReportsForBarangayMutation();
+
+  // Cluster mutation hooks
+  const [createSubCluster] = useCreateSubClusterMutation();
+  const [addReportsToSubCluster] = useAddReportsToSubClusterMutation();
+  const [removeReportsFromSubCluster] =
+    useRemoveReportsFromSubClusterMutation();
+
   const [recentDengueCases, setRecentDengueCases] = useState(null);
 
   // Get clusters from API
@@ -107,16 +118,11 @@ const DengueMapping = () => {
 
   // Transform API clusters data to match our component structure
   const transformedClusters = useMemo(() => {
-    console.log("[DEBUG] Raw clusters data:", clustersData);
-
     if (!clustersData?.data) {
-      console.log("[DEBUG] No clusters data available");
       return [];
     }
 
     const transformed = clustersData.data.map((cluster, index) => {
-      console.log(`[DEBUG] Processing cluster ${index}:`, cluster);
-
       // Calculate center coordinates from reports
       const coordinates = cluster.reports.map(
         (report) => report.specific_location.coordinates
@@ -177,26 +183,67 @@ const DengueMapping = () => {
         subClusters: cluster.sub_clusters || [],
       };
 
-      console.log(`[DEBUG] Transformed cluster ${index}:`, result);
       return result;
     });
 
-    console.log("[DEBUG] Final transformed clusters:", transformed);
     return transformed;
   }, [clustersData]);
 
+  const getClusterStatus = (cluster) => {
+    // Check if cluster has sub-clusters (partially or fully resolved)
+    const hasSubClusters =
+      cluster.subClusters && cluster.subClusters.length > 0;
+
+    if (cluster.unprocessedCount === 0 && hasSubClusters) {
+      return "fully-resolved"; // All reports resolved, sub-clusters exist
+    } else if (hasSubClusters && cluster.unprocessedCount > 0) {
+      return "partially-resolved"; // Some reports resolved, some still pending
+    } else if (cluster.unprocessedCount >= 2) {
+      return "pending"; // No sub-clusters, reports pending
+    } else {
+      return "partial"; // Less than 2 reports, can't form cluster
+    }
+  };
+
+  const getClusterStatusColor = (status) => {
+    switch (status) {
+      case "fully-resolved":
+        return "#10b981"; // emerald-500 - green
+      case "partially-resolved":
+        return "#f59e0b"; // amber-500 - orange/yellow
+      case "pending":
+        return "#dc2626"; // red-600 - red
+      case "partial":
+        return "#6b7280"; // gray-500 - gray
+      default:
+        return "#6b7280";
+    }
+  };
+
   const flaggedClusters = useMemo(() => {
-    console.log(
-      "[DEBUG] Filtering clusters. Total clusters:",
-      transformedClusters.length
-    );
     // Show all clusters that have at least 2 reports or are high severity
     const flagged = transformedClusters.filter(
       (c) => c.count >= 2 || c.severity === "high"
     );
-    console.log("[DEBUG] Flagged clusters:", flagged);
     return flagged;
   }, [transformedClusters]);
+
+  // Separate clusters by status for better organization
+  const pendingClusters = useMemo(() => {
+    return flaggedClusters.filter((c) => getClusterStatus(c) === "pending");
+  }, [flaggedClusters]);
+
+  const partiallyResolvedClusters = useMemo(() => {
+    return flaggedClusters.filter(
+      (c) => getClusterStatus(c) === "partially-resolved"
+    );
+  }, [flaggedClusters]);
+
+  const fullyResolvedClusters = useMemo(() => {
+    return flaggedClusters.filter(
+      (c) => getClusterStatus(c) === "fully-resolved"
+    );
+  }, [flaggedClusters]);
 
   const getSeverityColor = (severity) => {
     if (severity === "high") return "#dc2626"; // red-600
@@ -303,65 +350,113 @@ const DengueMapping = () => {
     }
   };
 
-  const handleClusterResolution = (action) => {
+  const handleClusterResolution = async (action) => {
     if (action === "resolve-selected") {
-      // Resolve only selected reports, keep others pending
-      const selectedReportIds = selectedReports;
-      const remainingReports = selectedCluster.reports.filter(
-        (report) =>
-          !selectedReportIds.includes(report.id) &&
-          !resolvedReports.includes(report.id)
-      );
-
-      console.log(`Resolving selected reports:`, selectedReportIds);
-      console.log(`Remaining reports:`, remainingReports);
-
-      // Add selected reports to resolved list
-      setResolvedReports((prev) => [...prev, ...selectedReportIds]);
-      setSelectedReports([]);
-
-      // Check if remaining reports can form a new cluster
-      if (remainingReports.length >= 2) {
-        const newSubCluster = {
-          id: `sub-${Date.now()}`,
-          name: `Sub-cluster from ${selectedCluster.barangays[0]}`,
-          center: selectedCluster.center,
-          count: remainingReports.length,
-          severity: "medium", // Default severity for sub-clusters
-          earliestReportAt:
-            remainingReports[0]?.date || new Date().toISOString(),
-          latestReportAt:
-            remainingReports[remainingReports.length - 1]?.date ||
-            new Date().toISOString(),
-          barangays: selectedCluster.barangays,
-          reports: remainingReports,
-          parentClusterId: selectedCluster.id,
-        };
-
-        setSubClusters((prev) => [...prev, newSubCluster]);
-
-        alert(
-          `Resolved ${selectedReportIds.length} reports. Created new sub-cluster with ${remainingReports.length} remaining reports.`
+      try {
+        // Resolve only selected reports, keep others pending
+        const selectedReportIds = selectedReports;
+        const remainingReports = selectedCluster.reports.filter(
+          (report) =>
+            !selectedReportIds.includes(report.id) &&
+            !resolvedReports.includes(report.id)
         );
-      } else {
-        alert(
-          `Resolved ${selectedReportIds.length} reports. ${remainingReports.length} reports remain pending.`
-        );
+
+        // Check if selected reports can form a sub-cluster (need at least 2)
+        if (selectedReports.length >= 2) {
+          // Call API to create sub-cluster with SELECTED reports
+          const subClusterData = {
+            parentClusterId: selectedCluster.id,
+            reportIds: selectedReports, // These are the reports to resolve
+            clusterType: "validated", // Backend expects 'validated' or 'rejected'
+          };
+
+          const result = await createSubCluster(subClusterData);
+
+          if (result.data) {
+            // Create local sub-cluster object for UI
+            const newSubCluster = {
+              id: result.data.data._id || `sub-${Date.now()}`,
+              name: `Sub-cluster from ${selectedCluster.barangays[0]}`,
+              center: selectedCluster.center,
+              count: selectedReportIds.length, // Count of selected reports
+              severity: "medium",
+              earliestReportAt:
+                selectedCluster.reports.find((r) =>
+                  selectedReportIds.includes(r.id)
+                )?.date || new Date().toISOString(),
+              latestReportAt:
+                selectedCluster.reports.findLast((r) =>
+                  selectedReportIds.includes(r.id)
+                )?.date || new Date().toISOString(),
+              barangays: selectedCluster.barangays,
+              reports: selectedCluster.reports.filter((r) =>
+                selectedReportIds.includes(r.id)
+              ), // Selected reports
+              parentClusterId: selectedCluster.id,
+            };
+
+            setSubClusters((prev) => [...prev, newSubCluster]);
+
+            // Mark selected reports as validated in the UI
+            setResolvedReports((prev) => [...prev, ...selectedReportIds]);
+            setSelectedReports([]);
+
+            toast.success(
+              `✅ Sub-cluster created successfully! ID: ${result.data.data._id} | Reports: ${selectedReportIds.length} | Status: Validated | Remaining: ${remainingReports.length}`
+            );
+          } else {
+            console.error(
+              `[ERROR] Failed to create sub-cluster:`,
+              result.error
+            );
+
+            // Show detailed error message
+            const errorMessage =
+              result.error?.data?.error ||
+              result.error?.message ||
+              "Unknown error occurred";
+            toast.error(`Failed to create sub-cluster: ${errorMessage}`);
+          }
+        } else {
+          // No sub-cluster needed, just resolve selected reports
+
+          // Add selected reports to resolved list
+          setResolvedReports((prev) => [...prev, ...selectedReportIds]);
+          setSelectedReports([]);
+
+          toast.info(
+            `Resolved ${selectedReportIds.length} reports. ${remainingReports.length} reports remain pending.`
+          );
+        }
+      } catch (error) {
+        console.error(`[ERROR] Error resolving cluster:`, error);
+        toast.error("Error resolving cluster. Please try again.");
       }
-
-      // TODO: Send to backend - resolve selected reports and create sub-cluster
     } else if (action === "resolve-all") {
-      // Resolve all reports in the cluster
-      console.log(`Resolving all reports in cluster:`, selectedCluster.id);
-      // TODO: Send to backend
-      alert("All reports resolved. Cluster will be closed.");
-      setShowClusterDetailsModal(false);
+      try {
+        // Resolve all reports in the cluster
+
+        // For resolve-all, we don't create a sub-cluster since all reports are resolved
+        // You might want to call a different endpoint here to mark the entire cluster as resolved
+
+        toast.success("All reports resolved. Cluster will be closed.");
+        setShowClusterDetailsModal(false);
+      } catch (error) {
+        console.error(`[ERROR] Error resolving all reports:`, error);
+        toast.error("Error resolving all reports. Please try again.");
+      }
     } else if (action === "reject-all") {
-      // Reject all reports in the cluster
-      console.log(`Rejecting all reports in cluster:`, selectedCluster.id);
-      // TODO: Send to backend
-      alert("All reports rejected. Cluster will be closed.");
-      setShowClusterDetailsModal(false);
+      try {
+        // Reject all reports in the cluster
+
+        // You might want to call a different endpoint here to mark the entire cluster as rejected
+
+        toast.success("All reports rejected. Cluster will be closed.");
+        setShowClusterDetailsModal(false);
+      } catch (error) {
+        console.error(`[ERROR] Error rejecting all reports:`, error);
+        toast.error("Error rejecting all reports. Please try again.");
+      }
     }
   };
 
@@ -404,15 +499,6 @@ const DengueMapping = () => {
     return remaining.length >= 2;
   };
 
-  useEffect(() => {
-    if (allInterventionsData) {
-      console.log(
-        "[DengueMapping DEBUG] Raw allInterventionsData received:",
-        JSON.stringify(allInterventionsData, null, 2)
-      );
-    }
-  }, [allInterventionsData]);
-
   const { data: interventionsData } = useGetInterventionsInProgressQuery(
     selectedBarangay?.properties?.name || "",
     {
@@ -420,19 +506,9 @@ const DengueMapping = () => {
     }
   );
 
-  // Add debug for raw posts data
-  useEffect(() => {
-    console.log("[DEBUG] Raw posts data:", posts);
-  }, [posts]);
-
   // Get nearby reports when a barangay is selected
   const nearbyReports = useMemo(() => {
-    console.log("[DEBUG] Calculating nearby reports");
-    console.log("[DEBUG] Selected Barangay:", selectedBarangay);
-    console.log("[DEBUG] All Posts:", posts);
-
     if (!selectedBarangay || !posts) {
-      console.log("[DEBUG] No selected barangay or posts available");
       return [];
     }
 
@@ -445,17 +521,9 @@ const DengueMapping = () => {
       : Array.isArray(posts)
       ? posts
       : [];
-    console.log("[DEBUG] Filtered allPostsArray:", allPostsArray);
 
     const filteredPosts = allPostsArray.filter((post) => {
       // Debug each post's properties
-      console.log("[DEBUG] Checking post:", {
-        id: post._id,
-        status: post.status,
-        hasCoordinates: !!post.specific_location?.coordinates,
-        coordinates: post.specific_location?.coordinates,
-        barangay: post.barangay,
-      });
 
       // Only include validated posts with coordinates
       if (
@@ -463,10 +531,6 @@ const DengueMapping = () => {
         post.status !== "Validated" ||
         !post.specific_location?.coordinates
       ) {
-        console.log(
-          "[DEBUG] Skipping post - Invalid status or no coordinates:",
-          post
-        );
         return false;
       }
 
@@ -515,8 +579,6 @@ const DengueMapping = () => {
       );
     });
 
-    console.log("[DEBUG] Filtered Posts:", filteredPosts);
-
     const nearbyReportsWithDistance = filteredPosts
       .map((post) => {
         let distance = 0;
@@ -546,7 +608,6 @@ const DengueMapping = () => {
       .sort((a, b) => a.distance - b.distance)
       .slice(0, 3); // Get top 3 nearest reports
 
-    console.log("[DEBUG] Final Nearby Reports:", nearbyReportsWithDistance);
     return nearbyReportsWithDistance;
   }, [selectedBarangay, posts]);
 
@@ -558,34 +619,18 @@ const DengueMapping = () => {
     const uniqueStatuses = new Set(
       allInterventionsData.map((i) => i.status?.toLowerCase())
     );
-    console.log(
-      "[DengueMapping DEBUG] All unique status values:",
-      Array.from(uniqueStatuses)
-    );
 
     const filtered = allInterventionsData.filter((intervention) => {
       const status = intervention.status?.toLowerCase();
       // Log each intervention's status for debugging
-      console.log("[DengueMapping DEBUG] Intervention status:", {
-        id: intervention._id,
-        status: status,
-        originalStatus: intervention.status,
-      });
 
       // Consider an intervention active if it's not completed/complete
       const isActive = status !== "completed" && status !== "complete";
       return isActive;
     });
 
-    console.log(
-      "[DengueMapping DEBUG] Filtered activeInterventions (before sort):",
-      JSON.stringify(filtered, null, 2)
-    );
     const sorted = filtered.sort((a, b) => new Date(b.date) - new Date(a.date));
-    console.log(
-      "[DengueMapping DEBUG] Sorted activeInterventions:",
-      JSON.stringify(sorted, null, 2)
-    );
+
     return sorted;
   }, [allInterventionsData]);
 
@@ -611,12 +656,7 @@ const DengueMapping = () => {
           import.meta.env.MODE === "PROD"
             ? import.meta.env.VITE_API_BASE_URL
             : "http://localhost:4000/";
-        console.log(
-          "[DEBUG] Fetching recent reports for:",
-          barangayName,
-          "from",
-          BASE_URL
-        );
+
         const response = await fetch(
           `${BASE_URL}api/v1/barangays/get-recent-reports-for-barangay`,
           {
@@ -627,7 +667,6 @@ const DengueMapping = () => {
         );
         if (!response.ok) throw new Error("Failed to fetch recent reports");
         const data = await response.json();
-        console.log("[DEBUG] Recent Reports API Response:", data); // Debug log
         const caseCounts = data?.reports?.case_counts || {};
         const reportsArr = Object.entries(caseCounts).map(([date, count]) => ({
           date,
@@ -672,11 +711,6 @@ const DengueMapping = () => {
     );
     setFilteredBarangays(filtered);
   };
-
-  // Add debug logging for barangaysList
-  useEffect(() => {
-    console.log("[DEBUG] Current barangaysList:", barangaysList);
-  }, [barangaysList]);
 
   const handleBarangaySelect = (barangay) => {
     if (!barangay) return;
@@ -765,21 +799,6 @@ const DengueMapping = () => {
         console.error("[DEBUG] Error fetching GeoJSON:", error);
       });
   };
-
-  // Add debug logging for selectedBarangay
-  useEffect(() => {
-    console.log("[DEBUG] Selected barangay updated:", selectedBarangay);
-  }, [selectedBarangay]);
-
-  // Add debug for posts
-  useEffect(() => {
-    console.log("[DEBUG] posts data:", posts);
-  }, [posts]);
-
-  // Add debug for nearbyReports
-  useEffect(() => {
-    console.log("[DEBUG] nearbyReports:", nearbyReports);
-  }, [nearbyReports]);
 
   const handleShowOnMap = (item, type) => {
     setSelectedMapItem({ type, item });
@@ -947,13 +966,6 @@ const DengueMapping = () => {
     }
   };
 
-  // Add debug logging for interventions error
-  useEffect(() => {
-    if (interventionsData && interventionsData.length > 0) {
-      console.log("[DEBUG] Interventions data:", interventionsData);
-    }
-  }, [interventionsData]);
-
   return (
     <main className="flex flex-col w-full">
       <p className="flex justify-center text-5xl font-extrabold mb-12 text-center md:justify-start md:text-left md:w-[78%]">
@@ -974,10 +986,15 @@ const DengueMapping = () => {
           showClusterDropdown={showClusterDropdown}
           setShowClusterDropdown={setShowClusterDropdown}
           flaggedClusters={flaggedClusters}
+          pendingClusters={pendingClusters}
+          partiallyResolvedClusters={partiallyResolvedClusters}
+          fullyResolvedClusters={fullyResolvedClusters}
           isLoadingClusters={isLoadingClusters}
           zoomToCluster={zoomToCluster}
           handleViewClusterDetails={handleViewClusterDetails}
           getSeverityColor={getSeverityColor}
+          getClusterStatus={getClusterStatus}
+          getClusterStatusColor={getClusterStatusColor}
           formatDateRange={formatDateRange}
         />
       </div>

@@ -1,4 +1,4 @@
-import React from 'react';
+import React from "react";
 import { CheckCircle, Circle, MapPinLine } from "phosphor-react";
 
 const ClusterDetailsModal = ({
@@ -22,7 +22,7 @@ const ClusterDetailsModal = ({
   canFormSubCluster,
   getRemainingReports,
   subClusters,
-  mapOnlyRef
+  mapOnlyRef,
 }) => {
   if (!showClusterDetailsModal || !selectedCluster) return null;
 
@@ -92,9 +92,9 @@ const ClusterDetailsModal = ({
             {!hasResolvedReports() ? (
               <div className="flex gap-2">
                 <button
-                  onClick={() =>
-                    handleClusterResolution("resolve-selected")
-                  }
+                  onClick={() => {
+                    handleClusterResolution("resolve-selected");
+                  }}
                   className="btn btn-success btn-sm"
                   disabled={getSelectedReportsCount() === 0}
                 >
@@ -102,7 +102,9 @@ const ClusterDetailsModal = ({
                   Resolve Selected ({getSelectedReportsCount()})
                 </button>
                 <button
-                  onClick={() => handleClusterResolution("resolve-all")}
+                  onClick={() => {
+                    handleClusterResolution("resolve-all");
+                  }}
                   className="btn btn-primary btn-sm"
                   disabled={selectedCluster.reports.length === 0}
                 >
@@ -110,7 +112,9 @@ const ClusterDetailsModal = ({
                   Resolve All
                 </button>
                 <button
-                  onClick={() => handleClusterResolution("reject-all")}
+                  onClick={() => {
+                    handleClusterResolution("reject-all");
+                  }}
                   className="btn btn-error btn-sm"
                 >
                   <Circle size={16} />
@@ -170,9 +174,7 @@ const ClusterDetailsModal = ({
                           <div
                             className="h-4 w-4 rounded-full"
                             style={{
-                              backgroundColor: getReportTypeColor(
-                                report.type
-                              ),
+                              backgroundColor: getReportTypeColor(report.type),
                             }}
                           />
                           <div>
@@ -219,9 +221,7 @@ const ClusterDetailsModal = ({
                       {/* Report Details */}
                       <div className="grid grid-cols-2 gap-3 text-sm mb-4">
                         <div>
-                          <span className="text-gray-600">
-                            Reported by:
-                          </span>
+                          <span className="text-gray-600">Reported by:</span>
                           <p className="font-medium">{report.reportedBy}</p>
                         </div>
                         <div>
@@ -242,9 +242,9 @@ const ClusterDetailsModal = ({
                           !resolvedReports.includes(report.id) && (
                             <>
                               <button
-                                onClick={() =>
-                                  handleReportSelection(report.id, "select")
-                                }
+                                onClick={() => {
+                                  handleReportSelection(report.id, "select");
+                                }}
                                 className={`btn btn-sm ${
                                   selectedReports.includes(report.id)
                                     ? "btn-success"
@@ -293,10 +293,7 @@ const ClusterDetailsModal = ({
                               ) : (
                                 <button
                                   onClick={() =>
-                                    handleReportSelection(
-                                      report.id,
-                                      "reject"
-                                    )
+                                    handleReportSelection(report.id, "reject")
                                   }
                                   className="btn btn-outline btn-error btn-sm"
                                 >
@@ -359,15 +356,13 @@ const ClusterDetailsModal = ({
                       selected for resolution
                     </p>
                     <p className="text-gray-600">
-                      {getUnselectedReportsCount()} reports will remain
-                      pending
+                      {getUnselectedReportsCount()} reports will remain pending
                     </p>
                     {canFormSubCluster() && (
                       <div className="mt-2 p-2 bg-info/10 rounded border border-info/20">
                         <p className="text-info text-xs">
-                          <strong>Note:</strong>{" "}
-                          {getRemainingReports().length} reports will form a
-                          new sub-cluster
+                          <strong>Note:</strong> {getRemainingReports().length}{" "}
+                          reports will form a new sub-cluster
                         </p>
                       </div>
                     )}
@@ -379,9 +374,7 @@ const ClusterDetailsModal = ({
             {/* Similarity Analysis */}
             <div className="card bg-base-100 shadow-md mb-6">
               <div className="card-body">
-                <h4 className="card-title text-primary">
-                  Similarity Analysis
-                </h4>
+                <h4 className="card-title text-primary">Similarity Analysis</h4>
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
                     <span className="text-sm">Location Proximity:</span>
