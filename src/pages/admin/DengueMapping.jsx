@@ -6,6 +6,8 @@ import {
   MagnifyingGlass,
   Upload,
   Clock,
+  Megaphone,
+  CaretDown,
 } from "phosphor-react";
 import { useState, useMemo, useRef, useEffect } from "react";
 import {
@@ -14,12 +16,25 @@ import {
   useGetAllInterventionsQuery,
   useGetAdminBarangaysQuery,
   useGetRecentReportsForBarangayMutation,
+  useGetClustersWithSubclustersQuery,
 } from "@/api/dengueApi";
 import * as turf from "@turf/turf";
-import MapOnly from "../../components/Mapping/MapOnly";
+import {
+  ClusterDropdown,
+  BarangaySearch,
+  MapContainer,
+  BarangayDetails,
+  ClusterDetailsModal,
+  MainReportModal,
+} from "../../components/Admin";
 import stagnantIcon from "../../assets/icons/stagnant_water.svg";
 import garbageIcon from "../../assets/icons/garbage.svg";
 import othersIcon from "../../assets/icons/others.svg";
+import {
+  IconExclamationCircle,
+  IconExclamationMark,
+} from "@tabler/icons-react";
+import { InfoIcon } from "lucide-react";
 
 // Define QC_CENTER constant for default map position
 const QC_CENTER = {
@@ -59,6 +74,15 @@ const DengueMapping = () => {
   const [recentReports, setRecentReports] = useState([]);
   const [showBreedingSites, setShowBreedingSites] = useState(true);
   const [showInterventions, setShowInterventions] = useState(false);
+  const [showClusterDropdown, setShowClusterDropdown] = useState(false);
+  const [showClusterDetailsModal, setShowClusterDetailsModal] = useState(false);
+  const [selectedCluster, setSelectedCluster] = useState(null);
+  const [selectedReports, setSelectedReports] = useState([]);
+  const [rejectedReports, setRejectedReports] = useState([]);
+  const [pendingRejections, setPendingRejections] = useState([]);
+  const [resolvedReports, setResolvedReports] = useState([]);
+  const [subClusters, setSubClusters] = useState([]);
+  const [clusterResolution, setClusterResolution] = useState("pending"); // pending, resolved, rejected
   const mapOnlyRef = useRef(null);
   const mapRef = useRef(null);
   const modalRef = useRef(null);
@@ -76,6 +100,309 @@ const DengueMapping = () => {
 
   const [getRecentReports] = useGetRecentReportsForBarangayMutation();
   const [recentDengueCases, setRecentDengueCases] = useState(null);
+
+  // Get clusters from API
+  const { data: clustersData, isLoading: isLoadingClusters } =
+    useGetClustersWithSubclustersQuery();
+
+  // Transform API clusters data to match our component structure
+  const transformedClusters = useMemo(() => {
+    console.log("[DEBUG] Raw clusters data:", clustersData);
+
+    if (!clustersData?.data) {
+      console.log("[DEBUG] No clusters data available");
+      return [];
+    }
+
+    const transformed = clustersData.data.map((cluster, index) => {
+      console.log(`[DEBUG] Processing cluster ${index}:`, cluster);
+
+      // Calculate center coordinates from reports
+      const coordinates = cluster.reports.map(
+        (report) => report.specific_location.coordinates
+      );
+      const center =
+        coordinates.length > 0
+          ? {
+              lng:
+                coordinates.reduce((sum, coord) => sum + coord[0], 0) /
+                coordinates.length,
+              lat:
+                coordinates.reduce((sum, coord) => sum + coord[1], 0) /
+                coordinates.length,
+            }
+          : { lng: 121.0437, lat: 14.676 }; // Default to QC center
+
+      // Determine severity based on unprocessed count
+      let severity = "low";
+      if (cluster.unprocessed_count >= 5) severity = "high";
+      else if (cluster.unprocessed_count >= 2) severity = "medium";
+
+      // Transform reports to match our structure
+      const transformedReports = cluster.reports.map((report) => ({
+        id: report._id,
+        type: report.report_type,
+        description: report.description,
+        reportedBy: report.isAnonymous ? "Anonymous" : "User", // You might want to fetch user details
+        date: report.date_and_time,
+        status: report.status,
+        severity:
+          severity === "high"
+            ? "High"
+            : severity === "medium"
+            ? "Medium"
+            : "Low",
+        location: `${report.barangay}`,
+        coordinates: {
+          lat: report.specific_location.coordinates[1],
+          lng: report.specific_location.coordinates[0],
+        },
+        images: report.images || [],
+        verified: report.status === "Validated",
+        resolved: report.status === "Resolved",
+      }));
+
+      const result = {
+        id: cluster._id,
+        name: `Cluster in ${cluster.barangay}`,
+        center,
+        count: cluster.reports.length,
+        severity,
+        earliestReportAt: cluster.date_range.start_date,
+        latestReportAt: cluster.date_range.end_date,
+        barangays: [cluster.barangay],
+        reports: transformedReports,
+        unprocessedCount: cluster.unprocessed_count,
+        processedCount: cluster.processed_count,
+        subClusters: cluster.sub_clusters || [],
+      };
+
+      console.log(`[DEBUG] Transformed cluster ${index}:`, result);
+      return result;
+    });
+
+    console.log("[DEBUG] Final transformed clusters:", transformed);
+    return transformed;
+  }, [clustersData]);
+
+  const flaggedClusters = useMemo(() => {
+    console.log(
+      "[DEBUG] Filtering clusters. Total clusters:",
+      transformedClusters.length
+    );
+    // Show all clusters that have at least 2 reports or are high severity
+    const flagged = transformedClusters.filter(
+      (c) => c.count >= 2 || c.severity === "high"
+    );
+    console.log("[DEBUG] Flagged clusters:", flagged);
+    return flagged;
+  }, [transformedClusters]);
+
+  const getSeverityColor = (severity) => {
+    if (severity === "high") return "#dc2626"; // red-600
+    if (severity === "medium") return "#f59e0b"; // amber-500
+    return "#10b981"; // emerald-500
+  };
+
+  const formatDateRange = (earliestDate, latestDate) => {
+    const earliest = new Date(earliestDate);
+    const latest = new Date(latestDate);
+    const now = new Date();
+
+    // If same day, show just the date
+    if (earliest.toDateString() === latest.toDateString()) {
+      return earliest.toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+      });
+    }
+
+    // If within same month, show "Dec 15 - 20"
+    if (
+      earliest.getMonth() === latest.getMonth() &&
+      earliest.getFullYear() === latest.getFullYear()
+    ) {
+      return `${earliest.toLocaleDateString("en-US", {
+        month: "short",
+      })} ${earliest.getDate()} - ${latest.getDate()}`;
+    }
+
+    // If different months but same year, show "Dec 15 - Jan 5"
+    if (earliest.getFullYear() === latest.getFullYear()) {
+      return `${earliest.toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+      })} - ${latest.toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+      })}`;
+    }
+
+    // If different years, show full dates
+    return `${earliest.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    })} - ${latest.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    })}`;
+  };
+
+  const zoomToCluster = (cluster) => {
+    if (mapOnlyRef.current) {
+      mapOnlyRef.current.panTo(cluster.center);
+      mapOnlyRef.current.setZoom(16);
+    }
+    setShowClusterDropdown(false);
+  };
+
+  const handleViewClusterDetails = (cluster) => {
+    setSelectedCluster(cluster);
+    setShowClusterDetailsModal(true);
+    setShowClusterDropdown(false);
+  };
+
+  const getReportTypeColor = (type) => {
+    if (type === "Dengue Case") return "#dc2626"; // red-600
+    if (type === "Breeding Site") return "#f59e0b"; // amber-500
+    return "#10b981"; // emerald-500
+  };
+
+  const getStatusColor = (status) => {
+    if (status === "Confirmed") return "#dc2626"; // red-600
+    if (status === "Under Investigation") return "#f59e0b"; // amber-500
+    if (status === "Validated") return "#3b82f6"; // blue-500
+    if (status === "Resolved") return "#10b981"; // emerald-500
+    if (status === "Pending Verification") return "#f59e0b"; // amber-500
+    return "#6b7280"; // gray-500
+  };
+
+  const handleReportSelection = (reportId, action) => {
+    if (action === "select") {
+      setSelectedReports((prev) => [...prev, reportId]);
+      // Remove from rejected if it was rejected
+      setRejectedReports((prev) => prev.filter((id) => id !== reportId));
+    } else if (action === "deselect") {
+      setSelectedReports((prev) => prev.filter((id) => id !== reportId));
+    } else if (action === "reject") {
+      // Add to pending rejections for confirmation
+      setPendingRejections((prev) => [...prev, reportId]);
+    } else if (action === "confirm-reject") {
+      // Confirm rejection
+      setRejectedReports((prev) => [...prev, reportId]);
+      setPendingRejections((prev) => prev.filter((id) => id !== reportId));
+      setSelectedReports((prev) => prev.filter((id) => id !== reportId));
+    } else if (action === "cancel-reject") {
+      // Cancel pending rejection
+      setPendingRejections((prev) => prev.filter((id) => id !== reportId));
+    } else if (action === "unreject") {
+      // Remove from rejected
+      setRejectedReports((prev) => prev.filter((id) => id !== reportId));
+    }
+  };
+
+  const handleClusterResolution = (action) => {
+    if (action === "resolve-selected") {
+      // Resolve only selected reports, keep others pending
+      const selectedReportIds = selectedReports;
+      const remainingReports = selectedCluster.reports.filter(
+        (report) =>
+          !selectedReportIds.includes(report.id) &&
+          !resolvedReports.includes(report.id)
+      );
+
+      console.log(`Resolving selected reports:`, selectedReportIds);
+      console.log(`Remaining reports:`, remainingReports);
+
+      // Add selected reports to resolved list
+      setResolvedReports((prev) => [...prev, ...selectedReportIds]);
+      setSelectedReports([]);
+
+      // Check if remaining reports can form a new cluster
+      if (remainingReports.length >= 2) {
+        const newSubCluster = {
+          id: `sub-${Date.now()}`,
+          name: `Sub-cluster from ${selectedCluster.barangays[0]}`,
+          center: selectedCluster.center,
+          count: remainingReports.length,
+          severity: "medium", // Default severity for sub-clusters
+          earliestReportAt:
+            remainingReports[0]?.date || new Date().toISOString(),
+          latestReportAt:
+            remainingReports[remainingReports.length - 1]?.date ||
+            new Date().toISOString(),
+          barangays: selectedCluster.barangays,
+          reports: remainingReports,
+          parentClusterId: selectedCluster.id,
+        };
+
+        setSubClusters((prev) => [...prev, newSubCluster]);
+
+        alert(
+          `Resolved ${selectedReportIds.length} reports. Created new sub-cluster with ${remainingReports.length} remaining reports.`
+        );
+      } else {
+        alert(
+          `Resolved ${selectedReportIds.length} reports. ${remainingReports.length} reports remain pending.`
+        );
+      }
+
+      // TODO: Send to backend - resolve selected reports and create sub-cluster
+    } else if (action === "resolve-all") {
+      // Resolve all reports in the cluster
+      console.log(`Resolving all reports in cluster:`, selectedCluster.id);
+      // TODO: Send to backend
+      alert("All reports resolved. Cluster will be closed.");
+      setShowClusterDetailsModal(false);
+    } else if (action === "reject-all") {
+      // Reject all reports in the cluster
+      console.log(`Rejecting all reports in cluster:`, selectedCluster.id);
+      // TODO: Send to backend
+      alert("All reports rejected. Cluster will be closed.");
+      setShowClusterDetailsModal(false);
+    }
+  };
+
+  const getSelectedReportsCount = () => {
+    return selectedReports.length;
+  };
+
+  const getUnselectedReportsCount = () => {
+    return (
+      selectedCluster?.reports.length -
+      selectedReports.length -
+      rejectedReports.length
+    );
+  };
+
+  const getRejectedReportsCount = () => {
+    return rejectedReports.length;
+  };
+
+  const getResolvedReportsCount = () => {
+    return resolvedReports.length;
+  };
+
+  const hasResolvedReports = () => {
+    return resolvedReports.length > 0;
+  };
+
+  const getRemainingReports = () => {
+    return (
+      selectedCluster?.reports.filter(
+        (report) =>
+          !resolvedReports.includes(report.id) &&
+          !rejectedReports.includes(report.id)
+      ) || []
+    );
+  };
+
+  const canFormSubCluster = () => {
+    const remaining = getRemainingReports();
+    return remaining.length >= 2;
+  };
 
   useEffect(() => {
     if (allInterventionsData) {
@@ -634,581 +961,88 @@ const DengueMapping = () => {
       </p>
 
       <div className="relative mb-4 flex justify-between items-center">
-        <div className="relative">
-          <input
-            type="text"
-            placeholder="Search barangay..."
-            value={searchQuery}
-            onChange={(e) => handleSearch(e.target.value)}
-            className="w-full md:w-[300px] pl-10 pr-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-          />
-          <MagnifyingGlass
-            size={20}
-            className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
-          />
-          {/* Search Results Dropdown */}
-          {searchQuery && filteredBarangays.length > 0 && (
-            <div className="absolute z-50 w-full mt-1 bg-white rounded-lg shadow-lg border border-gray-200 max-h-60 overflow-y-auto">
-              {filteredBarangays.map((barangay) => (
-                <div
-                  key={barangay._id}
-                  onClick={() => {
-                    handleBarangaySelect(barangay);
-                    setSearchQuery("");
-                    setFilteredBarangays([]);
-                  }}
-                  className="px-4 py-2 hover:bg-gray-100 cursor-pointer text-primary"
-                >
-                  {barangay.displayName || barangay.name}
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-
-      <div className="flex h-[50vh] mb-4" ref={mapContainerRef}>
-        <MapOnly
-          ref={mapOnlyRef}
-          showBreedingSites={showBreedingSites}
-          showInterventions={showInterventions}
-          selectedBarangay={selectedBarangay}
-          onBarangaySelect={handleBarangaySelect}
-          interventions={showInterventions ? activeInterventions : []}
-          style={{ height: "100%", width: "100%" }}
-          useAdminEndpoint={true}
-          onMarkerClick={(item, type) => {
-            if (type === "report") {
-              setSelectedFullReport(item);
-              setShowFullReport(true);
-            } else if (type === "intervention") {
-              // Create and show info window for intervention
-              const content = document.createElement("div");
-              content.innerHTML = `
-                <div class="p-3 flex flex-col items-center gap-1 font-normal bg-white text-center rounded-md shadow-md text-primary">
-                  <p class="text-4xl font-extrabold text-primary mb-2">${
-                    item.interventionType || "Intervention"
-                  }</p>
-                  <div class="text-lg flex items-center gap-2">
-                    <span class="font-bold">Status:</span>
-                    <span class="px-3 py-1 rounded-full text-white font-bold text-sm" style="background-color:#FF6347;box-shadow:0 1px 4px rgba(0,0,0,0.08);">
-                      ${item.status || ""}
-                    </span>
-                  </div>
-                  <p class="text-lg text-center"><span class="font-bold">Barangay:</span> ${
-                    item.barangay || ""
-                  }</p>
-                  ${
-                    item.address
-                      ? `<p class="text-lg text-center"><span class="font-bold text-center">Address:</span> ${item.address}</p>`
-                      : ""
-                  }
-                  <p class="text-lg"><span class="font-bold">Date:</span> ${
-                    item.date
-                      ? new Date(item.date).toLocaleString("en-US", {
-                          year: "numeric",
-                          month: "long",
-                          day: "numeric",
-                          hour: "numeric",
-                          minute: "2-digit",
-                          hour12: true,
-                        })
-                      : ""
-                  }</p>
-                  <p class="text-lg"><span class="font-bold">Personnel:</span> ${
-                    item.personnel || ""
-                  }</p>
-                </div>
-              `;
-              if (mapOnlyRef.current) {
-                mapOnlyRef.current.showInfoWindow(content, {
-                  lat: item.specific_location.coordinates[1],
-                  lng: item.specific_location.coordinates[0],
-                });
-              }
-            }
-          }}
+        <BarangaySearch
+          searchQuery={searchQuery}
+          handleSearch={handleSearch}
+          filteredBarangays={filteredBarangays}
+          handleBarangaySelect={handleBarangaySelect}
+          setSearchQuery={setSearchQuery}
+          setFilteredBarangays={setFilteredBarangays}
+        />
+        {/* CLUSTER REPORTED CONTAINER */}
+        <ClusterDropdown
+          showClusterDropdown={showClusterDropdown}
+          setShowClusterDropdown={setShowClusterDropdown}
+          flaggedClusters={flaggedClusters}
+          isLoadingClusters={isLoadingClusters}
+          zoomToCluster={zoomToCluster}
+          handleViewClusterDetails={handleViewClusterDetails}
+          getSeverityColor={getSeverityColor}
+          formatDateRange={formatDateRange}
         />
       </div>
-      <p className="text-left text-primary text-lg font-extrabold flex items-center gap-2 mb-8">
-        <div className="text-success">
-          <MapPinLine size={16} />
-        </div>
-        Click on a Barangay to view details
-      </p>
-      <div className="h-auto grid grid-cols-10 gap-10">
-        <div
-          className={`col-span-4 border-2 ${getBorderColor(
-            selectedBarangay?.properties?.patternType
-          )} rounded-2xl flex flex-col p-4 gap-1`}
-        >
-          <p className="text-center font-semibold text-base-content">
-            Selected Barangay - Dengue Overview
-          </p>
-          <p
-            className={`text-center font-bold ${getPatternTextColor(
-              selectedBarangay?.properties?.patternType
-            )} text-4xl mb-4 mt-2`}
-          >
-            {selectedBarangay
-              ? `Barangay ${
-                  selectedBarangay.properties?.displayName ||
-                  selectedBarangay.properties?.name
-                }`
-              : "Select a Barangay"}
-          </p>
-          <p
-            className={`text-center font-semibold text-white text-lg uppercase mb-4 px-4 py-1 rounded-full inline-block mx-auto ${getPatternBgColor(
-              selectedBarangay?.properties?.patternType
-            )}`}
-          >
-            {selectedBarangay
-              ? selectedBarangay.properties?.patternType
-                ? selectedBarangay.properties.patternType
-                    .charAt(0)
-                    .toUpperCase() +
-                  selectedBarangay.properties.patternType
-                    .slice(1)
-                    .replace(/_/g, " ")
-                : "NO PATTERN DETECTED"
-              : "NO BARANGAY SELECTED"}
-          </p>
-          <div className="w-[90%] mx-auto flex flex-col text-black gap-2">
-            {/* Pattern-Based */}
-            {selectedBarangay?.status_and_recommendation?.pattern_based &&
-              selectedBarangay.status_and_recommendation.pattern_based.status &&
-              selectedBarangay.status_and_recommendation.pattern_based.status.trim() !==
-                "" && (
-                <>
-                  <p className="font-bold text-lg text-primary mb-1">
-                    Pattern-Based
-                  </p>
-                  {selectedBarangay.status_and_recommendation.pattern_based
-                    .alert && (
-                    <p className="">
-                      <span className="font-bold">Alert: </span>
-                      {selectedBarangay.status_and_recommendation.pattern_based.alert.replace(
-                        new RegExp(
-                          `^${
-                            selectedBarangay.properties?.displayName ||
-                            selectedBarangay.properties?.name
-                          }:?\\s*`,
-                          "i"
-                        ),
-                        ""
-                      )}
-                    </p>
-                  )}
-                  {selectedBarangay.status_and_recommendation.pattern_based
-                    .recommendation && (
-                    <p className="">
-                      <span className="font-bold">Recommendation: </span>
-                      {
-                        selectedBarangay.status_and_recommendation.pattern_based
-                          .recommendation
-                      }
-                    </p>
-                  )}
-                  <hr className="border-t border-gray-200 my-2" />
-                </>
-              )}
-            {/* Report-Based */}
-            {selectedBarangay?.status_and_recommendation?.report_based &&
-              selectedBarangay.status_and_recommendation.report_based.status &&
-              selectedBarangay.status_and_recommendation.report_based.status.trim() !==
-                "" && (
-                <>
-                  <p className="font-bold text-lg text-primary mb-1">
-                    Report-Based
-                  </p>
-                  {/* Status as badge with label */}
-                  <div className="mb-2 flex items-center gap-2">
-                    <span className="font-bold">Status:</span>
-                    <span
-                      className={`inline-block px-3 py-1 rounded-full text-white text-md font-bold capitalize ${(() => {
-                        const status =
-                          selectedBarangay.status_and_recommendation.report_based.status.toLowerCase();
-                        if (status === "low") return "bg-success";
-                        if (status === "medium") return "bg-warning";
-                        if (status === "high") return "bg-error";
-                        return "bg-gray-400";
-                      })()}`}
-                    >
-                      {
-                        selectedBarangay.status_and_recommendation.report_based
-                          .status
-                      }
-                    </span>
-                  </div>
-                  {selectedBarangay.status_and_recommendation.report_based
-                    .alert && (
-                    <p className="">
-                      <span className="font-bold">Alert: </span>
-                      {
-                        selectedBarangay.status_and_recommendation.report_based
-                          .alert
-                      }
-                    </p>
-                  )}
-                  {selectedBarangay.status_and_recommendation.report_based
-                    .recommendation && (
-                    <p className="">
-                      <span className="font-bold">Recommendation: </span>
-                      {
-                        selectedBarangay.status_and_recommendation.report_based
-                          .recommendation
-                      }
-                    </p>
-                  )}
-                  <hr className="border-t border-gray-200 my-2" />
-                </>
-              )}
-            {/* Death Priority */}
-            {selectedBarangay?.status_and_recommendation?.death_priority &&
-              selectedBarangay.status_and_recommendation.death_priority
-                .status &&
-              selectedBarangay.status_and_recommendation.death_priority.status.trim() !==
-                "" && (
-                <>
-                  <p className="font-bold text-primary mb-1 text-lg">
-                    Death Priority
-                  </p>
-                  <p className="">
-                    <span className="font-bold">Status: </span>
-                    {
-                      selectedBarangay.status_and_recommendation.death_priority
-                        .status
-                    }
-                  </p>
-                  {selectedBarangay.status_and_recommendation.death_priority
-                    .alert && (
-                    <p className="">
-                      <span className="font-bold">Alert: </span>
-                      {
-                        selectedBarangay.status_and_recommendation
-                          .death_priority.alert
-                      }
-                    </p>
-                  )}
-                  {selectedBarangay.status_and_recommendation.death_priority
-                    .recommendation && (
-                    <p className="">
-                      <span className="font-bold">Recommendation: </span>
-                      {
-                        selectedBarangay.status_and_recommendation
-                          .death_priority.recommendation
-                      }
-                    </p>
-                  )}
-                  <hr className="border-t border-gray-200 my-2" />
-                </>
-              )}
-            {/* Pattern Based Alert */}
-            {barangaysList?.find(
-              (b) => b.name === selectedBarangay?.properties?.name
-            )?.status_and_recommendation?.pattern_based?.alert && (
-              <div>
-                <p className="text-md text-center text-gray-700 font-normal">
-                  {
-                    barangaysList.find(
-                      (b) => b.name === selectedBarangay?.properties?.name
-                    )?.status_and_recommendation?.pattern_based?.alert
-                  }
-                </p>
-              </div>
-            )}
-            {/* Recent Dengue Cases */}
-            {recentDengueCases && Object.keys(recentDengueCases).length > 0 && (
-              <div className="mb-2">
-                <p className="mt-1">
-                  <span className="font-bold text-lg">
-                    Recent Dengue Cases:{" "}
-                  </span>
-                </p>
-                <div className="mt-3 flex flex-col space-y-3 ml-4">
-                  {/* Dengue Cases List */}
-                  {Object.entries(recentDengueCases).map(([date, count]) => (
-                    <div key={date} className="flex gap-2 items-center">
-                      <div>
-                        <Circle size={16} color="red" weight="fill" />
-                      </div>
-                      <p className="font-bold">
-                        {date}:{" "}
-                        <span className="font-normal">
-                          {count} case{count > 1 ? "s" : ""}
-                        </span>
-                      </p>
-                    </div>
-                  ))}
-                </div>
-                <hr className="border-t border-gray-200 my-2" />
-              </div>
-            )}
-            {/* Interventions Section */}
-            {interventionsData && interventionsData.length > 0 && (
-              <>
-                {/* Ongoing Interventions */}
-                {interventionsData.filter((i) => i.status === "Ongoing")
-                  .length > 0 && (
-                  <>
-                    <p className="font-bold text-lg text-primary mb-1">
-                      Ongoing Interventions:
-                    </p>
-                    <div className="flex flex-col space-y-2 ml-4">
-                      {interventionsData
-                        .filter((i) => i.status === "Ongoing")
-                        .map((intervention) => (
-                          <div
-                            key={intervention._id}
-                            className="flex text-md gap-2 items-center"
-                          >
-                            <div className="text-success">
-                              <CheckCircle size={16} />
-                            </div>
-                            <p className="font-bold">
-                              {new Date(intervention.date).toLocaleDateString(
-                                "en-US",
-                                {
-                                  month: "long",
-                                  day: "numeric",
-                                }
-                              )}
-                              :{" "}
-                              <span className="font-normal">
-                                {intervention.interventionType}
-                              </span>
-                            </p>
-                          </div>
-                        ))}
-                    </div>
-                    <hr className="border-t border-gray-200 my-2" />
-                  </>
-                )}
 
-                {/* Scheduled Interventions */}
-                {interventionsData.filter((i) => i.status === "Scheduled")
-                  .length > 0 && (
-                  <>
-                    <p className="font-bold text-lg text-primary mb-1">
-                      Scheduled Interventions:
-                    </p>
-                    <div className="flex flex-col space-y-2 ml-4">
-                      {interventionsData
-                        .filter((i) => i.status === "Scheduled")
-                        .map((intervention) => (
-                          <div
-                            key={intervention._id}
-                            className="flex text-md gap-2 items-center"
-                          >
-                            <div className="text-warning">
-                              <Clock size={16} />
-                            </div>
-                            <p className="font-bold">
-                              {new Date(intervention.date).toLocaleDateString(
-                                "en-US",
-                                {
-                                  month: "long",
-                                  day: "numeric",
-                                }
-                              )}
-                              :{" "}
-                              <span className="font-normal">
-                                {intervention.interventionType}
-                              </span>
-                            </p>
-                          </div>
-                        ))}
-                    </div>
-                    <hr className="border-t border-gray-200 my-2" />
-                  </>
-                )}
-              </>
-            )}
-          </div>
-          <div className="flex justify-end">
-            {/* <button className="bg-primary rounded-full text-white px-4 py-1 text-[11px] hover:bg-primary/80 hover:scale-105 transition-all duration-200 active:scale-95 cursor-pointer">
-              View Full Report
-            </button> */}
-          </div>
-        </div>
-        <div className="col-span-6 flex flex-col gap-2">
-          <p className="text-[30px] text-base-content font-bold">
-            Reports nearby
-          </p>
-          {nearbyReports.length > 0 ? (
-            nearbyReports.map((report, index) => (
-              <div
-                key={index}
-                className="flex flex-col items-start bg-white rounded-2xl p-4 text-black gap-2 w-full"
-              >
-                <div className="flex items-center gap-2 mb-1">
-                  <img
-                    src={
-                      BREEDING_SITE_TYPE_ICONS[report.report_type] ||
-                      BREEDING_SITE_TYPE_ICONS.default
-                    }
-                    alt={report.report_type}
-                    className="w-8 h-8"
-                  />
-                  <p className="font-semibold text-lg">
-                    {report.barangay} - {report.report_type}
-                  </p>
-                </div>
-                <p>
-                  <span className="font-bold ml-1.5">Distance: </span>
-                  {(report.distance * 1000).toFixed(0)}m away
-                </p>
-                <p>
-                  <span className="font-bold ml-1.5">Reported: </span>
-                  {new Date(report.date_and_time).toLocaleDateString("en-US", {
-                    month: "long",
-                    day: "numeric",
-                  })}
-                </p>
-                <p>
-                  <span className="font-bold ml-1.5">Description: </span>
-                  {report.description}
-                </p>
-                <div className="flex justify-end w-full gap-2">
-                  <button
-                    onClick={() => handleViewFullReport(report)}
-                    className="bg-white text-primary border-1 rounded-full  px-4 py-1 text-[11px] hover:cursor-pointer hover:bg-primary/30 transition-all duration-200"
-                  >
-                    View Full Report
-                  </button>
-                  <button
-                    onClick={() => handleShowOnMap(report, "report")}
-                    className="bg-primary rounded-full text-white px-4 py-1 text-[11px] hover:bg-primary/80 hover:scale-105 transition-all duration-200 active:scale-95 cursor-pointer"
-                  >
-                    Show on Map
-                  </button>
-                </div>
-              </div>
-            ))
-          ) : (
-            <div className="flex flex-col items-start bg-white rounded-2xl p-4 text-black gap-2">
-              <p className="text-gray-500 italic">No nearby reports found</p>
-            </div>
-          )}
-        </div>
-      </div>
+      <MapContainer
+        mapContainerRef={mapContainerRef}
+        mapOnlyRef={mapOnlyRef}
+        showBreedingSites={showBreedingSites}
+        showInterventions={showInterventions}
+        selectedBarangay={selectedBarangay}
+        handleBarangaySelect={handleBarangaySelect}
+        activeInterventions={activeInterventions}
+        setSelectedFullReport={setSelectedFullReport}
+        setShowFullReport={setShowFullReport}
+      />
+
+      <BarangayDetails
+        selectedBarangay={selectedBarangay}
+        getBorderColor={getBorderColor}
+        getPatternTextColor={getPatternTextColor}
+        nearbyReports={nearbyReports}
+        activeInterventions={activeInterventions}
+        recentDengueCases={recentDengueCases}
+        getPatternBgColor={getPatternBgColor}
+        barangaysList={barangaysList}
+        interventionsData={interventionsData}
+        handleViewFullReport={handleViewFullReport}
+        handleShowOnMap={handleShowOnMap}
+        BREEDING_SITE_TYPE_ICONS={BREEDING_SITE_TYPE_ICONS}
+      />
+
+      {/* Cluster Details Modal */}
+      <ClusterDetailsModal
+        showClusterDetailsModal={showClusterDetailsModal}
+        selectedCluster={selectedCluster}
+        setShowClusterDetailsModal={setShowClusterDetailsModal}
+        getSeverityColor={getSeverityColor}
+        formatDateRange={formatDateRange}
+        getReportTypeColor={getReportTypeColor}
+        selectedReports={selectedReports}
+        resolvedReports={resolvedReports}
+        rejectedReports={rejectedReports}
+        pendingRejections={pendingRejections}
+        handleReportSelection={handleReportSelection}
+        handleClusterResolution={handleClusterResolution}
+        getSelectedReportsCount={getSelectedReportsCount}
+        getUnselectedReportsCount={getUnselectedReportsCount}
+        getRejectedReportsCount={getRejectedReportsCount}
+        getResolvedReportsCount={getResolvedReportsCount}
+        hasResolvedReports={hasResolvedReports}
+        canFormSubCluster={canFormSubCluster}
+        getRemainingReports={getRemainingReports}
+        subClusters={subClusters}
+        mapOnlyRef={mapOnlyRef}
+      />
 
       {/* Main Report Modal */}
-      <dialog
-        ref={modalRef}
-        className="modal transition-transform duration-300 ease-in-out"
-      >
-        <div className="modal-box bg-white rounded-3xl shadow-2xl w-9/12 max-w-4xl p-12 relative">
-          <button
-            className="absolute top-10 right-10 text-2xl font-semibold hover:text-gray-500 transition-colors duration-200 hover:cursor-pointer"
-            onClick={() => setShowFullReport(false)}
-          >
-            ✕
-          </button>
-
-          <p className="text-center text-3xl font-bold mb-6">
-            Full Report Details
-          </p>
-          <p className="text-left text-2xl font-bold mb-6">Report Details</p>
-          <hr className="text-accent/50 mb-6" />
-
-          <div className="space-y-2">
-            {/* Report Type Badge */}
-            <div
-              className={`inline-block rounded-full px-4 py-2 text-white ${
-                selectedFullReport?.report_type === "Breeding Site"
-                  ? "bg-info"
-                  : selectedFullReport?.report_type === "Standing Water"
-                  ? "bg-warning"
-                  : "bg-error"
-              }`}
-            >
-              {selectedFullReport?.report_type}
-            </div>
-
-            {/* Location Details */}
-            <div className="bg-gray-50 p-4 rounded-lg">
-              <p className="font-bold mb-2 text-xl">Location Details</p>
-              <p>
-                <span className="font-medium">Barangay:</span>{" "}
-                {selectedFullReport?.barangay}
-              </p>
-              <p>
-                <span className="font-medium">Coordinates:</span>{" "}
-                {selectedFullReport?.specific_location.coordinates.join(", ")}
-              </p>
-            </div>
-
-            {/* Report Details */}
-            <div className="bg-gray-50 p-4 rounded-lg">
-              <p className="font-bold mb-2 text-xl">Report Details</p>
-              <p>
-                <span className="font-medium">Reported by:</span>{" "}
-                {selectedFullReport?.user?.username}
-              </p>
-              <p>
-                <span className="font-medium">Date and Time:</span>{" "}
-                {new Date(selectedFullReport?.date_and_time).toLocaleString()}
-              </p>
-              <p>
-                <span className="font-medium">Status:</span>{" "}
-                {selectedFullReport?.status}
-              </p>
-              <p>
-                <span className="font-medium">Description:</span>{" "}
-                {selectedFullReport?.description}
-              </p>
-            </div>
-
-            {/* Images Section */}
-            {selectedFullReport?.images &&
-              selectedFullReport.images.length > 0 && (
-                <div className="bg-gray-50 p-4 rounded-lg">
-                  <p className="font-bold mb-2 text-xl">Evidence Images</p>
-                  <div className="grid grid-cols-2 gap-4">
-                    {selectedFullReport.images.map((img, idx) => (
-                      <div key={idx} className="relative">
-                        <img
-                          src={img}
-                          alt={`Evidence ${idx + 1}`}
-                          className="w-full h-48 object-cover rounded-lg"
-                        />
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-            {/* Action Buttons */}
-            <div className="flex justify-between items-center mt-6">
-              <button
-                onClick={openStreetViewModal}
-                className="btn bg-primary text-white hover:bg-primary/80 transition-colors"
-              >
-                View Street View
-              </button>
-
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setShowFullReport(false)}
-                  className="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 transition-colors"
-                >
-                  Close
-                </button>
-                <button
-                  onClick={() => {
-                    handleShowOnMap(selectedFullReport, "report");
-                    setShowFullReport(false);
-                  }}
-                  className="bg-info text-white px-4 py-2 rounded-lg hover:bg-info/80 transition-colors"
-                >
-                  Show on Map
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </dialog>
+      <MainReportModal
+        modalRef={modalRef}
+        showFullReport={showFullReport}
+        setShowFullReport={setShowFullReport}
+        selectedFullReport={selectedFullReport}
+        openStreetViewModal={openStreetViewModal}
+        handleShowOnMap={handleShowOnMap}
+      />
 
       {/* StreetView Modal */}
       <dialog ref={streetViewModalRef} className="modal">
@@ -1305,6 +1139,8 @@ const DengueMapping = () => {
           </div>
         </div>
       </dialog>
+
+      {/* Cluster Verification Modal */}
     </main>
   );
 };

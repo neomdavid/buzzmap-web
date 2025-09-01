@@ -75,6 +75,7 @@ export const dengueApi = createApi({
     "Alert",
     "Accounts",
     "Comments",
+    "Clusters",
   ],
   endpoints: (builder) => ({
     // Authentication Endpoints
@@ -1397,6 +1398,16 @@ export const dengueApi = createApi({
       }),
       invalidatesTags: ["Accounts"],
     }),
+
+    // Clusters endpoints
+    getClustersWithSubclusters: builder.query({
+      query: () => "clusters/get-clusters-with-subclusters",
+      providesTags: ["Clusters"],
+      transformResponse: (response) => {
+        console.log("[DEBUG] Clusters with subclusters response:", response);
+        return response;
+      },
+    }),
   }),
 });
 
@@ -1539,4 +1550,7 @@ export const {
 
   // Update user bio
   useUpdateBioMutation,
+
+  // Clusters hooks
+  useGetClustersWithSubclustersQuery,
 } = dengueApi;

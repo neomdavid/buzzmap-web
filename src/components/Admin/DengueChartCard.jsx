@@ -1,16 +1,14 @@
 import React, { useState, useMemo } from "react";
-import { Line } from "react-chartjs-2";
 import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  Title,
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
   Tooltip,
   Legend,
-  Filler,
-} from "chart.js";
+  ResponsiveContainer,
+} from "recharts";
 import {
   useGetBarangaysQuery,
   useGetBarangayWeeklyTrendsQuery,
@@ -20,6 +18,21 @@ import {
   getPatternLabel,
   normalizePatternType,
 } from "../../utils/patternConfig";
+
+// Custom components for the chart
+const CustomizedAxisTick = ({ x, y, payload }) => (
+  <g transform={`translate(${x},${y})`}>
+    <text x={0} y={0} dy={16} textAnchor="middle" fill="#fff" fontSize={12}>
+      {payload.value}
+    </text>
+  </g>
+);
+
+const CustomizedLabel = ({ x, y, value }) => (
+  <text x={x} y={y} dy={-10} textAnchor="middle" fill="#fff" fontSize={12}>
+    {value}
+  </text>
+);
 
 export default function DengueChartCard() {
   const [selectedBarangay, setSelectedBarangay] = useState("bahay toro");
@@ -118,7 +131,7 @@ export default function DengueChartCard() {
   const chartCases = chartData.map((d) => d.cases);
 
   // Find the max cases for the current chartData (for consistent Y axis)
-  const maxCases = Math.max(5, ...chartCases);
+  const maxCases = chartCases.length > 0 ? Math.max(5, ...chartCases) : 10;
 
   console.log("Transformed Chart Data:", chartData);
 
@@ -134,6 +147,14 @@ export default function DengueChartCard() {
     return (
       <div className="w-full bg-primary p-6 rounded-sm flex items-center justify-center">
         <p className="text-white">Error loading chart data</p>
+      </div>
+    );
+  }
+
+  if (!chartData || chartData.length === 0) {
+    return (
+      <div className="w-full bg-primary p-6 rounded-sm flex items-center justify-center">
+        <p className="text-white">No chart data available</p>
       </div>
     );
   }
