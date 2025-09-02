@@ -11,6 +11,8 @@ import {
   Warning,
   CheckCircle,
   Sparkle,
+  Info,
+  Skull,
 } from "phosphor-react";
 import {
   useGetAllInterventionsQuery,
@@ -445,10 +447,7 @@ const ActionRecommendationCard = ({
       {/* Recommendations Modal */}
       <dialog id={`recommendations_modal_${barangay}`} className="modal">
         <div
-          className={`modal-box bg-white rounded-4xl shadow-2xl w-11/12 max-w-5xl p-12 relative border-3 ${getPatternColor(
-            normalizePatternType(pattern_based?.status),
-            "border"
-          )}`}
+          className={`modal-box bg-white rounded-4xl shadow-2xl w-11/12 max-h-[90vh] overflow-y-auto max-w-5xl p-12 relative`}
         >
           <button
             className="absolute top-10 right-10 text-2xl font-semibold hover:text-gray-500 transition-colors duration-200 hover:cursor-pointer"
@@ -463,76 +462,75 @@ const ActionRecommendationCard = ({
             ✕
           </button>
 
-          <p className="text-center text-3xl font-bold mb-6 text-primary">
-            Recommendations
-          </p>
-          <p className="text-left text-2xl font-bold mb-6">
-            For{" "}
+          <div className="flex gap-2 items-center justify-center mb-3">
+            <Sparkle size={20} className="text-primary" weight="bold" />
+            <p className="text-center text-3xl font-bold text-primary">
+              AI-Powered Recommendations
+            </p>
+          </div>
+          <p className="text-center text-2xl font-bold mb-5">
             <span
-              className={`text-white px-4 py-1 font-normal text-xl font-semibold ml-1 rounded-full ${getPatternColor(
+              className={`text-white text-center px-4 py-1 font-normal text-xl font-semibold ml-1 rounded-full ${getPatternColor(
                 normalizePatternType(pattern_based?.status),
                 "badge"
               )}`}
             >
-              {barangay}
+              Barangay {barangay}
             </span>
           </p>
-          <hr className="text-accent/50 mb-[-2px]" />
 
-          {/* Pattern and Alert Section */}
-          <div className="mb-4">
-            <span
-              className={`px-4 py-1 rounded-full text-white text-sm font-semibold ${getPatternColor(
-                normalizePatternType(pattern_based?.status),
-                "badge"
-              )}`}
-            >
-              {getPatternLabel(pattern_based?.status)}
-            </span>
+          {/* Stats Badges in Modal */}
+          <div className="flex flex-wrap gap-3 mb-6 justify-center">
+            {/* Pattern Badge - white background, colored border/text */}
+            {pattern_based?.status && (
+              <div
+                className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white text-sm font-medium border ${getPatternColor(
+                  normalizePatternType(pattern_based?.status),
+                  "border"
+                )} ${getPatternColor(
+                  normalizePatternType(pattern_based?.status),
+                  "text"
+                )}`}
+              >
+                <span
+                  className={`w-2 h-2 rounded-full ${getPatternColor(
+                    normalizePatternType(pattern_based?.status),
+                    "badge"
+                  )}`}
+                ></span>
+                {getPatternLabel(pattern_based?.status)}
+              </div>
+            )}
 
-            {pattern_based?.alert && (
-              <div className="bg-base-200 p-4 rounded-lg">
-                {pattern_based.alert}
+            {/* Reports Badge - white background */}
+            {report_based && (
+              <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white border border-primary text-primary text-sm font-medium">
+                <MagnifyingGlass size={14} />
+                {report_based.count || 0} Reports
+              </div>
+            )}
+
+            {/* Deaths/Fatality Badge - white background */}
+            {death_priority?.count > 0 && (
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white border border-red-500 text-red-600 text-sm font-medium">
+                <Skull size={14} />
+                {death_priority.count}{" "}
+                {death_priority.count === 1 ? "Fatality" : "Fatalities"}
               </div>
             )}
           </div>
 
-          {/* Report-based Section */}
-          {report_based && (
-            <div className="mb-6 p-4 rounded-lg text-lg border border-warning">
-              <div className="font-bold mb-2 text-base-content text-lg">
-                Report-Based
-              </div>
-              {typeof report_based.count === "number" &&
-                report_based.count > 0 && (
-                  <div className="mb-2">
-                    <span className="font-bold">Reports:</span>{" "}
-                    {report_based.count}
-                  </div>
-                )}
-              {report_based.alert && report_based.alert !== "None" && (
-                <div className="mb-2">{report_based.alert}</div>
-              )}
-            </div>
-          )}
+          <hr className="text-accent/50 mb-2" />
 
-          {/* Death Priority Section */}
-          {death_priority && death_priority.count > 0 && (
-            <div className="mb-6 p-4 rounded-lg text-lg border border-error">
-              <div className="font-bold mb-2 text-base-content text-lg">
-                Death-Based
+          {/* Pattern Alert Section - if exists */}
+          {pattern_based?.alert && (
+            <div className="mb-6 p-4 flex justify-center items-center gap-2 rounded-lg">
+              <div className="flex items-center gap-2">
+                <Info className="text-primary" size={16} weight="bold" />
               </div>
-              <p
-                className="text-error mb-3"
-                dangerouslySetInnerHTML={{
-                  __html: death_priority.alert.replace(
-                    `${death_priority.count} death(s)`,
-                    `<span class="bg-error text-white px-2 py-0.5 rounded-full text-sm font-semibold mx-1">${
-                      death_priority.count
-                    } ${death_priority.count === 1 ? "death" : "deaths"}</span>`
-                  ),
-                }}
-              />
+              <p className="text-gray-700 text-md leading-relaxed">
+                {pattern_based.alert}
+              </p>
             </div>
           )}
 
@@ -541,8 +539,12 @@ const ActionRecommendationCard = ({
             {isLoadingAI && (
               <div className="mb-6">
                 <div className="flex items-center gap-2 mb-4">
-                  <Sparkle size={20} className="text-info animate-pulse" />
-                  <p className="text-xl font-semibold text-info">
+                  <Sparkle
+                    size={20}
+                    className="text-primary animate-pulse"
+                    weight="bold"
+                  />
+                  <p className="text-xl font-semibold text-primary">
                     AI-Powered Recommendations
                   </p>
                 </div>
@@ -596,12 +598,16 @@ const ActionRecommendationCard = ({
             {aiRecommendation?.recommendation && !isLoadingAI && !aiError && (
               <div className="mb-6">
                 <div className="flex items-center gap-2 mb-4">
-                  <Sparkle size={20} className="text-info" />
-                  <p className="text-xl font-semibold text-info">
+                  <Sparkle
+                    size={20}
+                    className="text-primary animate-pulse"
+                    weight="bold"
+                  />
+                  <p className="text-xl font-semibold text-primary">
                     AI-Powered Recommendations
                   </p>
                 </div>
-                <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+                <div className="bg-white p-4 pt-6 rounded-lg border border-gray-200 shadow-sm">
                   <div
                     className="text-gray-700 text-base leading-relaxed prose prose-sm max-w-none"
                     dangerouslySetInnerHTML={{
@@ -649,7 +655,7 @@ const ActionRecommendationCard = ({
                 </div>
               )}
 
-            <p className="text-xl font-semibold mb-4">
+            {/* <p className="text-xl font-semibold mb-4">
               Pattern-Based Recommendations:
             </p>
             <ul className="list-disc list-inside space-y-4">
@@ -667,7 +673,7 @@ const ActionRecommendationCard = ({
                   No recommendations available.
                 </li>
               )}
-            </ul>
+            </ul> */}
           </div>
 
           <div className="modal-action mt-8">
