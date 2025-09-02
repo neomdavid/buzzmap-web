@@ -1040,42 +1040,40 @@ const DengueMapping = () => {
       />
 
       {/* Cluster Details Modal */}
-      {showClusterDetailsModal && (
-        <>
-          {isLoadingSpecificCluster && (
-            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-              <div className="bg-white rounded-lg p-6">
-                <div className="flex items-center gap-3">
-                  <div className="loading loading-spinner loading-md"></div>
-                  <span>Loading cluster details...</span>
-                </div>
-              </div>
+      <ClusterDetailsModal
+        showClusterDetailsModal={showClusterDetailsModal}
+        selectedCluster={specificClusterData || selectedCluster}
+        setShowClusterDetailsModal={setShowClusterDetailsModal}
+        getSeverityColor={getSeverityColor}
+        formatDateRange={formatDateRange}
+        getReportTypeColor={getReportTypeColor}
+        selectedReports={selectedReports}
+        resolvedReports={resolvedReports}
+        rejectedReports={rejectedReports}
+        pendingRejections={pendingRejections}
+        handleReportSelection={handleReportSelection}
+        handleClusterResolution={handleClusterResolution}
+        getSelectedReportsCount={getSelectedReportsCount}
+        getUnselectedReportsCount={getUnselectedReportsCount}
+        getRejectedReportsCount={getRejectedReportsCount}
+        getResolvedReportsCount={getResolvedReportsCount}
+        hasResolvedReports={hasResolvedReports}
+        canFormSubCluster={canFormSubCluster}
+        getRemainingReports={getRemainingReports}
+        subClusters={subClusters}
+        mapOnlyRef={mapOnlyRef}
+      />
+
+      {/* Loading Overlay for Cluster Details */}
+      {showClusterDetailsModal && isLoadingSpecificCluster && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6">
+            <div className="flex items-center gap-3">
+              <div className="loading loading-spinner loading-md"></div>
+              <span>Loading cluster details...</span>
             </div>
-          )}
-          <ClusterDetailsModal
-            showClusterDetailsModal={showClusterDetailsModal}
-            selectedCluster={specificClusterData || selectedCluster}
-            setShowClusterDetailsModal={setShowClusterDetailsModal}
-            getSeverityColor={getSeverityColor}
-            formatDateRange={formatDateRange}
-            getReportTypeColor={getReportTypeColor}
-            selectedReports={selectedReports}
-            resolvedReports={resolvedReports}
-            rejectedReports={rejectedReports}
-            pendingRejections={pendingRejections}
-            handleReportSelection={handleReportSelection}
-            handleClusterResolution={handleClusterResolution}
-            getSelectedReportsCount={getSelectedReportsCount}
-            getUnselectedReportsCount={getUnselectedReportsCount}
-            getRejectedReportsCount={getRejectedReportsCount}
-            getResolvedReportsCount={getResolvedReportsCount}
-            hasResolvedReports={hasResolvedReports}
-            canFormSubCluster={canFormSubCluster}
-            getRemainingReports={getRemainingReports}
-            subClusters={subClusters}
-            mapOnlyRef={mapOnlyRef}
-          />
-        </>
+          </div>
+        </div>
       )}
 
       {/* Main Report Modal */}

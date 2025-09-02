@@ -1,5 +1,5 @@
 import React from "react";
-import { CheckCircle, Circle, MapPinLine } from "phosphor-react";
+import { CheckCircle, Circle, MapPinLine, Hourglass } from "phosphor-react";
 
 const ClusterDetailsModal = ({
   showClusterDetailsModal,
@@ -36,6 +36,55 @@ const ClusterDetailsModal = ({
   const subClustersData = clusterData.sub_clusters || subClusters || [];
   const severity = clusterData.severity || "medium";
 
+  // Count of validated sub-clusters
+  const validatedCount = subClustersData.filter(
+    (sc) => sc.cluster_type === "validated"
+  ).length;
+
+  // Check if cluster is resolved (no unprocessed reports)
+  const unprocessedReports = clusterData.unprocessed_reports || [];
+  const unprocessedCount = clusterData.unprocessed_count || 0;
+  const processedCount = clusterData.processed_count || 0;
+  const isClusterResolved = unprocessedCount === 0 && processedCount > 0;
+
+  // Create a set of report IDs that are already in validated sub-clusters
+  const validatedSubClusterReportIds = new Set();
+  subClustersData.forEach((subCluster) => {
+    if (subCluster.cluster_type === "validated" && subCluster.reports) {
+      subCluster.reports.forEach((reportId) => {
+        validatedSubClusterReportIds.add(reportId);
+      });
+    }
+  });
+
+  // Helper function to check if a report is already in a validated sub-cluster
+  const isReportInValidatedSubCluster = (reportId) => {
+    return validatedSubClusterReportIds.has(reportId);
+  };
+
+  // Derived counts for summary (exclude reports already in validated sub-clusters)
+  const selectableReportIds = new Set(
+    reports
+      .map((r) => r._id || r.id)
+      .filter((id) => id && !isReportInValidatedSubCluster(id))
+  );
+  const localSelectedCount = selectedReports.filter((id) =>
+    selectableReportIds.has(id)
+  ).length;
+  const localRejectedCount = rejectedReports.filter((id) =>
+    selectableReportIds.has(id)
+  ).length;
+  const localResolvedCount = resolvedReports.filter((id) =>
+    selectableReportIds.has(id)
+  ).length;
+  const localUnselectedCount = Math.max(
+    0,
+    selectableReportIds.size -
+      localSelectedCount -
+      localRejectedCount -
+      localResolvedCount
+  );
+
   return (
     <dialog
       id="cluster-verification-modal"
@@ -46,16 +95,17 @@ const ClusterDetailsModal = ({
         {/* Modal Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-200">
           <div className="flex items-center gap-4">
-            <div
-              className="h-5 w-5 rounded-full"
-              style={{
-                backgroundColor: getSeverityColor(severity),
-              }}
-            />
+            <div className="flex items-center gap-2">
+              {isClusterResolved ? (
+                <CheckCircle size={24} className="text-success" />
+              ) : (
+                <Hourglass size={24} className="text-warning" />
+              )}
+            </div>
             <div>
-              <h2 className="text-2xl font-bold text-primary">
+              <p className="text-2xl font-extrabold text-primary">
                 Cluster Verification: {barangay}
-              </h2>
+              </p>
               <p className="text-sm text-gray-600">
                 {reports.length} reports •{" "}
                 {dateRange.start_date && dateRange.end_date
@@ -65,7 +115,12 @@ const ClusterDetailsModal = ({
             </div>
           </div>
           <form method="dialog">
-            <button className="btn btn-circle btn-ghost btn-sm">✕</button>
+            <button
+              className="btn btn-circle btn-ghost btn-sm"
+              onClick={() => setShowClusterDetailsModal(false)}
+            >
+              ✕
+            </button>
           </form>
         </div>
 
@@ -80,33 +135,46 @@ const ClusterDetailsModal = ({
               <div className="stat">
                 <div className="stat-title text-sm">Selected</div>
                 <div className="stat-value text-2xl text-success">
-                  {getSelectedReportsCount()}
+                  {localSelectedCount}
                 </div>
               </div>
               <div className="stat">
                 <div className="stat-title text-sm">Unselected</div>
                 <div className="stat-value text-2xl text-warning">
-                  {getUnselectedReportsCount()}
+                  {localUnselectedCount}
                 </div>
               </div>
               <div className="stat">
                 <div className="stat-title text-sm">Rejected</div>
                 <div className="stat-value text-2xl text-error">
-                  {getRejectedReportsCount()}
+                  {localRejectedCount}
                 </div>
               </div>
             </div>
-            {!hasResolvedReports() ? (
+            {isClusterResolved ? (
+              <div className="flex items-center gap-2">
+                <div className="flex gap-2 px-4 py-2 bg-success text-white font-medium rounded-lg ">
+                  <CheckCircle size={16} weight="fill" />
+                  <p className="font-bold">
+                    Cluster Resolved
+                    <span className="font-normal">
+                      {" "}
+                      ({processedCount} reports processed)
+                    </span>
+                  </p>
+                </div>
+              </div>
+            ) : !hasResolvedReports() ? (
               <div className="flex gap-2">
                 <button
                   onClick={() => {
                     handleClusterResolution("resolve-selected");
                   }}
                   className="btn btn-success btn-sm"
-                  disabled={getSelectedReportsCount() === 0}
+                  disabled={localSelectedCount === 0}
                 >
                   <CheckCircle size={16} />
-                  Resolve Selected ({getSelectedReportsCount()})
+                  Resolve Selected ({localSelectedCount})
                 </button>
                 <button
                   onClick={() => {
@@ -144,9 +212,9 @@ const ClusterDetailsModal = ({
           {/* Left Panel - Reports List */}
           <div className="w-2/3 border-r border-gray-200 overflow-y-auto">
             <div className="p-6">
-              <h3 className="text-lg font-semibold text-primary mb-4">
+              <p className="text-lg font-bold text-primary mb-4">
                 Reports to Select
-              </h3>
+              </p>
               <div className="space-y-4">
                 {reports.map((report) => {
                   // Handle both old and new report structures
@@ -168,32 +236,35 @@ const ClusterDetailsModal = ({
                   return (
                     <div
                       key={reportId}
-                      className={`card bg-base-100 shadow-md border-2 transition-all ${
-                        selectedReports.includes(reportId)
+                      className={`card shadow-md border-2 transition-all relative ${
+                        isReportInValidatedSubCluster(reportId)
+                          ? "border-success bg-success/5 opacity-75"
+                          : selectedReports.includes(reportId)
                           ? "border-success bg-success/5"
-                          : "border-base-300 hover:border-primary/50"
+                          : "border-base-300 hover:border-primary/50 bg-base-100"
                       }`}
                     >
                       <div className="card-body p-4">
-                        {/* Selection Indicator */}
-                        {selectedReports.includes(reportId) && (
-                          <div className="absolute top-2 right-2">
-                            <div className="badge badge-success badge-sm">
-                              <CheckCircle size={12} />
-                              Selected
-                            </div>
-                          </div>
-                        )}
-                        {resolvedReports.includes(reportId) && (
-                          <div className="absolute top-2 right-2">
-                            <div className="badge badge-success badge-sm">
-                              <CheckCircle size={12} />
-                              Resolved
-                            </div>
-                          </div>
-                        )}
+                        {/* Selection Indicator - Fixed positioning */}
+                        <div className="absolute top-2 right-2 flex flex-col gap-1">
+                          {selectedReports.includes(reportId) &&
+                            !isReportInValidatedSubCluster(reportId) && (
+                              <div className="badge badge-success badge-sm">
+                                <CheckCircle size={12} />
+                                Selected
+                              </div>
+                            )}
+                          {resolvedReports.includes(reportId) &&
+                            !isReportInValidatedSubCluster(reportId) && (
+                              <div className="badge badge-success badge-sm">
+                                <CheckCircle size={12} />
+                                Resolved
+                              </div>
+                            )}
+                        </div>
+
                         {/* Report Header */}
-                        <div className="flex items-start justify-between mb-3">
+                        <div className="flex items-start justify-between mb-3 pr-2">
                           <div className="flex items-center gap-3">
                             <div
                               className="h-4 w-4 rounded-full"
@@ -277,83 +348,94 @@ const ClusterDetailsModal = ({
 
                         {/* Action Buttons */}
                         <div className="flex gap-2">
-                          {!rejectedReports.includes(reportId) &&
-                            !resolvedReports.includes(reportId) && (
-                              <>
-                                <button
-                                  onClick={() => {
-                                    handleReportSelection(reportId, "select");
-                                  }}
-                                  className={`btn btn-sm ${
-                                    selectedReports.includes(reportId)
-                                      ? "btn-success"
-                                      : "btn-outline btn-success"
-                                  }`}
-                                >
-                                  {selectedReports.includes(reportId) ? (
-                                    <>
-                                      <CheckCircle size={14} />
-                                      Selected
-                                    </>
-                                  ) : (
-                                    <>
-                                      <CheckCircle size={14} />
-                                      Select
-                                    </>
-                                  )}
-                                </button>
-
-                                {pendingRejections.includes(reportId) ? (
+                          {!isReportInValidatedSubCluster(reportId) && (
+                            <>
+                              {!rejectedReports.includes(reportId) &&
+                                !resolvedReports.includes(reportId) && (
                                   <>
                                     <button
-                                      onClick={() =>
+                                      onClick={() => {
                                         handleReportSelection(
                                           reportId,
-                                          "confirm-reject"
-                                        )
-                                      }
-                                      className="btn btn-error btn-sm"
+                                          "select"
+                                        );
+                                      }}
+                                      className={`btn btn-sm ${
+                                        selectedReports.includes(reportId)
+                                          ? "btn-success"
+                                          : "btn-outline btn-success"
+                                      }`}
                                     >
-                                      <Circle size={14} />
-                                      Confirm Reject
+                                      {selectedReports.includes(reportId) ? (
+                                        <>
+                                          <CheckCircle size={14} />
+                                          Selected
+                                        </>
+                                      ) : (
+                                        <>
+                                          <CheckCircle size={14} />
+                                          Select
+                                        </>
+                                      )}
                                     </button>
-                                    <button
-                                      onClick={() =>
-                                        handleReportSelection(
-                                          reportId,
-                                          "cancel-reject"
-                                        )
-                                      }
-                                      className="btn btn-outline btn-ghost btn-sm"
-                                    >
-                                      Cancel
-                                    </button>
-                                  </>
-                                ) : (
-                                  <button
-                                    onClick={() =>
-                                      handleReportSelection(reportId, "reject")
-                                    }
-                                    className="btn btn-outline btn-error btn-sm"
-                                  >
-                                    <Circle size={14} />
-                                    Reject
-                                  </button>
-                                )}
-                              </>
-                            )}
 
-                          {rejectedReports.includes(reportId) && (
-                            <button
-                              onClick={() =>
-                                handleReportSelection(reportId, "unreject")
-                              }
-                              className="btn btn-outline btn-warning btn-sm"
-                            >
-                              <CheckCircle size={14} />
-                              Unreject
-                            </button>
+                                    {pendingRejections.includes(reportId) ? (
+                                      <>
+                                        <button
+                                          onClick={() =>
+                                            handleReportSelection(
+                                              reportId,
+                                              "confirm-reject"
+                                            )
+                                          }
+                                          className="btn btn-error btn-sm"
+                                        >
+                                          <Circle size={14} />
+                                          Confirm Reject
+                                        </button>
+                                        <button
+                                          onClick={() =>
+                                            handleReportSelection(
+                                              reportId,
+                                              "cancel-reject"
+                                            )
+                                          }
+                                          className="btn btn-outline btn-ghost btn-sm"
+                                        >
+                                          Cancel
+                                        </button>
+                                      </>
+                                    ) : (
+                                      <button
+                                        onClick={() =>
+                                          handleReportSelection(
+                                            reportId,
+                                            "reject"
+                                          )
+                                        }
+                                        className="btn btn-outline btn-error btn-sm"
+                                      >
+                                        <Circle size={14} />
+                                        Reject
+                                      </button>
+                                    )}
+                                  </>
+                                )}
+
+                              {rejectedReports.includes(reportId) && (
+                                <button
+                                  onClick={() =>
+                                    handleReportSelection(reportId, "unreject")
+                                  }
+                                  className="btn btn-outline btn-warning btn-sm"
+                                >
+                                  <CheckCircle size={14} />
+                                  Unreject
+                                </button>
+                              )}
+                            </>
                           )}
+
                           <button
                             onClick={() => {
                               if (mapOnlyRef.current && reportCoordinates) {
@@ -392,12 +474,12 @@ const ClusterDetailsModal = ({
 
           {/* Right Panel - Analysis View */}
           <div className="w-1/3 p-6 overflow-y-auto">
-            <h3 className="text-lg font-semibold text-primary mb-4">
+            <p className="text-lg font-bold text-primary mb-4">
               Cluster Analysis
-            </h3>
+            </p>
 
             {/* Resolution Summary */}
-            {getSelectedReportsCount() > 0 && (
+            {localSelectedCount > 0 && (
               <div className="card bg-success/10 border-success mb-6">
                 <div className="card-body">
                   <h4 className="card-title text-success">
@@ -406,17 +488,59 @@ const ClusterDetailsModal = ({
                   </h4>
                   <div className="text-sm">
                     <p className="mb-2">
-                      <strong>{getSelectedReportsCount()}</strong> reports
-                      selected for resolution
+                      <strong>{localSelectedCount}</strong> reports selected for
+                      resolution
                     </p>
                     <p className="text-gray-600">
-                      {getUnselectedReportsCount()} reports will remain pending
+                      {localUnselectedCount} reports will remain pending
                     </p>
                     {canFormSubCluster() && (
                       <div className="mt-2 p-2 bg-info/10 rounded border border-info/20">
                         <p className="text-info text-xs">
                           <strong>Note:</strong> {getRemainingReports().length}{" "}
                           reports will form a new sub-cluster
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Sub-cluster Status */}
+            {subClustersData.length > 0 && (
+              <div className="card bg-success/10 border-success mb-6">
+                <div className="card-body">
+                  <h4 className="card-title text-success">
+                    <CheckCircle size={20} />
+                    Sub-clusters Status
+                  </h4>
+                  <div className="text-sm">
+                    <p className="mb-2">
+                      {validatedCount >= 2 ? (
+                        <>
+                          <strong>{validatedCount}</strong> validated
+                          sub-clusters
+                        </>
+                      ) : validatedCount === 1 ? (
+                        <>Validated as a cluster</>
+                      ) : (
+                        <>No validated sub-clusters</>
+                      )}
+                    </p>
+                    <p className="text-gray-600">
+                      Reports in validated sub-clusters are automatically marked
+                      as resolved (green)
+                    </p>
+                    {validatedSubClusterReportIds.size > 0 && (
+                      <div className="mt-2 p-2 bg-success/10 rounded border border-success/20">
+                        <p className="text-success text-xs">
+                          <strong>Note:</strong> No action required for{" "}
+                          {validatedSubClusterReportIds.size}{" "}
+                          {validatedSubClusterReportIds.size === 1
+                            ? "report"
+                            : "reports"}{" "}
+                          (already validated)
                         </p>
                       </div>
                     )}
@@ -490,9 +614,25 @@ const ClusterDetailsModal = ({
                     </span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-600">Cluster ID:</span>
-                    <span className="font-semibold text-xs font-mono">
-                      {clusterId}
+                    <span className="text-gray-600">Status:</span>
+                    <span
+                      className={`font-semibold ${
+                        isClusterResolved ? "text-success" : "text-warning"
+                      }`}
+                    >
+                      {isClusterResolved ? "Resolved" : "Active"}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Unprocessed:</span>
+                    <span className="font-semibold text-warning">
+                      {unprocessedCount}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Processed:</span>
+                    <span className="font-semibold text-success">
+                      {processedCount}
                     </span>
                   </div>
                 </div>
@@ -500,7 +640,7 @@ const ClusterDetailsModal = ({
             </div>
 
             {/* Sub-clusters */}
-            {subClustersData.length > 0 && (
+            {subClustersData.length >= 2 && (
               <div className="card bg-base-100 shadow-md mb-6">
                 <div className="card-body">
                   <h4 className="card-title text-primary">
@@ -559,30 +699,11 @@ const ClusterDetailsModal = ({
                 </div>
               </div>
             )}
-
-            {/* Debug Information - Only show in development */}
-            {process.env.NODE_ENV === "development" && (
-              <div className="card bg-base-100 shadow-md mb-6">
-                <div className="card-body">
-                  <h4 className="card-title text-primary">Debug Info</h4>
-                  <div className="text-xs">
-                    <details>
-                      <summary className="cursor-pointer">
-                        Raw API Response
-                      </summary>
-                      <pre className="mt-2 p-2 bg-gray-100 rounded overflow-auto max-h-40">
-                        {JSON.stringify(selectedCluster, null, 2)}
-                      </pre>
-                    </details>
-                  </div>
-                </div>
-              </div>
-            )}
           </div>
         </div>
       </div>
       <form method="dialog" className="modal-backdrop">
-        <button>close</button>
+        <button onClick={() => setShowClusterDetailsModal(false)}>close</button>
       </form>
     </dialog>
   );
