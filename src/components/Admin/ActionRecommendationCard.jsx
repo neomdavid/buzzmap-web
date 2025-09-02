@@ -10,8 +10,12 @@ import {
   Lightbulb,
   Warning,
   CheckCircle,
+  Sparkle,
 } from "phosphor-react";
-import { useGetAllInterventionsQuery } from "../../api/dengueApi";
+import {
+  useGetAllInterventionsQuery,
+  useGetRecommendationForInterventionQuery,
+} from "../../api/dengueApi";
 import { CheckCircle as LucideCheckCircle } from "lucide-react";
 
 // Pattern functions now use centralized configuration from patternConfig.js
@@ -66,6 +70,155 @@ const ActionRecommendationCard = ({
 }) => {
   // Get all interventions
   const { data: allInterventions } = useGetAllInterventionsQuery();
+
+  // AI recommendation state - only fetch when modal is opened
+  const [showAIRecommendations, setShowAIRecommendations] = useState(false);
+  const {
+    data: aiRecommendation,
+    isLoading: isLoadingAI,
+    error: aiError,
+  } = useGetRecommendationForInterventionQuery(barangay, {
+    skip: !showAIRecommendations, // Only fetch when modal is opened
+  });
+
+  // Helper function to convert markdown recommendations to HTML
+  const convertMarkdownToHtml = (text) => {
+    if (!text) return "";
+
+    // Split into lines and process each line
+    const lines = text.split("\n");
+    let html = "";
+    let inList = false;
+
+    lines.forEach((line, index) => {
+      const trimmedLine = line.trim();
+
+      // Check if line starts with markdown headers - convert to styled paragraphs instead of h1/h2/h3
+      if (trimmedLine.startsWith("###")) {
+        // End list if we were in one
+        if (inList) {
+          html += inList === "ul" ? "</ul>" : "</ol>";
+          inList = false;
+        }
+
+        const headerText = trimmedLine.replace(/^###+\s*/, "");
+        html += `<p class="text-lg font-bold text-gray-800 mb-3 mt-6 border-l-4 border-info pl-3">${headerText}</p>`;
+      } else if (trimmedLine.startsWith("##")) {
+        // End list if we were in one
+        if (inList) {
+          html += inList === "ul" ? "</ul>" : "</ol>";
+          inList = false;
+        }
+
+        const headerText = trimmedLine.replace(/^##+\s*/, "");
+        html += `<p class="text-xl font-bold text-gray-800 mb-4 mt-8 border-b-2 border-info pb-2">${headerText}</p>`;
+      } else if (trimmedLine.startsWith("#")) {
+        // End list if we were in one
+        if (inList) {
+          html += inList === "ul" ? "</ul>" : "</ol>";
+          inList = false;
+        }
+
+        const headerText = trimmedLine.replace(/^#+\s*/, "");
+        html += `<p class="text-2xl font-bold text-gray-800 mb-6 mt-8 text-center bg-info/10 py-3 px-4 rounded-lg">${headerText}</p>`;
+      }
+      // Check if line is entirely wrapped in ** (treat as section header)
+      else if (trimmedLine.match(/^\*\*.*\*\*$/)) {
+        // End list if we were in one
+        if (inList) {
+          html += inList === "ul" ? "</ul>" : "</ol>";
+          inList = false;
+        }
+
+        const headerText = trimmedLine.replace(/^\*\*(.*)\*\*$/, "$1");
+        html += `<p class="text-2xl font-bold text-gray-800 mb-4 mt-6 text-center bg-info/10 py-3 px-4 rounded-lg">${headerText}</p>`;
+      }
+      // Check if line starts with a bullet point or numbered list
+      else if (trimmedLine.startsWith("*") || /^\d+\./.test(trimmedLine)) {
+        // End previous list if switching types
+        if (
+          inList &&
+          ((trimmedLine.startsWith("*") && !inList.startsWith("*")) ||
+            (/^\d+\./.test(trimmedLine) && inList.startsWith("*")))
+        ) {
+          html += inList.startsWith("*") ? "</ul>" : "</ol>";
+          inList = false;
+        }
+
+        // Start list if not already in one
+        if (!inList) {
+          if (trimmedLine.startsWith("*")) {
+            html += '<ul class="list-disc list-inside space-y-2 mb-4">';
+            inList = "ul";
+          } else {
+            html += '<ol class="list-decimal list-inside space-y-2 mb-4">';
+            inList = "ol";
+          }
+        }
+
+        // Convert markdown to HTML
+        let content = trimmedLine;
+        if (trimmedLine.startsWith("*")) {
+          content = trimmedLine.replace(/^\*\s+/, ""); // Remove the * and spaces
+        } else {
+          content = trimmedLine.replace(/^\d+\.\s+/, ""); // Remove the number and spaces
+        }
+
+        // Apply formatting
+        content = content
+          .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>") // Bold text
+          .replace(/\*(.*?)\*/g, "<em>$1</em>"); // Italic text
+
+        const listTag = inList === "ul" ? "li" : "li";
+        html += `<${listTag} class="text-gray-700 mb-2">${content}</${listTag}>`;
+      } else if (trimmedLine === "") {
+        // Empty line - end list if we were in one
+        if (inList) {
+          html += inList === "ul" ? "</ul>" : "</ol>";
+          inList = false;
+        }
+        html += "<br>";
+      } else if (trimmedLine.match(/^[-*_]{3,}$/)) {
+        // Horizontal rule
+        if (inList) {
+          html += inList === "ul" ? "</ul>" : "</ol>";
+          inList = false;
+        }
+        html += '<hr class="my-6 border-gray-300" />';
+      } else {
+        // Regular text line - end list if we were in one
+        if (inList) {
+          html += inList === "ul" ? "</ul>" : "</ol>";
+          inList = false;
+        }
+
+        // Process regular text - handle bold, italic, and other formatting
+        let processedLine = trimmedLine
+          .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>") // Bold text
+          .replace(/\*(.*?)\*/g, "<em>$1</em>") // Italic text
+          .replace(
+            /`(.*?)`/g,
+            "<code class='bg-gray-100 px-1 py-0.5 rounded text-sm'>$1</code>"
+          ) // Inline code
+          .replace(
+            /~~(.*?)~~/g,
+            "<del class='line-through text-gray-500'>$1</del>"
+          ); // Strikethrough
+
+        // Only add paragraph tags if it's not empty and not just whitespace
+        if (processedLine.trim()) {
+          html += `<p class="mb-3 text-gray-700 leading-relaxed">${processedLine}</p>`;
+        }
+      }
+    });
+
+    // Close any open list
+    if (inList) {
+      html += inList === "ul" ? "</ul>" : "</ol>";
+    }
+
+    return html;
+  };
 
   // Helper function to check if a date is within 2 weeks
   const isWithinTwoWeeks = (dateStr) => {
@@ -189,13 +342,15 @@ const ActionRecommendationCard = ({
             report_based?.admin_recommendation ||
             death_priority?.recommendation) && (
             <button
-              onClick={() =>
+              onClick={() => {
+                setShowAIRecommendations(true); // Trigger AI recommendation fetch
                 document
                   .getElementById(`recommendations_modal_${barangay}`)
-                  .showModal()
-              }
-              className="px-3 py-1.5 bg-white border border-primary text-primary rounded-full hover:bg-primary/5 transition-colors text-sm cursor-pointer"
+                  .showModal();
+              }}
+              className="px-3 py-1.5 bg-white border border-primary text-primary rounded-full hover:bg-primary/5 transition-colors text-sm cursor-pointer flex items-center gap-2"
             >
+              <Sparkle size={14} className="text-primary" />
               View Recommendations
             </button>
           )}
@@ -297,11 +452,13 @@ const ActionRecommendationCard = ({
         >
           <button
             className="absolute top-10 right-10 text-2xl font-semibold hover:text-gray-500 transition-colors duration-200 hover:cursor-pointer"
-            onClick={() =>
+            onClick={() => {
               document
                 .getElementById(`recommendations_modal_${barangay}`)
-                .close()
-            }
+                .close();
+              // Reset AI recommendation state when modal is closed
+              setShowAIRecommendations(false);
+            }}
           >
             ✕
           </button>
@@ -380,6 +537,118 @@ const ActionRecommendationCard = ({
           )}
 
           <div className="max-h-[60vh] overflow-y-auto">
+            {/* AI Recommendations Section */}
+            {isLoadingAI && (
+              <div className="mb-6">
+                <div className="flex items-center gap-2 mb-4">
+                  <Sparkle size={20} className="text-info animate-pulse" />
+                  <p className="text-xl font-semibold text-info">
+                    AI-Powered Recommendations
+                  </p>
+                </div>
+                <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+                  <div className="text-center py-8">
+                    <div className="flex items-center justify-center gap-3 mb-3">
+                      <span className="loading loading-spinner loading-lg text-info"></span>
+                      <span className="text-gray-700 text-lg font-medium">
+                        Generating AI recommendations...
+                      </span>
+                    </div>
+                    <div className="text-gray-500 text-sm">
+                      Analyzing data and creating personalized insights...
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {aiError && !isLoadingAI && (
+              <div className="mb-6">
+                <div className="flex items-center gap-2 mb-4">
+                  <Warning size={20} className="text-error" />
+                  <p className="text-xl font-semibold text-error">
+                    AI Recommendations Unavailable
+                  </p>
+                </div>
+                <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+                  <div className="text-center py-6">
+                    <div className="flex items-center justify-center gap-2 mb-3">
+                      <Warning size={20} className="text-error" />
+                      <span className="text-gray-700 font-medium">
+                        Unable to load AI recommendations
+                      </span>
+                    </div>
+                    <p className="text-gray-500 text-sm mb-4">
+                      Please try again later or contact support if the issue
+                      persists.
+                    </p>
+                    <button
+                      onClick={() => setShowAIRecommendations(true)}
+                      className="btn btn-sm btn-info text-white"
+                    >
+                      Retry
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {aiRecommendation?.recommendation && !isLoadingAI && !aiError && (
+              <div className="mb-6">
+                <div className="flex items-center gap-2 mb-4">
+                  <Sparkle size={20} className="text-info" />
+                  <p className="text-xl font-semibold text-info">
+                    AI-Powered Recommendations
+                  </p>
+                </div>
+                <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+                  <div
+                    className="text-gray-700 text-base leading-relaxed prose prose-sm max-w-none"
+                    dangerouslySetInnerHTML={{
+                      __html: convertMarkdownToHtml(
+                        aiRecommendation.recommendation
+                      ),
+                    }}
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Show this when modal is opened but AI recommendations haven't been fetched yet */}
+            {showAIRecommendations &&
+              !isLoadingAI &&
+              !aiRecommendation?.recommendation &&
+              !aiError && (
+                <div className="mb-6">
+                  <div className="flex items-center gap-2 mb-4">
+                    <Sparkle size={20} className="text-info" />
+                    <p className="text-xl font-semibold text-info">
+                      AI-Powered Recommendations
+                    </p>
+                  </div>
+                  <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+                    <div className="text-center py-6">
+                      <div className="flex items-center justify-center gap-2 mb-3">
+                        <Sparkle size={20} className="text-info" />
+                        <span className="text-gray-700 font-medium">
+                          Ready to generate AI recommendations
+                        </span>
+                      </div>
+                      <p className="text-gray-500 text-sm mb-4">
+                        Click the button below to start generating personalized
+                        AI insights for this barangay.
+                      </p>
+                      <button
+                        onClick={() => setShowAIRecommendations(true)}
+                        className="btn btn-sm btn-info text-white"
+                      >
+                        Generate AI Recommendations
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
             <p className="text-xl font-semibold mb-4">
               Pattern-Based Recommendations:
             </p>
@@ -403,7 +672,12 @@ const ActionRecommendationCard = ({
 
           <div className="modal-action mt-8">
             <form method="dialog">
-              <button className="btn btn-primary text-white">Close</button>
+              <button
+                className="btn btn-primary text-white"
+                onClick={() => setShowAIRecommendations(false)}
+              >
+                Close
+              </button>
             </form>
           </div>
         </div>

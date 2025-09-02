@@ -17,6 +17,7 @@ import {
   useGetAdminBarangaysQuery,
   useGetRecentReportsForBarangayMutation,
   useGetClustersWithSubclustersQuery,
+  useGetSpecificClusterQuery,
   useCreateSubClusterMutation,
   useAddReportsToSubClusterMutation,
   useRemoveReportsFromSubClusterMutation,
@@ -115,6 +116,12 @@ const DengueMapping = () => {
   // Get clusters from API
   const { data: clustersData, isLoading: isLoadingClusters } =
     useGetClustersWithSubclustersQuery();
+
+  // Get specific cluster details when selected
+  const { data: specificClusterData, isLoading: isLoadingSpecificCluster } =
+    useGetSpecificClusterQuery(selectedCluster?._id || selectedCluster?.id, {
+      skip: !selectedCluster,
+    });
 
   // Transform API clusters data to match our component structure
   const transformedClusters = useMemo(() => {
@@ -309,6 +316,12 @@ const DengueMapping = () => {
     setSelectedCluster(cluster);
     setShowClusterDetailsModal(true);
     setShowClusterDropdown(false);
+
+    // Reset selection states when opening a new cluster
+    setSelectedReports([]);
+    setRejectedReports([]);
+    setPendingRejections([]);
+    setResolvedReports([]);
   };
 
   const getReportTypeColor = (type) => {
@@ -1027,29 +1040,43 @@ const DengueMapping = () => {
       />
 
       {/* Cluster Details Modal */}
-      <ClusterDetailsModal
-        showClusterDetailsModal={showClusterDetailsModal}
-        selectedCluster={selectedCluster}
-        setShowClusterDetailsModal={setShowClusterDetailsModal}
-        getSeverityColor={getSeverityColor}
-        formatDateRange={formatDateRange}
-        getReportTypeColor={getReportTypeColor}
-        selectedReports={selectedReports}
-        resolvedReports={resolvedReports}
-        rejectedReports={rejectedReports}
-        pendingRejections={pendingRejections}
-        handleReportSelection={handleReportSelection}
-        handleClusterResolution={handleClusterResolution}
-        getSelectedReportsCount={getSelectedReportsCount}
-        getUnselectedReportsCount={getUnselectedReportsCount}
-        getRejectedReportsCount={getRejectedReportsCount}
-        getResolvedReportsCount={getResolvedReportsCount}
-        hasResolvedReports={hasResolvedReports}
-        canFormSubCluster={canFormSubCluster}
-        getRemainingReports={getRemainingReports}
-        subClusters={subClusters}
-        mapOnlyRef={mapOnlyRef}
-      />
+      {showClusterDetailsModal && (
+        <>
+          {isLoadingSpecificCluster && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+              <div className="bg-white rounded-lg p-6">
+                <div className="flex items-center gap-3">
+                  <div className="loading loading-spinner loading-md"></div>
+                  <span>Loading cluster details...</span>
+                </div>
+              </div>
+            </div>
+          )}
+          <ClusterDetailsModal
+            showClusterDetailsModal={showClusterDetailsModal}
+            selectedCluster={specificClusterData || selectedCluster}
+            setShowClusterDetailsModal={setShowClusterDetailsModal}
+            getSeverityColor={getSeverityColor}
+            formatDateRange={formatDateRange}
+            getReportTypeColor={getReportTypeColor}
+            selectedReports={selectedReports}
+            resolvedReports={resolvedReports}
+            rejectedReports={rejectedReports}
+            pendingRejections={pendingRejections}
+            handleReportSelection={handleReportSelection}
+            handleClusterResolution={handleClusterResolution}
+            getSelectedReportsCount={getSelectedReportsCount}
+            getUnselectedReportsCount={getUnselectedReportsCount}
+            getRejectedReportsCount={getRejectedReportsCount}
+            getResolvedReportsCount={getResolvedReportsCount}
+            hasResolvedReports={hasResolvedReports}
+            canFormSubCluster={canFormSubCluster}
+            getRemainingReports={getRemainingReports}
+            subClusters={subClusters}
+            mapOnlyRef={mapOnlyRef}
+          />
+        </>
+      )}
 
       {/* Main Report Modal */}
       <MainReportModal

@@ -623,6 +623,19 @@ export const dengueApi = createApi({
       invalidatesTags: ["Analytics"],
     }),
 
+    // Get AI recommendation for intervention (new endpoint)
+    getRecommendationForIntervention: builder.query({
+      query: (barangay) =>
+        `analytics/get-recommendation-for-intervention?barangay=${encodeURIComponent(
+          barangay
+        )}`,
+      providesTags: ["Analytics"],
+      transformResponse: (response) => {
+        console.log("[DEBUG] AI recommendation response:", response);
+        return response;
+      },
+    }),
+
     // Get a single admin post by ID
     getSingleAdminPost: builder.query({
       query: (id) => `adminPosts/${id}`,
@@ -1409,6 +1422,18 @@ export const dengueApi = createApi({
       },
     }),
 
+    // Get specific cluster details
+    getSpecificCluster: builder.query({
+      query: (clusterId) => `clusters/${clusterId}`,
+      providesTags: (result, error, clusterId) => [
+        { type: "Clusters", id: clusterId },
+      ],
+      transformResponse: (response) => {
+        console.log("[DEBUG] Specific cluster response:", response);
+        return response;
+      },
+    }),
+
     // Create sub-cluster
     createSubCluster: builder.mutation({
       query: (data) => ({
@@ -1571,6 +1596,7 @@ export const {
 
   // Add this new endpoint
   useGenerateRecommendationMutation,
+  useGetRecommendationForInterventionQuery,
 
   // Add this to the exported hooks
   useGetRecentReportsForBarangayMutation,
@@ -1583,6 +1609,7 @@ export const {
 
   // Clusters hooks
   useGetClustersWithSubclustersQuery,
+  useGetSpecificClusterQuery,
   useCreateSubClusterMutation,
   useAddReportsToSubClusterMutation,
   useRemoveReportsFromSubClusterMutation,
