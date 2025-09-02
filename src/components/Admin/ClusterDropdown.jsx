@@ -1,4 +1,4 @@
-import React from 'react';
+import React from "react";
 import { Megaphone, CaretDown } from "phosphor-react";
 
 const ClusterDropdown = ({
@@ -14,7 +14,7 @@ const ClusterDropdown = ({
   getSeverityColor,
   getClusterStatus,
   getClusterStatusColor,
-  formatDateRange
+  formatDateRange,
 }) => {
   return (
     <div className="relative">
@@ -26,15 +26,27 @@ const ClusterDropdown = ({
       >
         <Megaphone weight="fill" />
         {isLoadingClusters ? (
-          <span>Loading clusters...</span>
+          <span className="flex items-center gap-2">
+            <span className="loading loading-spinner loading-xs"></span>
+            <span className="sr-only">Loading</span>
+          </span>
         ) : flaggedClusters.length > 0 ? (
           <span>
             {pendingClusters.length > 0 && `${pendingClusters.length} pending`}
-            {pendingClusters.length > 0 && partiallyResolvedClusters.length > 0 && " • "}
-            {partiallyResolvedClusters.length > 0 && `${partiallyResolvedClusters.length} partial`}
-            {partiallyResolvedClusters.length > 0 && fullyResolvedClusters.length > 0 && " • "}
-            {fullyResolvedClusters.length > 0 && `${fullyResolvedClusters.length} resolved`}
-            {pendingClusters.length === 0 && partiallyResolvedClusters.length === 0 && fullyResolvedClusters.length === 0 && `${flaggedClusters.length} total`}
+            {pendingClusters.length > 0 &&
+              partiallyResolvedClusters.length > 0 &&
+              " • "}
+            {partiallyResolvedClusters.length > 0 &&
+              `${partiallyResolvedClusters.length} partial`}
+            {partiallyResolvedClusters.length > 0 &&
+              fullyResolvedClusters.length > 0 &&
+              " • "}
+            {fullyResolvedClusters.length > 0 &&
+              `${fullyResolvedClusters.length} resolved`}
+            {pendingClusters.length === 0 &&
+              partiallyResolvedClusters.length === 0 &&
+              fullyResolvedClusters.length === 0 &&
+              `${flaggedClusters.length} total`}
           </span>
         ) : (
           <span>No active clusters</span>
@@ -50,9 +62,51 @@ const ClusterDropdown = ({
             Detected Clusters
           </div>
           {isLoadingClusters ? (
-            <div className="px-4 py-6 text-center text-gray-500 text-sm">
-              <div className="loading loading-spinner loading-md"></div>
-              <p className="mt-2">Loading clusters...</p>
+            <div className="max-h-96 overflow-y-auto px-3 py-3">
+              {/* Skeleton groups */}
+              <div className="mb-3">
+                <div className="px-4 py-2 bg-gray-50 border-b border-gray-200 text-sm font-semibold text-gray-600">
+                  <div className="skeleton h-4 w-40" />
+                </div>
+                <ul>
+                  {[...Array(3)].map((_, idx) => (
+                    <li key={idx} className="px-4 py-3 flex items-start gap-3">
+                      <div className="skeleton h-3 w-3 rounded-full mt-1" />
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="skeleton h-4 w-36" />
+                          <div className="skeleton h-4 w-10 rounded-full" />
+                        </div>
+                        <div className="skeleton h-3 w-40 mt-2" />
+                        <div className="flex gap-2 mt-2">
+                          <div className="skeleton h-6 w-24 rounded" />
+                          <div className="skeleton h-6 w-24 rounded" />
+                        </div>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <div className="mb-3">
+                <div className="px-4 py-2 bg-gray-50 border-b border-gray-200 text-sm font-semibold text-gray-600">
+                  <div className="skeleton h-4 w-44" />
+                </div>
+                <ul>
+                  {[...Array(2)].map((_, idx) => (
+                    <li key={idx} className="px-4 py-3 flex items-start gap-3">
+                      <div className="skeleton h-3 w-3 rounded-full mt-1" />
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="skeleton h-4 w-32" />
+                          <div className="skeleton h-4 w-10 rounded-full" />
+                        </div>
+                        <div className="skeleton h-3 w-36 mt-2" />
+                        <div className="skeleton h-6 w-28 mt-2 rounded" />
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </div>
             </div>
           ) : flaggedClusters.length === 0 ? (
             <div className="px-4 py-6 text-center text-gray-500 text-sm">
@@ -68,51 +122,56 @@ const ClusterDropdown = ({
                   </div>
                   <ul>
                     {pendingClusters.map((c) => (
-                <li
-                  key={c.id}
-                  className="px-4 py-3 hover:bg-gray-50 cursor-pointer flex items-start gap-3"
-                  onClick={() => zoomToCluster(c)}
-                >
-                  <div
-                    className="mt-1 h-3 w-3 rounded-full flex-shrink-0"
-                    style={{ backgroundColor: getSeverityColor(c.severity) }}
-                    title={c.severity}
-                  />
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center justify-between gap-2">
-                      <p className="text-sm font-semibold text-primary truncate">
-                        {c.barangays[0]}
-                      </p>
-                      <span className="text-xs font-bold text-white bg-primary px-2 py-0.5 rounded-full">
-                        {c.count}
-                      </span>
-                    </div>
-                    <p className="text-xs text-gray-400">
-                      {formatDateRange(c.earliestReportAt, c.latestReportAt)}
-                    </p>
-                    <div className="flex gap-2 mt-2">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          zoomToCluster(c);
-                        }}
-                        className="text-xs bg-primary text-white px-2 py-1 rounded hover:bg-primary/80 transition-colors"
+                      <li
+                        key={c.id}
+                        className="px-4 py-3 hover:bg-gray-50 cursor-pointer flex items-start gap-3"
+                        onClick={() => zoomToCluster(c)}
                       >
-                        Show on Map
-                      </button>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleViewClusterDetails(c);
-                        }}
-                        className="text-xs bg-gray-500 text-white px-2 py-1 rounded hover:bg-gray-600 transition-colors"
-                      >
-                        View Details
-                      </button>
-                    </div>
-                  </div>
-                </li>
-              ))}
+                        <div
+                          className="mt-1 h-3 w-3 rounded-full flex-shrink-0"
+                          style={{
+                            backgroundColor: getSeverityColor(c.severity),
+                          }}
+                          title={c.severity}
+                        />
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center justify-between gap-2">
+                            <p className="text-sm font-semibold text-primary truncate">
+                              {c.barangays[0]}
+                            </p>
+                            <span className="text-xs font-bold text-white bg-primary px-2 py-0.5 rounded-full">
+                              {c.count}
+                            </span>
+                          </div>
+                          <p className="text-xs text-gray-400">
+                            {formatDateRange(
+                              c.earliestReportAt,
+                              c.latestReportAt
+                            )}
+                          </p>
+                          <div className="flex gap-2 mt-2">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                zoomToCluster(c);
+                              }}
+                              className="text-xs bg-primary text-white px-2 py-1 rounded hover:bg-primary/80 transition-colors"
+                            >
+                              Show on Map
+                            </button>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleViewClusterDetails(c);
+                              }}
+                              className="text-xs bg-gray-500 text-white px-2 py-1 rounded hover:bg-gray-600 transition-colors"
+                            >
+                              View Details
+                            </button>
+                          </div>
+                        </div>
+                      </li>
+                    ))}
                   </ul>
                 </div>
               )}
@@ -132,7 +191,11 @@ const ClusterDropdown = ({
                       >
                         <div
                           className="mt-1 h-3 w-3 rounded-full flex-shrink-0"
-                          style={{ backgroundColor: getClusterStatusColor(getClusterStatus(c)) }}
+                          style={{
+                            backgroundColor: getClusterStatusColor(
+                              getClusterStatus(c)
+                            ),
+                          }}
                           title={getClusterStatus(c)}
                         />
                         <div className="min-w-0 flex-1">
@@ -145,11 +208,15 @@ const ClusterDropdown = ({
                             </span>
                           </div>
                           <p className="text-xs text-gray-400">
-                            {formatDateRange(c.earliestReportAt, c.latestReportAt)}
+                            {formatDateRange(
+                              c.earliestReportAt,
+                              c.latestReportAt
+                            )}
                           </p>
                           <div className="flex items-center gap-2 mt-1">
                             <span className="text-xs text-yellow-600 bg-yellow-100 px-2 py-0.5 rounded">
-                              {c.processedCount} resolved, {c.unprocessedCount} pending
+                              {c.processedCount} resolved, {c.unprocessedCount}{" "}
+                              pending
                             </span>
                           </div>
                           <div className="flex gap-2 mt-2">
@@ -194,7 +261,11 @@ const ClusterDropdown = ({
                       >
                         <div
                           className="mt-1 h-3 w-3 rounded-full flex-shrink-0"
-                          style={{ backgroundColor: getClusterStatusColor(getClusterStatus(c)) }}
+                          style={{
+                            backgroundColor: getClusterStatusColor(
+                              getClusterStatus(c)
+                            ),
+                          }}
                           title={getClusterStatus(c)}
                         />
                         <div className="min-w-0 flex-1">
@@ -207,7 +278,10 @@ const ClusterDropdown = ({
                             </span>
                           </div>
                           <p className="text-xs text-gray-400">
-                            {formatDateRange(c.earliestReportAt, c.latestReportAt)}
+                            {formatDateRange(
+                              c.earliestReportAt,
+                              c.latestReportAt
+                            )}
                           </p>
                           <div className="flex items-center gap-2 mt-1">
                             <span className="text-xs text-green-600 bg-green-100 px-2 py-0.5 rounded">

@@ -507,31 +507,57 @@ const ClusterDetailsModal = ({
               </div>
             )}
 
-            {/* Sub-cluster Status */}
-            {subClustersData.length > 0 && (
-              <div className="card bg-success/10 border-success mb-6">
+            {/* Resolution Status */}
+            {subClustersData.length > 0 || !isClusterResolved ? (
+              <div
+                className={`card ${
+                  isClusterResolved
+                    ? "bg-success/10 border-success"
+                    : "bg-warning/10 border-warning"
+                } mb-6`}
+              >
                 <div className="card-body">
-                  <h4 className="card-title text-success">
+                  <h4
+                    className={`card-title ${
+                      isClusterResolved ? "text-success" : "text-warning"
+                    }`}
+                  >
                     <CheckCircle size={20} />
-                    Sub-clusters Status
+                    Resolution Status
                   </h4>
                   <div className="text-sm">
                     <p className="mb-2">
-                      {validatedCount >= 2 ? (
-                        <>
-                          <strong>{validatedCount}</strong> validated
-                          sub-clusters
-                        </>
-                      ) : validatedCount === 1 ? (
-                        <>Validated as a cluster</>
+                      {isClusterResolved ? (
+                        validatedCount >= 2 ? (
+                          <>
+                            <strong>Resolved</strong> with {validatedCount}{" "}
+                            validated sub-clusters
+                          </>
+                        ) : validatedCount === 1 ? (
+                          <>
+                            <strong>Resolved</strong> as a cluster
+                          </>
+                        ) : (
+                          <>
+                            <strong>Resolved</strong> (no sub-clusters)
+                          </>
+                        )
                       ) : (
-                        <>No validated sub-clusters</>
+                        <>
+                          <strong>Active</strong> — {unprocessedCount}{" "}
+                          unprocessed{" "}
+                          {unprocessedCount === 1 ? "report" : "reports"}
+                        </>
                       )}
                     </p>
-                    <p className="text-gray-600">
-                      Reports in validated sub-clusters are automatically marked
-                      as resolved (green)
-                    </p>
+
+                    {validatedCount > 0 && (
+                      <p className="text-gray-600">
+                        Reports in validated sub-clusters are automatically
+                        marked as resolved (green)
+                      </p>
+                    )}
+
                     {validatedSubClusterReportIds.size > 0 && (
                       <div className="mt-2 p-2 bg-success/10 rounded border border-success/20">
                         <p className="text-success text-xs">
@@ -547,7 +573,7 @@ const ClusterDetailsModal = ({
                   </div>
                 </div>
               </div>
-            )}
+            ) : null}
 
             {/* Similarity Analysis */}
             <div className="card bg-base-100 shadow-md mb-6">
