@@ -328,6 +328,7 @@ export const dengueApi = createApi({
       invalidatesTags: (result, error, { id }) => [
         { type: "Post", id },
         { type: "Post", id: "LIST" },
+        "Clusters",
       ],
     }),
 

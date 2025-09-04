@@ -30,26 +30,19 @@ const ClusterDropdown = ({
             <span className="loading loading-spinner loading-xs"></span>
             <span className="sr-only">Loading</span>
           </span>
-        ) : flaggedClusters.length > 0 ? (
-          <span>
-            {pendingClusters.length > 0 && `${pendingClusters.length} pending`}
-            {pendingClusters.length > 0 &&
-              partiallyResolvedClusters.length > 0 &&
-              " • "}
-            {partiallyResolvedClusters.length > 0 &&
-              `${partiallyResolvedClusters.length} partial`}
-            {partiallyResolvedClusters.length > 0 &&
-              fullyResolvedClusters.length > 0 &&
-              " • "}
-            {fullyResolvedClusters.length > 0 &&
-              `${fullyResolvedClusters.length} resolved`}
-            {pendingClusters.length === 0 &&
-              partiallyResolvedClusters.length === 0 &&
-              fullyResolvedClusters.length === 0 &&
-              `${flaggedClusters.length} total`}
-          </span>
         ) : (
-          <span>No active clusters</span>
+          (() => {
+            const activeCount =
+              pendingClusters.length + partiallyResolvedClusters.length;
+            if (activeCount > 0) {
+              return (
+                <span>{`${activeCount} ${
+                  activeCount === 1 ? "cluster" : "clusters"
+                }`}</span>
+              );
+            }
+            return <span>No active clusters</span>;
+          })()
         )}
         <span className="bg-white/20 rounded-full p-0.5">
           <CaretDown size={12} />

@@ -1,5 +1,11 @@
 import React from "react";
-import { CheckCircle, Circle, MapPinLine, Hourglass } from "phosphor-react";
+import {
+  CheckCircle,
+  Circle,
+  MapPinLine,
+  Hourglass,
+  User,
+} from "phosphor-react";
 
 const ClusterDetailsModal = ({
   showClusterDetailsModal,
@@ -12,8 +18,10 @@ const ClusterDetailsModal = ({
   resolvedReports,
   rejectedReports,
   pendingRejections,
+  pendingIndividualValidations,
   handleReportSelection,
   handleClusterResolution,
+  handleIndividualValidation,
   getSelectedReportsCount,
   getUnselectedReportsCount,
   getRejectedReportsCount,
@@ -45,7 +53,6 @@ const ClusterDetailsModal = ({
   const unprocessedReports = clusterData.unprocessed_reports || [];
   const unprocessedCount = clusterData.unprocessed_count || 0;
   const processedCount = clusterData.processed_count || 0;
-  const isClusterResolved = unprocessedCount === 0 && processedCount > 0;
 
   // Create a set of report IDs that are already in validated sub-clusters
   const validatedSubClusterReportIds = new Set();
@@ -62,6 +69,35 @@ const ClusterDetailsModal = ({
     return validatedSubClusterReportIds.has(reportId);
   };
 
+  // Count individually validated and rejected reports
+  const individuallyValidatedCount = reports.filter(
+    (report) =>
+      report.status === "Validated" &&
+      !isReportInValidatedSubCluster(report._id || report.id)
+  ).length;
+  const individuallyRejectedCount = reports.filter(
+    (report) =>
+      report.status === "Rejected" &&
+      !isReportInValidatedSubCluster(report._id || report.id)
+  ).length;
+
+  // Check if all reports are in sub-clusters (cluster is fully resolved)
+  const allReportIds = new Set(reports.map((r) => r._id || r.id));
+  const subClusterReportIds = new Set();
+  subClustersData.forEach((subCluster) => {
+    if (subCluster.reports) {
+      subCluster.reports.forEach((reportId) => {
+        subClusterReportIds.add(reportId);
+      });
+    }
+  });
+
+  // Cluster is resolved when all reports are either in sub-clusters or individually processed
+  const totalProcessedCount =
+    processedCount + individuallyValidatedCount + individuallyRejectedCount;
+  const isClusterResolved =
+    totalProcessedCount === reports.length && reports.length > 0;
+
   // Derived counts for summary (exclude reports already in validated sub-clusters)
   const selectableReportIds = new Set(
     reports
@@ -77,12 +113,18 @@ const ClusterDetailsModal = ({
   const localResolvedCount = resolvedReports.filter((id) =>
     selectableReportIds.has(id)
   ).length;
+
+  // Count reports that are individually processed (not in sub-clusters)
+  const individuallyProcessedCount =
+    individuallyValidatedCount + individuallyRejectedCount;
+
   const localUnselectedCount = Math.max(
     0,
     selectableReportIds.size -
       localSelectedCount -
       localRejectedCount -
-      localResolvedCount
+      localResolvedCount -
+      individuallyProcessedCount
   );
 
   return (
@@ -147,7 +189,13 @@ const ClusterDetailsModal = ({
               <div className="stat">
                 <div className="stat-title text-sm">Rejected</div>
                 <div className="stat-value text-2xl text-error">
-                  {localRejectedCount}
+                  {individuallyRejectedCount}
+                </div>
+              </div>
+              <div className="stat">
+                <div className="stat-title text-sm">Individually Validated</div>
+                <div className="stat-value text-2xl text-success">
+                  {individuallyValidatedCount}
                 </div>
               </div>
             </div>
@@ -159,7 +207,7 @@ const ClusterDetailsModal = ({
                     Cluster Resolved
                     <span className="font-normal">
                       {" "}
-                      ({processedCount} reports processed)
+                      ({totalProcessedCount} reports processed)
                     </span>
                   </p>
                 </div>
@@ -233,13 +281,31 @@ const ClusterDetailsModal = ({
                     ? "Anonymous"
                     : report.user || "User";
 
+                  // Derived UI state
+                  const isSelected = selectedReports.includes(reportId);
+                  const isRejected =
+                    rejectedReports.includes(reportId) ||
+                    reportStatus === "Rejected";
+                  const isValidated =
+                    resolvedReports.includes(reportId) ||
+                    reportStatus === "Validated";
+
+                  const statusBadgeClass =
+                    reportStatus === "Validated"
+                      ? "badge-success"
+                      : reportStatus === "Pending"
+                      ? "badge-warning"
+                      : reportStatus === "Rejected"
+                      ? "badge-error"
+                      : "badge-info";
+
                   return (
                     <div
                       key={reportId}
                       className={`card shadow-md border-2 transition-all relative ${
                         isReportInValidatedSubCluster(reportId)
                           ? "border-success bg-success/5 opacity-75"
-                          : selectedReports.includes(reportId)
+                          : isSelected
                           ? "border-success bg-success/5"
                           : "border-base-300 hover:border-primary/50 bg-base-100"
                       }`}
@@ -247,30 +313,39 @@ const ClusterDetailsModal = ({
                       <div className="card-body p-4">
                         {/* Selection Indicator - Fixed positioning */}
                         <div className="absolute top-2 right-2 flex flex-col gap-1">
-                          {selectedReports.includes(reportId) &&
-                            !isReportInValidatedSubCluster(reportId) && (
-                              <div className="badge badge-success badge-sm">
-                                <CheckCircle size={12} />
-                                Selected
-                              </div>
-                            )}
-                          {resolvedReports.includes(reportId) &&
-                            !isReportInValidatedSubCluster(reportId) && (
-                              <div className="badge badge-success badge-sm">
-                                <CheckCircle size={12} />
-                                Resolved
-                              </div>
-                            )}
+                          {isReportInValidatedSubCluster(reportId) ? (
+                            <div className="badge badge-success badge-sm">
+                              <CheckCircle size={12} />
+                              Validated as a cluster
+                            </div>
+                          ) : reportStatus === "Validated" ? (
+                            <div className="badge badge-success badge-sm">
+                              Validated
+                            </div>
+                          ) : reportStatus === "Rejected" ? (
+                            <div className="badge badge-error badge-sm">
+                              <Circle size={12} />
+                              Rejected
+                            </div>
+                          ) : isSelected ? (
+                            <div className="badge badge-success badge-sm">
+                              <CheckCircle size={12} />
+                              Selected
+                            </div>
+                          ) : null}
                         </div>
 
                         {/* Report Header */}
                         <div className="flex items-start justify-between mb-3 pr-2">
                           <div className="flex items-center gap-3">
                             <div
-                              className="h-4 w-4 rounded-full"
-                              style={{
-                                backgroundColor: getReportTypeColor(reportType),
-                              }}
+                              className={`h-4 w-4 rounded-full ${
+                                isRejected
+                                  ? "bg-error"
+                                  : isValidated
+                                  ? "bg-success"
+                                  : "bg-warning"
+                              }`}
                             />
                             <div>
                               <h4 className="font-semibold text-primary">
@@ -282,24 +357,7 @@ const ClusterDetailsModal = ({
                             </div>
                           </div>
                           <div className="flex items-center gap-2">
-                            {rejectedReports.includes(reportId) && (
-                              <span className="badge badge-error badge-sm">
-                                Rejected
-                              </span>
-                            )}
-                            <span
-                              className={`badge badge-sm ${
-                                reportStatus === "Validated"
-                                  ? "badge-success"
-                                  : reportStatus === "Pending"
-                                  ? "badge-warning"
-                                  : reportStatus === "Rejected"
-                                  ? "badge-error"
-                                  : "badge-info"
-                              }`}
-                            >
-                              {reportStatus}
-                            </span>
+                            {/* Status badges moved to top-right corner */}
                           </div>
                         </div>
 
@@ -347,43 +405,96 @@ const ClusterDetailsModal = ({
                         </div>
 
                         {/* Action Buttons */}
-                        <div className="flex gap-2">
+                        <div className="flex gap-2 flex-wrap">
                           {!isReportInValidatedSubCluster(reportId) && (
                             <>
                               {!rejectedReports.includes(reportId) &&
-                                !resolvedReports.includes(reportId) && (
+                                !isReportInValidatedSubCluster(reportId) &&
+                                reportStatus !== "Validated" &&
+                                reportStatus !== "Rejected" && (
                                   <>
-                                    <button
-                                      onClick={() => {
-                                        handleReportSelection(
-                                          reportId,
-                                          "select"
-                                        );
-                                      }}
-                                      className={`btn btn-sm ${
-                                        selectedReports.includes(reportId)
-                                          ? "btn-success"
-                                          : "btn-outline btn-success"
-                                      }`}
-                                    >
-                                      {selectedReports.includes(reportId) ? (
-                                        <>
-                                          <CheckCircle size={14} />
-                                          Selected
-                                        </>
-                                      ) : (
-                                        <>
-                                          <CheckCircle size={14} />
-                                          Select
-                                        </>
-                                      )}
-                                    </button>
+                                    {/* Toggle select/unselect. Hide when reject is pending */}
+                                    {!pendingRejections.includes(reportId) && (
+                                      <button
+                                        onClick={() => {
+                                          handleReportSelection(
+                                            reportId,
+                                            isSelected ? "deselect" : "select"
+                                          );
+                                        }}
+                                        className={`btn btn-sm ${
+                                          isSelected
+                                            ? "btn-success"
+                                            : "btn-outline btn-success"
+                                        }`}
+                                      >
+                                        {isSelected ? (
+                                          <>
+                                            <CheckCircle size={14} />
+                                            Unselect
+                                          </>
+                                        ) : (
+                                          <>
+                                            <CheckCircle size={14} />
+                                            Select
+                                          </>
+                                        )}
+                                      </button>
+                                    )}
+
+                                    {/* Validate as Individual button */}
+                                    {!pendingRejections.includes(reportId) && (
+                                      <>
+                                        {pendingIndividualValidations.includes(
+                                          reportId
+                                        ) ? (
+                                          <>
+                                            <button
+                                              onClick={() => {
+                                                handleIndividualValidation(
+                                                  reportId,
+                                                  "confirm-validate"
+                                                );
+                                              }}
+                                              className="btn btn-success btn-sm"
+                                            >
+                                              <User size={14} />
+                                              Confirm Validate
+                                            </button>
+                                            <button
+                                              onClick={() => {
+                                                handleIndividualValidation(
+                                                  reportId,
+                                                  "cancel-validate"
+                                                );
+                                              }}
+                                              className="btn btn-outline btn-ghost btn-sm"
+                                            >
+                                              Cancel
+                                            </button>
+                                          </>
+                                        ) : (
+                                          <button
+                                            onClick={() => {
+                                              handleIndividualValidation(
+                                                reportId,
+                                                "validate"
+                                              );
+                                            }}
+                                            className="btn btn-outline btn-success btn-sm"
+                                          >
+                                            <User size={14} />
+                                            Validate as Individual
+                                          </button>
+                                        )}
+                                      </>
+                                    )}
 
                                     {pendingRejections.includes(reportId) ? (
                                       <>
                                         <button
                                           onClick={() =>
-                                            handleReportSelection(
+                                            handleIndividualValidation(
                                               reportId,
                                               "confirm-reject"
                                             )
@@ -395,7 +506,7 @@ const ClusterDetailsModal = ({
                                         </button>
                                         <button
                                           onClick={() =>
-                                            handleReportSelection(
+                                            handleIndividualValidation(
                                               reportId,
                                               "cancel-reject"
                                             )
@@ -406,18 +517,20 @@ const ClusterDetailsModal = ({
                                         </button>
                                       </>
                                     ) : (
-                                      <button
-                                        onClick={() =>
-                                          handleReportSelection(
-                                            reportId,
-                                            "reject"
-                                          )
-                                        }
-                                        className="btn btn-outline btn-error btn-sm"
-                                      >
-                                        <Circle size={14} />
-                                        Reject
-                                      </button>
+                                      !isSelected && (
+                                        <button
+                                          onClick={() =>
+                                            handleIndividualValidation(
+                                              reportId,
+                                              "reject"
+                                            )
+                                          }
+                                          className="btn btn-outline btn-error btn-sm"
+                                        >
+                                          <Circle size={14} />
+                                          Reject
+                                        </button>
+                                      )
                                     )}
                                   </>
                                 )}
@@ -433,6 +546,39 @@ const ClusterDetailsModal = ({
                                   Unreject
                                 </button>
                               )}
+
+                              {/* Show individual validation status */}
+                              {reportStatus === "Validated" &&
+                                !isReportInValidatedSubCluster(reportId) && (
+                                  <button
+                                    onClick={() => {
+                                      handleIndividualValidation(
+                                        reportId,
+                                        "unvalidate"
+                                      );
+                                    }}
+                                    className="btn btn-outline btn-warning btn-sm"
+                                  >
+                                    <User size={14} />
+                                    Unvalidate Individual
+                                  </button>
+                                )}
+
+                              {reportStatus === "Rejected" &&
+                                !isReportInValidatedSubCluster(reportId) && (
+                                  <button
+                                    onClick={() => {
+                                      handleIndividualValidation(
+                                        reportId,
+                                        "unreject"
+                                      );
+                                    }}
+                                    className="btn btn-outline btn-warning btn-sm"
+                                  >
+                                    <Circle size={14} />
+                                    Unreject Individual
+                                  </button>
+                                )}
                             </>
                           )}
 
@@ -528,25 +674,39 @@ const ClusterDetailsModal = ({
                   <div className="text-sm">
                     <p className="mb-2">
                       {isClusterResolved ? (
-                        validatedCount >= 2 ? (
-                          <>
-                            <strong>Resolved</strong> with {validatedCount}{" "}
-                            validated sub-clusters
-                          </>
-                        ) : validatedCount === 1 ? (
-                          <>
-                            <strong>Resolved</strong> as a cluster
-                          </>
-                        ) : (
-                          <>
-                            <strong>Resolved</strong> (no sub-clusters)
-                          </>
-                        )
+                        <>
+                          <strong>Resolved</strong> — All {reports.length}{" "}
+                          reports processed
+                          {validatedCount > 0 && (
+                            <span>
+                              {" "}
+                              ({validatedCount} sub-cluster
+                              {validatedCount > 1 ? "s" : ""})
+                            </span>
+                          )}
+                          {individuallyValidatedCount > 0 && (
+                            <span>
+                              {" "}
+                              ({individuallyValidatedCount} individual
+                              validation
+                              {individuallyValidatedCount > 1 ? "s" : ""})
+                            </span>
+                          )}
+                          {individuallyRejectedCount > 0 && (
+                            <span>
+                              {" "}
+                              ({individuallyRejectedCount} individual rejection
+                              {individuallyRejectedCount > 1 ? "s" : ""})
+                            </span>
+                          )}
+                        </>
                       ) : (
                         <>
-                          <strong>Active</strong> — {unprocessedCount}{" "}
-                          unprocessed{" "}
-                          {unprocessedCount === 1 ? "report" : "reports"}
+                          <strong>Active</strong> —{" "}
+                          {reports.length - totalProcessedCount} unprocessed{" "}
+                          {reports.length - totalProcessedCount === 1
+                            ? "report"
+                            : "reports"}
                         </>
                       )}
                     </p>

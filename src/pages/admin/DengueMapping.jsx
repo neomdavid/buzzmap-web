@@ -21,6 +21,7 @@ import {
   useCreateSubClusterMutation,
   useAddReportsToSubClusterMutation,
   useRemoveReportsFromSubClusterMutation,
+  useValidatePostMutation,
 } from "@/api/dengueApi";
 import ClusterDetailsSkeleton from "@/components/Skeletons/ClusterDetailsSkeleton";
 import * as turf from "@turf/turf";
@@ -86,9 +87,17 @@ const DengueMapping = () => {
   const [selectedReports, setSelectedReports] = useState([]);
   const [rejectedReports, setRejectedReports] = useState([]);
   const [pendingRejections, setPendingRejections] = useState([]);
+  const [pendingIndividualValidations, setPendingIndividualValidations] =
+    useState([]);
   const [resolvedReports, setResolvedReports] = useState([]);
   const [subClusters, setSubClusters] = useState([]);
   const [clusterResolution, setClusterResolution] = useState("pending"); // pending, resolved, rejected
+  const [bulkConfirm, setBulkConfirm] = useState({
+    open: false,
+    action: null,
+    ids: [],
+    reports: [],
+  });
   const mapOnlyRef = useRef(null);
   const mapRef = useRef(null);
   const modalRef = useRef(null);
@@ -111,6 +120,7 @@ const DengueMapping = () => {
   const [addReportsToSubCluster] = useAddReportsToSubClusterMutation();
   const [removeReportsFromSubCluster] =
     useRemoveReportsFromSubClusterMutation();
+  const [validatePost] = useValidatePostMutation();
 
   const [recentDengueCases, setRecentDengueCases] = useState(null);
 
@@ -202,12 +212,22 @@ const DengueMapping = () => {
     const hasSubClusters =
       cluster.subClusters && cluster.subClusters.length > 0;
 
-    if (cluster.unprocessedCount === 0 && hasSubClusters) {
-      return "fully-resolved"; // All reports resolved, sub-clusters exist
-    } else if (hasSubClusters && cluster.unprocessedCount > 0) {
-      return "partially-resolved"; // Some reports resolved, some still pending
+    // Count individually processed reports (validated or rejected)
+    const individuallyProcessedCount = cluster.reports.filter(
+      (report) => report.status === "Validated" || report.status === "Rejected"
+    ).length;
+
+    // Total processed count includes sub-cluster reports and individual validations/rejections
+    const totalProcessedCount =
+      cluster.processedCount + individuallyProcessedCount;
+    const totalReports = cluster.reports.length;
+
+    if (totalProcessedCount === totalReports && totalReports > 0) {
+      return "fully-resolved"; // All reports processed (either in sub-clusters or individually)
+    } else if (totalProcessedCount > 0) {
+      return "partially-resolved"; // Some reports processed, some still pending
     } else if (cluster.unprocessedCount >= 2) {
-      return "pending"; // No sub-clusters, reports pending
+      return "pending"; // No reports processed, reports pending
     } else {
       return "partial"; // Less than 2 reports, can't form cluster
     }
@@ -322,13 +342,78 @@ const DengueMapping = () => {
     setSelectedReports([]);
     setRejectedReports([]);
     setPendingRejections([]);
+    setPendingIndividualValidations([]);
     setResolvedReports([]);
+  };
+
+  // Get report IDs that belong to validated sub-clusters of the selected cluster
+  const getValidatedReportIdsFromSelectedCluster = () => {
+    const ids = new Set();
+    const subClustersList = selectedCluster?.subClusters || [];
+    subClustersList.forEach((sc) => {
+      const type = sc.cluster_type || sc.clusterType || sc.type;
+      if (type === "validated" && Array.isArray(sc.reports)) {
+        sc.reports.forEach((rid) => ids.add(rid));
+      }
+    });
+    return ids;
   };
 
   const getReportTypeColor = (type) => {
     if (type === "Dengue Case") return "#dc2626"; // red-600
     if (type === "Breeding Site") return "#f59e0b"; // amber-500
     return "#10b981"; // emerald-500
+  };
+
+  // Helpers for custom bulk confirmation modal
+  const openBulkConfirm = (action) => {
+    if (!selectedCluster) return;
+    const validatedIds = getValidatedReportIdsFromSelectedCluster();
+    const all = selectedCluster.reports || [];
+    let eligibleIds = [];
+    if (action === "resolve-all") {
+      eligibleIds = all
+        .map((r) => r.id)
+        .filter(
+          (id) =>
+            !validatedIds.has(id) &&
+            !resolvedReports.includes(id) &&
+            !rejectedReports.includes(id)
+        );
+    } else if (action === "reject-all") {
+      eligibleIds = all
+        .map((r) => r.id)
+        .filter((id) => !validatedIds.has(id) && !resolvedReports.includes(id));
+    }
+    const eligibleReports = all.filter((r) => eligibleIds.includes(r.id));
+    setBulkConfirm({
+      open: true,
+      action,
+      ids: eligibleIds,
+      reports: eligibleReports,
+    });
+  };
+
+  const closeBulkConfirm = () =>
+    setBulkConfirm({ open: false, action: null, ids: [], reports: [] });
+
+  const confirmBulkAction = () => {
+    if (!bulkConfirm.open || !selectedCluster) return;
+    const { action, ids } = bulkConfirm;
+    if (action === "resolve-all") {
+      setSelectedReports(ids);
+      setPendingRejections((prev) => prev.filter((id) => !ids.includes(id)));
+      toast.info(`Selected ${ids.length} reports.`);
+    } else if (action === "reject-all") {
+      setPendingRejections((prev) => {
+        const set = new Set(prev);
+        ids.forEach((id) => set.add(id));
+        return Array.from(set);
+      });
+      setSelectedReports((prev) => prev.filter((id) => !ids.includes(id)));
+      toast.info(`Marked ${ids.length} reports for rejection.`);
+    }
+    closeBulkConfirm();
   };
 
   const getStatusColor = (status) => {
@@ -347,20 +432,93 @@ const DengueMapping = () => {
       setRejectedReports((prev) => prev.filter((id) => id !== reportId));
     } else if (action === "deselect") {
       setSelectedReports((prev) => prev.filter((id) => id !== reportId));
-    } else if (action === "reject") {
-      // Add to pending rejections for confirmation
-      setPendingRejections((prev) => [...prev, reportId]);
-    } else if (action === "confirm-reject") {
-      // Confirm rejection
-      setRejectedReports((prev) => [...prev, reportId]);
-      setPendingRejections((prev) => prev.filter((id) => id !== reportId));
-      setSelectedReports((prev) => prev.filter((id) => id !== reportId));
-    } else if (action === "cancel-reject") {
-      // Cancel pending rejection
-      setPendingRejections((prev) => prev.filter((id) => id !== reportId));
     } else if (action === "unreject") {
       // Remove from rejected
       setRejectedReports((prev) => prev.filter((id) => id !== reportId));
+    }
+  };
+
+  const handleIndividualValidation = async (reportId, action) => {
+    try {
+      if (action === "validate") {
+        // Add to pending individual validations for confirmation
+        setPendingIndividualValidations((prev) => [...prev, reportId]);
+        return;
+      } else if (action === "confirm-validate") {
+        // Confirm individual validation
+        const result = await validatePost({
+          id: reportId,
+          status: "Validated",
+        });
+
+        if (result.data) {
+          toast.success("Report validated successfully");
+          setPendingIndividualValidations((prev) =>
+            prev.filter((id) => id !== reportId)
+          );
+          setSelectedReports((prev) => prev.filter((id) => id !== reportId));
+          setRejectedReports((prev) => prev.filter((id) => id !== reportId));
+        } else {
+          console.error("Failed to validate report:", result.error);
+          toast.error("Failed to validate report. Please try again.");
+        }
+      } else if (action === "cancel-validate") {
+        // Cancel pending individual validation
+        setPendingIndividualValidations((prev) =>
+          prev.filter((id) => id !== reportId)
+        );
+      } else if (action === "reject") {
+        // Add to pending rejections for confirmation
+        setPendingRejections((prev) => [...prev, reportId]);
+        return;
+      } else if (action === "confirm-reject") {
+        // Confirm rejection
+        const result = await validatePost({ id: reportId, status: "Rejected" });
+
+        if (result.data) {
+          toast.success("Report rejected successfully");
+          setPendingRejections((prev) => prev.filter((id) => id !== reportId));
+          setSelectedReports((prev) => prev.filter((id) => id !== reportId));
+        } else {
+          console.error("Failed to reject report:", result.error);
+          toast.error("Failed to reject report. Please try again.");
+        }
+      } else if (action === "cancel-reject") {
+        // Cancel pending rejection
+        setPendingRejections((prev) => prev.filter((id) => id !== reportId));
+      } else if (action === "unvalidate") {
+        // Unvalidate individual report
+        const result = await validatePost({
+          id: reportId,
+          status: "Pending Verification",
+        });
+
+        if (result.data) {
+          toast.success("Report status updated successfully");
+        } else {
+          console.error("Failed to update report status:", result.error);
+          toast.error("Failed to update report status. Please try again.");
+        }
+      } else if (action === "unreject") {
+        // Unreject individual report
+        const result = await validatePost({
+          id: reportId,
+          status: "Pending Verification",
+        });
+
+        if (result.data) {
+          toast.success("Report status updated successfully");
+        } else {
+          console.error("Failed to update report status:", result.error);
+          toast.error("Failed to update report status. Please try again.");
+        }
+      } else {
+        console.error("Invalid action for individual validation:", action);
+        return;
+      }
+    } catch (error) {
+      console.error("Error updating report status:", error);
+      toast.error("Error updating report status. Please try again.");
     }
   };
 
@@ -447,30 +605,9 @@ const DengueMapping = () => {
         toast.error("Error resolving cluster. Please try again.");
       }
     } else if (action === "resolve-all") {
-      try {
-        // Resolve all reports in the cluster
-
-        // For resolve-all, we don't create a sub-cluster since all reports are resolved
-        // You might want to call a different endpoint here to mark the entire cluster as resolved
-
-        toast.success("All reports resolved. Cluster will be closed.");
-        setShowClusterDetailsModal(false);
-      } catch (error) {
-        console.error(`[ERROR] Error resolving all reports:`, error);
-        toast.error("Error resolving all reports. Please try again.");
-      }
+      openBulkConfirm("resolve-all");
     } else if (action === "reject-all") {
-      try {
-        // Reject all reports in the cluster
-
-        // You might want to call a different endpoint here to mark the entire cluster as rejected
-
-        toast.success("All reports rejected. Cluster will be closed.");
-        setShowClusterDetailsModal(false);
-      } catch (error) {
-        console.error(`[ERROR] Error rejecting all reports:`, error);
-        toast.error("Error rejecting all reports. Please try again.");
-      }
+      openBulkConfirm("reject-all");
     }
   };
 
@@ -1052,8 +1189,10 @@ const DengueMapping = () => {
         resolvedReports={resolvedReports}
         rejectedReports={rejectedReports}
         pendingRejections={pendingRejections}
+        pendingIndividualValidations={pendingIndividualValidations}
         handleReportSelection={handleReportSelection}
         handleClusterResolution={handleClusterResolution}
+        handleIndividualValidation={handleIndividualValidation}
         getSelectedReportsCount={getSelectedReportsCount}
         getUnselectedReportsCount={getUnselectedReportsCount}
         getRejectedReportsCount={getRejectedReportsCount}
@@ -1180,6 +1319,65 @@ const DengueMapping = () => {
       </dialog>
 
       {/* Cluster Verification Modal */}
+      <dialog open={bulkConfirm.open} className="modal">
+        <div className="modal-box bg-white rounded-3xl shadow-2xl w-11/12 max-w-3xl p-6 max-h-[85vh] overflow-y-auto">
+          <div className="flex items-center justify-between mb-4">
+            <p className="text-xl font-bold text-primary">
+              {bulkConfirm.action === "resolve-all"
+                ? "Confirm Resolve All"
+                : "Confirm Reject All"}
+            </p>
+            <button className="btn btn-ghost btn-sm" onClick={closeBulkConfirm}>
+              ✕
+            </button>
+          </div>
+
+          <p className="text-sm text-gray-600 mb-4">
+            {bulkConfirm.action === "resolve-all"
+              ? "The following reports will be selected for resolution. This will not call the API until you click Resolve Selected in the details view."
+              : "The following reports will be marked for rejection. You can still confirm or cancel each afterwards."}
+          </p>
+
+          <div className="border rounded-lg">
+            <div className="px-3 py-2 bg-gray-50 border-b text-sm font-semibold text-gray-600">
+              Reports affected ({bulkConfirm.reports.length})
+            </div>
+            <ul className="max-h-80 overflow-y-auto divide-y">
+              {bulkConfirm.reports.map((r) => (
+                <li
+                  key={r.id}
+                  className="px-4 py-2 text-sm flex items-center justify-between"
+                >
+                  <span className="truncate mr-2">
+                    {r.type} • {r.description || "No description"}
+                  </span>
+                  <span className="text-xs text-gray-500">
+                    {new Date(r.date).toLocaleString()}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          <div className="flex justify-end gap-2 mt-4">
+            <button className="btn btn-ghost" onClick={closeBulkConfirm}>
+              Cancel
+            </button>
+            <button
+              className={`btn ${
+                bulkConfirm.action === "resolve-all"
+                  ? "btn-success"
+                  : "btn-error"
+              }`}
+              onClick={confirmBulkAction}
+            >
+              {bulkConfirm.action === "resolve-all"
+                ? "Confirm Select All"
+                : "Confirm Reject All"}
+            </button>
+          </div>
+        </div>
+      </dialog>
     </main>
   );
 };
