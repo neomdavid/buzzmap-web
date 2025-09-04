@@ -36,6 +36,10 @@ import {
 import stagnantIcon from "../../assets/icons/stagnant_water.svg";
 import garbageIcon from "../../assets/icons/garbage.svg";
 import othersIcon from "../../assets/icons/others.svg";
+import foggingIcon from "../../assets/icons/fogging.svg";
+import trappingIcon from "../../assets/icons/trapping.svg";
+import cleanUpIcon from "../../assets/icons/cleanup.svg";
+import educationIcon from "../../assets/icons/education.svg";
 import {
   IconExclamationCircle,
   IconExclamationMark,
@@ -1132,6 +1136,7 @@ const DengueMapping = () => {
           setSearchQuery={setSearchQuery}
           setFilteredBarangays={setFilteredBarangays}
         />
+
         {/* CLUSTER REPORTED CONTAINER */}
         <ClusterDropdown
           showClusterDropdown={showClusterDropdown}
@@ -1150,17 +1155,136 @@ const DengueMapping = () => {
         />
       </div>
 
-      <MapContainer
-        mapContainerRef={mapContainerRef}
-        mapOnlyRef={mapOnlyRef}
-        showBreedingSites={showBreedingSites}
-        showInterventions={showInterventions}
-        selectedBarangay={selectedBarangay}
-        handleBarangaySelect={handleBarangaySelect}
-        activeInterventions={activeInterventions}
-        setSelectedFullReport={setSelectedFullReport}
-        setShowFullReport={setShowFullReport}
-      />
+      <div className="relative">
+        <MapContainer
+          mapContainerRef={mapContainerRef}
+          mapOnlyRef={mapOnlyRef}
+          showBreedingSites={showBreedingSites}
+          showInterventions={showInterventions}
+          selectedBarangay={selectedBarangay}
+          handleBarangaySelect={handleBarangaySelect}
+          activeInterventions={activeInterventions}
+          setSelectedFullReport={setSelectedFullReport}
+          setShowFullReport={setShowFullReport}
+        />
+
+        {/* Map Controls Overlay - Top Left */}
+        <div className="absolute top-4 left-4 z-10">
+          <div className="flex flex-col gap-2">
+            <div className="flex gap-2">
+              <button
+                onClick={() => setShowBreedingSites(!showBreedingSites)}
+                className={`px-3 py-2 rounded-lg transition-colors text-sm ${
+                  showBreedingSites
+                    ? "bg-primary text-white"
+                    : "bg-white text-primary border border-gray-300 hover:bg-gray-50 shadow-md"
+                }`}
+              >
+                {showBreedingSites
+                  ? "Hide Breeding Sites"
+                  : "Show Breeding Sites"}
+              </button>
+              <button
+                onClick={() => setShowInterventions(!showInterventions)}
+                className={`px-3 py-2 rounded-lg transition-colors text-sm ${
+                  showInterventions
+                    ? "bg-primary text-white"
+                    : "bg-white text-primary border border-gray-300 hover:bg-gray-50 shadow-md"
+                }`}
+              >
+                {showInterventions
+                  ? "Hide Interventions"
+                  : "Show Interventions"}
+              </button>
+            </div>
+
+            {/* Legend */}
+            {(showBreedingSites || showInterventions) && (
+              <div className="bg-white rounded-lg shadow-md p-3 border border-gray-200 max-w-xs">
+                <h4 className="text-sm font-semibold text-gray-700 mb-2">
+                  Map Legend
+                </h4>
+                <div className="space-y-2">
+                  {showBreedingSites && (
+                    <div>
+                      <p className="text-xs font-medium text-gray-600 mb-1">
+                        Breeding Sites
+                      </p>
+                      <div className="grid grid-cols-1 gap-1 text-xs">
+                        <div className="flex items-center gap-2">
+                          <img
+                            src={stagnantIcon}
+                            alt="Stagnant Water"
+                            className="w-3 h-3"
+                          />
+                          <span>Stagnant Water</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <img
+                            src={garbageIcon}
+                            alt="Garbage"
+                            className="w-3 h-3"
+                          />
+                          <span>Garbage/Trash</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <img
+                            src={othersIcon}
+                            alt="Others"
+                            className="w-3 h-3"
+                          />
+                          <span>Others</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  {showInterventions && (
+                    <div>
+                      <p className="text-xs font-medium text-gray-600 mb-1">
+                        Interventions
+                      </p>
+                      <div className="grid grid-cols-1 gap-1 text-xs">
+                        <div className="flex items-center gap-2">
+                          <img
+                            src={foggingIcon}
+                            alt="Fogging"
+                            className="w-3 h-3"
+                          />
+                          <span>Fogging</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <img
+                            src={trappingIcon}
+                            alt="Trapping"
+                            className="w-3 h-3"
+                          />
+                          <span>Trapping</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <img
+                            src={cleanUpIcon}
+                            alt="Clean-up"
+                            className="w-3 h-3"
+                          />
+                          <span>Clean-up Drive</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <img
+                            src={educationIcon}
+                            alt="Education"
+                            className="w-3 h-3"
+                          />
+                          <span>Education Campaign</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
 
       <BarangayDetails
         selectedBarangay={selectedBarangay}

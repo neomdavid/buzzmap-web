@@ -72,6 +72,9 @@ const Analytics = () => {
   const { refetch: refetchAnalytics } = useGetAnalyticsQuery();
   const { refetch: refetchPosts } = useGetPostsQuery();
   const { refetch: refetchInterventions } = useGetAllInterventionsQuery();
+  const { refetch: refetchPatternResults } =
+    useGetPatternRecognitionResultsQuery();
+  const { refetch: refetchBarangays } = useGetAdminBarangaysQuery();
   const [dataVersion, setDataVersion] = useState(0);
   const [isImporting, setIsImporting] = useState(false);
   const [showBreedingSites, setShowBreedingSites] = useState(true);
@@ -231,6 +234,19 @@ const Analytics = () => {
       // Final step
       setImportProgress(100);
       await new Promise((resolve) => setTimeout(resolve, 300));
+
+      // Refetch all relevant data after successful import
+      console.log("Refetching data after successful CSV import...");
+      await Promise.all([
+        refetchAnalytics(),
+        refetchPosts(),
+        refetchInterventions(),
+        refetchPatternResults(),
+        refetchBarangays(),
+      ]);
+
+      // Update data version to trigger component re-renders with fresh data
+      setDataVersion((prev) => prev + 1);
 
       // Success handling
       setCsvFile(null);
@@ -835,7 +851,7 @@ const Analytics = () => {
             className="btn btn-primary mt-2"
             onClick={() => {
               setShowSuccessModal(false);
-              window.location.reload();
+              // Data has already been refetched, no need to reload the page
             }}
           >
             Close
