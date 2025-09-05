@@ -1464,6 +1464,24 @@ export const dengueApi = createApi({
       }),
       invalidatesTags: ["Clusters"],
     }),
+
+    // Remove reports from a cluster (not sub-cluster)
+    removeReportsFromCluster: builder.mutation({
+      query: ({
+        clusterId,
+        reportIds,
+        permanentlyExclude = false,
+        resetStatus = false,
+      }) => ({
+        url: `clusters/${clusterId}/remove-reports`,
+        method: "PATCH",
+        body: { reportIds, permanentlyExclude, resetStatus },
+      }),
+      invalidatesTags: (result, error, { clusterId }) => [
+        { type: "Clusters", id: clusterId },
+        "Clusters",
+      ],
+    }),
   }),
 });
 
@@ -1614,4 +1632,5 @@ export const {
   useCreateSubClusterMutation,
   useAddReportsToSubClusterMutation,
   useRemoveReportsFromSubClusterMutation,
+  useRemoveReportsFromClusterMutation,
 } = dengueApi;

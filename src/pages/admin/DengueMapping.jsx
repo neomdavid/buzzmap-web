@@ -203,6 +203,7 @@ const DengueMapping = () => {
         unprocessedCount: cluster.unprocessed_count,
         processedCount: cluster.processed_count,
         subClusters: cluster.sub_clusters || [],
+        metadata: cluster.metadata || {},
       };
 
       return result;
@@ -212,29 +213,79 @@ const DengueMapping = () => {
   }, [clustersData]);
 
   const getClusterStatus = (cluster) => {
-    // Check if cluster has sub-clusters (partially or fully resolved)
-    const hasSubClusters =
-      cluster.subClusters && cluster.subClusters.length > 0;
+    // Use the metadata.status from API if available, otherwise fall back to calculated logic
+    if (cluster.metadata && cluster.metadata.status) {
+      switch (cluster.metadata.status) {
+        case "resolved":
+          return "fully-resolved";
+        case "pending":
+          return "pending";
+        default:
+          // Fall through to calculated logic
+          break;
+      }
+    }
 
-    // Count individually processed reports (validated or rejected)
-    const individuallyProcessedCount = cluster.reports.filter(
-      (report) => report.status === "Validated" || report.status === "Rejected"
-    ).length;
+    // Fallback to calculated logic based on unprocessed_count
+    const unprocessedCount =
+      cluster.unprocessedCount || cluster.unprocessed_count || 0;
+    const totalReports = cluster.reports ? cluster.reports.length : 0;
 
-    // Total processed count includes sub-cluster reports and individual validations/rejections
-    const totalProcessedCount =
-      cluster.processedCount + individuallyProcessedCount;
-    const totalReports = cluster.reports.length;
+    // Calculate processed count if not provided by API
+    let processedCount = cluster.processedCount || cluster.processed_count;
+    if (processedCount === undefined || processedCount === null) {
+      // Calculate processed count as total - unprocessed
+      processedCount = Math.max(0, totalReports - unprocessedCount);
+    }
 
-    if (totalProcessedCount === totalReports && totalReports > 0) {
-      return "fully-resolved"; // All reports processed (either in sub-clusters or individually)
-    } else if (totalProcessedCount > 0) {
-      return "partially-resolved"; // Some reports processed, some still pending
-    } else if (cluster.unprocessedCount >= 2) {
-      return "pending"; // No reports processed, reports pending
-    } else {
+    // Also count reports that were validated but then removed from clustering
+    const validatedButRemovedCount = cluster.reports
+      ? cluster.reports.filter(
+          (report) =>
+            report.status === "Validated" &&
+            report.exclude_from_clustering === true
+        ).length
+      : 0;
+
+    // Total processed includes both processed reports and validated-but-removed reports
+    const totalProcessedIncludingRemoved =
+      processedCount + validatedButRemovedCount;
+
+    // Temporary debug logging
+    console.log(`[DEBUG] Cluster ${cluster.barangays?.[0]}:`, {
+      unprocessedCount,
+      processedCount,
+      validatedButRemovedCount,
+      totalProcessedIncludingRemoved,
+      totalReports,
+      status:
+        unprocessedCount > 0
+          ? totalProcessedIncludingRemoved > 0
+            ? "partially-resolved"
+            : "pending"
+          : "fully-resolved",
+    });
+
+    // If unprocessed_count is 0, all reports have been processed
+    if (unprocessedCount === 0 && totalReports > 0) {
+      return "fully-resolved";
+    }
+
+    // If there are unprocessed reports, check if any have been processed (including removed ones)
+    if (unprocessedCount > 0) {
+      if (totalProcessedIncludingRemoved > 0) {
+        return "partially-resolved"; // Some processed (including removed), some pending
+      } else {
+        return "pending"; // None processed, all pending
+      }
+    }
+
+    // Fallback for edge cases
+    if (totalReports < 2) {
       return "partial"; // Less than 2 reports, can't form cluster
     }
+
+    return "pending"; // Default fallback
   };
 
   const getClusterStatusColor = (status) => {
@@ -373,23 +424,37 @@ const DengueMapping = () => {
   const openBulkConfirm = (action) => {
     if (!selectedCluster) return;
     const validatedIds = getValidatedReportIdsFromSelectedCluster();
-    const all = selectedCluster.reports || [];
+    const cluster =
+      (specificClusterData && specificClusterData.data) || selectedCluster;
+    const all = cluster?.reports || [];
     let eligibleIds = [];
     if (action === "resolve-all") {
       eligibleIds = all
-        .map((r) => r.id)
-        .filter(
-          (id) =>
-            !validatedIds.has(id) &&
-            !resolvedReports.includes(id) &&
-            !rejectedReports.includes(id)
-        );
+        .filter((r) => {
+          const rid = r?._id || r?.id;
+          return (
+            rid &&
+            r.exclude_from_clustering !== true &&
+            !validatedIds.has(rid) &&
+            !resolvedReports.includes(rid) &&
+            !rejectedReports.includes(rid)
+          );
+        })
+        .map((r) => r._id || r.id);
     } else if (action === "reject-all") {
       eligibleIds = all
-        .map((r) => r.id)
-        .filter((id) => !validatedIds.has(id) && !resolvedReports.includes(id));
+        .filter((r) => {
+          const rid = r?._id || r?.id;
+          return (
+            rid && !validatedIds.has(rid) && !resolvedReports.includes(rid)
+          );
+        })
+        .map((r) => r._id || r.id);
     }
-    const eligibleReports = all.filter((r) => eligibleIds.includes(r.id));
+    const eligibleReports = all.filter((r) => {
+      const rid = r?._id || r?.id;
+      return eligibleIds.includes(rid);
+    });
     setBulkConfirm({
       open: true,
       action,
@@ -401,13 +466,32 @@ const DengueMapping = () => {
   const closeBulkConfirm = () =>
     setBulkConfirm({ open: false, action: null, ids: [], reports: [] });
 
-  const confirmBulkAction = () => {
+  const confirmBulkAction = async () => {
     if (!bulkConfirm.open || !selectedCluster) return;
     const { action, ids } = bulkConfirm;
     if (action === "resolve-all") {
-      setSelectedReports(ids);
-      setPendingRejections((prev) => prev.filter((id) => !ids.includes(id)));
-      toast.info(`Selected ${ids.length} reports.`);
+      try {
+        const parentClusterId = selectedCluster._id || selectedCluster.id;
+        const payload = {
+          parentClusterId,
+          reportIds: ids,
+          clusterType: "validated",
+        };
+        const result = await createSubCluster(payload);
+        if (result?.data?.success || result?.data?._id || !result?.error) {
+          toast.success(`Created sub-cluster with ${ids.length} reports.`);
+        } else {
+          console.error("[Bulk Resolve] Failed:", result?.error);
+          toast.error("Failed to resolve reports. Please try again.");
+        }
+      } catch (e) {
+        console.error("[Bulk Resolve] Exception:", e);
+        toast.error("Failed to resolve reports. Please try again.");
+      } finally {
+        // Clear local selections for those ids
+        setSelectedReports((prev) => prev.filter((id) => !ids.includes(id)));
+        setPendingRejections((prev) => prev.filter((id) => !ids.includes(id)));
+      }
     } else if (action === "reject-all") {
       setPendingRejections((prev) => {
         const set = new Set(prev);
@@ -526,7 +610,7 @@ const DengueMapping = () => {
     }
   };
 
-  const handleClusterResolution = async (action) => {
+  const handleClusterResolution = async (action, reportIds = null) => {
     if (action === "resolve-selected") {
       try {
         // Resolve only selected reports, keep others pending
@@ -609,7 +693,86 @@ const DengueMapping = () => {
         toast.error("Error resolving cluster. Please try again.");
       }
     } else if (action === "resolve-all") {
-      openBulkConfirm("resolve-all");
+      try {
+        // Resolve all eligible reports (same logic as resolve-selected but with all eligible reports)
+        const eligibleReportIds = reportIds || [];
+        const remainingReports = selectedCluster.reports.filter(
+          (report) =>
+            !eligibleReportIds.includes(report.id) &&
+            !resolvedReports.includes(report.id)
+        );
+
+        // Check if eligible reports can form a sub-cluster (need at least 2)
+        if (eligibleReportIds.length >= 2) {
+          // Call API to create sub-cluster with ALL eligible reports
+          const subClusterData = {
+            parentClusterId: selectedCluster.id,
+            reportIds: eligibleReportIds, // These are all the eligible reports to resolve
+            clusterType: "validated", // Backend expects 'validated' or 'rejected'
+          };
+
+          const result = await createSubCluster(subClusterData);
+
+          if (result.data) {
+            // Create local sub-cluster object for UI
+            const newSubCluster = {
+              id: result.data.data._id || `sub-${Date.now()}`,
+              name: `Sub-cluster from ${selectedCluster.barangays[0]}`,
+              center: selectedCluster.center,
+              count: eligibleReportIds.length, // Count of eligible reports
+              severity: "medium",
+              earliestReportAt:
+                selectedCluster.reports.find((r) =>
+                  eligibleReportIds.includes(r.id)
+                )?.date || new Date().toISOString(),
+              latestReportAt:
+                selectedCluster.reports.findLast((r) =>
+                  eligibleReportIds.includes(r.id)
+                )?.date || new Date().toISOString(),
+              barangays: selectedCluster.barangays,
+              reports: selectedCluster.reports.filter((r) =>
+                eligibleReportIds.includes(r.id)
+              ), // All eligible reports
+              parentClusterId: selectedCluster.id,
+            };
+
+            setSubClusters((prev) => [...prev, newSubCluster]);
+
+            // Mark all eligible reports as validated in the UI
+            setResolvedReports((prev) => [...prev, ...eligibleReportIds]);
+            setSelectedReports([]);
+
+            toast.success(
+              `✅ Sub-cluster created successfully! ID: ${result.data.data._id} | Reports: ${eligibleReportIds.length} | Status: Validated | Remaining: ${remainingReports.length}`
+            );
+          } else {
+            console.error(
+              `[ERROR] Failed to create sub-cluster:`,
+              result.error
+            );
+
+            // Show detailed error message
+            const errorMessage =
+              result.error?.data?.error ||
+              result.error?.message ||
+              "Unknown error occurred";
+            toast.error(`Failed to create sub-cluster: ${errorMessage}`);
+          }
+        } else {
+          // No sub-cluster needed, just resolve all eligible reports
+
+          // Add all eligible reports to resolved list
+          setResolvedReports((prev) => [...prev, ...eligibleReportIds]);
+          setSelectedReports([]);
+
+          toast.info(
+            `Resolved ${eligibleReportIds.length} reports. ${remainingReports.length} reports remain pending.`
+          );
+        }
+      } catch (error) {
+        console.error(`[ERROR] Error resolving cluster:`, error);
+        toast.error("Error resolving cluster. Please try again.");
+      }
     } else if (action === "reject-all") {
       openBulkConfirm("reject-all");
     }

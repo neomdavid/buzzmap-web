@@ -1,4 +1,6 @@
 import React, { useState } from "react";
+import { useRemoveReportsFromClusterMutation } from "@/api/dengueApi";
+import { toast } from "react-toastify";
 import { CheckCircle, Circle, MapPinLine, Hourglass } from "phosphor-react";
 
 const ClusterDetailsModal = ({
@@ -33,6 +35,9 @@ const ClusterDetailsModal = ({
   // Local UI-only state: pending remove confirmations and removed report ids
   const [pendingRemovals, setPendingRemovals] = useState([]);
   const [removedReportIds, setRemovedReportIds] = useState([]);
+  const [removingId, setRemovingId] = useState(null);
+  const [removeReportsFromCluster, { isLoading: isRemoving }] =
+    useRemoveReportsFromClusterMutation();
 
   const isPendingRemoval = (id) => pendingRemovals.includes(id);
   const isLocallyRemoved = (id) => removedReportIds.includes(id);
@@ -45,20 +50,51 @@ const ClusterDetailsModal = ({
     setPendingRemovals((prev) => prev.filter((x) => x !== id));
   };
 
-  const confirmRemoveFromCluster = (id) => {
-    // UI-only removal: hide from list and adjust local counts; does not change report status
-    setRemovedReportIds((prev) => (prev.includes(id) ? prev : [...prev, id]));
-    setPendingRemovals((prev) => prev.filter((x) => x !== id));
-    // Ensure it is not kept selected in parent state
-    if (selectedReports?.includes?.(id)) {
-      handleReportSelection(id, "deselect");
+  const confirmRemoveFromCluster = async (id) => {
+    try {
+      setRemovingId(id);
+      console.log("[Cluster] Removing report from cluster", {
+        clusterId,
+        reportId: id,
+      });
+      const response = await removeReportsFromCluster({
+        clusterId,
+        reportIds: [id],
+        permanentlyExclude: true,
+        resetStatus: false,
+      }).unwrap();
+      console.log("[Cluster] Remove response:", response);
+      toast.success(
+        response?.message || "Report removed from cluster successfully"
+      );
+
+      // Optimistically update local UI while data refetches
+      setRemovedReportIds((prev) => (prev.includes(id) ? prev : [...prev, id]));
+      setPendingRemovals((prev) => prev.filter((x) => x !== id));
+      if (selectedReports?.includes?.(id)) {
+        handleReportSelection(id, "deselect");
+      }
+    } catch (error) {
+      console.error("[Cluster] Failed to remove report from cluster:", error);
+      const msg =
+        error?.data?.message ||
+        error?.error ||
+        error?.message ||
+        "Request failed";
+      toast.error(`Failed to remove: ${msg}`);
+      // Keep pending state so user can retry or cancel
+    } finally {
+      setRemovingId(null);
     }
   };
 
-  // Use effective reports that are not locally removed
-  const effectiveReports = reports.filter(
-    (r) => !isLocallyRemoved(r._id || r.id)
-  );
+  // Helper: determine if a report is removed from cluster (local or backend)
+  const isReportRemoved = (report) => {
+    const id = report._id || report.id;
+    return isLocallyRemoved(id) || report.exclude_from_clustering === true;
+  };
+  // Keep showing all reports; visually mark removed ones and disable actions
+  const effectiveReports = reports;
   const dateRange = clusterData.date_range || {};
   const barangay =
     clusterData.barangay || clusterData.barangays?.[0] || "Unknown";
@@ -111,6 +147,7 @@ const ClusterDetailsModal = ({
   // Derived counts for summary (exclude reports already in validated sub-clusters)
   const selectableReportIds = new Set(
     effectiveReports
+      .filter((r) => !isReportRemoved(r))
       .map((r) => r._id || r.id)
       .filter((id) => id && !isReportInValidatedSubCluster(id))
   );
@@ -131,6 +168,9 @@ const ClusterDetailsModal = ({
       localRejectedCount -
       localResolvedCount
   );
+
+  // Precompute IDs eligible for resolve-all (exclude removed & validated sub-cluster)
+  const resolveAllIds = Array.from(selectableReportIds);
 
   return (
     <dialog
@@ -180,18 +220,18 @@ const ClusterDetailsModal = ({
                 <div className="stat-value text-2xl">{reports.length}</div>
               </div>
               <div className="stat">
-                <div className="stat-title text-sm">Selected</div>
+                <div className="stat-title text-sm">Resolved Reports</div>
                 <div className="stat-value text-2xl text-success">
-                  {localSelectedCount}
+                  {totalProcessedCount}
                 </div>
               </div>
               <div className="stat">
-                <div className="stat-title text-sm">Unselected</div>
-                <div className="stat-value text-2xl text-warning">
-                  {localUnselectedCount}
+                <div className="stat-title text-sm">Removed Reports</div>
+                <div className="stat-value text-2xl text-gray-500">
+                  {effectiveReports.filter((r) => isReportRemoved(r)).length}
                 </div>
               </div>
-              {/* Removed individual rejected/validated stats */}
+              {/* Removed individual selected/unselected stats */}
             </div>
             {isClusterResolved ? (
               <div className="flex items-center gap-2">
@@ -220,13 +260,13 @@ const ClusterDetailsModal = ({
                 </button>
                 <button
                   onClick={() => {
-                    handleClusterResolution("resolve-all");
+                    handleClusterResolution("resolve-all", resolveAllIds);
                   }}
                   className="btn btn-primary btn-sm"
-                  disabled={reports.length === 0}
+                  disabled={resolveAllIds.length === 0}
                 >
                   <CheckCircle size={16} />
-                  Resolve All
+                  Resolve All ({resolveAllIds.length})
                 </button>
                 {/* Reject All removed per updated flow */}
               </div>
@@ -269,6 +309,7 @@ const ClusterDetailsModal = ({
 
                   // Derived UI state
                   const isSelected = selectedReports.includes(reportId);
+                  const isRemoved = isReportRemoved(report);
                   const isRejected =
                     rejectedReports.includes(reportId) ||
                     reportStatus === "Rejected";
@@ -289,7 +330,9 @@ const ClusterDetailsModal = ({
                     <div
                       key={reportId}
                       className={`card shadow-md border-2 transition-all relative ${
-                        isReportInValidatedSubCluster(reportId)
+                        isRemoved
+                          ? "border-gray-300 bg-gray-100 opacity-70"
+                          : isReportInValidatedSubCluster(reportId)
                           ? "border-success bg-success/5 opacity-75"
                           : isSelected
                           ? "border-success bg-success/5"
@@ -299,7 +342,11 @@ const ClusterDetailsModal = ({
                       <div className="card-body p-4">
                         {/* Selection Indicator - Fixed positioning */}
                         <div className="absolute top-2 right-2 flex flex-col gap-1">
-                          {isReportInValidatedSubCluster(reportId) ? (
+                          {isRemoved ? (
+                            <div className="badge badge-ghost badge-sm">
+                              Removed from Cluster
+                            </div>
+                          ) : isReportInValidatedSubCluster(reportId) ? (
                             <div className="badge badge-success badge-sm">
                               <CheckCircle size={12} />
                               Validated as a cluster
@@ -317,7 +364,9 @@ const ClusterDetailsModal = ({
                           <div className="flex items-center gap-3">
                             <div
                               className={`h-4 w-4 rounded-full ${
-                                isRejected
+                                isRemoved
+                                  ? "bg-gray-400"
+                                  : isRejected
                                   ? "bg-error"
                                   : isValidated
                                   ? "bg-success"
@@ -383,75 +432,90 @@ const ClusterDetailsModal = ({
 
                         {/* Action Buttons */}
                         <div className="flex gap-2 flex-wrap">
-                          {!isReportInValidatedSubCluster(reportId) && (
-                            <>
-                              {!rejectedReports.includes(reportId) &&
-                                !isReportInValidatedSubCluster(reportId) && (
-                                  <>
-                                    {/* Toggle select/unselect */}
-                                    {!pendingRejections.includes(reportId) && (
-                                      <button
-                                        onClick={() => {
-                                          handleReportSelection(
-                                            reportId,
-                                            isSelected ? "deselect" : "select"
-                                          );
-                                        }}
-                                        className={`btn btn-sm ${
-                                          isSelected
-                                            ? "btn-success"
-                                            : "btn-outline btn-success"
-                                        }`}
-                                      >
-                                        {isSelected ? (
-                                          <>
-                                            <CheckCircle size={14} />
-                                            Unselect
-                                          </>
-                                        ) : (
-                                          <>
-                                            <CheckCircle size={14} />
-                                            Select
-                                          </>
-                                        )}
-                                      </button>
-                                    )}
-                                    {/* Remove from cluster (UI-only) */}
-                                    {pendingRejections.includes(reportId) ? (
-                                      <>
+                          {!isRemoved &&
+                            !isReportInValidatedSubCluster(reportId) && (
+                              <>
+                                {!rejectedReports.includes(reportId) &&
+                                  !isReportInValidatedSubCluster(reportId) && (
+                                    <>
+                                      {/* Toggle select/unselect */}
+                                      {!pendingRejections.includes(
+                                        reportId
+                                      ) && (
+                                        <button
+                                          onClick={() => {
+                                            handleReportSelection(
+                                              reportId,
+                                              isSelected ? "deselect" : "select"
+                                            );
+                                          }}
+                                          className={`btn btn-sm ${
+                                            isSelected
+                                              ? "btn-success"
+                                              : "btn-outline btn-success"
+                                          }`}
+                                        >
+                                          {isSelected ? (
+                                            <>
+                                              <CheckCircle size={14} />
+                                              Unselect
+                                            </>
+                                          ) : (
+                                            <>
+                                              <CheckCircle size={14} />
+                                              Select
+                                            </>
+                                          )}
+                                        </button>
+                                      )}
+                                      {/* Remove from cluster with inline confirm */}
+                                      {pendingRemovals.includes(reportId) ? (
+                                        <>
+                                          <button
+                                            onClick={() =>
+                                              confirmRemoveFromCluster(reportId)
+                                            }
+                                            className={`btn btn-warning btn-sm ${
+                                              removingId === reportId
+                                                ? "btn-disabled"
+                                                : ""
+                                            }`}
+                                            disabled={removingId === reportId}
+                                          >
+                                            {removingId === reportId ? (
+                                              <>
+                                                <span className="loading loading-spinner loading-xs"></span>
+                                                Removing...
+                                              </>
+                                            ) : (
+                                              "Confirm Remove"
+                                            )}
+                                          </button>
+                                          <button
+                                            onClick={() =>
+                                              cancelRemoveFromCluster(reportId)
+                                            }
+                                            className="btn btn-outline btn-ghost btn-sm"
+                                          >
+                                            Cancel
+                                          </button>
+                                        </>
+                                      ) : (
                                         <button
                                           onClick={() =>
-                                            confirmRemoveFromCluster(reportId)
+                                            requestRemoveFromCluster(reportId)
                                           }
-                                          className="btn btn-warning btn-sm"
+                                          className="btn btn-outline btn-warning btn-sm"
                                         >
-                                          Confirm Remove
+                                          Remove from Cluster
                                         </button>
-                                        <button
-                                          onClick={() =>
-                                            cancelRemoveFromCluster(reportId)
-                                          }
-                                          className="btn btn-outline btn-ghost btn-sm"
-                                        >
-                                          Cancel
-                                        </button>
-                                      </>
-                                    ) : (
-                                      <button
-                                        onClick={() =>
-                                          requestRemoveFromCluster(reportId)
-                                        }
-                                        className="btn btn-outline btn-warning btn-sm"
-                                      >
-                                        Remove from Cluster
-                                      </button>
-                                    )}
-                                  </>
-                                )}
+                                      )}
+                                    </>
+                                  )}
 
-                              {/* Unreject removed per updated design */}
-                            </>
-                          )}
+                                {/* Unreject removed per updated design */}
+                              </>
+                            )}
 
                           <button
                             onClick={() => {

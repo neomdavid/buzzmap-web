@@ -123,9 +123,11 @@ const ClusterDropdown = ({
                         <div
                           className="mt-1 h-3 w-3 rounded-full flex-shrink-0"
                           style={{
-                            backgroundColor: getSeverityColor(c.severity),
+                            backgroundColor: getClusterStatusColor(
+                              getClusterStatus(c)
+                            ),
                           }}
-                          title={c.severity}
+                          title={getClusterStatus(c)}
                         />
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center justify-between gap-2">
