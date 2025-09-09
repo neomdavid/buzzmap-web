@@ -1457,10 +1457,10 @@ export const dengueApi = createApi({
 
     // Remove reports from sub-cluster
     removeReportsFromSubCluster: builder.mutation({
-      query: ({ subClusterId, reportIds }) => ({
+      query: ({ subClusterId, reportIds, resetStatus = false }) => ({
         url: `clusters/sub-clusters/${subClusterId}/remove-reports`,
         method: "PATCH",
-        body: { reportIds },
+        body: { reportIds, resetStatus },
       }),
       invalidatesTags: ["Clusters"],
     }),

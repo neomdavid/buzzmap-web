@@ -12,7 +12,6 @@ export { default as CustomFormInput } from "./CustomFormInput.jsx";
 export { default as MapPicker } from "./MapPicker.jsx";
 export { default as DengueMapLegend } from "./DengueMapLegend.jsx";
 
-
 //LANDING
 export { default as GoalCard } from "./Landing/GoalCard.jsx";
 export { default as PreventionCard } from "./Landing/PreventionCard.jsx";
@@ -63,6 +62,10 @@ export { default as PieChart } from "./Admin/PieChart.jsx";
 export { default as AdminPostsTable } from "./Admin/AdminPostsTable.jsx";
 export { default as AlertsTable } from "./Admin/AlertsTable.jsx";
 export { default as InterventionAnalysisChart } from "./Admin/InterventionAnalysisChart.jsx";
+
+//SKELETONS
+export { default as TableSkeleton } from "./Skeletons/TableSkeleton.jsx";
+
 //SUPERADMIN
 export { default as UsersTable } from "./Superadmin/UsersTable.jsx";
 export { default as AdminsTable } from "./Superadmin/AdminsTable.jsx";

@@ -101,6 +101,7 @@ const DengueMapping = () => {
     action: null,
     ids: [],
     reports: [],
+    loading: false,
   });
   const mapOnlyRef = useRef(null);
   const mapRef = useRef(null);
@@ -133,10 +134,13 @@ const DengueMapping = () => {
     useGetClustersWithSubclustersQuery();
 
   // Get specific cluster details when selected
-  const { data: specificClusterData, isLoading: isLoadingSpecificCluster } =
-    useGetSpecificClusterQuery(selectedCluster?._id || selectedCluster?.id, {
-      skip: !selectedCluster,
-    });
+  const {
+    data: specificClusterData,
+    isLoading: isLoadingSpecificCluster,
+    refetch: refetchSpecificCluster,
+  } = useGetSpecificClusterQuery(selectedCluster?._id || selectedCluster?.id, {
+    skip: !selectedCluster,
+  });
 
   // Transform API clusters data to match our component structure
   const transformedClusters = useMemo(() => {
@@ -464,11 +468,21 @@ const DengueMapping = () => {
   };
 
   const closeBulkConfirm = () =>
-    setBulkConfirm({ open: false, action: null, ids: [], reports: [] });
+    setBulkConfirm({
+      open: false,
+      action: null,
+      ids: [],
+      reports: [],
+      loading: false,
+    });
 
   const confirmBulkAction = async () => {
     if (!bulkConfirm.open || !selectedCluster) return;
     const { action, ids } = bulkConfirm;
+
+    // Set loading state
+    setBulkConfirm((prev) => ({ ...prev, loading: true }));
+
     if (action === "resolve-all") {
       try {
         const parentClusterId = selectedCluster._id || selectedCluster.id;
@@ -479,7 +493,7 @@ const DengueMapping = () => {
         };
         const result = await createSubCluster(payload);
         if (result?.data?.success || result?.data?._id || !result?.error) {
-          toast.success(`Created sub-cluster with ${ids.length} reports.`);
+          toast.success(`Successfully resolved ${ids.length} reports.`);
         } else {
           console.error("[Bulk Resolve] Failed:", result?.error);
           toast.error("Failed to resolve reports. Please try again.");
@@ -662,7 +676,7 @@ const DengueMapping = () => {
             setSelectedReports([]);
 
             toast.success(
-              `✅ Sub-cluster created successfully! ID: ${result.data.data._id} | Reports: ${selectedReportIds.length} | Status: Validated | Remaining: ${remainingReports.length}`
+              `✅ Sub-cluster created successfully! ${selectedReportIds.length} reports resolved. ${remainingReports.length} reports remain pending.`
             );
           } else {
             console.error(
@@ -743,7 +757,7 @@ const DengueMapping = () => {
             setSelectedReports([]);
 
             toast.success(
-              `✅ Sub-cluster created successfully! ID: ${result.data.data._id} | Reports: ${eligibleReportIds.length} | Status: Validated | Remaining: ${remainingReports.length}`
+              `✅ Sub-cluster created successfully! ${eligibleReportIds.length} reports resolved. ${remainingReports.length} reports remain pending.`
             );
           } else {
             console.error(
@@ -1142,6 +1156,32 @@ const DengueMapping = () => {
     }
   };
 
+  // Function to highlight a specific report marker
+  const highlightReportMarker = (reportId) => {
+    // This will be implemented in the MapContainer component
+    // For now, we'll pass the reportId to the map component
+    if (mapOnlyRef.current && mapOnlyRef.current.highlightMarker) {
+      mapOnlyRef.current.highlightMarker(reportId);
+    }
+  };
+
+  // Function to handle report removal from sub-cluster
+  const handleReportRemovedFromSubCluster = (subClusterId, reportId) => {
+    console.log(
+      "Report removed from sub-cluster, refetching data:",
+      subClusterId,
+      reportId
+    );
+
+    // Refetch the specific cluster data to get updated sub-clusters
+    if (refetchSpecificCluster) {
+      refetchSpecificCluster();
+    }
+
+    // Also refetch the clusters list to update the overall cluster data
+    // This will be handled automatically by the RTK Query cache invalidation
+  };
+
   // Add handler for viewing full report
   const handleViewFullReport = (report) => {
     setSelectedFullReport(report);
@@ -1479,6 +1519,7 @@ const DengueMapping = () => {
         pendingIndividualValidations={pendingIndividualValidations}
         handleReportSelection={handleReportSelection}
         handleClusterResolution={handleClusterResolution}
+        openBulkConfirm={openBulkConfirm}
         handleIndividualValidation={handleIndividualValidation}
         getSelectedReportsCount={getSelectedReportsCount}
         getUnselectedReportsCount={getUnselectedReportsCount}
@@ -1489,6 +1530,8 @@ const DengueMapping = () => {
         getRemainingReports={getRemainingReports}
         subClusters={subClusters}
         mapOnlyRef={mapOnlyRef}
+        highlightReportMarker={highlightReportMarker}
+        onReportRemovedFromSubCluster={handleReportRemovedFromSubCluster}
       />
 
       {/* Loading Skeleton for Cluster Details */}
@@ -1647,7 +1690,11 @@ const DengueMapping = () => {
           </div>
 
           <div className="flex justify-end gap-2 mt-4">
-            <button className="btn btn-ghost" onClick={closeBulkConfirm}>
+            <button
+              className="btn btn-ghost"
+              onClick={closeBulkConfirm}
+              disabled={bulkConfirm.loading}
+            >
               Cancel
             </button>
             <button
@@ -1655,12 +1702,20 @@ const DengueMapping = () => {
                 bulkConfirm.action === "resolve-all"
                   ? "btn-success"
                   : "btn-error"
-              }`}
+              } ${bulkConfirm.loading ? "loading" : ""}`}
               onClick={confirmBulkAction}
+              disabled={bulkConfirm.loading}
             >
-              {bulkConfirm.action === "resolve-all"
-                ? "Confirm Select All"
-                : "Confirm Reject All"}
+              {bulkConfirm.loading ? (
+                <>
+                  <span className="loading loading-spinner loading-sm"></span>
+                  Processing...
+                </>
+              ) : bulkConfirm.action === "resolve-all" ? (
+                "Confirm Select All"
+              ) : (
+                "Confirm Reject All"
+              )}
             </button>
           </div>
         </div>

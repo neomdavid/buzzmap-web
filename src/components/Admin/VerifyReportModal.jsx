@@ -19,8 +19,12 @@ const VerifyReportModal = ({
   const modalRef = useRef(null);
   const streetViewRef = useRef(null);
   const [address, setAddress] = useState("");
-  const [showConfirmation, setShowConfirmation] = useState(type === 'verify' || type === 'reject');
-  const [actionType, setActionType] = useState(type === 'verify' || type === 'reject' ? type : null);
+  const [showConfirmation, setShowConfirmation] = useState(
+    type === "verify" || type === "reject"
+  );
+  const [actionType, setActionType] = useState(
+    type === "verify" || type === "reject" ? type : null
+  );
   const [validatePost, { isLoading }] = useValidatePostMutation();
   // Store the previous status for undo
   const [undoTimeout, setUndoTimeout] = useState(null);
@@ -28,16 +32,31 @@ const VerifyReportModal = ({
   const prevStatusRef = useRef(status);
 
   const handleConfirm = async () => {
-    if (typeof onConfirmAction === 'function') {
-      await onConfirmAction(actionType);
-      if (typeof onClose === "function") onClose();
+    if (typeof onConfirmAction === "function") {
+      try {
+        await onConfirmAction(actionType);
+        // Show success toast
+        toast.success(
+          `Report ${
+            actionType === "verify" ? "verified" : "rejected"
+          } successfully!`
+        );
+        if (typeof onClose === "function") onClose();
+      } catch (error) {
+        console.error("Verify/Reject error:", error);
+        toast.error("Failed to update report status.");
+      }
     } else {
       // fallback: do the API call directly
       const newStatus = actionType === "verify" ? "Validated" : "Rejected";
       const requestPayload = { id: reportId, status: newStatus };
       try {
         await validatePost(requestPayload).unwrap();
-        toast.success(`Report ${newStatus === "Validated" ? "verified" : "rejected"} successfully!`);
+        toast.success(
+          `Report ${
+            newStatus === "Validated" ? "verified" : "rejected"
+          } successfully!`
+        );
         if (typeof onSuccess === "function") onSuccess();
         if (typeof onClose === "function") onClose();
       } catch (error) {
@@ -88,7 +107,7 @@ const VerifyReportModal = ({
   };
 
   const handleCancel = () => {
-    if (typeof onClose === 'function') onClose();
+    if (typeof onClose === "function") onClose();
   };
 
   return (
@@ -96,7 +115,11 @@ const VerifyReportModal = ({
       ref={modalRef}
       className="modal transition-transform duration-300 ease-in-out"
     >
-      <div className={`modal-box border-t-10 ${actionType === 'reject' ? 'border-t-error' : 'border-t-success'} bg-white rounded-3xl shadow-2xl w-6/12 max-w-4xl p-6 py-14 relative`}>
+      <div
+        className={`modal-box border-t-10 ${
+          actionType === "reject" ? "border-t-error" : "border-t-success"
+        } bg-white rounded-3xl shadow-2xl w-6/12 max-w-4xl p-6 py-14 relative`}
+      >
         <button
           className="absolute top-4 right-4 text-2xl font-semibold hover:text-gray-500 transition-colors duration-200 hover:cursor-pointer"
           onClick={onClose}
@@ -223,7 +246,7 @@ const VerifyReportModal = ({
                 Confirm {actionType === "verify" ? "Verification" : "Rejection"}
               </span>
             </p>
-            <hr className="border-gray-300 border-"/>
+            <hr className="border-gray-300 border-" />
 
             {/* Basic Report Details */}
             <div className="flex justify-center text-primary text-lg">
@@ -238,12 +261,14 @@ const VerifyReportModal = ({
                 </div>
                 <div className="flex flex-row gap-4 items-start">
                   <span className="w-28  font-semibold mt-1">Description:</span>
-                  <span className=" font-normal whitespace-pre-line">{description}</span>
+                  <span className=" font-normal whitespace-pre-line">
+                    {description}
+                  </span>
                 </div>
               </div>
             </div>
 
-            <hr className="border-gray-300 border-"/>
+            <hr className="border-gray-300 border-" />
             <div className="text-center ">
               <p className="text-xl  mb-8">
                 Are you sure you want to {actionType} this report?

@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { useRemoveReportsFromClusterMutation } from "@/api/dengueApi";
 import { toast } from "react-toastify";
 import { CheckCircle, Circle, MapPinLine, Hourglass } from "phosphor-react";
+import SubClusterEditModal from "./SubClusterEditModal";
 
 const ClusterDetailsModal = ({
   showClusterDetailsModal,
@@ -16,6 +17,7 @@ const ClusterDetailsModal = ({
   pendingRejections,
   handleReportSelection,
   handleClusterResolution,
+  openBulkConfirm,
   getSelectedReportsCount,
   getUnselectedReportsCount,
   getRejectedReportsCount,
@@ -25,6 +27,8 @@ const ClusterDetailsModal = ({
   getRemainingReports,
   subClusters,
   mapOnlyRef,
+  highlightReportMarker,
+  onReportRemovedFromSubCluster,
 }) => {
   if (!showClusterDetailsModal || !selectedCluster) return null;
 
@@ -39,8 +43,54 @@ const ClusterDetailsModal = ({
   const [removeReportsFromCluster, { isLoading: isRemoving }] =
     useRemoveReportsFromClusterMutation();
 
+  // Sub-cluster edit modal state
+  const [showSubClusterEditModal, setShowSubClusterEditModal] = useState(false);
+  const [selectedSubCluster, setSelectedSubCluster] = useState(null);
+
   const isPendingRemoval = (id) => pendingRemovals.includes(id);
   const isLocallyRemoved = (id) => removedReportIds.includes(id);
+
+  const handleViewSubCluster = (subCluster) => {
+    console.log("Opening sub-cluster for editing:", subCluster);
+
+    // Extract actual report data from the main cluster's reports using the sub-cluster's report IDs
+    const subClusterReportIds = subCluster.reports || [];
+    console.log("Sub-cluster report IDs:", subClusterReportIds);
+    console.log(
+      "Available reports:",
+      reports.map((r) => ({ id: r._id || r.id, type: r.report_type }))
+    );
+
+    const actualReports = reports.filter((report) =>
+      subClusterReportIds.includes(report._id || report.id)
+    );
+
+    console.log("Filtered actual reports:", actualReports);
+
+    // Create a new sub-cluster object with the actual report data
+    const subClusterWithReports = {
+      ...subCluster,
+      reports: actualReports,
+    };
+
+    console.log("Sub-cluster with reports:", subClusterWithReports);
+
+    setSelectedSubCluster(subClusterWithReports);
+    setShowSubClusterEditModal(true);
+  };
+
+  const handleReportRemovedFromSubCluster = (subClusterId, reportId) => {
+    console.log("Report removed from sub-cluster:", subClusterId, reportId);
+
+    // Close the modal after successful removal
+    setShowSubClusterEditModal(false);
+    setSelectedSubCluster(null);
+
+    // Call the parent's refetch function to update the data
+    if (onReportRemovedFromSubCluster) {
+      onReportRemovedFromSubCluster(subClusterId, reportId);
+    }
+  };
 
   const requestRemoveFromCluster = (id) => {
     if (!isPendingRemoval(id)) setPendingRemovals((prev) => [...prev, id]);
@@ -258,16 +308,41 @@ const ClusterDetailsModal = ({
                   <CheckCircle size={16} />
                   Resolve Selected ({localSelectedCount})
                 </button>
-                <button
-                  onClick={() => {
-                    handleClusterResolution("resolve-all", resolveAllIds);
-                  }}
-                  className="btn btn-primary btn-sm"
-                  disabled={resolveAllIds.length === 0}
-                >
-                  <CheckCircle size={16} />
-                  Resolve All ({resolveAllIds.length})
-                </button>
+                {resolveAllIds.length >= 2 && (
+                  <button
+                    onClick={() => {
+                      openBulkConfirm("resolve-all");
+                    }}
+                    className="btn btn-primary btn-sm"
+                    disabled={resolveAllIds.length === 0}
+                  >
+                    <CheckCircle size={16} />
+                    Resolve All ({resolveAllIds.length})
+                  </button>
+                )}
+                {resolveAllIds.length === 1 && (
+                  <div className="flex items-center gap-2 text-sm text-gray-600">
+                    <span>
+                      Only 1 report remaining - cannot form sub-cluster
+                    </span>
+                    <button
+                      onClick={() => {
+                        confirmRemoveFromCluster(resolveAllIds[0]);
+                      }}
+                      className="btn btn-error btn-sm"
+                      disabled={removingId === resolveAllIds[0]}
+                    >
+                      {removingId === resolveAllIds[0] ? (
+                        <>
+                          <span className="loading loading-spinner loading-sm"></span>
+                          Removing...
+                        </>
+                      ) : (
+                        "Remove Report"
+                      )}
+                    </button>
+                  </div>
+                )}
                 {/* Reject All removed per updated flow */}
               </div>
             ) : (
@@ -535,6 +610,11 @@ const ClusterDetailsModal = ({
                                   mapOnlyRef.current.panTo(reportCoordinates);
                                 }
                                 mapOnlyRef.current.setZoom(18);
+
+                                // Highlight the specific report marker
+                                if (highlightReportMarker) {
+                                  highlightReportMarker(reportId);
+                                }
                               }
                               setShowClusterDetailsModal(false);
                             }}
@@ -746,7 +826,7 @@ const ClusterDetailsModal = ({
             </div>
 
             {/* Sub-clusters */}
-            {subClustersData.length >= 2 && (
+            {subClustersData.length > 0 && (
               <div className="card bg-base-100 shadow-md mb-6">
                 <div className="card-body">
                   <h4 className="card-title text-primary">
@@ -790,10 +870,7 @@ const ClusterDetailsModal = ({
                             </p>
                           </div>
                           <button
-                            onClick={() => {
-                              // TODO: Navigate to sub-cluster or open it in a new modal
-                              console.log("View sub-cluster:", subCluster);
-                            }}
+                            onClick={() => handleViewSubCluster(subCluster)}
                             className="btn btn-outline btn-primary btn-xs mt-2"
                           >
                             View Sub-cluster
@@ -811,6 +888,19 @@ const ClusterDetailsModal = ({
       <form method="dialog" className="modal-backdrop">
         <button onClick={() => setShowClusterDetailsModal(false)}>close</button>
       </form>
+
+      {/* Sub-cluster Edit Modal */}
+      <SubClusterEditModal
+        isOpen={showSubClusterEditModal}
+        onClose={() => {
+          setShowSubClusterEditModal(false);
+          setSelectedSubCluster(null);
+        }}
+        subCluster={selectedSubCluster}
+        onReportRemoved={handleReportRemovedFromSubCluster}
+        mapOnlyRef={mapOnlyRef}
+        highlightReportMarker={highlightReportMarker}
+      />
     </dialog>
   );
 };

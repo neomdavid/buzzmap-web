@@ -33,7 +33,6 @@ import {
   Interventions,
   ReportsVerification,
   AllInterventions,
-  InterventionEffectivity,
 } from "./pages/admin";
 import {
   SuperadminLayout,
@@ -43,11 +42,11 @@ import {
 } from "./pages/superadmin";
 import { toastError } from "./utils.jsx";
 import ErrorPage from "./pages/ErrorPage";
-import SearchResults from './pages/user/SearchResults';
-import ActivePosts from './pages/admin/CEA/ActivePosts';
-import ArchivedAdminPosts from './pages/admin/CEA/ArchivedAdminPosts';
-import ArchivedUsers from './pages/superadmin/ArchivedUsers';
-import ArchivedAdmins from './pages/superadmin/ArchivedAdmins';
+import SearchResults from "./pages/user/SearchResults";
+import ActivePosts from "./pages/admin/CEA/ActivePosts";
+import ArchivedAdminPosts from "./pages/admin/CEA/ArchivedAdminPosts";
+import ArchivedUsers from "./pages/superadmin/ArchivedUsers";
+import ArchivedAdmins from "./pages/superadmin/ArchivedAdmins";
 
 // Helper functions
 const getUserData = () => {
@@ -58,7 +57,8 @@ const getUserData = () => {
 
 const isAuthenticated = () => {
   const user = localStorage.getItem("user") || sessionStorage.getItem("user");
-  const token = localStorage.getItem("token") || sessionStorage.getItem("token");
+  const token =
+    localStorage.getItem("token") || sessionStorage.getItem("token");
   console.log("[DEBUG] isAuthenticated - user from storage:", user);
   console.log("[DEBUG] isAuthenticated - token from storage:", token);
   return user !== null && token !== null;
@@ -71,15 +71,18 @@ const PublicRoute = ({ children }) => {
 
 const PrivateRoute = ({ children, requiredRole }) => {
   const user = getUserData();
-  const token = localStorage.getItem("token") || sessionStorage.getItem("token");
-  
+  const token =
+    localStorage.getItem("token") || sessionStorage.getItem("token");
+
   console.log("[DEBUG] PrivateRoute - Required Role:", requiredRole);
   console.log("[DEBUG] PrivateRoute - User from storage:", user);
   console.log("[DEBUG] PrivateRoute - Token from storage:", token);
 
   // If no user data in storage, redirect to login regardless of token
   if (!user) {
-    console.log("[DEBUG] PrivateRoute - No user data found, redirecting to login");
+    console.log(
+      "[DEBUG] PrivateRoute - No user data found, redirecting to login"
+    );
     // Clear any existing token since it's invalid without user data
     localStorage.removeItem("token");
     sessionStorage.removeItem("token");
@@ -91,7 +94,12 @@ const PrivateRoute = ({ children, requiredRole }) => {
   if (requiredRole === "admin" || requiredRole === "superadmin") {
     // First check user role from storage
     if (user.role !== requiredRole) {
-      console.log("[DEBUG] PrivateRoute - User role mismatch:", user.role, "!=", requiredRole);
+      console.log(
+        "[DEBUG] PrivateRoute - User role mismatch:",
+        user.role,
+        "!=",
+        requiredRole
+      );
       toastError("You don't have permission to access this page.");
       return <Navigate to="/login" replace />;
     }
@@ -105,9 +113,9 @@ const PrivateRoute = ({ children, requiredRole }) => {
 
     try {
       // Decode the JWT token to get the role
-      const tokenPayload = JSON.parse(atob(token.split('.')[1]));
+      const tokenPayload = JSON.parse(atob(token.split(".")[1]));
       console.log("[DEBUG] PrivateRoute - Token payload:", tokenPayload);
-      
+
       // Check if token is expired
       const currentTime = Math.floor(Date.now() / 1000);
       if (tokenPayload.exp < currentTime) {
@@ -120,10 +128,12 @@ const PrivateRoute = ({ children, requiredRole }) => {
         toastError("Your session has expired. Please log in again.");
         return <Navigate to="/login" replace />;
       }
-      
+
       // Verify token role matches user role
       if (tokenPayload.role !== user.role) {
-        console.log("[DEBUG] PrivateRoute - Token role mismatch with user role");
+        console.log(
+          "[DEBUG] PrivateRoute - Token role mismatch with user role"
+        );
         // Clear auth data from both storage types
         localStorage.removeItem("token");
         localStorage.removeItem("user");
@@ -146,7 +156,12 @@ const PrivateRoute = ({ children, requiredRole }) => {
 
   // For user role, just verify user exists and role matches
   if (requiredRole === "user" && user.role !== "user") {
-    console.log("[DEBUG] PrivateRoute - User role mismatch:", user.role, "!=", "user");
+    console.log(
+      "[DEBUG] PrivateRoute - User role mismatch:",
+      user.role,
+      "!=",
+      "user"
+    );
     toastError("You don't have permission to access this page.");
     return <Navigate to="/login" replace />;
   }
@@ -241,14 +256,13 @@ const AppWithProviders = () => {
         { path: "/admin/denguemapping", element: <DengueMapping /> },
         { path: "/admin/interventions", element: <Interventions /> },
         { path: "/admin/interventions/all", element: <AllInterventions /> },
-        { path: "/admin/intervention-effectivity", element: <InterventionEffectivity /> },
-        { 
+        {
           path: "/admin/cea",
           element: <CEA />,
           children: [
             { index: true, element: <ActivePosts /> },
-            { path: "ap/archives", element: <ArchivedAdminPosts /> }
-          ]
+            { path: "ap/archives", element: <ArchivedAdminPosts /> },
+          ],
         },
       ],
     },
