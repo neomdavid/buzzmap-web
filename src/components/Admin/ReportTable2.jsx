@@ -110,10 +110,14 @@ const ActionsCell = (p) => {
   );
   const undoButton = (
     <button
-      className="flex items-center gap-1 text-warning hover:bg-gray-200 p-1 rounded-md hover:cursor-pointer"
+      className="flex items-center gap-1 text-warning hover:bg-gray-200 p-1 rounded-md hover:cursor-pointer disabled:opacity-50"
       onClick={() => handleUndo(p.data)}
+      disabled={isLoading}
     >
-      <p className="text-sm">Undo</p>
+      {isLoading ? (
+        <div className="w-4 h-4 border-2 border-warning border-t-transparent rounded-full animate-spin"></div>
+      ) : null}
+      <p className="text-sm">{isLoading ? "undoing..." : "Undo"}</p>
     </button>
   );
 
@@ -169,6 +173,7 @@ function ReportTable2({
   isActionable = true,
   onlyRecent = false,
   onSuccess,
+  isRefetching = false,
 }) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedReport, setSelectedReport] = useState(null);
@@ -271,12 +276,34 @@ function ReportTable2({
   const handleUndo = async (row) => {
     const undoInfo = undoState[row.id];
     if (!undoInfo) return;
-    await validatePost({ id: row.id, status: undoInfo.prevStatus });
-    setUndoState((prev) => {
-      const copy = { ...prev };
-      delete copy[row.id];
-      return copy;
-    });
+
+    try {
+      setActionLoading((prev) => ({ ...prev, [row.id]: true }));
+      await validatePost({ id: row.id, status: undoInfo.prevStatus }).unwrap();
+
+      // Show success toast
+      const { toast } = await import("react-toastify");
+      toast.success(
+        `Report status reverted to ${undoInfo.prevStatus} successfully!`
+      );
+
+      // Call success callback to refresh data
+      if (onSuccess) {
+        onSuccess();
+      }
+
+      setUndoState((prev) => {
+        const copy = { ...prev };
+        delete copy[row.id];
+        return copy;
+      });
+    } catch (error) {
+      console.error("Failed to undo report status:", error);
+      const { toast } = await import("react-toastify");
+      toast.error("Failed to undo report status.");
+    } finally {
+      setActionLoading((prev) => ({ ...prev, [row.id]: false }));
+    }
   };
 
   const columnDefs = useMemo(() => {
@@ -376,10 +403,18 @@ function ReportTable2({
   return (
     <>
       <div
-        className="ag-theme-quartz"
+        className="ag-theme-quartz relative"
         ref={gridRef}
         style={{ height: "100%", width: "100%" }}
       >
+        {isRefetching && (
+          <div className="absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center z-10">
+            <div className="flex flex-col items-center gap-2">
+              <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+              <span className="text-sm text-gray-600">Updating data...</span>
+            </div>
+          </div>
+        )}
         <AgGridReact
           ref={gridRef}
           rowData={rowData}

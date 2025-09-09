@@ -19,9 +19,16 @@ import {
 } from "@tabler/icons-react";
 
 const ReportsVerification = () => {
-  const { data: posts, isLoading, isError, refetch } = useGetPostsQuery();
+  const {
+    data: posts,
+    isLoading,
+    isError,
+    refetch,
+    isFetching,
+  } = useGetPostsQuery();
   const [selectedReport, setSelectedReport] = useState(null);
   const [validatedPosts, setValidatedPosts] = useState([]);
+  const [isRefetching, setIsRefetching] = useState(false);
 
   // Calculate summary stats
   const totalReports = posts?.length || 0;
@@ -50,8 +57,13 @@ const ReportsVerification = () => {
     }
   }, [posts]);
 
-  const handleVerificationSuccess = () => {
-    refetch();
+  const handleVerificationSuccess = async () => {
+    setIsRefetching(true);
+    try {
+      await refetch();
+    } finally {
+      setIsRefetching(false);
+    }
     setSelectedReport(null);
   };
 
@@ -171,6 +183,7 @@ const ReportsVerification = () => {
               posts={posts}
               onSelectReport={setSelectedReport}
               onSuccess={handleVerificationSuccess}
+              isRefetching={isRefetching}
             />
           </div>
         </section>

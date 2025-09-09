@@ -29,11 +29,13 @@ const VerifyReportModal = ({
   // Store the previous status for undo
   const [undoTimeout, setUndoTimeout] = useState(null);
   const [isUndoing, setIsUndoing] = useState(false);
+  const [isConfirming, setIsConfirming] = useState(false);
   const prevStatusRef = useRef(status);
 
   const handleConfirm = async () => {
-    if (typeof onConfirmAction === "function") {
-      try {
+    setIsConfirming(true);
+    try {
+      if (typeof onConfirmAction === "function") {
         await onConfirmAction(actionType);
         // Show success toast
         toast.success(
@@ -42,15 +44,10 @@ const VerifyReportModal = ({
           } successfully!`
         );
         if (typeof onClose === "function") onClose();
-      } catch (error) {
-        console.error("Verify/Reject error:", error);
-        toast.error("Failed to update report status.");
-      }
-    } else {
-      // fallback: do the API call directly
-      const newStatus = actionType === "verify" ? "Validated" : "Rejected";
-      const requestPayload = { id: reportId, status: newStatus };
-      try {
+      } else {
+        // fallback: do the API call directly
+        const newStatus = actionType === "verify" ? "Validated" : "Rejected";
+        const requestPayload = { id: reportId, status: newStatus };
         await validatePost(requestPayload).unwrap();
         toast.success(
           `Report ${
@@ -59,10 +56,12 @@ const VerifyReportModal = ({
         );
         if (typeof onSuccess === "function") onSuccess();
         if (typeof onClose === "function") onClose();
-      } catch (error) {
-        console.error("Verify/Reject error:", error);
-        toast.error("Failed to update report status.");
       }
+    } catch (error) {
+      console.error("Verify/Reject error:", error);
+      toast.error("Failed to update report status.");
+    } finally {
+      setIsConfirming(false);
     }
   };
 
@@ -279,13 +278,13 @@ const VerifyReportModal = ({
                   onClick={handleConfirm}
                   className={`${
                     actionType === "verify" ? "bg-success" : "bg-error"
-                  } text-white font-semibold px-8 py-3 rounded-xl hover:opacity-80 transition-all duration-200 flex items-center gap-2 hover:cursor-pointer hover:bg-opacity-80 transition-all duration-200`}
-                  disabled={isLoading}
+                  } text-white font-semibold px-8 py-3 rounded-xl hover:opacity-80 transition-all duration-200 flex items-center gap-2 hover:cursor-pointer hover:bg-opacity-80 transition-all duration-200 disabled:opacity-50`}
+                  disabled={isLoading || isConfirming}
                 >
-                  {isLoading ? (
+                  {isLoading || isConfirming ? (
                     <>
                       <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                      Processing...
+                      Confirming...
                     </>
                   ) : (
                     "Confirm"
@@ -293,8 +292,8 @@ const VerifyReportModal = ({
                 </button>
                 <button
                   onClick={handleCancel}
-                  className="bg-gray-300 text-gray-700 font-semibold px-8 py-3 rounded-xl hover:opacity-80 transition-all duration-200 hover:cursor-pointer hover:bg-opacity-80 transition-all duration-200"
-                  disabled={isLoading}
+                  className="bg-gray-300 text-gray-700 font-semibold px-8 py-3 rounded-xl hover:opacity-80 transition-all duration-200 hover:cursor-pointer hover:bg-opacity-80 transition-all duration-200 disabled:opacity-50"
+                  disabled={isLoading || isConfirming}
                 >
                   Cancel
                 </button>
