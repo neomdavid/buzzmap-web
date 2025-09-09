@@ -12,7 +12,7 @@ import { useCreateInterventionMutation, dengueApi } from "../../api/dengueApi"; 
 import InterventionLocationPicker from "./InterventionLocationPicker"; // Import the new component
 import * as turf from "@turf/turf"; // Import turf for calculations
 import dayjs from "dayjs";
-import { showCustomToast } from "../../utils"; // Import the custom toast function
+import { toast } from "react-toastify"; // Import react-toastify
 import {
   useGetBarangaysQuery,
   useGetAllInterventionsQuery,
@@ -302,6 +302,31 @@ const AddInterventionModal = ({
       [name]: value,
     }));
 
+    // If date is changed, auto-update status based on date logic
+    if (name === "date") {
+      const now = new Date();
+      const selectedDate = new Date(value);
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const selectedDay = new Date(
+        selectedDate.getFullYear(),
+        selectedDate.getMonth(),
+        selectedDate.getDate()
+      );
+
+      let correctStatus = "Scheduled"; // Default for future dates
+
+      if (selectedDay < today) {
+        correctStatus = "Complete";
+      } else if (selectedDay.getTime() === today.getTime()) {
+        correctStatus = "Scheduled"; // Default for today
+      }
+
+      setFormData((prev) => ({
+        ...prev,
+        status: correctStatus,
+      }));
+    }
+
     // If barangay is changed, update the highlighted barangay, pattern data, and pan map
     if (name === "barangay") {
       setHighlightedBarangay(value);
@@ -436,29 +461,53 @@ const AddInterventionModal = ({
     setIsSubmitting(true);
 
     try {
+      // Determine the correct status based on the date
+      const now = new Date();
+      const selectedDate = new Date(formData.date);
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const selectedDay = new Date(
+        selectedDate.getFullYear(),
+        selectedDate.getMonth(),
+        selectedDate.getDate()
+      );
+
+      let correctStatus = formData.status;
+
+      // Auto-set status based on date logic
+      if (selectedDay < today) {
+        correctStatus = "Complete";
+      } else if (selectedDay.getTime() === today.getTime()) {
+        // For today, keep the user's selection (Scheduled or Ongoing)
+        correctStatus = formData.status;
+      } else {
+        // For future dates, only allow Scheduled
+        correctStatus = "Scheduled";
+      }
+
       // Format the data before sending to the backend
       const formattedData = {
         ...formData,
-        status: formData.status === "Completed" ? "Complete" : formData.status, // Convert to correct case
+        date: new Date(formData.date).toISOString(), // Ensure proper ISO string format
+        status: correctStatus, // Use the correct status based on date logic
         specific_location: {
           type: "Point", // Add the required type field
           coordinates: formData.specific_location.coordinates,
         },
       };
 
-      await createIntervention(formattedData).unwrap();
+      console.log("[Modal DEBUG] Request body:", formattedData);
+
+      const response = await createIntervention(formattedData).unwrap();
       console.log("[Modal DEBUG] Intervention created successfully");
-      showCustomToast("Intervention created successfully!", "success");
+      console.log("[Modal DEBUG] Response:", response);
+      toast.success("Intervention created successfully!");
       onClose();
     } catch (error) {
       console.error("[Modal DEBUG] Error creating intervention:", error);
       setSubmissionError(
         error.data?.message || "Failed to create intervention"
       );
-      showCustomToast(
-        error.data?.message || "Failed to create intervention",
-        "error"
-      );
+      toast.error(error.data?.message || "Failed to create intervention");
     } finally {
       setIsSubmitting(false);
     }
@@ -750,7 +799,6 @@ const AddInterventionModal = ({
                       name="interventionType"
                       required
                     >
-                      <option value="">Select Intervention Type</option>
                       {interventionTypes.map((type) => (
                         <option key={type} value={type}>
                           {type}
@@ -790,6 +838,7 @@ const AddInterventionModal = ({
                       onChange={handleChange}
                       name="date"
                       required
+                      step="60"
                     />
                   </div>
 

@@ -158,7 +158,19 @@ const InterventionDetailsModal = ({
                 : "View Intervention Details"}
             </p>
             <div className="flex justify-center mb-6">
-              <p className={`${intervention.status === "Complete" ? "bg-success" : intervention.status === "Scheduled" ? "bg-warning" : intervention.status === "Ongoing" ? "bg-info" : "bg-gray-300"} w-[40%] text-center rounded-xl py-1.5 text-white font-extrabold text-xl`}>{intervention.status}</p>
+              <p
+                className={`${
+                  intervention.status === "Complete"
+                    ? "bg-success"
+                    : intervention.status === "Scheduled"
+                    ? "bg-warning"
+                    : intervention.status === "Ongoing"
+                    ? "bg-info"
+                    : "bg-gray-300"
+                } w-[40%] text-center rounded-xl py-1.5 text-white font-extrabold text-xl`}
+              >
+                {intervention.status}
+              </p>
             </div>
 
             {/* Display form to edit or view */}
@@ -168,12 +180,6 @@ const InterventionDetailsModal = ({
             >
               {!isEditing ? (
                 <>
-                  <div className="flex gap-1">
-                    <p className="text-gray-500">Intervention ID: </p>
-                    <p className="font-semibold text-primary">
-                      {intervention._id}
-                    </p>
-                  </div>
                   <div className="flex gap-1">
                     <p className="text-gray-500">Barangay: </p>
                     <p className="font-semibold text-primary">
@@ -191,7 +197,16 @@ const InterventionDetailsModal = ({
                   <div className="flex gap-1">
                     <p className="text-gray-500">Date and Time: </p>
                     <p className="font-semibold text-primary">
-                      {intervention.date}
+                      {new Date(intervention.date).toLocaleString("en-US", {
+                        weekday: "long",
+                        year: "numeric",
+                        month: "long",
+                        day: "numeric",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                        second: "2-digit",
+                        hour12: true,
+                      })}
                     </p>
                   </div>
                   <div className="flex gap-1">
@@ -257,9 +272,13 @@ const InterventionDetailsModal = ({
                     >
                       <option value="All">All</option>
                       <option value="Fogging">Fogging</option>
-                      <option value="Ovicidal-Larvicidal Trapping">Ovicidal-Larvicidal Trapping</option>
+                      <option value="Ovicidal-Larvicidal Trapping">
+                        Ovicidal-Larvicidal Trapping
+                      </option>
                       <option value="Clean-up Drive">Clean-up Drive</option>
-                      <option value="Education Campaign">Education Campaign</option>
+                      <option value="Education Campaign">
+                        Education Campaign
+                      </option>
                     </select>
                   </div>
                   <div className="flex flex-col gap-2">
