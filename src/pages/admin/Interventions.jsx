@@ -3,6 +3,7 @@ import {
   InterventionsTable,
   // FormCoordinationRequest, // Commented out as it's not used in the current visible layout
   ActionRecommendationCard,
+  TableSkeleton,
 } from "../../components";
 import {
   useGetAllInterventionsQuery,
@@ -464,7 +465,63 @@ const Interventions = () => {
   };
 
   if (isLoadingInterventions || isLoadingPosts || isLoadingBarangays) {
-    return <div>Loading...</div>;
+    return (
+      <main className="flex flex-col w-full">
+        <p className="flex justify-center text-5xl font-extrabold mb-12 text-center md:justify-start md:text-left md:w-[48%]">
+          Interventions
+        </p>
+
+        {/* Summary Cards Skeleton */}
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
+          {Array.from({ length: 6 }).map((_, index) => (
+            <div
+              key={index}
+              className="flex flex-col text-center rounded-2xl shadow bg-base-100 border border-base-200 px-6 py-5 items-center"
+            >
+              <div className="skeleton h-7 w-7 mb-1" />
+              <div className="skeleton h-8 w-12 mb-2" />
+              <div className="skeleton h-4 w-20" />
+            </div>
+          ))}
+        </div>
+
+        <section className="flex flex-col gap-16">
+          <div className="flex flex-col w-full gap-6">
+            <p className="text-base-content text-4xl font-bold mb-2">
+              Prescriptive Action Recommendations
+            </p>
+
+            {/* Pattern Tabs Skeleton */}
+            <div className="flex gap-4 flex-wrap items-center mb-6">
+              {Array.from({ length: 4 }).map((_, index) => (
+                <div key={index} className="skeleton h-10 w-32 rounded-full" />
+              ))}
+            </div>
+
+            {/* Cards Container Skeleton */}
+            <div className="rounded-xl shadow p-4">
+              <div className="skeleton h-20 w-full mb-4 rounded-2xl" />
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {Array.from({ length: 6 }).map((_, index) => (
+                  <div key={index} className="skeleton h-64 rounded-xl" />
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Recent Interventions Skeleton */}
+          <div className="flex justify-between items-center mb-4">
+            <p className="text-base-content text-4xl font-bold">
+              Recent Intervention Records
+            </p>
+            <div className="skeleton h-8 w-32 rounded-full" />
+          </div>
+          <div className="h-135">
+            <TableSkeleton rows={5} columns={6} />
+          </div>
+        </section>
+      </main>
+    );
   }
 
   if (errorInterventions || errorPosts || errorBarangays) {

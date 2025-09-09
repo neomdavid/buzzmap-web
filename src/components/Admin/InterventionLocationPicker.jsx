@@ -132,9 +132,17 @@ const InterventionLocationPicker = ({
           error: "Pinned location is outside Quezon City boundaries.",
         };
       }
+      // Enforce highlightedBarangay only
+      if (highlightedBarangay && foundBarangayName !== highlightedBarangay) {
+        return {
+          barangayName: foundBarangayName,
+          isValid: false,
+          error: `Pin must be within ${highlightedBarangay} only`,
+        };
+      }
       return { barangayName: foundBarangayName, isValid: true, error: "" };
     },
-    [qcBoundaryFeatures, isBoundaryDataLoaded]
+    [qcBoundaryFeatures, isBoundaryDataLoaded, highlightedBarangay]
   );
 
   // Effect: handle initialPin
@@ -214,8 +222,6 @@ const InterventionLocationPicker = ({
         mapInstance.current.panTo(focusCommand.center);
         mapInstance.current.setZoom(focusCommand.zoom || 15);
         setHighlightedBarangayName(focusCommand.name);
-        // Don't clear the existing pin when highlighting a barangay
-        // The user should be able to see both the highlighted barangay and their existing pin
       } else if (
         focusCommand.type === "pin" &&
         focusCommand.lat &&
@@ -271,9 +277,35 @@ const InterventionLocationPicker = ({
         highlightedBarangayName,
         currentMarker
       );
-      // Click handler
+
+      // Apply any existing focus command immediately after init
+      if (focusCommand) {
+        if (focusCommand.type === "barangay" && focusCommand.center) {
+          mapInstance.current.panTo(focusCommand.center);
+          mapInstance.current.setZoom(focusCommand.zoom || 15);
+          setHighlightedBarangayName(focusCommand.name);
+        } else if (
+          focusCommand.type === "pin" &&
+          focusCommand.lat &&
+          focusCommand.lng
+        ) {
+          const newPin = { lat: focusCommand.lat, lng: focusCommand.lng };
+          setCurrentMarker(newPin);
+          mapInstance.current.panTo(newPin);
+          mapInstance.current.setZoom(focusCommand.zoom || 18);
+        }
+      }
+
+      // Click handler with barangay enforcement
       mapInstance.current.addListener("click", (e) => {
         const coords = { lat: e.latLng.lat(), lng: e.latLng.lng() };
+        const validation = validateCoordinates(coords);
+        if (!validation.isValid) {
+          // Show inline message and do not place marker
+          setErrorMessage(validation.error || "Invalid location");
+          return;
+        }
+        // Place marker only when valid and within highlighted barangay (if provided)
         setCurrentMarker(coords);
         mapInstance.current.panTo(coords);
         mapInstance.current.setZoom(18);
