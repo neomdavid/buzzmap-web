@@ -1,8 +1,9 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useRemoveReportsFromClusterMutation } from "@/api/dengueApi";
 import { toast } from "react-toastify";
 import { CheckCircle, Circle, MapPinLine, Hourglass } from "phosphor-react";
 import SubClusterEditModal from "./SubClusterEditModal";
+import ImageExpansionModal from "../ImageExpansionModal";
 
 const ClusterDetailsModal = ({
   showClusterDetailsModal,
@@ -47,6 +48,32 @@ const ClusterDetailsModal = ({
   const [showSubClusterEditModal, setShowSubClusterEditModal] = useState(false);
   const [selectedSubCluster, setSelectedSubCluster] = useState(null);
 
+  // Image expansion modal state
+  const [showImageModal, setShowImageModal] = useState(false);
+  const [selectedImage, setSelectedImage] = useState(null);
+
+  // Address geocoding state
+  const [reportAddresses, setReportAddresses] = useState({});
+
+  // Geocode addresses when modal opens and reports are available
+  useEffect(() => {
+    if (showClusterDetailsModal && reports.length > 0) {
+      reports.forEach((report) => {
+        const reportId = report._id || report.id;
+        const coordinates =
+          report.specific_location?.coordinates || report.coordinates;
+
+        if (
+          coordinates &&
+          coordinates.length === 2 &&
+          !reportAddresses[reportId]
+        ) {
+          geocodeCoordinates(coordinates, reportId);
+        }
+      });
+    }
+  }, [showClusterDetailsModal, reports]);
+
   const isPendingRemoval = (id) => pendingRemovals.includes(id);
   const isLocallyRemoved = (id) => removedReportIds.includes(id);
 
@@ -90,6 +117,55 @@ const ClusterDetailsModal = ({
     if (onReportRemovedFromSubCluster) {
       onReportRemovedFromSubCluster(subClusterId, reportId);
     }
+  };
+
+  // Image expansion modal handlers
+  const handleImageClick = (image) => {
+    setSelectedImage(image);
+    setShowImageModal(true);
+  };
+
+  const handleCloseImageModal = () => {
+    setShowImageModal(false);
+    setSelectedImage(null);
+  };
+
+  // Geocode coordinates to address
+  const geocodeCoordinates = (coordinates, reportId) => {
+    if (
+      !coordinates ||
+      coordinates.length !== 2 ||
+      !window.google?.maps?.Geocoder
+    ) {
+      return;
+    }
+
+    const geocoder = new window.google.maps.Geocoder();
+    const latLng = new window.google.maps.LatLng(
+      coordinates[1], // latitude
+      coordinates[0] // longitude
+    );
+
+    geocoder.geocode({ location: latLng }, (results, status) => {
+      if (status === "OK" && results[0]) {
+        // Get a cleaner address by removing city and country parts
+        const formattedAddress = results[0].formatted_address;
+        const addressParts = formattedAddress.split(",");
+
+        // Remove the last 2 parts (usually city and country) to get a more specific address
+        const specificAddress = addressParts.slice(0, -2).join(",").trim();
+
+        setReportAddresses((prev) => ({
+          ...prev,
+          [reportId]: specificAddress || formattedAddress,
+        }));
+      } else {
+        setReportAddresses((prev) => ({
+          ...prev,
+          [reportId]: "Address not found",
+        }));
+      }
+    });
   };
 
   const requestRemoveFromCluster = (id) => {
@@ -369,8 +445,10 @@ const ClusterDetailsModal = ({
                   // Handle both old and new report structures
                   const reportId = report._id || report.id;
                   const reportType = report.report_type || report.type;
-                  const reportDescription = report.description || "";
+                  const reportDescription =
+                    report.description || report.desc || report.content || "";
                   const reportDate = report.date_and_time || report.date;
+
                   const reportStatus = report.status || "Pending";
                   const reportImages = report.images || [];
                   const reportLocation =
@@ -380,7 +458,7 @@ const ClusterDetailsModal = ({
                   const isAnonymous = report.isAnonymous || false;
                   const reportedBy = isAnonymous
                     ? "Anonymous"
-                    : report.user || "User";
+                    : report.user?.username || "User";
 
                   // Derived UI state
                   const isSelected = selectedReports.includes(reportId);
@@ -452,9 +530,11 @@ const ClusterDetailsModal = ({
                               <h4 className="font-semibold text-primary">
                                 {reportType}
                               </h4>
-                              <p className="text-sm text-gray-600">
-                                {reportDescription}
-                              </p>
+                              {reportDescription && (
+                                <p className="text-sm text-gray-600 mt-1">
+                                  {reportDescription}
+                                </p>
+                              )}
                             </div>
                           </div>
                           <div className="flex items-center gap-2">
@@ -475,10 +555,7 @@ const ClusterDetailsModal = ({
                                   src={image}
                                   alt={`Report ${idx + 1}`}
                                   className="w-20 h-20 object-cover rounded-lg border cursor-pointer hover:opacity-80 transition-opacity"
-                                  onClick={() => {
-                                    // TODO: Open image in full view
-                                    console.log("View image:", image);
-                                  }}
+                                  onClick={() => handleImageClick(image)}
                                 />
                               ))}
                             </div>
@@ -501,8 +578,27 @@ const ClusterDetailsModal = ({
                           </div>
                           <div className="col-span-2">
                             <span className="text-gray-600">Location:</span>
-                            <p className="font-medium">{reportLocation}</p>
+                            <p className="font-medium">
+                              {reportAddresses[reportId] ? (
+                                reportAddresses[reportId]
+                              ) : reportCoordinates &&
+                                reportCoordinates.length === 2 ? (
+                                <span className="text-gray-500 italic">
+                                  Loading address...
+                                </span>
+                              ) : (
+                                reportLocation
+                              )}
+                            </p>
                           </div>
+                          {reportDescription && (
+                            <div className="col-span-2">
+                              <span className="text-gray-600">
+                                Description:
+                              </span>
+                              <p className="font-medium">{reportDescription}</p>
+                            </div>
+                          )}
                         </div>
 
                         {/* Action Buttons */}
@@ -900,6 +996,13 @@ const ClusterDetailsModal = ({
         onReportRemoved={handleReportRemovedFromSubCluster}
         mapOnlyRef={mapOnlyRef}
         highlightReportMarker={highlightReportMarker}
+      />
+
+      {/* Image Expansion Modal */}
+      <ImageExpansionModal
+        isOpen={showImageModal}
+        onClose={handleCloseImageModal}
+        image={selectedImage}
       />
     </dialog>
   );
