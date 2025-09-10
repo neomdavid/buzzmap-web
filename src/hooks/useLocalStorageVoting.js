@@ -3,14 +3,26 @@ import { useState, useEffect, useCallback } from "react";
 const VOTES_STORAGE_KEY = "buzzmap_votes";
 const SYNC_INTERVAL = 5 * 60 * 1000; // 5 minutes
 
+// Helper function to normalize vote arrays from API format to our format
+const normalizeVoteArray = (votes) => {
+  if (!Array.isArray(votes)) return [];
+  return votes.map((vote) =>
+    typeof vote === "object" && vote._id ? vote._id : vote
+  );
+};
+
 export const useLocalStorageVoting = (
   postId,
   initialUpvotes = [],
   initialDownvotes = []
 ) => {
+  // Normalize the initial data from API
+  const normalizedUpvotes = normalizeVoteArray(initialUpvotes);
+  const normalizedDownvotes = normalizeVoteArray(initialDownvotes);
+
   const [localVotes, setLocalVotes] = useState({
-    upvotes: initialUpvotes,
-    downvotes: initialDownvotes,
+    upvotes: normalizedUpvotes,
+    downvotes: normalizedDownvotes,
     lastSynced: Date.now(),
   });
 
@@ -23,16 +35,66 @@ export const useLocalStorageVoting = (
         const postVotes = allVotes[postId];
         if (postVotes) {
           setLocalVotes({
-            upvotes: postVotes.upvotes || initialUpvotes,
-            downvotes: postVotes.downvotes || initialDownvotes,
+            upvotes: normalizeVoteArray(postVotes.upvotes) || normalizedUpvotes,
+            downvotes:
+              normalizeVoteArray(postVotes.downvotes) || normalizedDownvotes,
             lastSynced: postVotes.lastSynced || Date.now(),
           });
         }
       } catch (error) {
         console.error("Error loading votes from localStorage:", error);
       }
+    } else {
+      // If no saved votes, use initial data from API
+      setLocalVotes({
+        upvotes: normalizedUpvotes,
+        downvotes: normalizedDownvotes,
+        lastSynced: Date.now(),
+      });
     }
   }, [postId, initialUpvotes, initialDownvotes]);
+
+  // Update local votes when initial data changes (from API)
+  useEffect(() => {
+    const newNormalizedUpvotes = normalizeVoteArray(initialUpvotes);
+    const newNormalizedDownvotes = normalizeVoteArray(initialDownvotes);
+
+    console.log(`[useLocalStorageVoting] Post ${postId} - API data:`, {
+      initialUpvotes,
+      initialDownvotes,
+      newNormalizedUpvotes,
+      newNormalizedDownvotes,
+    });
+
+    // Always update with fresh API data if it's different
+    setLocalVotes((prev) => {
+      // Check if we have localStorage data for this post
+      const savedVotes = localStorage.getItem(VOTES_STORAGE_KEY);
+      if (savedVotes) {
+        try {
+          const allVotes = JSON.parse(savedVotes);
+          const postVotes = allVotes[postId];
+          if (postVotes) {
+            // Use localStorage data if available
+            console.log(
+              `[useLocalStorageVoting] Post ${postId} - Using localStorage data`
+            );
+            return prev;
+          }
+        } catch (error) {
+          console.error("Error checking localStorage:", error);
+        }
+      }
+
+      // Use API data if no localStorage data
+      console.log(`[useLocalStorageVoting] Post ${postId} - Using API data`);
+      return {
+        upvotes: newNormalizedUpvotes,
+        downvotes: newNormalizedDownvotes,
+        lastSynced: Date.now(),
+      };
+    });
+  }, [initialUpvotes, initialDownvotes, postId]);
 
   // Save votes to localStorage
   const saveVotesToStorage = useCallback(

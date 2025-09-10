@@ -41,10 +41,27 @@ const PostCard = ({
   onPostDeleted, // Add callback for when post is deleted
 }) => {
   // Debug logging for PostCard props
+  console.log(`[PostCard Debug] Post ${postId}:`, {
+    upvotes: upvotes,
+    downvotes: downvotes,
+    upvotesArray: upvotesArray,
+    downvotesArray: downvotesArray,
+    upvotesType: typeof upvotes,
+    downvotesType: typeof downvotes,
+    upvotesArrayType: typeof upvotesArray,
+    downvotesArrayType: typeof downvotesArray,
+    upvotesLength: upvotes?.length,
+    downvotesLength: downvotes?.length,
+    upvotesArrayLength: upvotesArray?.length,
+    downvotesArrayLength: downvotesArray?.length,
+  });
 
   const userFromStore = useSelector((state) => state.auth?.user);
   const commentModalRef = useRef(null);
   const deleteModalRef = useRef(null);
+
+  // Debug state for showing debug info
+  const [showDebug, setShowDebug] = useState(false);
 
   // State for image expansion modal
   const [selectedImage, setSelectedImage] = useState(null);
@@ -250,6 +267,152 @@ const PostCard = ({
 
   return (
     <div className="shadow-sm bg-white rounded-lg px-6 pt-6 pb-4">
+      {/* Debug Screen - Remove this in production */}
+      <div className="mb-4 p-4 bg-yellow-100 border border-yellow-300 rounded-lg">
+        <div className="flex justify-between items-center mb-2">
+          <h3 className="font-bold text-yellow-800">
+            🐛 Debug Info - Post {postId}
+          </h3>
+          <button
+            onClick={() => setShowDebug(!showDebug)}
+            className="px-2 py-1 bg-yellow-200 hover:bg-yellow-300 rounded text-sm"
+          >
+            {showDebug ? "Hide" : "Show"} Debug
+          </button>
+        </div>
+
+        {showDebug && (
+          <div className="space-y-2 text-sm">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <h4 className="font-semibold text-yellow-700">Raw Props:</h4>
+                <div className="bg-white p-2 rounded border text-xs">
+                  <div>
+                    <strong>upvotes:</strong> {JSON.stringify(upvotes)}
+                  </div>
+                  <div>
+                    <strong>downvotes:</strong> {JSON.stringify(downvotes)}
+                  </div>
+                  <div>
+                    <strong>upvotesArray:</strong>{" "}
+                    {JSON.stringify(upvotesArray)}
+                  </div>
+                  <div>
+                    <strong>downvotesArray:</strong>{" "}
+                    {JSON.stringify(downvotesArray)}
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <h4 className="font-semibold text-yellow-700">
+                  Data Analysis:
+                </h4>
+                <div className="bg-white p-2 rounded border text-xs space-y-1">
+                  <div>
+                    <strong>upvotes type:</strong> {typeof upvotes}
+                  </div>
+                  <div>
+                    <strong>downvotes type:</strong> {typeof downvotes}
+                  </div>
+                  <div>
+                    <strong>upvotesArray type:</strong> {typeof upvotesArray}
+                  </div>
+                  <div>
+                    <strong>downvotesArray type:</strong>{" "}
+                    {typeof downvotesArray}
+                  </div>
+                  <div>
+                    <strong>upvotes length:</strong> {upvotes?.length || "N/A"}
+                  </div>
+                  <div>
+                    <strong>downvotes length:</strong>{" "}
+                    {downvotes?.length || "N/A"}
+                  </div>
+                  <div>
+                    <strong>upvotesArray length:</strong>{" "}
+                    {upvotesArray?.length || "N/A"}
+                  </div>
+                  <div>
+                    <strong>downvotesArray length:</strong>{" "}
+                    {downvotesArray?.length || "N/A"}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <h4 className="font-semibold text-yellow-700">Vote Counts:</h4>
+              <div className="bg-white p-2 rounded border text-xs">
+                <div>
+                  <strong>Upvotes Count:</strong>{" "}
+                  {upvotes?.length || upvotesArray?.length || 0}
+                </div>
+                <div>
+                  <strong>Downvotes Count:</strong>{" "}
+                  {downvotes?.length || downvotesArray?.length || 0}
+                </div>
+                <div>
+                  <strong>Net Votes:</strong>{" "}
+                  {(upvotes?.length || upvotesArray?.length || 0) -
+                    (downvotes?.length || downvotesArray?.length || 0)}
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <h4 className="font-semibold text-yellow-700">
+                Backend Response Structure:
+              </h4>
+              <div className="bg-white p-2 rounded border text-xs">
+                <div>
+                  <strong>upvotes structure:</strong>{" "}
+                  {Array.isArray(upvotes) ? "Array" : "Not Array"}
+                </div>
+                <div>
+                  <strong>downvotes structure:</strong>{" "}
+                  {Array.isArray(downvotes) ? "Array" : "Not Array"}
+                </div>
+                {upvotes && Array.isArray(upvotes) && upvotes.length > 0 && (
+                  <div>
+                    <strong>upvotes[0]:</strong> {JSON.stringify(upvotes[0])}
+                  </div>
+                )}
+                {downvotes &&
+                  Array.isArray(downvotes) &&
+                  downvotes.length > 0 && (
+                    <div>
+                      <strong>downvotes[0]:</strong>{" "}
+                      {JSON.stringify(downvotes[0])}
+                    </div>
+                  )}
+              </div>
+            </div>
+
+            <div>
+              <h4 className="font-semibold text-yellow-700">
+                What Gets Passed to ReactionsTab:
+              </h4>
+              <div className="bg-white p-2 rounded border text-xs">
+                <div>
+                  <strong>upvotesArray prop:</strong>{" "}
+                  {JSON.stringify(upvotesArray)}
+                </div>
+                <div>
+                  <strong>downvotesArray prop:</strong>{" "}
+                  {JSON.stringify(downvotesArray)}
+                </div>
+                <div>
+                  <strong>upvotes prop:</strong> {JSON.stringify(upvotes)}
+                </div>
+                <div>
+                  <strong>downvotes prop:</strong> {JSON.stringify(downvotes)}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
       {/* Header with user details and options */}
       <div className="flex justify-between items-start mb-4">
         <UserDetailsTab

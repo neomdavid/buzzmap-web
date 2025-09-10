@@ -218,6 +218,20 @@ const Community = () => {
     (post, index) => {
       const userProfile = getUserProfile(post.user?._id);
 
+      // Debug logging for vote data
+      console.log(`[Community] Post ${post._id} vote data:`, {
+        upvotes: post.upvotes,
+        downvotes: post.downvotes,
+        upvotesLength: post.upvotes?.length || 0,
+        downvotesLength: post.downvotes?.length || 0,
+        upvotesType: typeof post.upvotes,
+        downvotesType: typeof post.downvotes,
+        upvotesIsArray: Array.isArray(post.upvotes),
+        downvotesIsArray: Array.isArray(post.downvotes),
+        upvotesArrayValue: post.upvotes || [],
+        downvotesArrayValue: post.downvotes || [],
+      });
+
       return (
         <div
           key={post._id}
@@ -248,8 +262,8 @@ const Community = () => {
             upvotes={post.upvotes}
             downvotes={post.downvotes}
             commentsCount={post.commentsCount}
-            upvotesArray={post.upvotesArray || []}
-            downvotesArray={post.downvotesArray || []}
+            upvotesArray={Array.isArray(post.upvotes) ? post.upvotes : []}
+            downvotesArray={Array.isArray(post.downvotes) ? post.downvotes : []}
             _commentCount={post.commentsCount}
             userId={post.user?._id}
             currentUserId={userFromStore?._id}

@@ -11,7 +11,6 @@ import {
   useRemoveAdminPostDownvoteMutation,
 } from "../../api/dengueApi";
 import { showCustomToast } from "../../utils.jsx";
-import { useLocalStorageVoting } from "../../hooks/useLocalStorageVoting";
 
 const ReactionsTab = ({
   postId,
@@ -36,17 +35,30 @@ const ReactionsTab = ({
   const lastVoteTime = useRef(0);
   const VOTE_DEBOUNCE_MS = 500; // 500ms debounce
 
-  // Use localStorage-based voting
-  const {
-    upvotes: localUpvotes,
-    downvotes: localDownvotes,
-    netVotes,
-    updateVotes,
-    getUserVoteStatus,
-  } = useLocalStorageVoting(postId, upvotesArray, downvotesArray);
+  // Calculate net votes from arrays (more reliable than count props)
+  const upvoteCount = Array.isArray(upvotesArray)
+    ? upvotesArray.length
+    : upvotes || 0;
+  const downvoteCount = Array.isArray(downvotesArray)
+    ? downvotesArray.length
+    : downvotes || 0;
+  const netVotes = upvoteCount - downvoteCount;
 
-  // Get current user's vote status from localStorage
-  const { hasUpvoted, hasDownvoted } = getUserVoteStatus(currentUserId);
+  // Check if current user has voted
+  const hasUpvoted =
+    Array.isArray(upvotesArray) &&
+    upvotesArray.some((vote) =>
+      typeof vote === "object"
+        ? vote._id === currentUserId
+        : vote === currentUserId
+    );
+  const hasDownvoted =
+    Array.isArray(downvotesArray) &&
+    downvotesArray.some((vote) =>
+      typeof vote === "object"
+        ? vote._id === currentUserId
+        : vote === currentUserId
+    );
 
   // Regular post mutations (for background sync)
   const [upvoteReport] = useUpvoteReportMutation();
@@ -79,55 +91,29 @@ const ReactionsTab = ({
       return;
     }
 
-    // Create new arrays for localStorage update
-    let newUpvotes = [...localUpvotes];
-    let newDownvotes = [...localDownvotes];
-
-    if (hasUpvoted) {
-      // Remove upvote
-      newUpvotes = newUpvotes.filter((vote) =>
-        typeof vote === "object"
-          ? vote._id !== currentUserId
-          : vote !== currentUserId
-      );
-    } else {
-      // Add upvote
-      newUpvotes.push(currentUserId);
-      // If user had downvoted, remove it
-      if (hasDownvoted) {
-        newDownvotes = newDownvotes.filter((vote) =>
-          typeof vote === "object"
-            ? vote._id !== currentUserId
-            : vote !== currentUserId
-        );
-      }
-    }
-
-    // Update localStorage immediately (instant UI update)
-    updateVotes(newUpvotes, newDownvotes);
-
-    // Update parent component for consistency
-    onVoteUpdate?.(newUpvotes, newDownvotes);
-
-    // Background API call (non-blocking)
     try {
       if (hasUpvoted) {
+        // Remove upvote
         if (isAdminPost) {
           await removeAdminPostUpvote(postId).unwrap();
         } else {
           await removeUpvote(postId).unwrap();
         }
       } else {
+        // Add upvote
         if (isAdminPost) {
           await upvoteAdminPost(postId).unwrap();
         } else {
           await upvoteReport(postId).unwrap();
         }
       }
-      console.log("[VOTE] Background sync successful for post:", postId);
     } catch (error) {
-      console.error("[VOTE] Background sync failed for post:", postId, error);
-      // Don't revert localStorage - keep the optimistic update
+      console.error("[VOTE] Failed to upvote post:", postId, error);
+      if (onShowToast) {
+        onShowToast("Failed to vote. Please try again.", "error");
+      } else {
+        showCustomToast("Failed to vote. Please try again.", "error");
+      }
     } finally {
       setIsVoting(false);
     }
@@ -152,55 +138,29 @@ const ReactionsTab = ({
       return;
     }
 
-    // Create new arrays for localStorage update
-    let newUpvotes = [...localUpvotes];
-    let newDownvotes = [...localDownvotes];
-
-    if (hasDownvoted) {
-      // Remove downvote
-      newDownvotes = newDownvotes.filter((vote) =>
-        typeof vote === "object"
-          ? vote._id !== currentUserId
-          : vote !== currentUserId
-      );
-    } else {
-      // Add downvote
-      newDownvotes.push(currentUserId);
-      // If user had upvoted, remove it
-      if (hasUpvoted) {
-        newUpvotes = newUpvotes.filter((vote) =>
-          typeof vote === "object"
-            ? vote._id !== currentUserId
-            : vote !== currentUserId
-        );
-      }
-    }
-
-    // Update localStorage immediately (instant UI update)
-    updateVotes(newUpvotes, newDownvotes);
-
-    // Update parent component for consistency
-    onVoteUpdate?.(newUpvotes, newDownvotes);
-
-    // Background API call (non-blocking)
     try {
       if (hasDownvoted) {
+        // Remove downvote
         if (isAdminPost) {
           await removeAdminPostDownvote(postId).unwrap();
         } else {
           await removeDownvote(postId).unwrap();
         }
       } else {
+        // Add downvote
         if (isAdminPost) {
           await downvoteAdminPost(postId).unwrap();
         } else {
           await downvoteReport(postId).unwrap();
         }
       }
-      console.log("[VOTE] Background sync successful for post:", postId);
     } catch (error) {
-      console.error("[VOTE] Background sync failed for post:", postId, error);
-      // Don't revert localStorage - keep the optimistic update
+      console.error("[VOTE] Failed to downvote post:", postId, error);
+      if (onShowToast) {
+        onShowToast("Failed to vote. Please try again.", "error");
+      } else {
+        showCustomToast("Failed to vote. Please try again.", "error");
+      }
     } finally {
       setIsVoting(false);
     }
