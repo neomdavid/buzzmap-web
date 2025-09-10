@@ -4,6 +4,7 @@ import ImageGrid from "./ImageGrid";
 import { UserDetailsTab } from "../";
 import { useSelector } from "react-redux";
 import CommentModal from "./CommentModal";
+import { ImageExpansionModal } from "../";
 import { toastInfo } from "../../utils.jsx";
 import {
   useGetCommentsQuery,
@@ -44,6 +45,22 @@ const PostCard = ({
   const userFromStore = useSelector((state) => state.auth?.user);
   const commentModalRef = useRef(null);
   const deleteModalRef = useRef(null);
+
+  // State for image expansion modal
+  const [selectedImage, setSelectedImage] = useState(null);
+  const [isImageModalOpen, setIsImageModalOpen] = useState(false);
+
+  // Handle image click
+  const handleImageClick = (image) => {
+    setSelectedImage(image);
+    setIsImageModalOpen(true);
+  };
+
+  // Handle image modal close
+  const handleImageModalClose = () => {
+    setIsImageModalOpen(false);
+    setSelectedImage(null);
+  };
 
   // Delete post mutation
   const [deletePost, { isLoading: isDeleting }] = useDeletePostMutation();
@@ -305,7 +322,7 @@ const PostCard = ({
         </p>
       </div>
 
-      <ImageGrid images={images} />
+      <ImageGrid images={images} onImageClick={handleImageClick} />
 
       <hr className="text-gray-200 mt-4 mb-2" />
       <ReactionsTab
@@ -394,6 +411,13 @@ const PostCard = ({
 
       {/* Show modal when showDeleteModal is true */}
       {showDeleteModal && deleteModalRef.current?.showModal()}
+
+      {/* Image Expansion Modal */}
+      <ImageExpansionModal
+        isOpen={isImageModalOpen}
+        onClose={handleImageModalClose}
+        image={selectedImage}
+      />
     </div>
   );
 };

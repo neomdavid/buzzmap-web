@@ -186,6 +186,9 @@ export const dengueApi = createApi({
         sortOrder,
         username,
         description,
+        popular,
+        recent,
+        myPosts,
         page = 1,
         limit = 10,
       } = {}) => {
@@ -203,6 +206,11 @@ export const dengueApi = createApi({
         if (sortOrder) params.append("sortOrder", sortOrder);
         if (username) params.append("username", username);
         if (description) params.append("description", description);
+
+        // Add filter parameters
+        if (popular) params.append("popular", "true");
+        if (recent) params.append("recent", "true");
+        if (myPosts) params.append("myPosts", "true");
 
         // Remove pagination params
         // params.append('page', page);

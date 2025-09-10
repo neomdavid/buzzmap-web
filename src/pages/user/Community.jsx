@@ -18,6 +18,7 @@ import {
   SecondaryButton,
   DescriptionWithImages,
   NewPostModal,
+  PostCardSkeleton,
 } from "../../components";
 import {
   useGetPostsQuery,
@@ -44,6 +45,7 @@ const Community = () => {
   const [filter, setFilter] = useState("latest"); // 'latest', 'popular', 'myPosts'
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearching, setIsSearching] = useState(false);
+  const [isFilterLoading, setIsFilterLoading] = useState(false);
   const userFromStore = useSelector((state) => state.auth?.user);
   const [searchParams, setSearchParams] = useState({
     barangay: "",
@@ -74,8 +76,36 @@ const Community = () => {
     status: "Validated",
     sortBy: searchParams.sortBy,
     sortOrder: searchParams.sortOrder,
+    popular: filter === "popular",
+    recent: filter === "latest",
+    myPosts: filter === "myPosts",
     ...searchParams,
   });
+
+  // Handle filter loading state - reset after a timeout
+  useEffect(() => {
+    if (isFilterLoading) {
+      const timer = setTimeout(() => {
+        setIsFilterLoading(false);
+      }, 1000); // 1 second timeout to prevent infinite loading
+      return () => clearTimeout(timer);
+    }
+  }, [isFilterLoading]);
+
+  // Also reset when data loads
+  useEffect(() => {
+    if (data && !isLoading) {
+      setIsFilterLoading(false);
+    }
+  }, [data, isLoading]);
+
+  // Reset loading state when filter changes (fallback)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsFilterLoading(false);
+    }, 2000); // 2 second fallback timeout
+    return () => clearTimeout(timer);
+  }, [filter]);
 
   // Clear local vote updates only when posts are added/removed, not on vote updates
   const [lastDataHash, setLastDataHash] = useState("");
@@ -348,38 +378,58 @@ const Community = () => {
         {!searchQuery && (
           <section className="flex gap-x-2 font-semibold w-full mb-8 px-3 sm:px-0">
             <FilterButton
-              text="Popular"
+              text={
+                isFilterLoading && filter === "popular"
+                  ? "Loading..."
+                  : "Popular"
+              }
               active={filter === "popular"}
+              disabled={isFilterLoading}
               onClick={() => {
+                setIsFilterLoading(true);
                 setFilter("popular");
                 setSearchParams((prev) => ({
                   ...prev,
                   sortBy: "likesCount",
                   sortOrder: "desc",
+                  username: undefined, // Clear username when switching filters
                 }));
               }}
             />
             <FilterButton
-              text="Latest"
+              text={
+                isFilterLoading && filter === "latest" ? "Loading..." : "Latest"
+              }
               active={filter === "latest"}
+              disabled={isFilterLoading}
               onClick={() => {
+                setIsFilterLoading(true);
                 setFilter("latest");
                 setSearchParams((prev) => ({
                   ...prev,
                   sortBy: "createdAt",
                   sortOrder: "desc",
+                  username: undefined, // Clear username when switching filters
                 }));
               }}
             />
             {userFromStore && userFromStore.role === "user" && (
               <FilterButton
-                text="My Posts"
+                text={
+                  isFilterLoading && filter === "myPosts"
+                    ? "Loading..."
+                    : "My Posts"
+                }
                 active={filter === "myPosts"}
+                disabled={isFilterLoading}
                 onClick={() => {
+                  setIsFilterLoading(true);
                   setFilter("myPosts");
                   setSearchParams((prev) => ({
                     ...prev,
-                    username: userFromStore.username,
+                    sortBy: "createdAt",
+                    sortOrder: "desc",
+                    username: undefined, // Clear username - API will handle myPosts parameter
                   }));
                 }}
               />
@@ -445,8 +495,12 @@ const Community = () => {
         </section>
         <NewPostModal onSubmit={handleClearSearch} />
         <section className="bg-base-200 px-1.5 sm:px-8 py-6 rounded-lg flex flex-col gap-y-8">
-          {isLoading ? (
-            <div className="text-center">Loading posts...</div>
+          {isLoading || isFilterLoading ? (
+            <div className="space-y-4">
+              {Array.from({ length: 3 }).map((_, index) => (
+                <PostCardSkeleton key={index} />
+              ))}
+            </div>
           ) : isError ? (
             <div className="text-center text-error">Error loading posts</div>
           ) : filteredPosts.length === 0 ? (
