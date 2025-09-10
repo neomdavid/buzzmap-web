@@ -7,12 +7,44 @@ const DescriptionWithImages = ({
   description,
   onDescriptionChange,
 }) => {
+  const [fileError, setFileError] = useState("");
+
+  // Define accepted image file types
+  const acceptedImageTypes = [
+    "image/jpeg",
+    "image/jpg",
+    "image/png",
+    "image/gif",
+    "image/webp",
+    "image/bmp",
+    "image/svg+xml",
+  ];
+
+  const validateFileType = (file) => {
+    return acceptedImageTypes.includes(file.type);
+  };
+
   const handleImageChange = (e) => {
     const files = Array.from(e.target.files);
+    setFileError(""); // Clear previous errors
+
     if (files.length + images.length > 4) {
       toastWarn("You can only upload a maximum of 4 images.");
       return;
     }
+
+    // Validate each file type
+    const invalidFiles = files.filter((file) => !validateFileType(file));
+
+    if (invalidFiles.length > 0) {
+      const invalidFileNames = invalidFiles.map((file) => file.name).join(", ");
+      const errorMessage = `The following files are not supported: ${invalidFileNames}. Please upload only image files (JPEG, PNG, GIF, WebP, BMP, SVG).`;
+      setFileError(errorMessage);
+      toastWarn(errorMessage);
+      return;
+    }
+
+    // If all files are valid, add them
     onImageChange([...images, ...files]);
   };
 
@@ -24,15 +56,16 @@ const DescriptionWithImages = ({
   return (
     <div className="flex flex-col p-2 gap-2 ml-16">
       <div className="flex justify-between items-center">
-      <span className="label-text mb-1 text-primary font-bold">Description</span>
-
+        <span className="label-text mb-1 text-primary font-bold">
+          Description
+        </span>
 
         {/* Image Picker */}
         <label className="btn btn-md btn-outline cursor-pointer">
           📷 Add Images
           <input
             type="file"
-            accept="image/*"
+            accept="image/jpeg,image/jpg,image/png,image/gif,image/webp,image/bmp,image/svg+xml"
             multiple
             className="hidden"
             onChange={handleImageChange}
@@ -48,6 +81,33 @@ const DescriptionWithImages = ({
         value={description}
         onChange={(e) => onDescriptionChange(e.target.value)}
       ></textarea>
+
+      {/* File type information and error display */}
+      <div className="text-sm text-gray-600">
+        <p>
+          Accepted file types: JPEG, PNG, GIF, WebP, BMP, SVG (Max 4 images)
+        </p>
+      </div>
+
+      {/* Error message display */}
+      {fileError && (
+        <div className="alert alert-error text-sm">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            className="stroke-current shrink-0 h-6 w-6"
+            fill="none"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth="2"
+              d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
+            />
+          </svg>
+          <span>{fileError}</span>
+        </div>
+      )}
 
       {/* Preview selected images */}
       {images.length > 0 && (

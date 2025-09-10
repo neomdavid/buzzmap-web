@@ -543,7 +543,7 @@ export const dengueApi = createApi({
         method: "PATCH",
         body: formData,
       }),
-      invalidatesTags: ["Post"],
+      invalidatesTags: [],
     }),
 
     // Delete an admin post
@@ -552,7 +552,7 @@ export const dengueApi = createApi({
         url: `adminPosts/${id}`,
         method: "DELETE",
       }),
-      invalidatesTags: ["Post"],
+      invalidatesTags: [],
     }),
 
     // Get all alerts (paginated)
@@ -767,7 +767,14 @@ export const dengueApi = createApi({
       async onQueryStarted(reportId, { dispatch, queryFulfilled }) {
         try {
           const { data } = await queryFulfilled;
-          console.log("[DEBUG] Upvote successful:", data);
+          console.log(
+            "[DEBUG] Vote API success - Post:",
+            reportId,
+            "Upvotes:",
+            data.upvotes,
+            "Downvotes:",
+            data.downvotes
+          );
 
           // Update the cache for both the specific post and the post list
           dispatch(
@@ -776,17 +783,17 @@ export const dengueApi = createApi({
               if (post) {
                 post.upvotes = data.upvotes;
                 post.downvotes = data.downvotes;
+                post.upvotesArray = data.upvotesArray || [];
+                post.downvotesArray = data.downvotesArray || [];
               }
             })
           );
         } catch (error) {
-          console.error("[DEBUG] Upvote failed:", error);
-          // The error will be handled by the component to show the toast
+          console.error("[DEBUG] Upvote API failed:", error);
         }
       },
       invalidatesTags: (result, error, reportId) => [
         { type: "Post", id: reportId },
-        { type: "Post", id: "LIST" },
       ],
     }),
     downvoteReport: builder.mutation({
@@ -809,6 +816,8 @@ export const dengueApi = createApi({
               if (post) {
                 post.upvotes = data.upvotes;
                 post.downvotes = data.downvotes;
+                post.upvotesArray = data.upvotesArray || [];
+                post.downvotesArray = data.downvotesArray || [];
               }
             })
           );
@@ -818,7 +827,6 @@ export const dengueApi = createApi({
       },
       invalidatesTags: (result, error, reportId) => [
         { type: "Post", id: reportId },
-        { type: "Post", id: "LIST" },
       ],
     }),
     removeUpvote: builder.mutation({
@@ -841,6 +849,8 @@ export const dengueApi = createApi({
               if (post) {
                 post.upvotes = data.upvotes;
                 post.downvotes = data.downvotes;
+                post.upvotesArray = data.upvotesArray || [];
+                post.downvotesArray = data.downvotesArray || [];
               }
             })
           );
@@ -850,7 +860,6 @@ export const dengueApi = createApi({
       },
       invalidatesTags: (result, error, reportId) => [
         { type: "Post", id: reportId },
-        { type: "Post", id: "LIST" },
       ],
     }),
     removeDownvote: builder.mutation({
@@ -873,6 +882,8 @@ export const dengueApi = createApi({
               if (post) {
                 post.upvotes = data.upvotes;
                 post.downvotes = data.downvotes;
+                post.upvotesArray = data.upvotesArray || [];
+                post.downvotesArray = data.downvotesArray || [];
               }
             })
           );
@@ -882,7 +893,6 @@ export const dengueApi = createApi({
       },
       invalidatesTags: (result, error, reportId) => [
         { type: "Post", id: reportId },
-        { type: "Post", id: "LIST" },
       ],
     }),
     addComment: builder.mutation({
@@ -1121,7 +1131,7 @@ export const dengueApi = createApi({
           console.error("[DEBUG] Admin post upvote failed:", error);
         }
       },
-      invalidatesTags: ["Post"],
+      invalidatesTags: [],
     }),
 
     downvoteAdminPost: builder.mutation({
@@ -1152,7 +1162,7 @@ export const dengueApi = createApi({
           console.error("[DEBUG] Admin post downvote failed:", error);
         }
       },
-      invalidatesTags: ["Post"],
+      invalidatesTags: [],
     }),
 
     removeAdminPostUpvote: builder.mutation({
@@ -1183,7 +1193,7 @@ export const dengueApi = createApi({
           console.error("[DEBUG] Remove admin post upvote failed:", error);
         }
       },
-      invalidatesTags: ["Post"],
+      invalidatesTags: [],
     }),
 
     removeAdminPostDownvote: builder.mutation({
@@ -1214,7 +1224,7 @@ export const dengueApi = createApi({
           console.error("[DEBUG] Remove admin post downvote failed:", error);
         }
       },
-      invalidatesTags: ["Post"],
+      invalidatesTags: [],
     }),
 
     // Admin post comments endpoints

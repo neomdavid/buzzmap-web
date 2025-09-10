@@ -40,14 +40,6 @@ const PostCard = ({
   onPostDeleted, // Add callback for when post is deleted
 }) => {
   // Debug logging for PostCard props
-  console.log("[DEBUG] PostCard received props:", {
-    postId,
-    upvotesArray,
-    downvotesArray,
-    currentUserId,
-    hasOnVoteUpdate: !!onVoteUpdate,
-    userId,
-  });
 
   const userFromStore = useSelector((state) => state.auth?.user);
   const commentModalRef = useRef(null);
@@ -118,15 +110,7 @@ const PostCard = ({
   }, [actualComments]);
 
   // Debug logging
-  useEffect(() => {
-    console.log("[DEBUG] PostCard - Comment counts:", {
-      commentsCount,
-      _commentCount,
-      actualCommentCount,
-      localCommentCount,
-      postId,
-    });
-  }, [
+  useEffect(() => {}, [
     commentsCount,
     _commentCount,
     actualCommentCount,
@@ -194,7 +178,6 @@ const PostCard = ({
         onPostDeleted(postId);
       }
     } catch (error) {
-      console.error("Failed to delete post:", error);
       toast.error(
         error?.data?.message || "Failed to delete post. Please try again.",
         {
