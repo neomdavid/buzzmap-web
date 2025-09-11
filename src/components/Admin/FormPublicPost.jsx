@@ -51,6 +51,23 @@ const FormPublicPost = ({ onSuccess }) => {
     e.preventDefault();
     setImageError("");
     setSubmitError("");
+    // Re-validate images before confirming
+    const MAX_FILE_MB = 2; // per file limit
+    const MAX_TOTAL_MB = 8; // total limit
+    const totalBytes = images.reduce((sum, f) => sum + (f?.size || 0), 0);
+    const tooLargeFile = images.find(
+      (f) => (f?.size || 0) > MAX_FILE_MB * 1024 * 1024
+    );
+    if (tooLargeFile) {
+      setImageError(
+        `Each image must be ≤ ${MAX_FILE_MB}MB. Offender: ${tooLargeFile.name}`
+      );
+      return;
+    }
+    if (totalBytes > MAX_TOTAL_MB * 1024 * 1024) {
+      setImageError(`Total images size must be ≤ ${MAX_TOTAL_MB}MB.`);
+      return;
+    }
     if (images.length === 0) {
       setImageError("At least one image is required.");
       return;
@@ -79,7 +96,7 @@ const FormPublicPost = ({ onSuccess }) => {
       // Success toast (minimal)
       toast.success(
         <div className="text-sm">
-          <p className="text-[14px]">Post scheduled/published</p>
+          <p className="text-[14px]">Post published</p>
           <div className="mt-2">
             <p className="text-[12px] text-gray-700">Category: {postType}</p>
             <p className="text-[12px] text-gray-700">Title: {postTitle}</p>
@@ -126,15 +143,7 @@ const FormPublicPost = ({ onSuccess }) => {
     }
 
     // Define accepted image file types
-    const acceptedImageTypes = [
-      "image/jpeg",
-      "image/jpg",
-      "image/png",
-      "image/gif",
-      "image/webp",
-      "image/bmp",
-      "image/svg+xml",
-    ];
+    const acceptedImageTypes = ["image/jpeg", "image/jpg", "image/png"];
 
     // Validate each file type
     const invalidFiles = files.filter(
@@ -143,13 +152,28 @@ const FormPublicPost = ({ onSuccess }) => {
 
     if (invalidFiles.length > 0) {
       const invalidFileNames = invalidFiles.map((file) => file.name).join(", ");
-      const errorMessage = `The following files are not supported: ${invalidFileNames}. Please upload only image files (JPEG, PNG, GIF, WebP, BMP, SVG).`;
+      const errorMessage = `The following files are not supported: ${invalidFileNames}. Allowed formats: .jpg, .jpeg, .png`;
       setImageError(errorMessage);
       return;
     }
 
-    // If all files are valid, add them
+    // Validate sizes: per-file and total
+    const MAX_FILE_MB = 2; // per file limit
+    const MAX_TOTAL_MB = 8; // total limit
+    const tooLarge = files.find((f) => f.size > MAX_FILE_MB * 1024 * 1024);
+    if (tooLarge) {
+      setImageError(
+        `Each image must be ≤ ${MAX_FILE_MB}MB. Offender: ${tooLarge.name}`
+      );
+      return;
+    }
+
     const newImages = [...images, ...files];
+    const totalBytes = newImages.reduce((sum, f) => sum + (f?.size || 0), 0);
+    if (totalBytes > MAX_TOTAL_MB * 1024 * 1024) {
+      setImageError(`Total images size must be ≤ ${MAX_TOTAL_MB}MB.`);
+      return;
+    }
     setImages(newImages);
     const newPreviews = files.map((file) => URL.createObjectURL(file));
     setImagePreviews([...imagePreviews, ...newPreviews]);
@@ -283,7 +307,7 @@ const FormPublicPost = ({ onSuccess }) => {
               <label className="flex items-center justify-center gap-2 p-4 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-primary transition-colors">
                 <input
                   type="file"
-                  accept="image/jpeg,image/jpg,image/png,image/gif,image/webp,image/bmp,image/svg+xml"
+                  accept="image/jpeg,image/jpg,image/png"
                   multiple
                   onChange={handleImageUpload}
                   className="hidden"
@@ -298,10 +322,7 @@ const FormPublicPost = ({ onSuccess }) => {
                 <Plus size={20} className="text-gray-500" />
               </label>
               <div className="text-sm text-gray-600">
-                <p>
-                  Accepted file types: JPEG, PNG, GIF, WebP, BMP, SVG (Max 8
-                  images)
-                </p>
+                <p>Accepted file types: JPG, JPEG, PNG (Max 8 images)</p>
               </div>
               {imageError && (
                 <div className="alert alert-error text-sm mt-2">

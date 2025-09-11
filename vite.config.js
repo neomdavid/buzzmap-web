@@ -11,8 +11,17 @@ export default defineConfig({
       "@": path.resolve(__dirname, "src"), // <- add this
     },
   },
-  mode: process.env.NODE_ENV || 'development',
-  assetsInclude: ['**/*.svg'], // Ensure SVGs are included as assets
+  server: {
+    proxy: {
+      "/api": {
+        target: "https://buzzmap-backend.onrender.com",
+        changeOrigin: true,
+        secure: true,
+      },
+    },
+  },
+  mode: process.env.NODE_ENV || "development",
+  assetsInclude: ["**/*.svg"], // Ensure SVGs are included as assets
   build: {
     rollupOptions: {
       output: {
@@ -25,7 +34,7 @@ export default defineConfig({
         },
         // Ensure assets are properly handled
         assetFileNames: (assetInfo) => {
-          const info = assetInfo.name.split('.');
+          const info = assetInfo.name.split(".");
           const ext = info[info.length - 1];
           if (/png|jpe?g|svg|gif|tiff|bmp|ico/i.test(ext)) {
             return `img/[name]-[hash][extname]`;

@@ -87,7 +87,7 @@ const AdminPostsTable = () => {
         headerName: "Category",
         field: "category",
         flex: 1,
-        filter: "agSetColumnFilter",
+        filter: "agTextColumnFilter",
         comparator: (a, b) =>
           stringCollator.compare(normalizeForSort(a), normalizeForSort(b)),
       },
