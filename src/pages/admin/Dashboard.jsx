@@ -87,6 +87,9 @@ const Dashboard = () => {
     : [];
   const safeInterventions = Array.isArray(interventions) ? interventions : [];
 
+  // Recent posts slice used by Recent Reports table (top 5 as-is)
+  const recentPosts = safePosts.slice(0, 5);
+
   // Calculate counts for reports
   const reportCounts = safePosts.reduce(
     (acc, post) => {
@@ -285,6 +288,10 @@ const Dashboard = () => {
             <MapOnly
               style={{ height: "300px", width: "100%" }}
               useAdminEndpoint={true}
+              showBreedingSites={true}
+              recentOnly={true}
+              recentCount={5}
+              recentPosts={recentPosts}
             />
           </div>
           {/* <div className="flex flex-col ">
