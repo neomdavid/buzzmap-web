@@ -147,7 +147,7 @@ const Landing = () => {
 
       <img
         src={landing2}
-        className="h-[380px] lg:h-[420px] xl:h-[440px] object-cover object-top rounded-3xl  mx-auto mt-[-60px] z-[-1] mb-8 max-w-[95vw] w-full px-6 sm:px-6"
+        className="h-[380px] lg:h-[420px] xl:h-[440px] object-cover rounded-3xl  mx-auto mt-[-60px] z-[-1] mb-8 max-w-[95vw] w-full px-6 sm:px-6"
         style={{
           maskImage:
             "linear-gradient(to bottom, rgba(0,0,0,0) 20%, rgba(0,0,0,0.8) 50%, rgba(0,0,0,1) 60%)",
@@ -159,7 +159,7 @@ const Landing = () => {
       <section className="flex flex-col lg:flex-row lg:mt-10  justify-center  sm:max-w-[95vw] m-auto px-6 sm:px-6 gap-x-4 ">
         <div className="rounded-xl overflow-hidden h-[400px] lg:h-[550px]  mb-6 lg:mb-0 lg:flex-13 flex items-center justify-center bg-red-100">
           <MapOnly style={{ height: "100%", width: "100%" }} />
-        </div>
+
         <div className="mb-16 flex flex-col flex-10 text-lg  sm:mx-6 items-center text-center lg:items-end lg:text-right">
           <Heading
             text="see the /danger zones/"
