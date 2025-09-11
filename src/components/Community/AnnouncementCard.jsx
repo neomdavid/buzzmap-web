@@ -158,7 +158,7 @@ const AnnouncementCard = ({ announcement }) => {
               <h1 className="text-4xl">{title}</h1>
               <p className="font-semibold text-[12px]">
                 <span className="font-normal">From</span> Quezon City
-                Epidemiology & Surveillance Division (CESU)
+                Epidemiology & Surveillance Division (QCESD)
               </p>
               <p className="font-semibold text-[12px]">
                 {formatTimestamp(announcement?.publishDate)}

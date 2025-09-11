@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import { useGoogleMaps } from "../GoogleMapsProvider";
 
 const ReportDetailsModal = ({
   reportId,
@@ -19,9 +20,11 @@ const ReportDetailsModal = ({
   const streetViewRef = useRef(null);
   const streetViewModalRef = useRef(null);
   const [address, setAddress] = useState(location);
+  const { isLoaded: isGoogleMapsLoaded } = useGoogleMaps();
 
   useEffect(() => {
     if (!coordinates || coordinates.length !== 2) return;
+    if (!isGoogleMapsLoaded) return;
 
     const geocoder = new window.google.maps.Geocoder();
     const latLng = new window.google.maps.LatLng(
@@ -49,7 +52,7 @@ const ReportDetailsModal = ({
         zoom: 1,
       });
     }
-  }, [coordinates, images, type]);
+  }, [coordinates, images, type, isGoogleMapsLoaded]);
 
   const handleConfirmAction = () => {
     onConfirmAction?.(type);
@@ -58,7 +61,7 @@ const ReportDetailsModal = ({
 
   const openStreetViewModal = () => {
     const streetViewElement = streetViewModalRef.current;
-    if (streetViewElement && coordinates?.length === 2) {
+    if (streetViewElement && coordinates?.length === 2 && isGoogleMapsLoaded) {
       streetViewElement.showModal();
 
       new window.google.maps.StreetViewPanorama(
@@ -77,6 +80,29 @@ const ReportDetailsModal = ({
     verify: <span className="text-primary">Verify Report</span>,
     reject: <span className="text-error">Reject Report</span>,
   }[type];
+
+  // Show loading state if Google Maps is not loaded yet
+  if (!isGoogleMapsLoaded) {
+    return (
+      <dialog
+        ref={modalRef}
+        className="modal transition-transform duration-300 ease-in-out"
+      >
+        <div className="modal-box bg-white rounded-3xl shadow-2xl w-9/12 max-w-4xl p-12 relative">
+          <button
+            className="absolute top-10 right-10 text-2xl font-semibold hover:text-gray-500 transition-colors duration-200 hover:cursor-pointer"
+            onClick={onClose}
+          >
+            ✕
+          </button>
+          <div className="flex flex-col items-center justify-center py-20">
+            <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mb-4"></div>
+            <p className="text-lg text-gray-600">Loading Google Maps...</p>
+          </div>
+        </div>
+      </dialog>
+    );
+  }
 
   return (
     <>
@@ -252,8 +278,8 @@ const ReportDetailsModal = ({
               <div className="grid grid-cols-3 gap-4">
                 {images.map((img, idx) => (
                   <div key={idx} className="relative">
-                    <img 
-                      src={img} 
+                    <img
+                      src={img}
                       alt={`Reported Photo ${idx + 1}`}
                       className="w-full h-48 object-cover rounded-lg shadow-md"
                     />

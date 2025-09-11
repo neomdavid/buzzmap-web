@@ -32,6 +32,30 @@ const baseQueryWithErrorHandling = async (args, api, extraOptions) => {
 
     // Check for 401 Unauthorized response
     if (result.error?.status === 401) {
+      // Check if this is an account disabled error
+      const errorMessage =
+        result.error.data?.message || result.error.data || "";
+      if (
+        errorMessage.toLowerCase().includes("disabled") ||
+        errorMessage.toLowerCase().includes("account disabled") ||
+        errorMessage.toLowerCase().includes("inactive")
+      ) {
+        // Dispatch custom event for account disabled
+        const { dispatchAccountDisabledEvent } = await import(
+          "../utils/accountStatusHandler"
+        );
+        dispatchAccountDisabledEvent(
+          "Your account has been disabled. Please contact an administrator."
+        );
+
+        return {
+          error: {
+            status: "ACCOUNT_DISABLED",
+            data: "Your account has been disabled. Please contact an administrator.",
+          },
+        };
+      }
+
       // Preserve the original error message from the backend
       return {
         error: {
@@ -39,6 +63,32 @@ const baseQueryWithErrorHandling = async (args, api, extraOptions) => {
           data: result.error.data || "Please log in to perform this action",
         },
       };
+    }
+
+    // Check for 403 Forbidden response (account might be disabled)
+    if (result.error?.status === 403) {
+      const errorMessage =
+        result.error.data?.message || result.error.data || "";
+      if (
+        errorMessage.toLowerCase().includes("disabled") ||
+        errorMessage.toLowerCase().includes("account disabled") ||
+        errorMessage.toLowerCase().includes("inactive")
+      ) {
+        // Dispatch custom event for account disabled
+        const { dispatchAccountDisabledEvent } = await import(
+          "../utils/accountStatusHandler"
+        );
+        dispatchAccountDisabledEvent(
+          "Your account has been disabled. Please contact an administrator."
+        );
+
+        return {
+          error: {
+            status: "ACCOUNT_DISABLED",
+            data: "Your account has been disabled. Please contact an administrator.",
+          },
+        };
+      }
     }
 
     return result;
