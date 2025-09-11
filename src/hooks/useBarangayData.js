@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from "react";
 
 export const useBarangayData = (barangaysList, posts) => {
   const [barangayData, setBarangayData] = useState(null);
@@ -17,10 +17,9 @@ export const useBarangayData = (barangaysList, posts) => {
     const fetchData = async () => {
       if (!isMountedRef.current) return;
 
-      console.log("Fetching barangay data...");
       setLoading(true);
       setError(null);
-      
+
       try {
         // Fetch barangay geojson
         const barangayResponse = await fetch(
@@ -29,15 +28,11 @@ export const useBarangayData = (barangaysList, posts) => {
         if (!barangayResponse.ok)
           throw new Error("Failed to load barangay data");
         const barangayGeoJson = await barangayResponse.json();
-        console.log(
-          "Barangay data loaded:",
-          barangayGeoJson.features?.length || 0,
-          "features"
-        );
+
         if (isMountedRef.current) {
           setBarangayData(barangayGeoJson);
         }
-        
+
         // Process breeding sites
         if (posts) {
           const validPosts = Array.isArray(posts?.posts)
@@ -52,12 +47,10 @@ export const useBarangayData = (barangaysList, posts) => {
               Array.isArray(post.specific_location.coordinates) &&
               post.specific_location.coordinates.length === 2
           );
-          console.log("Valid breeding sites found:", validatedSites.length);
           if (isMountedRef.current) {
             setBreedingSites(validatedSites);
           }
         } else {
-          console.log("No posts data available");
           if (isMountedRef.current) {
             setBreedingSites([]);
           }
@@ -91,7 +84,6 @@ export const useBarangayData = (barangaysList, posts) => {
           Array.isArray(post.specific_location.coordinates) &&
           post.specific_location.coordinates.length === 2
       );
-      console.log("Updating breeding sites:", validatedSites.length);
       if (isMountedRef.current) {
         setBreedingSites(validatedSites);
       }
@@ -102,6 +94,6 @@ export const useBarangayData = (barangaysList, posts) => {
     barangayData,
     breedingSites,
     loading,
-    error
+    error,
   };
 };

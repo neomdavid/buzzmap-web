@@ -18,6 +18,7 @@ const MapControls = ({
   selectedBarangay,
   handleBarangaySelect,
   barangayData,
+  barangayDataLoading,
   selectedIntervention,
   setSelectedIntervention,
 }) => {
@@ -78,19 +79,121 @@ const MapControls = ({
               onChange={handleBarangaySelect}
               className="w-full px-4 py-2 hover:cursor-pointer rounded-md shadow bg-transparent text-primary border border-primary/20 focus:border-primary focus:outline-none"
             >
-              <option value="">Select a barangay</option>
-              {barangayData?.features?.map((feature, index) => (
-                <option
-                  key={`barangay-${feature.properties.name || index}`}
-                  value={feature.properties.name || ""}
-                >
-                  {feature.properties.name || `Unknown Barangay ${index + 1}`}
-                </option>
-              ))}
+              <option value="">Choose a barangay</option>
+              {(() => {
+                // Show loading state if data is still loading
+                if (barangayDataLoading) {
+                  return (
+                    <option value="" disabled>
+                      Loading barangays...
+                    </option>
+                  );
+                }
+
+                if (!barangayData?.features) {
+                  return (
+                    <option value="" disabled>
+                      No barangay data available
+                    </option>
+                  );
+                }
+
+                if (barangayData.features.length === 0) {
+                  return (
+                    <option value="" disabled>
+                      No barangays found
+                    </option>
+                  );
+                }
+
+                // Filter out features without names first
+                const featuresWithNames = barangayData.features.filter(
+                  (feature) => {
+                    // Check if the feature has a valid name
+                    const name = feature.properties?.name;
+                    return (
+                      name && typeof name === "string" && name.trim() !== ""
+                    );
+                  }
+                );
+
+                // If no features with names, show loading
+                if (featuresWithNames.length === 0) {
+                  return (
+                    <option value="" disabled>
+                      Loading barangays...
+                    </option>
+                  );
+                }
+
+                return featuresWithNames
+                  .slice()
+                  .sort((a, b) => {
+                    const nameA = a.properties?.name || "";
+                    const nameB = b.properties?.name || "";
+                    return nameA.localeCompare(nameB);
+                  })
+                  .map((feature, index) => {
+                    const name = feature.properties?.name;
+                    return (
+                      <option
+                        key={`barangay-${name}-${index}`}
+                        value={name || ""}
+                      >
+                        {name}
+                      </option>
+                    );
+                  });
+              })()}
             </select>
 
             {/* Legends */}
             <div className="flex flex-col gap-3">
+              {/* Barangay Color Legend */}
+              <div className="bg-white rounded-md shadow px-4 py-3 border border-gray-200">
+                <p className="text-sm font-medium text-gray-600 mb-2">
+                  Barangay Status Colors
+                </p>
+                <div className="space-y-2">
+                  <div className="flex items-center space-x-2">
+                    <div
+                      className="w-4 h-4 rounded border-2"
+                      style={{
+                        backgroundColor: "#e53e3e",
+                        borderColor: "#e53e3e",
+                      }}
+                    ></div>
+                    <span className="text-xs text-primary">
+                      Increasing Cases
+                    </span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <div
+                      className="w-4 h-4 rounded border-2"
+                      style={{
+                        backgroundColor: "#38a169",
+                        borderColor: "#38a169",
+                      }}
+                    ></div>
+                    <span className="text-xs text-primary">
+                      Decreasing Cases
+                    </span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <div
+                      className="w-4 h-4 rounded border-2"
+                      style={{
+                        backgroundColor: "#718096",
+                        borderColor: "#718096",
+                      }}
+                    ></div>
+                    <span className="text-xs text-primary">
+                      No Change/Stable
+                    </span>
+                  </div>
+                </div>
+              </div>
+
               {/* Marker Legend */}
               {(showBreedingSites || showInterventions) && (
                 <div className="bg-white rounded-md shadow px-4 py-3 border border-gray-200">
