@@ -62,33 +62,25 @@ const AlertsTable = () => {
         headerName: "Barangays",
         field: "barangays",
         flex: 1,
-        filter: 'agTextColumnFilter',
-      },
-      {
-        headerName: "Severity",
-        field: "severity",
-        flex: 1,
-        filter: 'agSetColumnFilter',
-        filterParams: {
-          values: ['Low', 'Medium', 'High']
-        }
+        filter: "agTextColumnFilter",
       },
       {
         headerName: "Messages",
         field: "messages",
         flex: 2,
-        filter: 'agTextColumnFilter',
+        filter: "agTextColumnFilter",
+        sortable: false,
       },
       {
         headerName: "Date",
         field: "date",
         flex: 1,
-        filter: 'agDateColumnFilter',
+        filter: "agDateColumnFilter",
         cellRenderer: DateCell,
-        sort: 'desc',
+        sort: "desc",
         comparator: (dateA, dateB) => {
           return dateA.getTime() - dateB.getTime();
-        }
+        },
       },
       {
         headerName: "Actions",
@@ -120,7 +112,9 @@ const AlertsTable = () => {
         barangays: (alert.barangays || [])
           .map((b) => (typeof b === "string" ? b : b.name))
           .join(", "),
-        messages: Array.isArray(alert.messages) ? alert.messages.join(" | ") : "",
+        messages: Array.isArray(alert.messages)
+          ? alert.messages.join(" | ")
+          : "",
         date: alert.timestamp ? new Date(alert.timestamp) : null,
       })),
     [alerts]
@@ -154,7 +148,7 @@ const AlertsTable = () => {
               resizable: true,
             }}
             style={{
-              height: '100%',
+              height: "100%",
             }}
           />
         </div>
@@ -211,7 +205,7 @@ const AlertsTable = () => {
                   </label>
                   <div className="p-3 bg-base-200 rounded-lg whitespace-pre-wrap">
                     {Array.isArray(selectedAlert.messages)
-                      ? selectedAlert.messages.join('\n')
+                      ? selectedAlert.messages.join("\n")
                       : selectedAlert.messages}
                   </div>
                 </div>

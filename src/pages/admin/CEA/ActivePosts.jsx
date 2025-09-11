@@ -3,7 +3,7 @@ import {
   FormPublicPost,
   FormDengueAlert,
   AdminPostsTable,
-  AlertsTable
+  AlertsTable,
 } from "../../../components";
 import { Plus } from "phosphor-react";
 
@@ -42,13 +42,14 @@ const ActivePosts = () => {
             key={tab.id}
             className={`px-6 py-2 text-lg font-semibold focus:outline-none transition-colors
               border-x border-t
-              ${activeTab === tab.id
-                ? "border-primary border-b-white bg-white text-primary rounded-t-xl z-10"
-                : "border-gray-200 bg-gray-50 text-gray-500 hover:bg-gray-100 rounded-t-xl"
+              ${
+                activeTab === tab.id
+                  ? "border-primary border-b-white bg-white text-primary rounded-t-xl z-10"
+                  : "border-gray-200 bg-gray-50 text-gray-500 hover:bg-gray-100 rounded-t-xl"
               }
               ${idx === 0 ? "-ml-px" : ""}
             `}
-            style={{ marginBottom: '-2px' }}
+            style={{ marginBottom: "-2px" }}
             onClick={() => setActiveTab(tab.id)}
           >
             {tab.label}
@@ -86,19 +87,19 @@ const ActivePosts = () => {
 
       {/* Modal for Forms using <dialog> */}
       <dialog ref={dialogRef} className="modal">
-        <div className="modal-box bg-transparent shadow-none rounded-3xl w-11/12 max-w-3xl  relative">
+        <div className="modal-box bg-transparent shadow-none rounded-3xl w-11/12 max-w-3xl  relative z-[-1]">
           <button
-            className="absolute top-9 right-10 z-40 text-white text-xl font-semibold hover:text-gray-500 transition-all duration-200 hover:cursor-pointer"
+            className="absolute top-9 right-10 z-[-1] text-white text-xl font-semibold hover:text-gray-500 transition-all duration-200 hover:cursor-pointer"
             onClick={closeModal}
           >
             ✕
           </button>
-          {modalType === "public" && <FormPublicPost />}
-          {modalType === "alerts" && <FormDengueAlert />}
+          {modalType === "public" && <FormPublicPost onSuccess={closeModal} />}
+          {modalType === "alerts" && <FormDengueAlert onSuccess={closeModal} />}
         </div>
       </dialog>
     </main>
   );
 };
 
-export default ActivePosts; 
+export default ActivePosts;
