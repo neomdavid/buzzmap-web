@@ -1,5 +1,14 @@
 import * as turf from "@turf/turf";
 
+// Import icons properly for Vite to process them
+import foggingIcon from "../assets/icons/fogging.svg";
+import trappingIcon from "../assets/icons/trapping.svg";
+import cleanupIcon from "../assets/icons/cleanup.svg";
+import educationIcon from "../assets/icons/education.svg";
+import stagnantWaterIcon from "../assets/icons/stagnant_water.svg";
+import garbageIcon from "../assets/icons/garbage.svg";
+import othersIcon from "../assets/icons/others.svg";
+
 // Color constants
 export const PATTERN_COLORS = {
   low: "border-success bg-success/5",
@@ -37,19 +46,19 @@ export const INTERVENTION_STATUS_COLORS = {
 };
 
 export const INTERVENTION_TYPE_ICONS = {
-  Fogging: "/src/assets/icons/fogging.svg",
-  "Ovicidal-Larvicidal Trapping": "/src/assets/icons/trapping.svg",
-  "Clean-up Drive": "/src/assets/icons/cleanup.svg",
-  "Education Campaign": "/src/assets/icons/education.svg",
-  default: "/src/assets/icons/fogging.svg",
+  Fogging: foggingIcon,
+  "Ovicidal-Larvicidal Trapping": trappingIcon,
+  "Clean-up Drive": cleanupIcon,
+  "Education Campaign": educationIcon,
+  default: foggingIcon,
 };
 
 export const BREEDING_SITE_TYPE_ICONS = {
-  "Stagnant Water": "/src/assets/icons/stagnant_water.svg",
-  "Standing Water": "/src/assets/icons/stagnant_water.svg", // Use same icon as stagnant water
-  "Uncollected Garbage or Trash": "/src/assets/icons/garbage.svg",
-  Others: "/src/assets/icons/others.svg",
-  default: "/src/assets/icons/stagnant_water.svg",
+  "Stagnant Water": stagnantWaterIcon,
+  "Standing Water": stagnantWaterIcon, // Use same icon as stagnant water
+  "Uncollected Garbage or Trash": garbageIcon,
+  Others: othersIcon,
+  default: stagnantWaterIcon,
 };
 
 // Helper function to normalize barangay names for comparison
