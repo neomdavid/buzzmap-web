@@ -10,11 +10,11 @@
 /* Ensure app modals stay below toasts */
 .modal,
 .modal-box {
-  z-index: 1 !important;
+  z-index: 2147483646 !important;
 }
 
 /* Place dialog backdrops below toasts as well */
 dialog::backdrop,
 .modal::backdrop {
-  z-index: 1 !important;
+  z-index: 2147483646 !important;
 }

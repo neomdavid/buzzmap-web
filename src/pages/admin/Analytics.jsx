@@ -13,6 +13,7 @@ import {
 import PatternRecognitionResults from "@/components/Admin/PatternAlerts";
 import PatternAlerts from "@/components/Admin/PatternAlerts";
 import { useState, useRef, useEffect, useMemo } from "react";
+import { useSelector } from "react-redux";
 import {
   useGetAnalyticsQuery,
   useGetPostsQuery,
@@ -81,6 +82,7 @@ const Analytics = () => {
   const [showInterventions, setShowInterventions] = useState(true);
 
   const [importProgress, setImportProgress] = useState(0);
+  const authToken = useSelector((state) => state?.auth?.token);
 
   const { data: patternResultsData, isLoading: isLoadingPatterns } =
     useGetPatternRecognitionResultsQuery();
@@ -182,6 +184,9 @@ const Analytics = () => {
 
   const handleFileUpload = async (file) => {
     try {
+      if (!authToken) {
+        throw new Error("Authentication invalid. Please log in again.");
+      }
       const formData = new FormData();
       formData.append("file", file);
 
@@ -189,6 +194,11 @@ const Analytics = () => {
         `${import.meta.env.VITE_API_BASE_URL}api/v1/analytics/submit-csv-file`,
         {
           method: "POST",
+          headers: {
+            Authorization: `Bearer ${authToken}`,
+            // Let the browser set Content-Type for FormData
+            Accept: "application/json",
+          },
           body: formData,
         }
       );
@@ -851,7 +861,8 @@ const Analytics = () => {
             className="btn btn-primary mt-2"
             onClick={() => {
               setShowSuccessModal(false);
-              // Data has already been refetched, no need to reload the page
+              // Reload the page to ensure all data is fresh
+              window.location.reload();
             }}
           >
             Close

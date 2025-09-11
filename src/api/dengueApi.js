@@ -1505,11 +1505,12 @@ export const dengueApi = createApi({
     }),
 
     // Clusters endpoints
-    getClustersWithSubclusters: builder.query({
-      query: () => "clusters/get-clusters-with-subclusters",
+    // New: Get clusters (replaces get-clusters-with-subclusters)
+    getClusters: builder.query({
+      query: () => "clusters/get-clusters",
       providesTags: ["Clusters"],
       transformResponse: (response) => {
-        console.log("[DEBUG] Clusters with subclusters response:", response);
+        console.log("[DEBUG] Clusters response:", response);
         return response;
       },
     }),
@@ -1567,6 +1568,19 @@ export const dengueApi = createApi({
         url: `clusters/${clusterId}/remove-reports`,
         method: "PATCH",
         body: { reportIds, permanentlyExclude, resetStatus },
+      }),
+      invalidatesTags: (result, error, { clusterId }) => [
+        { type: "Clusters", id: clusterId },
+        "Clusters",
+      ],
+    }),
+
+    // New: Resolve or unresolve selected reports in a cluster
+    resolveReports: builder.mutation({
+      query: ({ clusterId, reportIds, isResolved }) => ({
+        url: `clusters/${clusterId}/resolve-reports`,
+        method: "PATCH",
+        body: { reportIds, isResolved },
       }),
       invalidatesTags: (result, error, { clusterId }) => [
         { type: "Clusters", id: clusterId },
@@ -1720,10 +1734,11 @@ export const {
   useUpdateBioMutation,
 
   // Clusters hooks
-  useGetClustersWithSubclustersQuery,
+  useGetClustersQuery,
   useGetSpecificClusterQuery,
   useCreateSubClusterMutation,
   useAddReportsToSubClusterMutation,
   useRemoveReportsFromSubClusterMutation,
   useRemoveReportsFromClusterMutation,
+  useResolveReportsMutation,
 } = dengueApi;

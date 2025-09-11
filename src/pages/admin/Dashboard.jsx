@@ -214,7 +214,10 @@ const Dashboard = () => {
         </div>
 
         {/* ReportCard for Total Alerts Sent */}
-        <div className="cursor-pointer" onClick={() => navigate("/admin/CEA")}>
+        <div
+          className="cursor-pointer"
+          onClick={() => navigate("/admin/cea?tab=alerts")}
+        >
           <ReportCard
             title="Total Alerts Sent"
             count={totalAlerts}

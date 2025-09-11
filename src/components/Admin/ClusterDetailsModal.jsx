@@ -1,5 +1,8 @@
 import React, { useState, useEffect } from "react";
-import { useRemoveReportsFromClusterMutation } from "@/api/dengueApi";
+import {
+  useRemoveReportsFromClusterMutation,
+  useResolveReportsMutation,
+} from "@/api/dengueApi";
 import { toast } from "react-toastify";
 import { CheckCircle, Circle, MapPinLine, Hourglass } from "phosphor-react";
 import ImageExpansionModal from "../ImageExpansionModal";
@@ -25,6 +28,9 @@ const ClusterDetailsModal = ({
   hasResolvedReports,
   mapOnlyRef,
   highlightReportMarker,
+  canFormSubCluster,
+  getRemainingReports,
+  refetchSpecificCluster,
 }) => {
   if (!showClusterDetailsModal || !selectedCluster) return null;
 
@@ -38,6 +44,8 @@ const ClusterDetailsModal = ({
   const [removingId, setRemovingId] = useState(null);
   const [removeReportsFromCluster, { isLoading: isRemoving }] =
     useRemoveReportsFromClusterMutation();
+  const [resolveReports, { isLoading: isResolving }] =
+    useResolveReportsMutation();
 
   // Image expansion modal state
   const [showImageModal, setShowImageModal] = useState(false);
@@ -149,6 +157,9 @@ const ClusterDetailsModal = ({
       if (selectedReports?.includes?.(id)) {
         handleReportSelection(id, "deselect");
       }
+      if (typeof refetchSpecificCluster === "function") {
+        refetchSpecificCluster();
+      }
     } catch (error) {
       console.error("[Cluster] Failed to remove report from cluster:", error);
       const msg =
@@ -160,6 +171,30 @@ const ClusterDetailsModal = ({
       // Keep pending state so user can retry or cancel
     } finally {
       setRemovingId(null);
+    }
+  };
+
+  const markResolved = async (id) => {
+    try {
+      await resolveReports({
+        clusterId,
+        reportIds: [id],
+        isResolved: true,
+      }).unwrap();
+      toast.success("Marked as resolved");
+      if (selectedReports?.includes?.(id)) {
+        handleReportSelection(id, "deselect");
+      }
+      if (typeof refetchSpecificCluster === "function") {
+        refetchSpecificCluster();
+      }
+    } catch (error) {
+      const msg =
+        error?.data?.message ||
+        error?.error ||
+        error?.message ||
+        "Request failed";
+      toast.error(`Failed to resolve: ${msg}`);
     }
   };
 
@@ -177,15 +212,31 @@ const ClusterDetailsModal = ({
   const severity = clusterData.severity || "medium";
 
   // Check if cluster is resolved (no unprocessed reports)
-  const unprocessedReports = clusterData.unprocessed_reports || [];
-  const unprocessedCount = clusterData.unprocessed_count || 0;
-  const processedCount = clusterData.processed_count || 0;
+  const breakdown = clusterData.breakdown || {};
+  const totalReportsCount = Array.isArray(reports) ? reports.length : 0;
+  const unprocessedCount =
+    clusterData.unprocessed_count !== undefined
+      ? clusterData.unprocessed_count
+      : Math.max(
+          0,
+          totalReportsCount -
+            ((breakdown.validated_reports || 0) +
+              (breakdown.rejected_reports || 0) +
+              (breakdown.resolved_reports || 0) +
+              (breakdown.excluded_reports || 0))
+        );
+  // Treat "processed" as actually resolved within the cluster
+  const resolvedCount =
+    breakdown.resolved_reports !== undefined
+      ? breakdown.resolved_reports
+      : reports.filter((r) => r?.isResolved === true).length;
 
   // Individual validation/rejection no longer used in modal
 
   // Cluster is resolved when all reports are processed at cluster level (no unprocessed)
-  const totalProcessedCount = processedCount;
-  const isClusterResolved = unprocessedCount === 0 && reports.length > 0;
+  const totalProcessedCount = resolvedCount;
+  const isClusterResolved =
+    resolvedCount === totalReportsCount && totalReportsCount > 0;
 
   // Derived counts for summary
   const selectableReportIds = new Set(
@@ -218,7 +269,7 @@ const ClusterDetailsModal = ({
   return (
     <dialog
       id="cluster-verification-modal"
-      className="modal"
+      className="modal z-[1000]"
       open={showClusterDetailsModal}
     >
       <div className="modal-box bg-white rounded-3xl shadow-2xl w-11/12 max-w-7xl p-0 max-h-[95vh] overflow-hidden">
@@ -265,13 +316,7 @@ const ClusterDetailsModal = ({
               <div className="stat">
                 <div className="stat-title text-sm">Resolved Reports</div>
                 <div className="stat-value text-2xl text-success">
-                  {totalProcessedCount}
-                </div>
-              </div>
-              <div className="stat">
-                <div className="stat-title text-sm">Removed Reports</div>
-                <div className="stat-value text-2xl text-gray-500">
-                  {effectiveReports.filter((r) => isReportRemoved(r)).length}
+                  {resolvedCount}
                 </div>
               </div>
               {/* Removed individual selected/unselected stats */}
@@ -518,33 +563,47 @@ const ClusterDetailsModal = ({
                               {!rejectedReports.includes(reportId) && (
                                 <>
                                   {/* Toggle select/unselect */}
-                                  {!pendingRejections.includes(reportId) && (
-                                    <button
-                                      onClick={() => {
-                                        handleReportSelection(
-                                          reportId,
-                                          isSelected ? "deselect" : "select"
-                                        );
-                                      }}
-                                      className={`btn btn-sm ${
-                                        isSelected
-                                          ? "btn-success"
-                                          : "btn-outline btn-success"
-                                      }`}
-                                    >
-                                      {isSelected ? (
-                                        <>
-                                          <CheckCircle size={14} />
-                                          Unselect
-                                        </>
-                                      ) : (
-                                        <>
-                                          <CheckCircle size={14} />
-                                          Select
-                                        </>
-                                      )}
-                                    </button>
-                                  )}
+                                  {!pendingRejections.includes(reportId) &&
+                                    (() => {
+                                      const isResolvedInCluster =
+                                        report.isResolved === true;
+                                      return (
+                                        <button
+                                          onClick={() => {
+                                            if (!isResolvedInCluster) {
+                                              handleReportSelection(
+                                                reportId,
+                                                isSelected
+                                                  ? "deselect"
+                                                  : "select"
+                                              );
+                                            }
+                                          }}
+                                          className={`btn btn-sm ${
+                                            isResolvedInCluster
+                                              ? "btn-disabled"
+                                              : isSelected
+                                              ? "btn-success"
+                                              : "btn-outline btn-success"
+                                          }`}
+                                          disabled={isResolvedInCluster}
+                                        >
+                                          {isResolvedInCluster ? (
+                                            "Resolved"
+                                          ) : isSelected ? (
+                                            <>
+                                              <CheckCircle size={14} />
+                                              Unselect
+                                            </>
+                                          ) : (
+                                            <>
+                                              <CheckCircle size={14} />
+                                              Select
+                                            </>
+                                          )}
+                                        </button>
+                                      );
+                                    })()}
                                   {/* Remove from cluster with inline confirm */}
                                   {pendingRemovals.includes(reportId) ? (
                                     <>
@@ -578,14 +637,34 @@ const ClusterDetailsModal = ({
                                       </button>
                                     </>
                                   ) : (
-                                    <button
-                                      onClick={() =>
-                                        requestRemoveFromCluster(reportId)
-                                      }
-                                      className="btn btn-outline btn-warning btn-sm"
-                                    >
-                                      Remove from Cluster
-                                    </button>
+                                    <div className="flex gap-2">
+                                      <button
+                                        onClick={() =>
+                                          requestRemoveFromCluster(reportId)
+                                        }
+                                        className="btn btn-outline btn-warning btn-sm"
+                                      >
+                                        Remove from Cluster
+                                      </button>
+                                      {report.isResolved !== true && (
+                                        <button
+                                          onClick={() => markResolved(reportId)}
+                                          className={`btn btn-success btn-sm ${
+                                            isResolving ? "btn-disabled" : ""
+                                          }`}
+                                          disabled={isResolving}
+                                        >
+                                          {isResolving ? (
+                                            <>
+                                              <span className="loading loading-spinner loading-xs"></span>
+                                              Processing...
+                                            </>
+                                          ) : (
+                                            "Mark Resolved"
+                                          )}
+                                        </button>
+                                      )}
+                                    </div>
                                   )}
                                 </>
                               )}
@@ -768,13 +847,13 @@ const ClusterDetailsModal = ({
                   <div className="flex justify-between">
                     <span className="text-gray-600">Unprocessed:</span>
                     <span className="font-semibold text-warning">
-                      {unprocessedCount}
+                      {Math.max(0, (reports?.length || 0) - resolvedCount)}
                     </span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-600">Processed:</span>
+                    <span className="text-gray-600">Resolved:</span>
                     <span className="font-semibold text-success">
-                      {processedCount}
+                      {resolvedCount}
                     </span>
                   </div>
                 </div>

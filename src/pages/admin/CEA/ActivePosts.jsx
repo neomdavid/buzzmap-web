@@ -1,4 +1,5 @@
-import { useState, useRef } from "react";
+import { useEffect, useState, useRef } from "react";
+import { useLocation } from "react-router-dom";
 import {
   FormPublicPost,
   FormDengueAlert,
@@ -13,9 +14,19 @@ const TABS = [
 ];
 
 const ActivePosts = () => {
+  const location = useLocation();
   const [activeTab, setActiveTab] = useState("public");
   const [modalType, setModalType] = useState(null); // 'public' or 'alerts'
   const dialogRef = useRef(null);
+
+  // Sync initial tab from query string (?tab=alerts|public)
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const tab = params.get("tab");
+    if (tab === "alerts" || tab === "public") {
+      setActiveTab(tab);
+    }
+  }, [location.search]);
 
   const openModal = (type) => {
     setModalType(type);
