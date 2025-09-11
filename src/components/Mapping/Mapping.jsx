@@ -145,6 +145,12 @@ const Mapping = () => {
       setSelectedBarangayFeature(feature);
       setSelectedBreedingSite(null);
       setSelectedIntervention(null);
+
+      // Update dropdown to show the selected barangay name
+      const barangayName = feature.properties?.name;
+      if (barangayName) {
+        setSelectedBarangay(barangayName);
+      }
     } else {
       // When barangay is deselected, clear both feature and dropdown selection
       setSelectedBarangayFeature(null);

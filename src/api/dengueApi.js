@@ -736,6 +736,29 @@ export const dengueApi = createApi({
       providesTags: ["Accounts"],
     }),
 
+    // Archived accounts (separate endpoints for users and admins)
+    getArchivedUsers: builder.query({
+      query: () => ({
+        url: "accounts/archived/users",
+        method: "GET",
+      }),
+      transformResponse: (response) => {
+        // Expecting { message, accounts: [...], count }
+        return response;
+      },
+      providesTags: ["Accounts"],
+    }),
+    getArchivedAdmins: builder.query({
+      query: () => ({
+        url: "accounts/archived/admins",
+        method: "GET",
+      }),
+      transformResponse: (response) => {
+        return response;
+      },
+      providesTags: ["Accounts"],
+    }),
+
     // Add this new endpoint
     getBasicProfiles: builder.query({
       query: () => ({
@@ -1677,6 +1700,8 @@ export const {
 
   // Add this new endpoint
   useGetDeletedAccountsQuery,
+  useGetArchivedUsersQuery,
+  useGetArchivedAdminsQuery,
 
   // Add this new endpoint
   useGetBasicProfilesQuery,

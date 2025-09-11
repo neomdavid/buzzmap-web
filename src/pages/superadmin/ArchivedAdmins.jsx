@@ -1,15 +1,15 @@
 import React, { useMemo } from "react";
-import { useGetDeletedAccountsQuery } from "../../api/dengueApi";
+import { useGetArchivedAdminsQuery } from "../../api/dengueApi";
 import ArchivedAccounts from "./ArchivedAccounts";
 
 const ArchivedAdmins = () => {
-  const { data: accounts, isLoading } = useGetDeletedAccountsQuery();
+  const { data, isLoading } = useGetArchivedAdminsQuery();
 
   // Filter for admins
   const deletedAdmins = useMemo(() => {
-    if (!accounts) return [];
-    return accounts.filter(account => account.role === "admin");
-  }, [accounts]);
+    if (!data) return [];
+    return Array.isArray(data.accounts) ? data.accounts : [];
+  }, [data]);
 
   const columns = useMemo(
     () => [
@@ -17,19 +17,19 @@ const ArchivedAdmins = () => {
         headerName: "Username",
         field: "username",
         flex: 1,
-        filter: 'agTextColumnFilter',
+        filter: "agTextColumnFilter",
       },
       {
         headerName: "Email",
         field: "email",
         flex: 1,
-        filter: 'agTextColumnFilter',
+        filter: "agTextColumnFilter",
       },
       {
         headerName: "Role",
         field: "role",
         flex: 1,
-        filter: 'agSetColumnFilter',
+        filter: "agSetColumnFilter",
         cellRenderer: (params) => {
           let bgColor = "";
           let textColor = "";
@@ -50,7 +50,9 @@ const ArchivedAdmins = () => {
 
           return (
             <div className="h-full flex justify-center items-center">
-              <span className={`px-3.5 py-1 capitalize rounded-full text-sm font-medium ${bgColor} ${textColor}`}>
+              <span
+                className={`px-3.5 py-1 capitalize rounded-full text-sm font-medium ${bgColor} ${textColor}`}
+              >
                 {params.value}
               </span>
             </div>
@@ -61,7 +63,7 @@ const ArchivedAdmins = () => {
         headerName: "Created At",
         field: "createdAt",
         flex: 1,
-        filter: 'agDateColumnFilter',
+        filter: "agDateColumnFilter",
         cellRenderer: (params) => {
           if (!params.value) return "N/A";
           const date = new Date(params.value);
@@ -76,7 +78,7 @@ const ArchivedAdmins = () => {
         headerName: "Deleted At",
         field: "deletedAt",
         flex: 1,
-        filter: 'agDateColumnFilter',
+        filter: "agDateColumnFilter",
         cellRenderer: (params) => {
           if (!params.value) return "N/A";
           const date = new Date(params.value);
@@ -104,4 +106,4 @@ const ArchivedAdmins = () => {
   );
 };
 
-export default ArchivedAdmins; 
+export default ArchivedAdmins;

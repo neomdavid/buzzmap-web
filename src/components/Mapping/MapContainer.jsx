@@ -269,6 +269,11 @@ const MapContainer = ({
         // Remove highlight and InfoWindow when closed
         infoWindow.addListener("closeclick", () => {
           setSelectedBarangayFeature(null);
+          // Pan out to show full view
+          if (mapInstance) {
+            mapInstance.panTo({ lat: 14.676, lng: 121.0437 });
+            mapInstance.setZoom(13);
+          }
         });
       } catch (error) {
         console.error("Error calculating barangay center:", error);
@@ -532,6 +537,11 @@ const MapContainer = ({
           // Remove highlight and InfoWindow when closed
           infoWindow.addListener("closeclick", () => {
             setSelectedBarangayFeature(null);
+            // Pan out to show full view
+            if (mapInstance) {
+              mapInstance.panTo({ lat: 14.676, lng: 121.0437 });
+              mapInstance.setZoom(13);
+            }
           });
         });
 
@@ -583,6 +593,11 @@ const MapContainer = ({
           if (infoWindowRef.current) {
             infoWindowRef.current.close();
             setSelectedBarangayFeature(null);
+            // Pan out to show full view
+            if (mapInstance) {
+              mapInstance.panTo({ lat: 14.676, lng: 121.0437 });
+              mapInstance.setZoom(13);
+            }
           }
 
           // Pan to marker position and zoom in
@@ -648,6 +663,15 @@ const MapContainer = ({
         `;
           infoWindow.setContent(content);
           infoWindow.open(map, marker);
+
+          // Add close event handler to pan out when info window is closed
+          infoWindow.addListener("closeclick", () => {
+            // Pan out to show full view
+            if (mapInstance) {
+              mapInstance.panTo({ lat: 14.676, lng: 121.0437 });
+              mapInstance.setZoom(13);
+            }
+          });
         });
 
         return marker;
@@ -717,6 +741,11 @@ const MapContainer = ({
             if (infoWindowRef.current) {
               infoWindowRef.current.close();
               setSelectedBarangayFeature(null);
+              // Pan out to show full view
+              if (mapInstance) {
+                mapInstance.panTo({ lat: 14.676, lng: 121.0437 });
+                mapInstance.setZoom(13);
+              }
             }
 
             // Pan to marker position and zoom in
@@ -774,6 +803,15 @@ const MapContainer = ({
               lng: intervention.specific_location.coordinates[0],
             });
             infoWindow.open(map, marker);
+
+            // Add close event handler to pan out when info window is closed
+            infoWindow.addListener("closeclick", () => {
+              // Pan out to show full view
+              if (mapInstance) {
+                mapInstance.panTo({ lat: 14.676, lng: 121.0437 });
+                mapInstance.setZoom(13);
+              }
+            });
           });
 
           overlaysRef.current.push(marker);
