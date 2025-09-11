@@ -20,7 +20,9 @@ ModuleRegistry.registerModules([AllCommunityModule]);
 const defaultColDef = {
   flex: 1,
   minWidth: 100,
-  filter: true,
+  filter: false,
+  floatingFilter: false,
+  movable: false,
   filterParams: {
     buttons: ["apply", "clear", "reset", "cancel"],
     closeOnApply: true,
@@ -308,21 +310,23 @@ function ReportTable2({
 
   const columnDefs = useMemo(() => {
     const baseCols = [
-      { field: "username", headerName: "Username", minWidth: 150 },
-      { field: "barangay", headerName: "Barangay", minWidth: 200 },
+      {
+        field: "username",
+        headerName: "Username",
+        minWidth: 150,
+        filter: "agTextColumnFilter",
+      },
+      {
+        field: "barangay",
+        headerName: "Barangay",
+        minWidth: 200,
+        filter: false,
+      },
       {
         field: "date",
         headerName: "Date & Time",
         minWidth: 120,
-        filter: "agDateColumnFilter",
-        filterParams: {
-          comparator: (filterLocalDateAtMidnight, cellValue) => {
-            const cellDate = new Date(cellValue);
-            if (cellDate < filterLocalDateAtMidnight) return -1;
-            if (cellDate > filterLocalDateAtMidnight) return 1;
-            return 0;
-          },
-        },
+        filter: false,
         valueGetter: (params) => {
           return params.data.dateValue;
         },
@@ -335,6 +339,7 @@ function ReportTable2({
         headerName: "Status",
         minWidth: 140,
         cellRenderer: StatusCell,
+        filter: false,
       },
     ];
 
@@ -421,6 +426,9 @@ function ReportTable2({
           columnDefs={columnDefs}
           defaultColDef={defaultColDef}
           theme={theme}
+          floatingFilter={false}
+          suppressMovableColumns={true}
+          suppressDragLeaveHidesColumns={true}
           pagination={isActionable && !onlyRecent} // Only show pagination when not showing only recent
           paginationPageSize={20}
           paginationPageSizeSelector={[10, 20, 50, 100]}
