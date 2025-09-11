@@ -55,7 +55,7 @@ const SupersuperadminLayout = () => {
   };
 
   return (
-    <div className="flex h-screen overflow-hidden">
+    <div className="flex h-screen overflow-hidden bg-neutral-content">
       {/* Sidebar */}
       <aside
         className={`fixed shadow-md top-0 left-0 h-full 
@@ -75,13 +75,13 @@ const SupersuperadminLayout = () => {
                     onClick={toggleSidebar}
                     className="text-white hover:text-gray-200 transition-colors"
                   >
-                    <X size={24} />
+                    <X size={24} className="hover:cursor-pointer"/>
                   </button>
                 </>
               ) : (
                 <button 
                   onClick={toggleSidebar}
-                  className="text-white hover:text-gray-200 transition-colors flex justify-center translate-x-1 sm:block hidden"
+                  className="text-white hover:text-gray-200 transition-colors flex justify-center translate-x-1 sm:block hidden hover:cursor-pointer"
                   onMouseEnter={(e) => handleMouseEnter(e, "Toggle Sidebar")}
                   onMouseLeave={handleMouseLeave}
                 >
@@ -172,14 +172,14 @@ const SupersuperadminLayout = () => {
           {isSidebarOpen ? (
             <button 
               onClick={() => setShowLogoutModal(true)}
-              className="font-bold text-white text-lg hover:text-red-300 transition-all duration-200"
+              className="font-bold text-white text-lg hover:text-red-300 transition-all duration-200 hover:cursor-pointer"
             >
               Logout
             </button>
           ) : (
             <button 
               onClick={() => setShowLogoutModal(true)}
-              className="flex justify-center text-white hover:text-red-300 transition-all duration-200 translate-x-[-4px] sm:block hidden"
+              className="flex justify-center text-white hover:text-red-300 transition-all duration-200 translate-x-[-4px] sm:block hidden hover:cursor-pointer"
               onMouseEnter={(e) => handleMouseEnter(e, "Logout")}
               onMouseLeave={handleMouseLeave}
             >
@@ -213,18 +213,18 @@ const SupersuperadminLayout = () => {
 
       {/* Logout Confirmation Modal */}
       <dialog id="logout_modal" className="modal" open={showLogoutModal}>
-        <div className="modal-box text-primary">
-          <p className="font-bold text-3xl mb-4 text-error">Confirm Logout</p>
-          <p className="py-4 text-lg">Are you sure you want to logout?</p>
+        <div className="modal-box text-primary p-10 rounded-2xl">
+          <p className="font-extrabold text-4xl mb-4 text-error">Confirm Logout</p>
+          <p className="py-4 text-lg text-primary">Are you sure you want to logout?</p>
           <div className="modal-action">
             <button 
-              className="btn btn-primary btn-ghost"
+              className="text-primary border-1 border-primary rounded-md px-4 py-2 hover:cursor-pointer hover:bg-primary/20  transition-all duration-200"
               onClick={() => setShowLogoutModal(false)}
             >
               Cancel
             </button>
             <button 
-              className="btn btn-error"
+              className="text-white bg-error rounded-md px-4 py-2 hover:cursor-pointer hover:bg-error/80  transition-all duration-200"
               onClick={() => {
                 setShowLogoutModal(false);
                 handleLogout();

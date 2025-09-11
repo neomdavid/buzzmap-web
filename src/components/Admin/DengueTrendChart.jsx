@@ -12,63 +12,57 @@ import {
   ReferenceLine,
 } from "recharts";
 import { ChartContainer } from "../ui/chart";
-import { useGetBarangayWeeklyTrendsQuery, useGetBarangaysQuery, useGetPatternRecognitionResultsQuery } from "../../api/dengueApi";
+import {
+  useGetBarangayWeeklyTrendsQuery,
+  useGetBarangaysQuery,
+  useGetPatternRecognitionResultsQuery,
+} from "../../api/dengueApi";
 import { useState, useMemo } from "react";
+import { ArrowClockwise } from "phosphor-react";
+import { IconReload } from "@tabler/icons-react";
+import { 
+  PATTERN_TYPES, 
+  PATTERN_COLORS, 
+  PATTERN_LABELS, 
+  getPatternColor, 
+  normalizePatternType 
+} from "../../utils/patternConfig";
 
-const getPatternColor = (patternType) => {
+const getPatternColorForChart = (patternType) => {
   // Convert pattern type to lowercase for case-insensitive comparison
-  const patternTypeLower = patternType?.toLowerCase();
-  
-  if (patternTypeLower === 'spike') {
-    return "#ef4444"; // Red
-  }
-  if (patternTypeLower === 'gradual_rise') {
-    return "#f97316"; // Orange
-  }
-  if (patternTypeLower === 'stability') {
-    return "#3b82f6"; // Blue (info)
-  }
-  if (patternTypeLower === 'decline') {
-    return "#22c55e"; // Green
-  }
-  if (patternTypeLower === 'low_level_activity') {
-    return "#9ca3af"; // Gray
-  }
-  
-  // Default color if no pattern type
-  return "#9ca3af"; // Gray
+  const normalizedPattern = normalizePatternType(patternType);
+  return getPatternColor(normalizedPattern, 'stroke');
 };
 
-// Update the pattern levels
+// Update the pattern levels to use centralized configuration
 const patternLevels = [
-  { label: "Spike", color: "#ef4444" },      // error/red
-  { label: "Gradual Rise", color: "#f97316" }, // warning/orange
-  { label: "Stability", color: "#3b82f6" },    // info/blue
-  { label: "Decline", color: "#22c55e" },      // success/green
-  { label: "Low Level Activity", color: "#9ca3af" },    // gray
+  { label: PATTERN_LABELS[PATTERN_TYPES.SPIKE], color: getPatternColor(PATTERN_TYPES.SPIKE, 'stroke') },
+  { label: PATTERN_LABELS[PATTERN_TYPES.INCREASE], color: getPatternColor(PATTERN_TYPES.INCREASE, 'stroke') },
+  { label: PATTERN_LABELS[PATTERN_TYPES.DECREASE], color: getPatternColor(PATTERN_TYPES.DECREASE, 'stroke') },
+  { label: PATTERN_LABELS[PATTERN_TYPES.LOW_LEVEL_ACTIVITY], color: getPatternColor(PATTERN_TYPES.LOW_LEVEL_ACTIVITY, 'stroke') },
+  { label: PATTERN_LABELS[PATTERN_TYPES.NO_CHANGE], color: getPatternColor(PATTERN_TYPES.NO_CHANGE, 'stroke') },
 ];
 
 // Helper function to format pattern type for display
 const formatPatternType = (patternType) => {
-  if (!patternType) return 'No pattern detected';
+  if (!patternType) return "No pattern detected";
   
-  const patternTypeLower = patternType.toLowerCase();
-  if (patternTypeLower === 'spike') return 'Spike';
-  if (patternTypeLower === 'gradual_rise') return 'Gradual Rise';
-  if (patternTypeLower === 'stability') return 'Stability';
-  if (patternTypeLower === 'decline') return 'Decline';
-  if (patternTypeLower === 'low_level_activity') return 'Low Level Activity';
-  
-  return patternType.charAt(0).toUpperCase() + patternType.slice(1).replace(/_/g, ' ');
+  const normalizedPattern = normalizePatternType(patternType);
+  return PATTERN_LABELS[normalizedPattern] || "No Pattern";
 };
 
-export default function DengueTrendChart({ selectedBarangay, onBarangayChange }) {
+export default function DengueTrendChart({
+  selectedBarangay,
+  onBarangayChange,
+}) {
   const [weeks, setWeeks] = useState(12);
-  const [intervalType, setIntervalType] = useState('biweekly');
+  const [refreshNum, setRefreshNum] = useState(0);
+  const [intervalType, setIntervalType] = useState("biweekly");
 
   // Fetch barangays
-  const { data: barangaysData, isLoading: barangaysLoading } = useGetBarangaysQuery();
-  
+  const { data: barangaysData, isLoading: barangaysLoading } =
+    useGetBarangaysQuery();
+
   // Fetch pattern recognition results
   const { data: patternData } = useGetPatternRecognitionResultsQuery();
 
@@ -78,14 +72,20 @@ export default function DengueTrendChart({ selectedBarangay, onBarangayChange })
         const barangay = patternData?.data?.find(
           (b) => b.name.toLowerCase() === selectedBarangay.toLowerCase()
         );
-        return barangay?.pattern || '';
+        return barangay?.pattern || "";
       })()
-    : '';
+    : "";
 
   const skipTrends = !selectedBarangay;
-  const { data: trendsData, isLoading, error } = useGetBarangayWeeklyTrendsQuery(
+  const {
+    data: trendsData,
+    isLoading,
+    error,
+    isFetching,
+    refetch,
+  } = useGetBarangayWeeklyTrendsQuery(
     skipTrends
-      ? { barangay_name: '', number_of_weeks: weeks }
+      ? { barangay_name: "", number_of_weeks: weeks }
       : { barangay_name: selectedBarangay, number_of_weeks: weeks },
     { skip: skipTrends }
   );
@@ -93,13 +93,12 @@ export default function DengueTrendChart({ selectedBarangay, onBarangayChange })
   // Transform the API data to match the chart format
   const chartData = useMemo(() => {
     try {
-      if (!trendsData?.data?.weekly_counts) {
-        console.log('[DEBUG] No weekly counts data available');
+      if (!trendsData?.data?.complete_weeks) {
+        console.log("[DEBUG] No complete weeks data available");
         return [];
       }
 
-
-      const completeWeeks = trendsData.data.weekly_counts.complete_weeks || {};
+      const completeWeeks = trendsData.data.complete_weeks || {};
 
       // Transform complete weeks
       let weekEntries = Object.entries(completeWeeks)
@@ -109,8 +108,11 @@ export default function DengueTrendChart({ selectedBarangay, onBarangayChange })
             cases: info.count,
             dateRange: info.date_range,
             patternType: selectedBarangayPattern,
-            color: index >= array.length - 4 ? getPatternColor(selectedBarangayPattern) : "#9ca3af",
-            weekNumber: index // Add week number for reference line calculation
+            color:
+              index >= array.length - 4
+                ? getPatternColorForChart(selectedBarangayPattern)
+                : "#9ca3af",
+            weekNumber: index, // Add week number for reference line calculation
           };
           return entry;
         })
@@ -122,7 +124,7 @@ export default function DengueTrendChart({ selectedBarangay, onBarangayChange })
         });
 
       // If interval type is biweekly, combine every two weeks
-      if (intervalType === 'biweekly') {
+      if (intervalType === "biweekly") {
         const biweeklyEntries = [];
         for (let i = 0; i < weekEntries.length; i += 2) {
           if (i + 1 < weekEntries.length) {
@@ -130,12 +132,17 @@ export default function DengueTrendChart({ selectedBarangay, onBarangayChange })
             const firstWeek = weekEntries[i];
             const secondWeek = weekEntries[i + 1];
             biweeklyEntries.push({
-              week: `${formatDateRange(firstWeek.dateRange)} - ${formatDateRange(secondWeek.dateRange).split(' - ')[1]}`,
+              week: `${formatDateRange(firstWeek.dateRange)} - ${
+                formatDateRange(secondWeek.dateRange).split(" - ")[1]
+              }`,
               cases: firstWeek.cases + secondWeek.cases,
               dateRange: [firstWeek.dateRange[0], secondWeek.dateRange[1]],
               patternType: selectedBarangayPattern,
-              color: i >= weekEntries.length - 4 ? getPatternColor(selectedBarangayPattern) : "#9ca3af",
-              weekNumber: firstWeek.weekNumber // Keep the first week's number for reference
+              color:
+                i >= weekEntries.length - 4
+                  ? getPatternColorForChart(selectedBarangayPattern)
+                  : "#9ca3af",
+              weekNumber: firstWeek.weekNumber, // Keep the first week's number for reference
             });
           } else {
             // If there's an odd number of weeks, add the last week as is
@@ -147,7 +154,7 @@ export default function DengueTrendChart({ selectedBarangay, onBarangayChange })
 
       return weekEntries;
     } catch (error) {
-      console.error('[DEBUG] Error transforming chart data:', error);
+      console.error("[DEBUG] Error transforming chart data:", error);
       return [];
     }
   }, [trendsData, selectedBarangayPattern, intervalType]);
@@ -155,39 +162,46 @@ export default function DengueTrendChart({ selectedBarangay, onBarangayChange })
   // Find the reference line position based on weeks
   const referenceLinePosition = useMemo(() => {
     if (!chartData.length) return null;
-    
+
     // For biweekly, we want the 2nd-to-last point (representing 4 weeks)
     // For weekly, we want the 4th-to-last point
-    const index = intervalType === 'biweekly' ? chartData.length - 2 : chartData.length - 4;
-    
+    const index =
+      intervalType === "biweekly" ? chartData.length - 2 : chartData.length - 4;
+
     // Ensure we don't go out of bounds
     if (index < 0) return chartData[0]?.week;
-    
+
     return chartData[index]?.week;
   }, [chartData, intervalType]);
 
   // Helper to format date range
   function formatDateRange(dateRange) {
-    if (!Array.isArray(dateRange) || dateRange.length !== 2) return '';
+    if (!Array.isArray(dateRange) || dateRange.length !== 2) return "";
     const [start, end] = dateRange;
     const startDate = new Date(start);
     const endDate = new Date(end);
     // Format as 'MMM D - MMM D' or 'MMM D - D' if same month
-    const options = { month: 'short', day: 'numeric' };
+    const options = { month: "short", day: "numeric" };
     if (startDate.getMonth() === endDate.getMonth()) {
-      return `${startDate.toLocaleDateString(undefined, options)} - ${endDate.getDate()}`;
+      return `${startDate.toLocaleDateString(
+        undefined,
+        options
+      )} - ${endDate.getDate()}`;
     }
-    return `${startDate.toLocaleDateString(undefined, options)} - ${endDate.toLocaleDateString(undefined, options)}`;
+    return `${startDate.toLocaleDateString(
+      undefined,
+      options
+    )} - ${endDate.toLocaleDateString(undefined, options)}`;
   }
 
   // Find the max cases for the current chartData (for consistent Y axis)
   const maxCases = useMemo(() => {
     try {
-      const max = Math.max(...chartData.map(d => d.cases || 0));
+      const max = Math.max(...chartData.map((d) => d.cases || 0));
       // If max is greater than 10, round up to the next multiple of 2
       return max > 10 ? Math.ceil(max / 2) * 2 : 10;
     } catch (error) {
-      console.error('[DEBUG] Error calculating max cases:', error);
+      console.error("[DEBUG] Error calculating max cases:", error);
       return 10;
     }
   }, [chartData]);
@@ -203,17 +217,51 @@ export default function DengueTrendChart({ selectedBarangay, onBarangayChange })
 
   if (isLoading || barangaysLoading) {
     return (
-      <div className="flex flex-col p-5 gap-4">
+      <div className="flex flex-col p-5 gap-4 items-center justify-center h-[400px]">
         <span className="loading loading-spinner loading-lg text-primary"></span>
       </div>
     );
   }
 
   if (error) {
-    console.error('[DEBUG] Chart error:', error);
+    console.error("[DEBUG] Chart error:", error);
     return (
-      <div className="flex flex-col p-5 gap-4">
-        <p className="text-error">Error loading chart data: {error.message || 'Unknown error'}</p>
+      <div className="flex flex-col p-5 gap-4 items-center  h-full justify-center text-center">
+        {isFetching ? (
+          <span className="loading loading-spinner loading-lg text-primary" />
+        ) : refreshNum <= 1 ? (
+          <>
+            <p className="text-gray-700 text-lg">
+              Hmmm... we couldn't load the chart data.
+              <br />
+              Try refreshing it below.
+            </p>
+            <button
+              onClick={() => {
+                refetch();
+                console.log(refreshNum);
+                setRefreshNum((currentNum) => currentNum + 1);
+              }}
+              disabled={isFetching}
+              className="btn text-primary px-4 py-2 rounded  transition"
+            >
+              {isFetching ? (
+                "Refreshing..."
+              ) : (
+                <div className="flex justify-between gap-1  items-center">
+                  <p>Refresh Chart</p>
+                  <IconReload size={12} />
+                </div>
+              )}
+            </button>
+          </>
+        ) : (
+          <p className="text-red-500 text-lg">
+            Something went wrong with the chart.
+            <br />
+            Please try again later.
+          </p>
+        )}
       </div>
     );
   }
@@ -229,7 +277,9 @@ export default function DengueTrendChart({ selectedBarangay, onBarangayChange })
   if (!chartData || chartData.length === 0) {
     return (
       <div className="flex flex-col p-5 gap-4">
-        <p className="text-warning">No data available for the selected period</p>
+        <p className="text-warning">
+          No data available for the selected period
+        </p>
       </div>
     );
   }
@@ -242,10 +292,13 @@ export default function DengueTrendChart({ selectedBarangay, onBarangayChange })
             Dengue Cases Trend - {selectedBarangay}
           </p>
           <p className="text-base-content text-sm">
-            Pattern: <span style={{
-              color: getPatternColor(selectedBarangayPattern),
-              fontWeight: 'bold'
-            }}>
+            Pattern:{" "}
+            <span
+              style={{
+                color: getPatternColorForChart(selectedBarangayPattern),
+                fontWeight: "bold",
+              }}
+            >
               {formatPatternType(selectedBarangayPattern)}
             </span>
           </p>
@@ -309,7 +362,7 @@ export default function DengueTrendChart({ selectedBarangay, onBarangayChange })
                 color: "#000000",
                 fontSize: "14px",
                 marginLeft: "45px",
-                marginBottom: "-2px"
+                marginBottom: "-2px",
               }}
               align="left"
             />
@@ -320,7 +373,7 @@ export default function DengueTrendChart({ selectedBarangay, onBarangayChange })
               strokeWidth={1}
               segment={[
                 { x: referenceLinePosition, y: 0 },
-                { x: chartData[chartData.length - 1]?.week, y: 0 }
+                { x: chartData[chartData.length - 1]?.week, y: 0 },
               ]}
               label={({ viewBox }) => {
                 const { x, y } = viewBox;
@@ -353,10 +406,14 @@ export default function DengueTrendChart({ selectedBarangay, onBarangayChange })
               content={({ active, payload }) => {
                 if (active && payload && payload.length > 0) {
                   const dataPoint = payload[0].payload;
-                  if (dataPoint.week === chartData[chartData.length - 4]?.week) {
+                  if (
+                    dataPoint.week === chartData[chartData.length - 4]?.week
+                  ) {
                     return (
                       <div className="bg-white p-2 border border-gray-200 rounded shadow-sm">
-                        <p className="text-sm text-gray-700">Start of {selectedBarangayPattern || 'pattern'}</p>
+                        <p className="text-sm text-gray-700">
+                          Start of {selectedBarangayPattern || "pattern"}
+                        </p>
                       </div>
                     );
                   }
@@ -367,19 +424,19 @@ export default function DengueTrendChart({ selectedBarangay, onBarangayChange })
             <Line
               type="monotone"
               dataKey="cases"
-              stroke={getPatternColor(selectedBarangayPattern)}
+              stroke={getPatternColorForChart(selectedBarangayPattern)}
               strokeWidth={3}
               dot={{
                 r: 5,
                 strokeWidth: 2,
-                fill: getPatternColor(selectedBarangayPattern),
-                stroke: getPatternColor(selectedBarangayPattern)
+                fill: getPatternColorForChart(selectedBarangayPattern),
+                stroke: getPatternColorForChart(selectedBarangayPattern),
               }}
               activeDot={{
                 r: 7,
                 strokeWidth: 2,
-                fill: getPatternColor(selectedBarangayPattern),
-                stroke: getPatternColor(selectedBarangayPattern)
+                fill: getPatternColorForChart(selectedBarangayPattern),
+                stroke: getPatternColorForChart(selectedBarangayPattern),
               }}
               label={({ x, y, value }) => (
                 <text
@@ -399,14 +456,14 @@ export default function DengueTrendChart({ selectedBarangay, onBarangayChange })
             {selectedBarangay && patternData && (
               <ReferenceLine
                 x={patternData.start_date}
-                stroke={getPatternColor(patternData.pattern)}
+                stroke={getPatternColorForChart(patternData.pattern)}
                 strokeWidth={2}
                 label={{
                   value: formatPatternType(patternData.pattern),
-                  position: 'insideTopRight',
-                  fill: getPatternColor(patternData.pattern),
+                  position: "insideTopRight",
+                  fill: getPatternColorForChart(patternData.pattern),
                   fontSize: 12,
-                  fontWeight: 'bold'
+                  fontWeight: "bold",
                 }}
               />
             )}

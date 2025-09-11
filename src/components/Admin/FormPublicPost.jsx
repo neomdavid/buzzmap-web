@@ -1,6 +1,9 @@
 import { useState } from "react";
 import { CalendarBlank, Clock, Image, Plus, X } from "phosphor-react";
-import { useCreateAdminPostMutation, useGetAllAdminPostsQuery } from "../../api/dengueApi";
+import {
+  useCreateAdminPostMutation,
+  useGetAllAdminPostsQuery,
+} from "../../api/dengueApi";
 import { useSelector } from "react-redux"; // To get the token
 
 const FormPublicPost = () => {
@@ -58,8 +61,22 @@ const FormPublicPost = () => {
       setTimeout(() => setSuccess(false), 3000);
       refetch(); // Refetch admin posts after successful post
     } catch (err) {
-      alert("Failed to publish post.");
-      console.error(err);
+      console.error("Post upload error:", err);
+
+      // Better error handling
+      if (err.status === 500 && err.data?.message?.includes("uploads")) {
+        alert(
+          "Server upload error: Unable to save images. Please contact administrator."
+        );
+      } else if (err.status === 413) {
+        alert("Files too large. Please reduce image sizes.");
+      } else {
+        alert(
+          `Failed to publish post: ${
+            err.data?.message || err.message || "Unknown error"
+          }`
+        );
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -67,10 +84,37 @@ const FormPublicPost = () => {
 
   const handleImageUpload = (e) => {
     const files = Array.from(e.target.files);
+    setImageError(""); // Clear previous errors
+
     if (images.length + files.length > 8) {
-      alert("Maximum 8 images allowed");
+      setImageError("Maximum 8 images allowed");
       return;
     }
+
+    // Define accepted image file types
+    const acceptedImageTypes = [
+      "image/jpeg",
+      "image/jpg",
+      "image/png",
+      "image/gif",
+      "image/webp",
+      "image/bmp",
+      "image/svg+xml",
+    ];
+
+    // Validate each file type
+    const invalidFiles = files.filter(
+      (file) => !acceptedImageTypes.includes(file.type)
+    );
+
+    if (invalidFiles.length > 0) {
+      const invalidFileNames = invalidFiles.map((file) => file.name).join(", ");
+      const errorMessage = `The following files are not supported: ${invalidFileNames}. Please upload only image files (JPEG, PNG, GIF, WebP, BMP, SVG).`;
+      setImageError(errorMessage);
+      return;
+    }
+
+    // If all files are valid, add them
     const newImages = [...images, ...files];
     setImages(newImages);
     const newPreviews = files.map((file) => URL.createObjectURL(file));
@@ -187,7 +231,7 @@ const FormPublicPost = () => {
             <label className="flex items-center justify-center gap-2 p-4 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-primary transition-colors">
               <input
                 type="file"
-                accept="image/*"
+                accept="image/jpeg,image/jpg,image/png,image/gif,image/webp,image/bmp,image/svg+xml"
                 multiple
                 onChange={handleImageUpload}
                 className="hidden"
@@ -201,8 +245,29 @@ const FormPublicPost = () => {
               </span>
               <Plus size={20} className="text-gray-500" />
             </label>
+            <div className="text-sm text-gray-600">
+              <p>
+                Accepted file types: JPEG, PNG, GIF, WebP, BMP, SVG (Max 8
+                images)
+              </p>
+            </div>
             {imageError && (
-              <div className="text-error text-sm font-semibold mt-1">{imageError}</div>
+              <div className="alert alert-error text-sm mt-2">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="stroke-current shrink-0 h-6 w-6"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
+                </svg>
+                <span>{imageError}</span>
+              </div>
             )}
             {imagePreviews.length > 0 && (
               <div className="grid grid-cols-4 gap-2 mt-2">
@@ -252,16 +317,16 @@ const FormPublicPost = () => {
 // Helper component to render post content with preserved newlines and blue hashtags
 export const PostContentDisplay = ({ content }) => (
   <div style={{ whiteSpace: "pre-line" }}>
-    {content.split('\n').map((line, idx) =>
-      line.trim().startsWith('#') ? (
-        <span key={idx} style={{ color: 'blue' }}>
+    {content.split("\n").map((line, idx) =>
+      line.trim().startsWith("#") ? (
+        <span key={idx} style={{ color: "blue" }}>
           {line}
-          {'\n'}
+          {"\n"}
         </span>
       ) : (
         <span key={idx}>
           {line}
-          {'\n'}
+          {"\n"}
         </span>
       )
     )}

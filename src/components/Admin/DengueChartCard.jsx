@@ -1,4 +1,4 @@
-import React, { PureComponent, useState, useMemo } from "react";
+import React, { useState, useMemo } from "react";
 import {
   LineChart,
   Line,
@@ -9,95 +9,90 @@ import {
   Legend,
   ResponsiveContainer,
 } from "recharts";
-import { useGetBarangayWeeklyTrendsQuery, useGetBarangaysQuery } from "../../api/dengueApi";
+import {
+  useGetBarangaysQuery,
+  useGetBarangayWeeklyTrendsQuery,
+} from "../../api/dengueApi";
+import {
+  getPatternColor,
+  getPatternLabel,
+  normalizePatternType,
+} from "../../utils/patternConfig";
 
-class CustomizedLabel extends PureComponent {
-  render() {
-    const { x, y, value } = this.props;
-    return (
-      <text
-        x={x}
-        y={y}
-        dy={-11}
-        fill="#fff"
-        fontSize={10}
-        textAnchor="middle"
-      >
-        {value}
-      </text>
-    );
-  }
-}
+// Custom components for the chart
+const CustomizedAxisTick = ({ x, y, payload }) => (
+  <g transform={`translate(${x},${y})`}>
+    <text x={0} y={0} dy={16} textAnchor="middle" fill="#fff" fontSize={12}>
+      {payload.value}
+    </text>
+  </g>
+);
 
-class CustomizedAxisTick extends PureComponent {
-  render() {
-    const { x, y, payload } = this.props;
-    return (
-      <g transform={`translate(${x},${y})`}>
-        <text
-          x={0}
-          y={0}
-          dy={16}
-          textAnchor="end"
-          fill="#fff"
-          transform="rotate(-35)"
-        >
-          {payload.value}
-        </text>
-      </g>
-    );
-  }
-}
+const CustomizedLabel = ({ x, y, value }) => (
+  <text x={x} y={y} dy={-10} textAnchor="middle" fill="#fff" fontSize={12}>
+    {value}
+  </text>
+);
 
 export default function DengueChartCard() {
-  const [selectedBarangay, setSelectedBarangay] = useState('bahay toro');
+  const [selectedBarangay, setSelectedBarangay] = useState("bahay toro");
   const [weeks, setWeeks] = useState(6);
 
   // Fetch barangays
-  const { data: barangaysData, isLoading: barangaysLoading } = useGetBarangaysQuery();
+  const { data: barangaysData, isLoading: barangaysLoading } =
+    useGetBarangaysQuery();
   // Get pattern for selected barangay (from barangaysData)
   const selectedBarangayPattern = useMemo(() => {
-    if (!barangaysData || !selectedBarangay) return 'none';
+    if (!barangaysData || !selectedBarangay) return "none";
     const barangay = barangaysData.find(
-      b => b.name?.toLowerCase() === selectedBarangay.toLowerCase()
+      (b) => b.name?.toLowerCase() === selectedBarangay.toLowerCase()
     );
     // Debug logs
-    console.log('[Admin DengueChartCard DEBUG] selectedBarangay:', selectedBarangay);
-    console.log('[Admin DengueChartCard DEBUG] found barangay:', barangay);
-    let pattern = barangay?.status_and_recommendation?.pattern_based?.status?.toLowerCase();
-    if (!pattern || pattern === '') pattern = 'none';
-    console.log('[Admin DengueChartCard DEBUG] selectedBarangayPattern:', pattern);
+    console.log(
+      "[Admin DengueChartCard DEBUG] selectedBarangay:",
+      selectedBarangay
+    );
+    console.log("[Admin DengueChartCard DEBUG] found barangay:", barangay);
+    let pattern =
+      barangay?.status_and_recommendation?.pattern_based?.status?.toLowerCase();
+    if (!pattern || pattern === "") pattern = "none";
+    console.log(
+      "[Admin DengueChartCard DEBUG] selectedBarangayPattern:",
+      pattern
+    );
     return pattern;
   }, [barangaysData, selectedBarangay]);
 
-  const { data: trendsData, isLoading, error } = useGetBarangayWeeklyTrendsQuery({
+  const {
+    data: trendsData,
+    isLoading,
+    error,
+  } = useGetBarangayWeeklyTrendsQuery({
     barangay_name: selectedBarangay,
-    number_of_weeks: weeks
+    number_of_weeks: weeks,
   });
 
-  // Get color based on pattern
-  const PATTERN_COLORS = {
-    spike: "#ef4444",        // Red
-    gradual_rise: "#f97316", // Orange
-    decline: "#22c55e",      // Green
-    stability: "#3b82f6",    // Blue
-    none: "#6b7280",         // Gray
-    default: "#6b7280",      // Gray
-  };
-  const lineColor = PATTERN_COLORS[selectedBarangayPattern] || PATTERN_COLORS.default;
+  // Get color based on pattern using centralized configuration
+  const lineColor = getPatternColor(selectedBarangayPattern, "stroke");
 
   // Helper to format date range
   function formatDateRange(dateRange) {
-    if (!Array.isArray(dateRange) || dateRange.length !== 2) return '';
+    if (!Array.isArray(dateRange) || dateRange.length !== 2) return "";
     const [start, end] = dateRange;
     const startDate = new Date(start);
     const endDate = new Date(end);
     // Format as 'MMM D - MMM D' or 'MMM D - D' if same month
-    const options = { month: 'short', day: 'numeric' };
+    const options = { month: "short", day: "numeric" };
     if (startDate.getMonth() === endDate.getMonth()) {
-      return `${startDate.toLocaleDateString(undefined, options)} - ${endDate.getDate()}`;
+      return `${startDate.toLocaleDateString(
+        undefined,
+        options
+      )} - ${endDate.getDate()}`;
     }
-    return `${startDate.toLocaleDateString(undefined, options)} - ${endDate.toLocaleDateString(undefined, options)}`;
+    return `${startDate.toLocaleDateString(
+      undefined,
+      options
+    )} - ${endDate.toLocaleDateString(undefined, options)}`;
   }
 
   // Transform the API data to match the chart format (new API structure)
@@ -132,13 +127,13 @@ export default function DengueChartCard() {
     return weekEntries;
   }, [trendsData]);
 
-  const chartLabels = chartData.map(d => d.week);
-  const chartCases = chartData.map(d => d.cases);
+  const chartLabels = chartData.map((d) => d.week);
+  const chartCases = chartData.map((d) => d.cases);
 
   // Find the max cases for the current chartData (for consistent Y axis)
-  const maxCases = Math.max(5, ...chartCases);
+  const maxCases = chartCases.length > 0 ? Math.max(5, ...chartCases) : 10;
 
-  console.log('Transformed Chart Data:', chartData);
+  console.log("Transformed Chart Data:", chartData);
 
   if (isLoading) {
     return (
@@ -156,6 +151,14 @@ export default function DengueChartCard() {
     );
   }
 
+  if (!chartData || chartData.length === 0) {
+    return (
+      <div className="w-full bg-primary p-6 rounded-sm flex items-center justify-center">
+        <p className="text-white">No chart data available</p>
+      </div>
+    );
+  }
+
   return (
     <div className="w-full bg-primary p-6 rounded-sm">
       <div className="flex justify-between items-center mb-4">
@@ -164,8 +167,9 @@ export default function DengueChartCard() {
             Weekly Dengue Cases - {selectedBarangay}
           </p>
           <p className="text-sm text-white">
-            Pattern: <span className="font-semibold" style={{ color: lineColor }}>
-              {selectedBarangayPattern.charAt(0).toUpperCase() + selectedBarangayPattern.slice(1).replace('_', ' ')}
+            Pattern:{" "}
+            <span className="font-semibold" style={{ color: lineColor }}>
+              {getPatternLabel(normalizePatternType(selectedBarangayPattern))}
             </span>
           </p>
         </div>
@@ -225,8 +229,8 @@ export default function DengueChartCard() {
               border: "1px solid #e5e7eb",
               color: "#222",
             }}
-            labelStyle={{ color: '#222' }}
-            itemStyle={{ color: '#222' }}
+            labelStyle={{ color: "#222" }}
+            itemStyle={{ color: "#222" }}
           />
           <Legend
             formatter={() => "Number of Cases"}

@@ -12,6 +12,7 @@ export default defineConfig({
     },
   },
   mode: process.env.NODE_ENV || 'development',
+  assetsInclude: ['**/*.svg'], // Ensure SVGs are included as assets
   build: {
     rollupOptions: {
       output: {
@@ -21,6 +22,15 @@ export default defineConfig({
           react: ["react", "react-dom"],
           ui: ["@headlessui/react", "phosphor-react", "daisyui"],
           // You can add more as needed, depending on large dependencies
+        },
+        // Ensure assets are properly handled
+        assetFileNames: (assetInfo) => {
+          const info = assetInfo.name.split('.');
+          const ext = info[info.length - 1];
+          if (/png|jpe?g|svg|gif|tiff|bmp|ico/i.test(ext)) {
+            return `img/[name]-[hash][extname]`;
+          }
+          return `assets/[name]-[hash][extname]`;
         },
       },
     },

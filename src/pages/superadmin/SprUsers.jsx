@@ -1,15 +1,15 @@
 import { UsersTable } from "../../components";
 import { useState, useEffect } from "react";
 import { User, CheckCircle, XCircle, Clock } from "phosphor-react";
-import { useGetUsersQuery } from "../../api/dengueApi";
+import { useGetAccountsQuery } from "../../api/dengueApi";
 import { Link } from "react-router-dom";
 
 function SprUsers() {
-  // Add the users query
-  const { data: users, isLoading, error } = useGetUsersQuery();
+  // Use the same query as UsersTable for consistency
+  const { data: accounts, isLoading, error } = useGetAccountsQuery();
   
   // Add console.log to debug the response
-  console.log('Users API Response:', users);
+  console.log('Accounts API Response:', accounts);
   console.log('Loading state:', isLoading);
   console.log('Error state:', error);
 
@@ -22,18 +22,25 @@ function SprUsers() {
     lastUpdated: new Date()
   });
 
-  // Update stats when users data changes
+  // Update stats when accounts data changes - filter for users only and exclude deleted
   useEffect(() => {
-    if (users) {
+    if (accounts) {
+      // Filter for users only and exclude deleted accounts (same logic as UsersTable)
+      const userAccounts = accounts.filter(account => {
+        const isUser = account.role === 'user';
+        const isNotDeleted = account.status !== 'deleted';
+        return isUser && isNotDeleted;
+      });
+
       setStats({
-        totalUsers: users.length,
-        activeUsers: users.filter(user => user.status === 'active').length,
-        bannedUsers: users.filter(user => user.status === 'banned').length,
-        unverifiedUsers: users.filter(user => user.status === 'unverified').length,
+        totalUsers: userAccounts.length,
+        activeUsers: userAccounts.filter(user => user.status === 'active').length,
+        bannedUsers: userAccounts.filter(user => user.status === 'banned').length,
+        unverifiedUsers: userAccounts.filter(user => user.status === 'unverified').length,
         lastUpdated: new Date()
       });
     }
-  }, [users]);
+  }, [accounts]);
 
   // Add filter states
   const [statusFilter, setStatusFilter] = useState("");
@@ -41,7 +48,7 @@ function SprUsers() {
   const [searchQuery, setSearchQuery] = useState("");
 
   return (
-    <main className="flex flex-col w-full">
+    <main className="flex flex-col w-full py-8">
       {/* Statistics Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         <div className="bg-white p-6 rounded-xl shadow-sm">
@@ -119,7 +126,7 @@ function SprUsers() {
             </div>
             <div className="flex gap-4">
               <select 
-                className="select select-bordered w-full max-w-xs"
+                className="select select-bordered w-full max-w-xs hover:cursor-pointer"
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
               >
@@ -130,7 +137,7 @@ function SprUsers() {
               </select>
 
               <select 
-                className="select select-bordered w-full max-w-xs"
+                className="select select-bordered w-full max-w-xs hover:cursor-pointer"
                 value={roleFilter}
                 onChange={(e) => setRoleFilter(e.target.value)}
               >

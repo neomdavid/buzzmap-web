@@ -32,17 +32,16 @@ const customTheme = themeQuartz.withParams({
 
 const StatusCell = (p) => {
   const status = p.value;
-  const bgColor =
-    status === "Complete"
-      ? "bg-success"
-      : status === "Scheduled"
-      ? "bg-warning"
-      : "bg-info";
+  const statusStyles = {
+    Scheduled: "bg-info/10 text-info border-info/20",
+    Ongoing: "bg-warning/10 text-warning border-warning/20",
+    Complete: "bg-success/10 text-success border-success/20",
+  };
 
   return (
     <div className="flex items-center justify-center h-full p-1">
       <span
-        className={`${bgColor} rounded-2xl px-4 py-1 flex items-center justify-center text-white text-sm font-semibold text-center`}
+        className={`${statusStyles[status]} rounded-2xl px-4 py-1 flex items-center justify-center text-sm font-semibold text-center border`}
       >
         {status}
       </span>
@@ -112,28 +111,28 @@ function InterventionsTable({
   const columnDefs = useMemo(() => {
     const baseCols = [
       { field: "barangay", headerName: "Barangay", minWidth: 150 },
-      { 
-        field: "address", 
-        headerName: "Address", 
+      {
+        field: "address",
+        headerName: "Address",
         minWidth: 250,
         sortable: false,
         cellRenderer: (p) => (
           <div className="flex items-center h-full p-1">
             <span className="truncate" title={p.value}>
-              {p.value || 'No address specified'}
+              {p.value || "No address specified"}
             </span>
           </div>
-        )
+        ),
       },
-      { 
-        field: "date", 
-        headerName: "Date", 
+      {
+        field: "date",
+        headerName: "Date",
         minWidth: 140,
         cellRenderer: DateCell,
-        sort: 'desc', // Default sort by date descending
+        sort: "desc", // Default sort by date descending
         comparator: (dateA, dateB) => {
           return dateA.getTime() - dateB.getTime();
-        }
+        },
       },
       {
         field: "interventionType",
@@ -231,6 +230,7 @@ function InterventionsTable({
           theme={theme}
           pagination={isActionable && !onlyRecent} // Only show pagination when not showing only recent
           paginationPageSize={10}
+          paginationPageSizeSelector={[10, 20, 50, 100]}
           // onGridSizeChanged={onGridSizeChanged}
           onFirstDataRendered={onFirstDataRendered}
           context={{ openDetailsModal }}

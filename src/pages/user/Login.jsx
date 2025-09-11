@@ -39,9 +39,9 @@ const Login = () => {
         password,
       }).unwrap();
       console.log("Login successful:", response);
-      
+
       const { user, accessToken } = response;
-      
+
       // First update Redux state
       dispatch(setAuthCredentials({ user, token: accessToken, rememberMe }));
 
@@ -49,14 +49,16 @@ const Login = () => {
       toastSuccess(`Welcome, ${user.name}`);
 
       // Wait for state to be updated and persisted
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise((resolve) => setTimeout(resolve, 100));
 
       // Verify the state was updated correctly
-      const storedUser = localStorage.getItem('user') || sessionStorage.getItem('user');
-      const storedToken = localStorage.getItem('token') || sessionStorage.getItem('token');
+      const storedUser =
+        localStorage.getItem("user") || sessionStorage.getItem("user");
+      const storedToken =
+        localStorage.getItem("token") || sessionStorage.getItem("token");
 
       if (!storedUser || !storedToken) {
-        toastError('Login failed - please try again');
+        toastError("Login failed - please try again");
         return;
       }
 
@@ -75,51 +77,54 @@ const Login = () => {
       console.error("Login error details:", {
         status: err?.status,
         message: err?.data?.message,
-        fullError: err
+        fullError: err,
       });
-      
+
       // Check for unverified account error
-      const errorMessage = err?.data?.message?.toLowerCase() || '';
-      if (errorMessage.includes("not been verified") || errorMessage.includes("pending activation")) {
+      const errorMessage = err?.data?.message?.toLowerCase() || "";
+      if (
+        errorMessage.includes("not been verified") ||
+        errorMessage.includes("pending activation")
+      ) {
         console.log("Unverified account detected");
         console.log("Storing email in Redux:", email);
-        
+
         // Store email in Redux for OTP verification
         dispatch(setEmailForOtp(email));
-        
+
         try {
           // Automatically resend OTP for account verification
           await resendOtp({
             email,
-            purpose: "account-verification"
+            purpose: "account-verification",
           }).unwrap();
-          
+
           toastSuccess("Verification code has been resent to your email!");
-          
+
           // Wait for Redux state to update
           setTimeout(() => {
             console.log("Redirecting to OTP page with state");
             // Use replace: true to prevent back navigation
-            navigate("/otp", { 
+            navigate("/otp", {
               replace: true,
-              state: { 
-                from: 'login',
-                email: email 
-              }
+              state: {
+                from: "login",
+                email: email,
+              },
             });
           }, 100);
         } catch (resendError) {
           console.error("Failed to resend OTP:", resendError);
           toastError("Failed to resend verification code. Please try again.");
-          
+
           // Still redirect to OTP page even if resend fails
           setTimeout(() => {
-            navigate("/otp", { 
+            navigate("/otp", {
               replace: true,
-              state: { 
-                from: 'login',
-                email: email 
-              }
+              state: {
+                from: "login",
+                email: email,
+              },
             });
           }, 100);
         }
@@ -131,7 +136,9 @@ const Login = () => {
       if (backendMessage) {
         toastError(backendMessage);
       } else if (err?.status === 500) {
-        toastError('Network error. Please check your connection and try again.');
+        toastError(
+          "Network error. Please check your connection and try again."
+        );
       } else {
         toastError("Login failed. Please check your credentials.");
       }
@@ -195,8 +202,9 @@ const Login = () => {
               <label className="text-md lg:text-[14px]">Remember Me</label>
             </div>
             <button
+              type="button"
               onClick={handleForgotPasswordClick}
-              className="font-semibold  italic hover:underline hover:cursor-pointer"
+              className="font-semibold text-[14px]  italic hover:underline hover:cursor-pointer"
             >
               Forgot password?
             </button>
@@ -206,15 +214,16 @@ const Login = () => {
           <button
             disabled={isLoading || !email.trim() || !password.trim()}
             className={`bg-primary  font-extrabold shadow-[2px_6px_3px_rgba(0,0,0,0.20)] font-bold text-white w-xs py-3 px-4 rounded-2xl hover:cursor-pointer hover:bg-base-200/60 transition-all duration-300 ${
-              (isLoading || !email.trim() || !password.trim()) && "bg-gray-100 disabled opacity-50 cursor-not-allowed"
+              (isLoading || !email.trim() || !password.trim()) &&
+              "bg-gray-100 disabled opacity-50 cursor-not-allowed"
             }`}
           >
             {isLoading ? "Logging in..." : "Login"}
           </button>
           {isError && (
             <p className="z-10000000  font-semibold text-red-500 font-light italic text-md">
-              {error?.data?.message || 
-                (error?.status === 500 
+              {error?.data?.message ||
+                (error?.status === 500
                   ? "Network error. Please check your connection and try again."
                   : "Login failed. Please check your credentials.")}
             </p>

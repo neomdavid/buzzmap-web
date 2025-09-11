@@ -257,10 +257,6 @@ function AdminsTable({ statusFilter, roleFilter, searchQuery }) {
 
     return (
       <div className="py-2 h-full w-full flex items-center gap-2">
-        <button className="flex items-center gap-1 text-primary hover:bg-gray-200 p-1 rounded-md">
-          <IconSearch size={13} stroke={2.5} />
-          <p className="text-sm">view</p>
-        </button>
         {/* Only show disable/enable button if not super admin */}
         {!isSuperAdmin && (
           <button 
@@ -406,7 +402,10 @@ function AdminsTable({ statusFilter, roleFilter, searchQuery }) {
       >
         {isLoading ? (
           <div className="h-full flex items-center justify-center">
-            <p className="text-lg">Loading accounts...</p>
+            <div className="text-center">
+              <span className="loading loading-spinner loading-lg text-primary"></span>
+              <p className="mt-4 text-lg text-gray-600">Loading accounts...</p>
+            </div>
           </div>
         ) : error ? (
           <div className="h-full flex items-center justify-center">

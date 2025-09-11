@@ -1,4 +1,10 @@
-import React, { useState, useMemo, useRef, useCallback, useEffect } from "react";
+import React, {
+  useState,
+  useMemo,
+  useRef,
+  useCallback,
+  useEffect,
+} from "react";
 import {
   AllCommunityModule,
   ModuleRegistry,
@@ -15,6 +21,10 @@ const defaultColDef = {
   flex: 1,
   minWidth: 100,
   filter: true,
+  filterParams: {
+    buttons: ["apply", "clear", "reset", "cancel"],
+    closeOnApply: true,
+  },
 };
 
 const customTheme = themeQuartz.withParams({
@@ -52,10 +62,12 @@ const StatusCell = (p) => {
 };
 
 const ActionsCell = (p) => {
-  const { undoState, handleVerify, handleReject, handleUndo } = p.context;
+  const { undoState, handleVerify, handleReject, handleUndo, actionLoading } =
+    p.context;
   const status = p.data.status;
   const id = p.data.id;
   const isUndoing = !!undoState[id];
+  const isLoading = !!actionLoading[id];
 
   const viewButton = (
     <button
@@ -68,37 +80,53 @@ const ActionsCell = (p) => {
   );
   const verifyButton = (
     <button
-      className="flex items-center gap-1 text-success hover:bg-gray-200 p-1 rounded-md hover:cursor-pointer"
+      className="flex items-center gap-1 text-success hover:bg-gray-200 p-1 rounded-md hover:cursor-pointer disabled:opacity-50"
       onClick={() => handleVerify(p.data)}
+      disabled={isLoading}
     >
-      <div className="rounded-full bg-success p-0.5">
-        <IconCheck size={11} color="white" stroke={4} />
-      </div>
-      <p className="text-sm">verify</p>
+      {isLoading ? (
+        <div className="w-4 h-4 border-2 border-success border-t-transparent rounded-full animate-spin"></div>
+      ) : (
+        <div className="rounded-full bg-success p-0.5">
+          <IconCheck size={11} color="white" stroke={4} />
+        </div>
+      )}
+      <p className="text-sm">{isLoading ? "processing..." : "verify"}</p>
     </button>
   );
   const rejectButton = (
     <button
-      className="flex items-center gap-1 text-error hover:bg-gray-200 p-1 rounded-md hover:cursor-pointer"
+      className="flex items-center gap-1 text-error hover:bg-gray-200 p-1 rounded-md hover:cursor-pointer disabled:opacity-50"
       onClick={() => handleReject(p.data)}
+      disabled={isLoading}
     >
-      <IconX size={15} stroke={5} />
-      <p className="text-sm">reject</p>
+      {isLoading ? (
+        <div className="w-4 h-4 border-2 border-error border-t-transparent rounded-full animate-spin"></div>
+      ) : (
+        <IconX size={15} stroke={5} />
+      )}
+      <p className="text-sm">{isLoading ? "processing..." : "reject"}</p>
     </button>
   );
   const undoButton = (
     <button
-      className="flex items-center gap-1 text-warning hover:bg-gray-200 p-1 rounded-md hover:cursor-pointer"
+      className="flex items-center gap-1 text-warning hover:bg-gray-200 p-1 rounded-md hover:cursor-pointer disabled:opacity-50"
       onClick={() => handleUndo(p.data)}
+      disabled={isLoading}
     >
-      <p className="text-sm">Undo</p>
+      {isLoading ? (
+        <div className="w-4 h-4 border-2 border-warning border-t-transparent rounded-full animate-spin"></div>
+      ) : null}
+      <p className="text-sm">{isLoading ? "undoing..." : "Undo"}</p>
     </button>
   );
 
   return (
     <div className="py-2 h-full w-full flex items-center gap-2">
       {viewButton}
-      {isUndoing ? undoButton : (
+      {isUndoing ? (
+        undoButton
+      ) : (
         <>
           {status === "Pending" && verifyButton}
           {status === "Pending" && rejectButton}
@@ -115,7 +143,7 @@ const ActionsCell = (p) => {
 //   // Your operations here
 // };
 
-const UNDO_STORAGE_KEY = 'reportUndoState';
+const UNDO_STORAGE_KEY = "reportUndoState";
 
 function loadUndoStateFromStorage() {
   try {
@@ -140,12 +168,19 @@ function saveUndoStateToStorage(state) {
   localStorage.setItem(UNDO_STORAGE_KEY, JSON.stringify(state));
 }
 
-function ReportTable2({ posts, isActionable = true, onlyRecent = false }) {
+function ReportTable2({
+  posts,
+  isActionable = true,
+  onlyRecent = false,
+  onSuccess,
+  isRefetching = false,
+}) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedReport, setSelectedReport] = useState(null);
   const [selectedReportType, setSelectedReportType] = useState(null);
-  const [validatePost] = useValidatePostMutation();
+  const [validatePost, { isLoading: isUpdating }] = useValidatePostMutation();
   const [undoState, setUndoState] = useState(() => loadUndoStateFromStorage()); // { [id]: { prevStatus, newStatus, timestamp } }
+  const [actionLoading, setActionLoading] = useState({}); // Track loading state for individual actions
 
   const gridRef = useRef(null);
 
@@ -174,6 +209,7 @@ function ReportTable2({ posts, isActionable = true, onlyRecent = false }) {
       second: "2-digit", // "45"
       hour12: true, // Show 12-hour format with AM/PM
     }),
+    dateValue: new Date(post.date_and_time), // Raw date for filtering
     status: post.status,
     description: post.description, // Include description
     images: post.images || [], // Include images, default to empty array if undefined
@@ -212,32 +248,88 @@ function ReportTable2({ posts, isActionable = true, onlyRecent = false }) {
 
   // Handler to be called after confirmation in modal
   const handleConfirmAction = async (row, actionType) => {
-    const timestamp = Date.now();
-    const newStatus = actionType === "verify" ? "Validated" : "Rejected";
-    setUndoState((prev) => ({
-      ...prev,
-      [row.id]: { prevStatus: row.status, newStatus, timestamp },
-    }));
-    await validatePost({ id: row.id, status: newStatus });
+    try {
+      setActionLoading((prev) => ({ ...prev, [row.id]: true }));
+      const timestamp = Date.now();
+      const newStatus = actionType === "verify" ? "Validated" : "Rejected";
+      setUndoState((prev) => ({
+        ...prev,
+        [row.id]: { prevStatus: row.status, newStatus, timestamp },
+      }));
+      await validatePost({ id: row.id, status: newStatus }).unwrap();
+      // Close modal after successful action
+      setIsModalOpen(false);
+      setSelectedReport(null);
+      // Call success callback to refresh data
+      if (onSuccess) {
+        onSuccess();
+      }
+    } catch (error) {
+      console.error("Failed to update report status:", error);
+      // Keep modal open on error so user can retry
+    } finally {
+      setActionLoading((prev) => ({ ...prev, [row.id]: false }));
+    }
   };
 
   // Handler for undo
   const handleUndo = async (row) => {
     const undoInfo = undoState[row.id];
     if (!undoInfo) return;
-    await validatePost({ id: row.id, status: undoInfo.prevStatus });
-    setUndoState((prev) => {
-      const copy = { ...prev };
-      delete copy[row.id];
-      return copy;
-    });
+
+    try {
+      setActionLoading((prev) => ({ ...prev, [row.id]: true }));
+      await validatePost({ id: row.id, status: undoInfo.prevStatus }).unwrap();
+
+      // Show success toast
+      const { toast } = await import("react-toastify");
+      toast.success(
+        `Report status reverted to ${undoInfo.prevStatus} successfully!`
+      );
+
+      // Call success callback to refresh data
+      if (onSuccess) {
+        onSuccess();
+      }
+
+      setUndoState((prev) => {
+        const copy = { ...prev };
+        delete copy[row.id];
+        return copy;
+      });
+    } catch (error) {
+      console.error("Failed to undo report status:", error);
+      const { toast } = await import("react-toastify");
+      toast.error("Failed to undo report status.");
+    } finally {
+      setActionLoading((prev) => ({ ...prev, [row.id]: false }));
+    }
   };
 
   const columnDefs = useMemo(() => {
     const baseCols = [
       { field: "username", headerName: "Username", minWidth: 150 },
       { field: "barangay", headerName: "Barangay", minWidth: 200 },
-      { field: "date", headerName: "Date & Time", minWidth: 120 },
+      {
+        field: "date",
+        headerName: "Date & Time",
+        minWidth: 120,
+        filter: "agDateColumnFilter",
+        filterParams: {
+          comparator: (filterLocalDateAtMidnight, cellValue) => {
+            const cellDate = new Date(cellValue);
+            if (cellDate < filterLocalDateAtMidnight) return -1;
+            if (cellDate > filterLocalDateAtMidnight) return 1;
+            return 0;
+          },
+        },
+        valueGetter: (params) => {
+          return params.data.dateValue;
+        },
+        valueFormatter: (params) => {
+          return params.data.date;
+        },
+      },
       {
         field: "status",
         headerName: "Status",
@@ -311,10 +403,18 @@ function ReportTable2({ posts, isActionable = true, onlyRecent = false }) {
   return (
     <>
       <div
-        className="ag-theme-quartz"
+        className="ag-theme-quartz relative"
         ref={gridRef}
         style={{ height: "100%", width: "100%" }}
       >
+        {isRefetching && (
+          <div className="absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center z-10">
+            <div className="flex flex-col items-center gap-2">
+              <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+              <span className="text-sm text-gray-600">Updating data...</span>
+            </div>
+          </div>
+        )}
         <AgGridReact
           ref={gridRef}
           rowData={rowData}
@@ -322,10 +422,18 @@ function ReportTable2({ posts, isActionable = true, onlyRecent = false }) {
           defaultColDef={defaultColDef}
           theme={theme}
           pagination={isActionable && !onlyRecent} // Only show pagination when not showing only recent
-          paginationPageSize={10}
+          paginationPageSize={20}
+          paginationPageSizeSelector={[10, 20, 50, 100]}
           onGridSizeChanged={onGridSizeChanged}
           onFirstDataRendered={onFirstDataRendered}
-          context={{ openModal, undoState, handleVerify, handleReject, handleUndo }}
+          context={{
+            openModal,
+            undoState,
+            handleVerify,
+            handleReject,
+            handleUndo,
+            actionLoading,
+          }}
           // onGridReady={onGridReady} // Add this line
         />
       </div>
@@ -370,7 +478,9 @@ function ReportTable2({ posts, isActionable = true, onlyRecent = false }) {
             coordinates={selectedReport.coordinates}
             type={selectedReportType}
             username={selectedReport.username}
-            onConfirmAction={actionType => handleConfirmAction(selectedReport, actionType)}
+            onConfirmAction={(actionType) =>
+              handleConfirmAction(selectedReport, actionType)
+            }
           />
         )}
     </>

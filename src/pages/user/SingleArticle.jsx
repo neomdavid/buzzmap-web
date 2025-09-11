@@ -1,16 +1,20 @@
 import { ArrowLeft } from "phosphor-react";
 import { useState, useEffect } from "react";
-import { useParams, useNavigate } from 'react-router-dom';
-import { useGetSingleAdminPostQuery } from '../../api/dengueApi';
+import { useParams, useNavigate } from "react-router-dom";
+import { useGetSingleAdminPostQuery } from "../../api/dengueApi";
 import { PostContentDisplay } from "../../components/Admin/FormPublicPost";
-import dummyUpdates from '../../data/dummyUpdates';
-import { formatArticleDate } from '../../utils';
+import dummyUpdates from "../../data/dummyUpdates";
+import { formatArticleDate } from "../../utils";
 
 const SingleArticle = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const dummyArticle = dummyUpdates.find(u => String(u.id) === String(id));
-  const { data: article, isLoading, error } = useGetSingleAdminPostQuery(id, { skip: !!dummyArticle });
+  const dummyArticle = dummyUpdates.find((u) => String(u.id) === String(id));
+  const {
+    data: article,
+    isLoading,
+    error,
+  } = useGetSingleAdminPostQuery(id, { skip: !!dummyArticle });
   const [currentSlide, setCurrentSlide] = useState(0);
   const [aspectRatio, setAspectRatio] = useState("16/9");
 
@@ -20,12 +24,16 @@ const SingleArticle = () => {
 
   // Function to handle next slide
   const nextSlide = () => {
-    setCurrentSlide((prev) => (prev === (displayArticle?.images?.length || 0) - 1 ? 0 : prev + 1));
+    setCurrentSlide((prev) =>
+      prev === (displayArticle?.images?.length || 0) - 1 ? 0 : prev + 1
+    );
   };
 
   // Function to handle previous slide
   const prevSlide = () => {
-    setCurrentSlide((prev) => (prev === 0 ? (displayArticle?.images?.length || 0) - 1 : prev - 1));
+    setCurrentSlide((prev) =>
+      prev === 0 ? (displayArticle?.images?.length || 0) - 1 : prev - 1
+    );
   };
 
   // Effect to detect image aspect ratio
@@ -64,14 +72,11 @@ const SingleArticle = () => {
     );
   }
 
-  if (!displayArticle) {
+  if (!displayArticle || displayArticle.status === "archived") {
     return (
       <div className="flex flex-col items-center justify-center h-screen">
         <p className="text-gray-500 text-xl mb-4">Article not found</p>
-        <button 
-          onClick={() => navigate(-1)}
-          className="btn btn-primary"
-        >
+        <button onClick={() => navigate(-1)} className="btn btn-primary">
           Go Back
         </button>
       </div>
@@ -91,23 +96,25 @@ const SingleArticle = () => {
           onClick={() => navigate(-1)}
         />
         <p className="font-semibold text-2xl">
-          {displayArticle.category === 'news' 
-            ? 'Dengue Surveillance Update'
-            : '#QCESDhelps'}
+          {displayArticle.category === "news"
+            ? "Dengue Surveillance Update"
+            : "#QCESDhelps"}
         </p>
       </div>
 
       <p className="text-4xl sm:text-6xl tracking-[.8px] uppercase w-[90%] sm:w-[80%] mx-auto text-center p-6 sm:p-12 font-[900] break-words">
-        {displayArticle.category === 'news' 
+        {displayArticle.category === "news"
           ? formatArticleDate(displayArticle.publishDate)
           : displayArticle.title}
-          <span className="font-[700]"> Dengue Surveillance Update</span>
+        <span className="font-[700]"> Dengue Surveillance Update</span>
       </p>
 
       <p className="text-center font-bold text-md mt-[-14px] break-words">
-        {displayArticle.category === 'news' 
+        {displayArticle.category === "news"
           ? `Published on ${formatArticleDate(displayArticle.publishDate)}`
-          : `Last updated on ${formatArticleDate(displayArticle.date || displayArticle.publishDate)}`}
+          : `Last updated on ${formatArticleDate(
+              displayArticle.date || displayArticle.publishDate
+            )}`}
       </p>
 
       {/* Carousel */}
@@ -115,7 +122,9 @@ const SingleArticle = () => {
         <div className="w-[90%] sm:w-[60%] mx-auto my-10 rounded-lg overflow-hidden max-w-3xl">
           <div className="relative group">
             {/* Current Slide */}
-            <div className={`w-full ${aspectRatioClasses[aspectRatio]} relative`}>
+            <div
+              className={`w-full ${aspectRatioClasses[aspectRatio]} relative`}
+            >
               <img
                 src={displayArticle.images[currentSlide]}
                 alt={displayArticle.title}
@@ -156,11 +165,13 @@ const SingleArticle = () => {
 
       {/* Article Content */}
       <div className="w-[90%] sm:w-[80%] mx-auto">
-        <div className="break-words whitespace-pre-wrap">
+        <div className="break-words text-lg whitespace-pre-wrap">
           {displayArticle.content ? (
             <div>{displayArticle.content}</div>
           ) : (
-            <PostContentDisplay content={displayArticle.content || displayArticle.content} />
+            <PostContentDisplay
+              content={displayArticle.content || displayArticle.content}
+            />
           )}
         </div>
       </div>

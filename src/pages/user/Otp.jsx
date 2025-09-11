@@ -1,15 +1,19 @@
 import { useState, useRef, useEffect } from "react";
 import { useSelector, useDispatch } from "react-redux";
-import { useVerifyOtpMutation, useResendOtpMutation } from "../../api/dengueApi";
+import {
+  useVerifyOtpMutation,
+  useResendOtpMutation,
+} from "../../api/dengueApi";
 // import { setCredentials } from "../../features/authSlice";
-import { toastError } from "../../utils.jsx";
+import { toastError, toastSuccess } from "../../utils.jsx";
 import { useNavigate, useLocation } from "react-router-dom";
 
 function Otp() {
   const [otp, setOtp] = useState(["", "", "", ""]);
   const inputRefs = useRef([]);
   const email = useSelector((state) => state.otp.email);
-  const [verifyOtp, { isLoading, isError, error, reset }] = useVerifyOtpMutation();
+  const [verifyOtp, { isLoading, isError, error, reset }] =
+    useVerifyOtpMutation();
   const [resendOtp, { isLoading: isResendLoading }] = useResendOtpMutation();
   const [cooldown, setCooldown] = useState(0);
   const [hasInitialized, setHasInitialized] = useState(false);
@@ -58,7 +62,7 @@ function Otp() {
 
     const initializeOtp = async () => {
       console.log("[OTP] Initializing OTP component");
-      
+
       if (!emailToUse) {
         console.log("[OTP] No email found, redirecting to login");
         toastError("No email found. Please try logging in again.");
@@ -67,16 +71,18 @@ function Otp() {
       }
 
       // Show toast if redirected from login
-      if (location.state?.from === 'login') {
+      if (location.state?.from === "login") {
         console.log("[OTP] Redirected from login, showing toast");
-        toastError("Account registration was not completed. Please verify your email to continue.");
+        toastError(
+          "Account registration was not completed. Please verify your email to continue."
+        );
       }
 
       try {
         console.log("[OTP] Attempting to send initial OTP to:", emailToUse);
         const response = await resendOtp({
           email: emailToUse,
-          purpose: "account-verification"
+          purpose: "account-verification",
         }).unwrap();
         console.log("[OTP] Initial OTP send response:", response);
         setCooldown(60); // Set initial cooldown
@@ -112,11 +118,11 @@ function Otp() {
     try {
       console.log("[OTP] Sending resend request with:", {
         email: emailToUse,
-        purpose: "account-verification"
+        purpose: "account-verification",
       });
       const response = await resendOtp({
         email: emailToUse,
-        purpose: "account-verification"
+        purpose: "account-verification",
       }).unwrap();
       console.log("[OTP] OTP resend response:", response);
       setCooldown(60); // Start 60 second cooldown only for resend
@@ -136,12 +142,12 @@ function Otp() {
 
   const handleChange = (index, value) => {
     if (!/^\d?$/.test(value)) return; // Only allow one digit
-    
+
     // Reset error state when OTP changes
     if (isError) {
       reset();
     }
-    
+
     const newOtp = [...otp];
     newOtp[index] = value;
     setOtp(newOtp);
@@ -167,8 +173,10 @@ function Otp() {
         otp: fullOtp,
         purpose: "account-verification",
       }).unwrap();
-      console.log("[OTP] OTP verified successfully:", response);
       navigate("/login");
+      toastSuccess(
+        "Your account has been created successfully! You can now log in."
+      );
     } catch (err) {
       console.error("[OTP] OTP verification failed:", err);
     }
@@ -211,14 +219,15 @@ function Otp() {
             onClick={handleResendOtp}
             disabled={isResendLoading || cooldown > 0}
             className={`font-bold hover:underline ${
-              (isResendLoading || cooldown > 0) && "opacity-50 cursor-not-allowed"
+              (isResendLoading || cooldown > 0) &&
+              "opacity-50 cursor-not-allowed"
             }`}
           >
-            {isResendLoading 
-              ? "Sending..." 
-              : cooldown > 0 
-                ? `Resend (${cooldown}s)` 
-                : "Resend"}
+            {isResendLoading
+              ? "Sending..."
+              : cooldown > 0
+              ? `Resend (${cooldown}s)`
+              : "Resend"}
           </button>
         </p>
         <button
@@ -237,9 +246,10 @@ function Otp() {
 
         {isError && (
           <p className="text-red-400 font-semibold text-md mt-[-10px]">
-            {error?.data?.message?.includes("email") 
+            {error?.data?.message?.includes("email")
               ? "Invalid OTP code. Please try again."
-              : error?.data?.message || "Something went wrong. Please try again."}
+              : error?.data?.message ||
+                "Something went wrong. Please try again."}
           </p>
         )}
       </div>

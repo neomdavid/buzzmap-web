@@ -12,7 +12,6 @@ export { default as CustomFormInput } from "./CustomFormInput.jsx";
 export { default as MapPicker } from "./MapPicker.jsx";
 export { default as DengueMapLegend } from "./DengueMapLegend.jsx";
 
-
 //LANDING
 export { default as GoalCard } from "./Landing/GoalCard.jsx";
 export { default as PreventionCard } from "./Landing/PreventionCard.jsx";
@@ -30,6 +29,7 @@ export { default as Comment2 } from "./Community/Comment2.jsx";
 export { default as DescriptionWithImages } from "./Community/DescriptionWithImages.jsx";
 export { default as NewPostModal } from "./Community/NewPostModal.jsx";
 export { default as CustomModalToast } from "./Community/CustomModalToast.jsx";
+export { default as ImageExpansionModal } from "./ImageExpansionModal.jsx";
 
 //PREVENTION
 export { default as NewsGrid } from "./Prevention/NewsGrid.jsx";
@@ -63,6 +63,11 @@ export { default as PieChart } from "./Admin/PieChart.jsx";
 export { default as AdminPostsTable } from "./Admin/AdminPostsTable.jsx";
 export { default as AlertsTable } from "./Admin/AlertsTable.jsx";
 export { default as InterventionAnalysisChart } from "./Admin/InterventionAnalysisChart.jsx";
+
+//SKELETONS
+export { default as TableSkeleton } from "./Skeletons/TableSkeleton.jsx";
+export { default as PostCardSkeleton } from "./Skeletons/PostCardSkeleton.jsx";
+
 //SUPERADMIN
 export { default as UsersTable } from "./Superadmin/UsersTable.jsx";
 export { default as AdminsTable } from "./Superadmin/AdminsTable.jsx";

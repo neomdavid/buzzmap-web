@@ -8,12 +8,13 @@ import "react-toastify/dist/ReactToastify.css";
 
 createRoot(document.getElementById("root")).render(
   <Provider store={store}>
-      <ToastContainer
-        position="top-center"
-        newestOnTop
-        toastClassName="text-sm"
-        style={{ zIndex: "999999999999 !important" }}
-      />
-      <App />
+    <ToastContainer
+      position="top-center"
+      newestOnTop
+      toastClassName="text-sm"
+      className="z-[999999]"
+      style={{ zIndex: 999999 }}
+    />
+    <App />
   </Provider>
 );

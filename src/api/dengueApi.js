@@ -2,16 +2,17 @@
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 
 // Debug environment variables
-console.log('Current Mode:', import.meta.env.MODE);
-console.log('VITE_API_BASE_URL:', import.meta.env.VITE_API_BASE_URL);
-console.log('VITE_MODE:', import.meta.env.VITE_MODE);
+console.log("Current Mode:", import.meta.env.MODE);
+console.log("VITE_API_BASE_URL:", import.meta.env.VITE_API_BASE_URL);
+console.log("VITE_MODE:", import.meta.env.VITE_MODE);
 
 // Determine base URL based on environment
-const BASE_URL = import.meta.env.VITE_MODE === 'PROD' || import.meta.env.MODE === 'PROD'
-  ? import.meta.env.VITE_API_BASE_URL 
-  : 'http://localhost:4000/';
+const BASE_URL =
+  import.meta.env.VITE_MODE === "PROD" || import.meta.env.MODE === "PROD"
+    ? import.meta.env.VITE_API_BASE_URL
+    : "http://localhost:4000/";
 
-console.log('Final BASE_URL:', BASE_URL);
+console.log("Final BASE_URL:", BASE_URL);
 
 const customBaseQuery = fetchBaseQuery({
   baseUrl: BASE_URL + "api/v1/",
@@ -28,32 +29,85 @@ const customBaseQuery = fetchBaseQuery({
 const baseQueryWithErrorHandling = async (args, api, extraOptions) => {
   try {
     const result = await customBaseQuery(args, api, extraOptions);
-    
+
     // Check for 401 Unauthorized response
     if (result.error?.status === 401) {
+      // Check if this is an account disabled error
+      const errorMessage =
+        result.error.data?.message || result.error.data || "";
+      if (
+        errorMessage.toLowerCase().includes("disabled") ||
+        errorMessage.toLowerCase().includes("account disabled") ||
+        errorMessage.toLowerCase().includes("inactive")
+      ) {
+        // Dispatch custom event for account disabled
+        const { dispatchAccountDisabledEvent } = await import(
+          "../utils/accountStatusHandler"
+        );
+        dispatchAccountDisabledEvent(
+          "Your account has been disabled. Please contact an administrator."
+        );
+
+        return {
+          error: {
+            status: "ACCOUNT_DISABLED",
+            data: "Your account has been disabled. Please contact an administrator.",
+          },
+        };
+      }
+
       // Preserve the original error message from the backend
-      return { 
-        error: { 
-          status: 'UNAUTHORIZED', 
-          data: result.error.data || 'Please log in to perform this action' 
-        } 
+      return {
+        error: {
+          status: "UNAUTHORIZED",
+          data: result.error.data || "Please log in to perform this action",
+        },
       };
     }
-    
+
+    // Check for 403 Forbidden response (account might be disabled)
+    if (result.error?.status === 403) {
+      const errorMessage =
+        result.error.data?.message || result.error.data || "";
+      if (
+        errorMessage.toLowerCase().includes("disabled") ||
+        errorMessage.toLowerCase().includes("account disabled") ||
+        errorMessage.toLowerCase().includes("inactive")
+      ) {
+        // Dispatch custom event for account disabled
+        const { dispatchAccountDisabledEvent } = await import(
+          "../utils/accountStatusHandler"
+        );
+        dispatchAccountDisabledEvent(
+          "Your account has been disabled. Please contact an administrator."
+        );
+
+        return {
+          error: {
+            status: "ACCOUNT_DISABLED",
+            data: "Your account has been disabled. Please contact an administrator.",
+          },
+        };
+      }
+    }
+
     return result;
   } catch (error) {
     // Handle connection refused errors
-    if (error.message?.includes('Failed to fetch') || error.message?.includes('NetworkError')) {
-      console.error('Connection error:', error);
-      return { 
-        error: { 
-          status: 'CONNECTION_ERROR', 
-          data: 'Unable to connect to the server. Please check if the server is running.' 
-        } 
+    if (
+      error.message?.includes("Failed to fetch") ||
+      error.message?.includes("NetworkError")
+    ) {
+      console.error("Connection error:", error);
+      return {
+        error: {
+          status: "CONNECTION_ERROR",
+          data: "Unable to connect to the server. Please check if the server is running.",
+        },
       };
     }
-    
-    return { error: { status: 'CUSTOM_ERROR', data: error.message } };
+
+    return { error: { status: "CUSTOM_ERROR", data: error.message } };
   }
 };
 
@@ -71,6 +125,7 @@ export const dengueApi = createApi({
     "Alert",
     "Accounts",
     "Comments",
+    "Clusters",
   ],
   endpoints: (builder) => ({
     // Authentication Endpoints
@@ -87,16 +142,16 @@ export const dengueApi = createApi({
           await queryFulfilled;
         } catch (error) {
           // Handle registration error
-          console.error('Registration failed:', error);
+          console.error("Registration failed:", error);
         }
-      }
+      },
     }),
 
     login: builder.mutation({
       query: (credentials) => {
         return {
           url: "auth/login",
-          method: "POST", 
+          method: "POST",
           body: credentials,
         };
       },
@@ -108,7 +163,7 @@ export const dengueApi = createApi({
           // Don't handle the error here, let it propagate to the component
           console.log("Login error in onQueryStarted:", error);
         }
-      }
+      },
     }),
 
     verifyOtp: builder.mutation({
@@ -124,9 +179,9 @@ export const dengueApi = createApi({
       query: (data) => ({
         url: "auth/resend-otp",
         method: "POST",
-        body: { 
+        body: {
           email: data.email,
-          purpose: data.purpose || "account-verification"
+          purpose: data.purpose || "account-verification",
         },
       }),
       invalidatesTags: ["OTP"],
@@ -170,7 +225,7 @@ export const dengueApi = createApi({
 
     // Posts/Reports Endpoints
     getPosts: builder.query({
-      query: ({ 
+      query: ({
         search,
         barangay,
         report_type,
@@ -181,24 +236,32 @@ export const dengueApi = createApi({
         sortOrder,
         username,
         description,
+        popular,
+        recent,
+        myPosts,
         page = 1,
-        limit = 10
+        limit = 10,
       } = {}) => {
-        let url = 'reports';
+        let url = "reports";
         const params = new URLSearchParams();
 
         // Add all search parameters if they exist
-        if (search) params.append('search', search);
-        if (barangay) params.append('barangay', barangay);
-        if (report_type) params.append('report_type', report_type);
-        if (status) params.append('status', status);
-        if (startDate) params.append('startDate', startDate);
-        if (endDate) params.append('endDate', endDate);
-        if (sortBy) params.append('sortBy', sortBy);
-        if (sortOrder) params.append('sortOrder', sortOrder);
-        if (username) params.append('username', username);
-        if (description) params.append('description', description);
-        
+        if (search) params.append("search", search);
+        if (barangay) params.append("barangay", barangay);
+        if (report_type) params.append("report_type", report_type);
+        if (status) params.append("status", status);
+        if (startDate) params.append("startDate", startDate);
+        if (endDate) params.append("endDate", endDate);
+        if (sortBy) params.append("sortBy", sortBy);
+        if (sortOrder) params.append("sortOrder", sortOrder);
+        if (username) params.append("username", username);
+        if (description) params.append("description", description);
+
+        // Add filter parameters
+        if (popular) params.append("popular", "true");
+        if (recent) params.append("recent", "true");
+        if (myPosts) params.append("myPosts", "true");
+
         // Remove pagination params
         // params.append('page', page);
         // params.append('limit', limit);
@@ -210,7 +273,7 @@ export const dengueApi = createApi({
         }
 
         // Log the final URL
-        console.log('API Request URL:', url);
+        console.log("API Request URL:", url);
         return url;
       },
       async onQueryStarted(arg, { dispatch, queryFulfilled, getState }) {
@@ -218,17 +281,23 @@ export const dengueApi = createApi({
           // Check if user is admin and trigger analysis before fetching posts
           const state = getState();
           const user = state.auth?.user;
-          
-          if (user?.role === 'admin') {
-            console.log('[DEBUG] Admin fetching posts, triggering crowdsourced analysis first...');
+
+          if (user?.role === "admin") {
+            console.log(
+              "[DEBUG] Admin fetching posts, triggering crowdsourced analysis first..."
+            );
             // Trigger analysis before fetching posts
-            await dispatch(dengueApi.endpoints.analyzeCrowdsourcedReports.initiate()).unwrap();
-            console.log('[DEBUG] Crowdsourced analysis completed, now fetching posts...');
+            await dispatch(
+              dengueApi.endpoints.analyzeCrowdsourcedReports.initiate()
+            ).unwrap();
+            console.log(
+              "[DEBUG] Crowdsourced analysis completed, now fetching posts..."
+            );
           }
-          
+
           await queryFulfilled;
         } catch (error) {
-          console.error('[DEBUG] Error in getPosts onQueryStarted:', error);
+          console.error("[DEBUG] Error in getPosts onQueryStarted:", error);
           // Still allow posts to be fetched even if analysis fails
         }
       },
@@ -236,13 +305,13 @@ export const dengueApi = createApi({
         // No more paginated format, just return the array directly
         return response;
       },
-      providesTags: (result) => 
+      providesTags: (result) =>
         Array.isArray(result)
           ? [
-              ...result.map(({ id, _id }) => ({ type: 'Post', id: id || _id })),
-              { type: 'Post', id: 'LIST' },
+              ...result.map(({ id, _id }) => ({ type: "Post", id: id || _id })),
+              { type: "Post", id: "LIST" },
             ]
-          : [{ type: 'Post', id: 'LIST' }],
+          : [{ type: "Post", id: "LIST" }],
     }),
 
     getPostById: builder.query({
@@ -259,17 +328,17 @@ export const dengueApi = createApi({
       invalidatesTags: [{ type: "Post", id: "LIST" }],
       // Add optimistic update
       async onQueryStarted(postData, { dispatch, queryFulfilled }) {
-        const optimisticPost = { 
-          ...postData, 
+        const optimisticPost = {
+          ...postData,
           id: Date.now(),
           createdAt: new Date().toISOString(),
           likesCount: 0,
-          commentsCount: 0
+          commentsCount: 0,
         };
-        
+
         // Optimistically update the cache
         dispatch(
-          dengueApi.util.updateQueryData('getPosts', undefined, (draft) => {
+          dengueApi.util.updateQueryData("getPosts", undefined, (draft) => {
             draft.unshift(optimisticPost);
           })
         );
@@ -279,12 +348,12 @@ export const dengueApi = createApi({
         } catch {
           // Revert on error
           dispatch(
-            dengueApi.util.updateQueryData('getPosts', undefined, (draft) => {
+            dengueApi.util.updateQueryData("getPosts", undefined, (draft) => {
               draft.shift();
             })
           );
         }
-      }
+      },
     }),
 
     createPostWithImage: builder.mutation({
@@ -302,7 +371,7 @@ export const dengueApi = createApi({
 
     deletePost: builder.mutation({
       query: (id) => ({
-        url: `posts/${id}`,
+        url: `reports/${id}`,
         method: "DELETE",
       }),
       invalidatesTags: (result, error, id) => [{ type: "Post", id }],
@@ -311,12 +380,13 @@ export const dengueApi = createApi({
     validatePost: builder.mutation({
       query: ({ id, status }) => ({
         url: `reports/${id}`,
-        method: 'PATCH',
+        method: "PATCH",
         body: { status },
       }),
       invalidatesTags: (result, error, { id }) => [
-        { type: 'Post', id },
-        { type: 'Post', id: 'LIST' }
+        { type: "Post", id },
+        { type: "Post", id: "LIST" },
+        "Clusters",
       ],
     }),
 
@@ -331,7 +401,7 @@ export const dengueApi = createApi({
     // Analytics Endpoints
     getAnalytics: builder.query({
       query: () => {
-        console.log('[DEBUG] Fetching analytics data...');
+        console.log("[DEBUG] Fetching analytics data...");
         return "analytics/interventions";
       },
       providesTags: ["Analytics"],
@@ -344,7 +414,7 @@ export const dengueApi = createApi({
         method: "GET",
       }),
       transformResponse: (response) => {
-        console.log('[DEBUG] Crowdsourced analysis response:', response);
+        console.log("[DEBUG] Crowdsourced analysis response:", response);
         return response;
       },
     }),
@@ -371,22 +441,22 @@ export const dengueApi = createApi({
     getAllInterventions: builder.query({
       query: () => `interventions`,
       transformResponse: (response) => {
-        console.log('[DEBUG] All interventions response:', response);
+        console.log("[DEBUG] All interventions response:", response);
         return response;
       },
       providesTags: (result) => {
-        if (!Array.isArray(result)) return [{ type: 'Intervention', id: 'LIST' }];
-        
+        if (!Array.isArray(result))
+          return [{ type: "Intervention", id: "LIST" }];
+
         // Create tags for each barangay that has interventions
-        const barangayTags = [...new Set(result.map(i => i.barangay))].map(barangay => ({
-          type: 'Intervention',
-          id: barangay
-        }));
-        
-        return [
-          ...barangayTags,
-          { type: 'Intervention', id: 'LIST' }
-        ];
+        const barangayTags = [...new Set(result.map((i) => i.barangay))].map(
+          (barangay) => ({
+            type: "Intervention",
+            id: barangay,
+          })
+        );
+
+        return [...barangayTags, { type: "Intervention", id: "LIST" }];
       },
     }),
 
@@ -394,12 +464,12 @@ export const dengueApi = createApi({
     getInterventionsInProgress: builder.query({
       query: (barangay) => `interventions/in-progress/${barangay}`,
       transformResponse: (response) => {
-        console.log('[DEBUG] Interventions for barangay response:', response);
+        console.log("[DEBUG] Interventions for barangay response:", response);
         return response;
       },
       providesTags: (result, error, barangay) => [
         { type: "Intervention", id: barangay },
-        { type: "Intervention", id: "LIST" }
+        { type: "Intervention", id: "LIST" },
       ],
     }),
 
@@ -412,7 +482,7 @@ export const dengueApi = createApi({
       }),
       invalidatesTags: (result, error, { barangay }) => [
         { type: "Intervention", id: barangay },
-        { type: "Intervention", id: "LIST" }
+        { type: "Intervention", id: "LIST" },
       ],
     }),
 
@@ -432,7 +502,7 @@ export const dengueApi = createApi({
       invalidatesTags: (result, error, { id, updatedData }) => [
         { type: "Intervention", id },
         { type: "Intervention", id: updatedData.barangay },
-        { type: "Intervention", id: "LIST" }
+        { type: "Intervention", id: "LIST" },
       ],
     }),
 
@@ -444,7 +514,7 @@ export const dengueApi = createApi({
       }),
       invalidatesTags: (result, error, id) => [
         { type: "Intervention", id },
-        { type: "Intervention", id: "LIST" }
+        { type: "Intervention", id: "LIST" },
       ],
     }),
 
@@ -454,8 +524,26 @@ export const dengueApi = createApi({
       providesTags: ["PatternRecognition"],
     }),
 
-    // Get all barangays
+    // Get all barangays for user route
     getBarangays: builder.query({
+      query: () => "barangays/get-all-barangays-for-user",
+      providesTags: ["Barangay"],
+      transformResponse: (response) => {
+        // If response is an array, sort it alphabetically by name/displayName
+        if (Array.isArray(response)) {
+          return response.sort((a, b) => {
+            // Use displayName if available, otherwise fallback to name
+            const nameA = (a.displayName || a.name || "").toLowerCase();
+            const nameB = (b.displayName || b.name || "").toLowerCase();
+            return nameA.localeCompare(nameB);
+          });
+        }
+        return response;
+      },
+    }),
+
+    // Get all barangays for admin route (includes admin-specific patterns)
+    getAdminBarangays: builder.query({
       query: () => "barangays/get-all-barangays",
       providesTags: ["Barangay"],
       transformResponse: (response) => {
@@ -500,20 +588,20 @@ export const dengueApi = createApi({
       providesTags: (result) =>
         Array.isArray(result)
           ? [
-              ...result.map(({ id, _id }) => ({ type: 'Post', id: id || _id })),
-              { type: 'Post', id: 'LIST' },
+              ...result.map(({ id, _id }) => ({ type: "Post", id: id || _id })),
+              { type: "Post", id: "LIST" },
             ]
-          : [{ type: 'Post', id: 'LIST' }],
+          : [{ type: "Post", id: "LIST" }],
     }),
 
     // Update an admin post
     updateAdminPost: builder.mutation({
       query: ({ id, formData }) => ({
         url: `adminPosts/${id}`,
-        method: 'PATCH',
+        method: "PATCH",
         body: formData,
       }),
-      invalidatesTags: ["Post"],
+      invalidatesTags: [],
     }),
 
     // Delete an admin post
@@ -522,7 +610,7 @@ export const dengueApi = createApi({
         url: `adminPosts/${id}`,
         method: "DELETE",
       }),
-      invalidatesTags: ["Post"],
+      invalidatesTags: [],
     }),
 
     // Get all alerts (paginated)
@@ -534,10 +622,13 @@ export const dengueApi = createApi({
       providesTags: (result) =>
         Array.isArray(result)
           ? [
-              ...result.map(({ id, _id }) => ({ type: 'Alert', id: id || _id })),
-              { type: 'Alert', id: 'LIST' },
+              ...result.map(({ id, _id }) => ({
+                type: "Alert",
+                id: id || _id,
+              })),
+              { type: "Alert", id: "LIST" },
             ]
-          : [{ type: 'Alert', id: 'LIST' }],
+          : [{ type: "Alert", id: "LIST" }],
     }),
 
     // Update an alert
@@ -562,17 +653,46 @@ export const dengueApi = createApi({
     // Add this to your endpoints object in dengueApi
     getBarangayWeeklyTrends: builder.query({
       query: ({ barangay_name, number_of_weeks }) => {
-        console.log('[DEBUG] Fetching weekly trends for:', { barangay_name, number_of_weeks });
+        console.log("[DEBUG] Fetching weekly trends for:", {
+          barangay_name,
+          number_of_weeks,
+        });
         return {
-          url: 'analytics/get-barangay-weekly-trends',
-          method: 'POST',
+          url: "analytics/get-barangay-weekly-trends",
+          method: "POST",
           body: {
             barangay_name,
-            number_of_weeks
-          }
+            number_of_weeks,
+          },
         };
       },
-      providesTags: ['Analytics']
+      providesTags: ["Analytics"],
+    }),
+
+    // Generate AI recommendation for barangay
+    generateRecommendation: builder.mutation({
+      query: ({ userRole, barangay }) => ({
+        url: "analytics/generate-recommendation",
+        method: "POST",
+        body: {
+          userRole,
+          barangay,
+        },
+      }),
+      invalidatesTags: ["Analytics"],
+    }),
+
+    // Get AI recommendation for intervention (new endpoint)
+    getRecommendationForIntervention: builder.query({
+      query: (barangay) =>
+        `analytics/get-recommendation-for-intervention?barangay=${encodeURIComponent(
+          barangay
+        )}`,
+      providesTags: ["Analytics"],
+      transformResponse: (response) => {
+        console.log("[DEBUG] AI recommendation response:", response);
+        return response;
+      },
     }),
 
     // Get a single admin post by ID
@@ -598,102 +718,128 @@ export const dengueApi = createApi({
       providesTags: (result) =>
         Array.isArray(result)
           ? [
-              ...result.map(({ id, _id }) => ({ type: 'Accounts', id: id || _id })),
-              { type: 'Accounts', id: 'LIST' },
+              ...result.map(({ id, _id }) => ({
+                type: "Accounts",
+                id: id || _id,
+              })),
+              { type: "Accounts", id: "LIST" },
             ]
-          : [{ type: 'Accounts', id: 'LIST' }],
+          : [{ type: "Accounts", id: "LIST" }],
     }),
 
     // Add this new endpoint
     getDeletedAccounts: builder.query({
       query: () => ({
-        url: '/accounts/deleted',
-        method: 'GET',
+        url: "/accounts/deleted",
+        method: "GET",
       }),
-      providesTags: ['Accounts'],
+      providesTags: ["Accounts"],
+    }),
+
+    // Archived accounts (separate endpoints for users and admins)
+    getArchivedUsers: builder.query({
+      query: () => ({
+        url: "accounts/archived/users",
+        method: "GET",
+      }),
+      transformResponse: (response) => {
+        // Expecting { message, accounts: [...], count }
+        return response;
+      },
+      providesTags: ["Accounts"],
+    }),
+    getArchivedAdmins: builder.query({
+      query: () => ({
+        url: "accounts/archived/admins",
+        method: "GET",
+      }),
+      transformResponse: (response) => {
+        return response;
+      },
+      providesTags: ["Accounts"],
     }),
 
     // Add this new endpoint
     getBasicProfiles: builder.query({
       query: () => ({
-        url: '/accounts/basic',
-        method: 'GET',
+        url: "/accounts/basic",
+        method: "GET",
       }),
-      providesTags: ['Accounts'],
+      providesTags: ["Accounts"],
     }),
 
     // Create admin account
     createAdmin: builder.mutation({
       query: (adminData) => ({
-        url: 'accounts',
-        method: 'POST',
+        url: "accounts",
+        method: "POST",
         body: adminData,
       }),
-      invalidatesTags: ['Accounts'],
+      invalidatesTags: ["Accounts"],
     }),
 
     // Verify OTP
     verifyAdminOTP: builder.mutation({
       query: (otpData) => ({
-        url: 'auth/verify-otp',
-        method: 'POST',
+        url: "auth/verify-otp",
+        method: "POST",
         body: otpData,
       }),
-      invalidatesTags: ['Accounts'],
+      invalidatesTags: ["Accounts"],
     }),
 
     // Add this to the endpoints object
     deleteAccount: builder.mutation({
       query: (id) => ({
         url: `accounts/${id}`,
-        method: 'DELETE',
+        method: "DELETE",
       }),
-      invalidatesTags: ['Accounts'],
+      invalidatesTags: ["Accounts"],
     }),
 
     // Add this to the endpoints object
     toggleAccountStatus: builder.mutation({
       query: ({ id, status }) => ({
         url: `accounts/${id}/toggle-status`,
-        method: 'PATCH',
+        method: "PATCH",
         body: { status },
       }),
       invalidatesTags: (result, error, { id }) => [
-        { type: 'Accounts', id },
-        { type: 'Accounts', id: 'LIST' }
+        { type: "Accounts", id },
+        { type: "Accounts", id: "LIST" },
       ],
       // Add optimistic update
       async onQueryStarted({ id, status }, { dispatch, queryFulfilled }) {
         try {
           await queryFulfilled;
         } catch (error) {
-          console.error('Error updating account status:', error);
+          console.error("Error updating account status:", error);
         }
-      }
+      },
     }),
 
     // Add this to the endpoints object in dengueApi
     getUsers: builder.query({
       query: () => ({
-        url: '/accounts/role/user',
-        method: 'GET',
+        url: "/accounts/role/user",
+        method: "GET",
       }),
-      providesTags: ['Accounts'],
+      providesTags: ["Accounts"],
     }),
 
     // Add this to the endpoints object
     analyzeInterventionEffectivity: builder.mutation({
       query: (interventionId) => ({
-        url: 'analytics/analyze-intervention-effectivity',
-        method: 'POST',
-        body: { intervention_id: interventionId }
+        url: "analytics/analyze-intervention-effectivity",
+        method: "POST",
+        body: { intervention_id: interventionId },
       }),
-      providesTags: (result, error, id) => [{ type: 'Intervention', id }]
+      providesTags: (result, error, id) => [{ type: "Intervention", id }],
     }),
 
     upvoteReport: builder.mutation({
       query: (reportId) => {
-        console.log('[DEBUG] Upvoting report:', reportId);
+        console.log("[DEBUG] Upvoting report:", reportId);
         return {
           url: `reports/${reportId}/upvote`,
           method: "POST",
@@ -702,31 +848,38 @@ export const dengueApi = createApi({
       async onQueryStarted(reportId, { dispatch, queryFulfilled }) {
         try {
           const { data } = await queryFulfilled;
-          console.log('[DEBUG] Upvote successful:', data);
-          
+          console.log(
+            "[DEBUG] Vote API success - Post:",
+            reportId,
+            "Upvotes:",
+            data.upvotes,
+            "Downvotes:",
+            data.downvotes
+          );
+
           // Update the cache for both the specific post and the post list
           dispatch(
-            dengueApi.util.updateQueryData('getPosts', undefined, (draft) => {
-              const post = draft.find(p => p._id === reportId);
+            dengueApi.util.updateQueryData("getPosts", undefined, (draft) => {
+              const post = draft.find((p) => p._id === reportId);
               if (post) {
                 post.upvotes = data.upvotes;
                 post.downvotes = data.downvotes;
+                post.upvotesArray = data.upvotesArray || [];
+                post.downvotesArray = data.downvotesArray || [];
               }
             })
           );
         } catch (error) {
-          console.error('[DEBUG] Upvote failed:', error);
-          // The error will be handled by the component to show the toast
+          console.error("[DEBUG] Upvote API failed:", error);
         }
       },
       invalidatesTags: (result, error, reportId) => [
         { type: "Post", id: reportId },
-        { type: "Post", id: "LIST" }
       ],
     }),
     downvoteReport: builder.mutation({
       query: (reportId) => {
-        console.log('[DEBUG] Downvoting report:', reportId);
+        console.log("[DEBUG] Downvoting report:", reportId);
         return {
           url: `reports/${reportId}/downvote`,
           method: "POST",
@@ -735,30 +888,31 @@ export const dengueApi = createApi({
       async onQueryStarted(reportId, { dispatch, queryFulfilled }) {
         try {
           const { data } = await queryFulfilled;
-          console.log('[DEBUG] Downvote successful:', data);
-          
+          console.log("[DEBUG] Downvote successful:", data);
+
           // Update the cache for both the specific post and the post list
           dispatch(
-            dengueApi.util.updateQueryData('getPosts', undefined, (draft) => {
-              const post = draft.find(p => p._id === reportId);
+            dengueApi.util.updateQueryData("getPosts", undefined, (draft) => {
+              const post = draft.find((p) => p._id === reportId);
               if (post) {
                 post.upvotes = data.upvotes;
                 post.downvotes = data.downvotes;
+                post.upvotesArray = data.upvotesArray || [];
+                post.downvotesArray = data.downvotesArray || [];
               }
             })
           );
         } catch (error) {
-          console.error('[DEBUG] Downvote failed:', error);
+          console.error("[DEBUG] Downvote failed:", error);
         }
       },
       invalidatesTags: (result, error, reportId) => [
         { type: "Post", id: reportId },
-        { type: "Post", id: "LIST" }
       ],
     }),
     removeUpvote: builder.mutation({
       query: (reportId) => {
-        console.log('[DEBUG] Removing upvote from report:', reportId);
+        console.log("[DEBUG] Removing upvote from report:", reportId);
         return {
           url: `reports/${reportId}/upvote`,
           method: "DELETE",
@@ -767,30 +921,31 @@ export const dengueApi = createApi({
       async onQueryStarted(reportId, { dispatch, queryFulfilled }) {
         try {
           const { data } = await queryFulfilled;
-          console.log('[DEBUG] Remove upvote successful:', data);
-          
+          console.log("[DEBUG] Remove upvote successful:", data);
+
           // Update the cache for both the specific post and the post list
           dispatch(
-            dengueApi.util.updateQueryData('getPosts', undefined, (draft) => {
-              const post = draft.find(p => p._id === reportId);
+            dengueApi.util.updateQueryData("getPosts", undefined, (draft) => {
+              const post = draft.find((p) => p._id === reportId);
               if (post) {
                 post.upvotes = data.upvotes;
                 post.downvotes = data.downvotes;
+                post.upvotesArray = data.upvotesArray || [];
+                post.downvotesArray = data.downvotesArray || [];
               }
             })
           );
         } catch (error) {
-          console.error('[DEBUG] Remove upvote failed:', error);
+          console.error("[DEBUG] Remove upvote failed:", error);
         }
       },
       invalidatesTags: (result, error, reportId) => [
         { type: "Post", id: reportId },
-        { type: "Post", id: "LIST" }
       ],
     }),
     removeDownvote: builder.mutation({
       query: (reportId) => {
-        console.log('[DEBUG] Removing downvote from report:', reportId);
+        console.log("[DEBUG] Removing downvote from report:", reportId);
         return {
           url: `reports/${reportId}/downvote`,
           method: "DELETE",
@@ -799,25 +954,26 @@ export const dengueApi = createApi({
       async onQueryStarted(reportId, { dispatch, queryFulfilled }) {
         try {
           const { data } = await queryFulfilled;
-          console.log('[DEBUG] Remove downvote successful:', data);
-          
+          console.log("[DEBUG] Remove downvote successful:", data);
+
           // Update the cache for both the specific post and the post list
           dispatch(
-            dengueApi.util.updateQueryData('getPosts', undefined, (draft) => {
-              const post = draft.find(p => p._id === reportId);
+            dengueApi.util.updateQueryData("getPosts", undefined, (draft) => {
+              const post = draft.find((p) => p._id === reportId);
               if (post) {
                 post.upvotes = data.upvotes;
                 post.downvotes = data.downvotes;
+                post.upvotesArray = data.upvotesArray || [];
+                post.downvotesArray = data.downvotesArray || [];
               }
             })
           );
         } catch (error) {
-          console.error('[DEBUG] Remove downvote failed:', error);
+          console.error("[DEBUG] Remove downvote failed:", error);
         }
       },
       invalidatesTags: (result, error, reportId) => [
         { type: "Post", id: reportId },
-        { type: "Post", id: "LIST" }
       ],
     }),
     addComment: builder.mutation({
@@ -828,58 +984,64 @@ export const dengueApi = createApi({
       }),
       invalidatesTags: (result, error, { reportId }) => [
         { type: "Post", id: reportId },
-        { type: "Comments", id: reportId }
+        { type: "Comments", id: reportId },
       ],
     }),
     getComments: builder.query({
       query: (postId) => {
-        console.log('[DEBUG] Fetching comments for postId:', postId);
+        console.log("[DEBUG] Fetching comments for postId:", postId);
         const url = `reports/${postId}/comments`;
-        console.log('[DEBUG] Comments API URL:', url);
+        console.log("[DEBUG] Comments API URL:", url);
         return {
           url,
-          method: 'GET',
+          method: "GET",
           headers: {
-            'Content-Type': 'application/json',
+            "Content-Type": "application/json",
           },
         };
       },
       transformResponse: (response, meta, arg) => {
-        console.log('[DEBUG] Raw Comments API Response:', response);
-        console.log('[DEBUG] Response type:', typeof response);
-        console.log('[DEBUG] Is Array?', Array.isArray(response));
-        
+        console.log("[DEBUG] Raw Comments API Response:", response);
+        console.log("[DEBUG] Response type:", typeof response);
+        console.log("[DEBUG] Is Array?", Array.isArray(response));
+
         try {
           // If response is an array, return it directly
           if (Array.isArray(response)) {
-            console.log('[DEBUG] Response is an array with length:', response.length);
+            console.log(
+              "[DEBUG] Response is an array with length:",
+              response.length
+            );
             return response;
           }
-          
+
           // If response is an object with a data property, return that
           if (response && response.data) {
-            console.log('[DEBUG] Response has data property with length:', response.data.length);
+            console.log(
+              "[DEBUG] Response has data property with length:",
+              response.data.length
+            );
             return response.data;
           }
-          
+
           // If response is empty or null, return empty array
-          console.log('[DEBUG] Response is empty or null');
+          console.log("[DEBUG] Response is empty or null");
           return [];
         } catch (error) {
-          console.error('[DEBUG] Error transforming comments response:', error);
+          console.error("[DEBUG] Error transforming comments response:", error);
           return [];
         }
       },
       transformErrorResponse: (response, meta, arg) => {
-        console.error('[DEBUG] Comments API Error:', response);
-        console.error('[DEBUG] Error meta:', meta);
-        console.error('[DEBUG] Error arg:', arg);
+        console.error("[DEBUG] Comments API Error:", response);
+        console.error("[DEBUG] Error meta:", meta);
+        console.error("[DEBUG] Error arg:", arg);
         return response;
       },
       providesTags: (result, error, postId) => {
-        console.log('[DEBUG] Comments cache tags for postId:', postId);
-        console.log('[DEBUG] Comments result:', result);
-        console.log('[DEBUG] Comments error:', error);
+        console.log("[DEBUG] Comments cache tags for postId:", postId);
+        console.log("[DEBUG] Comments result:", result);
+        console.log("[DEBUG] Comments error:", error);
         return [{ type: "Comments", id: postId }];
       },
     }),
@@ -887,8 +1049,8 @@ export const dengueApi = createApi({
     // Test endpoint to verify API connectivity
     testApiConnection: builder.query({
       query: () => ({
-        url: 'health',
-        method: 'GET',
+        url: "health",
+        method: "GET",
       }),
     }),
 
@@ -901,15 +1063,15 @@ export const dengueApi = createApi({
       async onQueryStarted(commentId, { dispatch, queryFulfilled, getState }) {
         try {
           const { data } = await queryFulfilled;
-          console.log('[DEBUG] Comment upvote successful:', data);
-          
+          console.log("[DEBUG] Comment upvote successful:", data);
+
           // Get the report ID from the comment data
           const reportId = data.report;
-          
+
           // Update the cache for the specific report's comments
           dispatch(
-            dengueApi.util.updateQueryData('getComments', reportId, (draft) => {
-              const comment = draft.find(c => c._id === commentId);
+            dengueApi.util.updateQueryData("getComments", reportId, (draft) => {
+              const comment = draft.find((c) => c._id === commentId);
               if (comment) {
                 comment.upvotes = data.upvotes;
                 comment.downvotes = data.downvotes;
@@ -917,11 +1079,11 @@ export const dengueApi = createApi({
             })
           );
         } catch (error) {
-          console.error('[DEBUG] Comment upvote failed:', error);
+          console.error("[DEBUG] Comment upvote failed:", error);
         }
       },
       invalidatesTags: (result, error, commentId) => [
-        { type: "Comments", id: "LIST" }
+        { type: "Comments", id: "LIST" },
       ],
     }),
 
@@ -933,15 +1095,15 @@ export const dengueApi = createApi({
       async onQueryStarted(commentId, { dispatch, queryFulfilled, getState }) {
         try {
           const { data } = await queryFulfilled;
-          console.log('[DEBUG] Comment downvote successful:', data);
-          
+          console.log("[DEBUG] Comment downvote successful:", data);
+
           // Get the report ID from the comment data
           const reportId = data.report;
-          
+
           // Update the cache for the specific report's comments
           dispatch(
-            dengueApi.util.updateQueryData('getComments', reportId, (draft) => {
-              const comment = draft.find(c => c._id === commentId);
+            dengueApi.util.updateQueryData("getComments", reportId, (draft) => {
+              const comment = draft.find((c) => c._id === commentId);
               if (comment) {
                 comment.upvotes = data.upvotes;
                 comment.downvotes = data.downvotes;
@@ -949,11 +1111,11 @@ export const dengueApi = createApi({
             })
           );
         } catch (error) {
-          console.error('[DEBUG] Comment downvote failed:', error);
+          console.error("[DEBUG] Comment downvote failed:", error);
         }
       },
       invalidatesTags: (result, error, commentId) => [
-        { type: "Comments", id: "LIST" }
+        { type: "Comments", id: "LIST" },
       ],
     }),
 
@@ -965,15 +1127,15 @@ export const dengueApi = createApi({
       async onQueryStarted(commentId, { dispatch, queryFulfilled, getState }) {
         try {
           const { data } = await queryFulfilled;
-          console.log('[DEBUG] Remove comment upvote successful:', data);
-          
+          console.log("[DEBUG] Remove comment upvote successful:", data);
+
           // Get the report ID from the comment data
           const reportId = data.report;
-          
+
           // Update the cache for the specific report's comments
           dispatch(
-            dengueApi.util.updateQueryData('getComments', reportId, (draft) => {
-              const comment = draft.find(c => c._id === commentId);
+            dengueApi.util.updateQueryData("getComments", reportId, (draft) => {
+              const comment = draft.find((c) => c._id === commentId);
               if (comment) {
                 comment.upvotes = data.upvotes;
                 comment.downvotes = data.downvotes;
@@ -981,11 +1143,11 @@ export const dengueApi = createApi({
             })
           );
         } catch (error) {
-          console.error('[DEBUG] Remove comment upvote failed:', error);
+          console.error("[DEBUG] Remove comment upvote failed:", error);
         }
       },
       invalidatesTags: (result, error, commentId) => [
-        { type: "Comments", id: "LIST" }
+        { type: "Comments", id: "LIST" },
       ],
     }),
 
@@ -997,15 +1159,15 @@ export const dengueApi = createApi({
       async onQueryStarted(commentId, { dispatch, queryFulfilled, getState }) {
         try {
           const { data } = await queryFulfilled;
-          console.log('[DEBUG] Remove comment downvote successful:', data);
-          
+          console.log("[DEBUG] Remove comment downvote successful:", data);
+
           // Get the report ID from the comment data
           const reportId = data.report;
-          
+
           // Update the cache for the specific report's comments
           dispatch(
-            dengueApi.util.updateQueryData('getComments', reportId, (draft) => {
-              const comment = draft.find(c => c._id === commentId);
+            dengueApi.util.updateQueryData("getComments", reportId, (draft) => {
+              const comment = draft.find((c) => c._id === commentId);
               if (comment) {
                 comment.upvotes = data.upvotes;
                 comment.downvotes = data.downvotes;
@@ -1013,11 +1175,11 @@ export const dengueApi = createApi({
             })
           );
         } catch (error) {
-          console.error('[DEBUG] Remove comment downvote failed:', error);
+          console.error("[DEBUG] Remove comment downvote failed:", error);
         }
       },
       invalidatesTags: (result, error, commentId) => [
-        { type: "Comments", id: "LIST" }
+        { type: "Comments", id: "LIST" },
       ],
     }),
 
@@ -1030,23 +1192,27 @@ export const dengueApi = createApi({
       async onQueryStarted(postId, { dispatch, queryFulfilled }) {
         try {
           const { data } = await queryFulfilled;
-          console.log('[DEBUG] Admin post upvote successful:', data);
-          
+          console.log("[DEBUG] Admin post upvote successful:", data);
+
           // Update the cache for admin posts
           dispatch(
-            dengueApi.util.updateQueryData('getAllAdminPosts', undefined, (draft) => {
-              const post = draft.find(p => p._id === postId);
-              if (post) {
-                post.upvotes = data.upvotes;
-                post.downvotes = data.downvotes;
+            dengueApi.util.updateQueryData(
+              "getAllAdminPosts",
+              undefined,
+              (draft) => {
+                const post = draft.find((p) => p._id === postId);
+                if (post) {
+                  post.upvotes = data.upvotes;
+                  post.downvotes = data.downvotes;
+                }
               }
-            })
+            )
           );
         } catch (error) {
-          console.error('[DEBUG] Admin post upvote failed:', error);
+          console.error("[DEBUG] Admin post upvote failed:", error);
         }
       },
-      invalidatesTags: ["Post"],
+      invalidatesTags: [],
     }),
 
     downvoteAdminPost: builder.mutation({
@@ -1057,23 +1223,27 @@ export const dengueApi = createApi({
       async onQueryStarted(postId, { dispatch, queryFulfilled }) {
         try {
           const { data } = await queryFulfilled;
-          console.log('[DEBUG] Admin post downvote successful:', data);
-          
+          console.log("[DEBUG] Admin post downvote successful:", data);
+
           // Update the cache for admin posts
           dispatch(
-            dengueApi.util.updateQueryData('getAllAdminPosts', undefined, (draft) => {
-              const post = draft.find(p => p._id === postId);
-              if (post) {
-                post.upvotes = data.upvotes;
-                post.downvotes = data.downvotes;
+            dengueApi.util.updateQueryData(
+              "getAllAdminPosts",
+              undefined,
+              (draft) => {
+                const post = draft.find((p) => p._id === postId);
+                if (post) {
+                  post.upvotes = data.upvotes;
+                  post.downvotes = data.downvotes;
+                }
               }
-            })
+            )
           );
         } catch (error) {
-          console.error('[DEBUG] Admin post downvote failed:', error);
+          console.error("[DEBUG] Admin post downvote failed:", error);
         }
       },
-      invalidatesTags: ["Post"],
+      invalidatesTags: [],
     }),
 
     removeAdminPostUpvote: builder.mutation({
@@ -1084,23 +1254,27 @@ export const dengueApi = createApi({
       async onQueryStarted(postId, { dispatch, queryFulfilled }) {
         try {
           const { data } = await queryFulfilled;
-          console.log('[DEBUG] Remove admin post upvote successful:', data);
-          
+          console.log("[DEBUG] Remove admin post upvote successful:", data);
+
           // Update the cache for admin posts
           dispatch(
-            dengueApi.util.updateQueryData('getAllAdminPosts', undefined, (draft) => {
-              const post = draft.find(p => p._id === postId);
-              if (post) {
-                post.upvotes = data.upvotes;
-                post.downvotes = data.downvotes;
+            dengueApi.util.updateQueryData(
+              "getAllAdminPosts",
+              undefined,
+              (draft) => {
+                const post = draft.find((p) => p._id === postId);
+                if (post) {
+                  post.upvotes = data.upvotes;
+                  post.downvotes = data.downvotes;
+                }
               }
-            })
+            )
           );
         } catch (error) {
-          console.error('[DEBUG] Remove admin post upvote failed:', error);
+          console.error("[DEBUG] Remove admin post upvote failed:", error);
         }
       },
-      invalidatesTags: ["Post"],
+      invalidatesTags: [],
     }),
 
     removeAdminPostDownvote: builder.mutation({
@@ -1111,30 +1285,34 @@ export const dengueApi = createApi({
       async onQueryStarted(postId, { dispatch, queryFulfilled }) {
         try {
           const { data } = await queryFulfilled;
-          console.log('[DEBUG] Remove admin post downvote successful:', data);
-          
+          console.log("[DEBUG] Remove admin post downvote successful:", data);
+
           // Update the cache for admin posts
           dispatch(
-            dengueApi.util.updateQueryData('getAllAdminPosts', undefined, (draft) => {
-              const post = draft.find(p => p._id === postId);
-              if (post) {
-                post.upvotes = data.upvotes;
-                post.downvotes = data.downvotes;
+            dengueApi.util.updateQueryData(
+              "getAllAdminPosts",
+              undefined,
+              (draft) => {
+                const post = draft.find((p) => p._id === postId);
+                if (post) {
+                  post.upvotes = data.upvotes;
+                  post.downvotes = data.downvotes;
+                }
               }
-            })
+            )
           );
         } catch (error) {
-          console.error('[DEBUG] Remove admin post downvote failed:', error);
+          console.error("[DEBUG] Remove admin post downvote failed:", error);
         }
       },
-      invalidatesTags: ["Post"],
+      invalidatesTags: [],
     }),
 
     // Admin post comments endpoints
     getAdminPostComments: builder.query({
       query: (postId) => `comments/${postId}`,
       providesTags: (result, error, postId) => [
-        { type: "Comments", id: postId }
+        { type: "Comments", id: postId },
       ],
     }),
 
@@ -1145,7 +1323,7 @@ export const dengueApi = createApi({
         body: { content },
       }),
       invalidatesTags: (result, error, { postId }) => [
-        { type: "Comments", id: postId }
+        { type: "Comments", id: postId },
       ],
     }),
 
@@ -1157,24 +1335,28 @@ export const dengueApi = createApi({
       async onQueryStarted(commentId, { dispatch, queryFulfilled }) {
         try {
           const { data } = await queryFulfilled;
-          console.log('[DEBUG] Admin post comment upvote successful:', data);
-          
+          console.log("[DEBUG] Admin post comment upvote successful:", data);
+
           // Update the cache for admin post comments
           dispatch(
-            dengueApi.util.updateQueryData('getAdminPostComments', data.adminPost, (draft) => {
-              const comment = draft.find(c => c._id === commentId);
-              if (comment) {
-                comment.upvotes = data.upvotes;
-                comment.downvotes = data.downvotes;
+            dengueApi.util.updateQueryData(
+              "getAdminPostComments",
+              data.adminPost,
+              (draft) => {
+                const comment = draft.find((c) => c._id === commentId);
+                if (comment) {
+                  comment.upvotes = data.upvotes;
+                  comment.downvotes = data.downvotes;
+                }
               }
-            })
+            )
           );
         } catch (error) {
-          console.error('[DEBUG] Admin post comment upvote failed:', error);
+          console.error("[DEBUG] Admin post comment upvote failed:", error);
         }
       },
       invalidatesTags: (result, error, commentId) => [
-        { type: "Comments", id: "LIST" }
+        { type: "Comments", id: "LIST" },
       ],
     }),
 
@@ -1186,24 +1368,28 @@ export const dengueApi = createApi({
       async onQueryStarted(commentId, { dispatch, queryFulfilled }) {
         try {
           const { data } = await queryFulfilled;
-          console.log('[DEBUG] Admin post comment downvote successful:', data);
-          
+          console.log("[DEBUG] Admin post comment downvote successful:", data);
+
           // Update the cache for admin post comments
           dispatch(
-            dengueApi.util.updateQueryData('getAdminPostComments', data.adminPost, (draft) => {
-              const comment = draft.find(c => c._id === commentId);
-              if (comment) {
-                comment.upvotes = data.upvotes;
-                comment.downvotes = data.downvotes;
+            dengueApi.util.updateQueryData(
+              "getAdminPostComments",
+              data.adminPost,
+              (draft) => {
+                const comment = draft.find((c) => c._id === commentId);
+                if (comment) {
+                  comment.upvotes = data.upvotes;
+                  comment.downvotes = data.downvotes;
+                }
               }
-            })
+            )
           );
         } catch (error) {
-          console.error('[DEBUG] Admin post comment downvote failed:', error);
+          console.error("[DEBUG] Admin post comment downvote failed:", error);
         }
       },
       invalidatesTags: (result, error, commentId) => [
-        { type: "Comments", id: "LIST" }
+        { type: "Comments", id: "LIST" },
       ],
     }),
 
@@ -1215,24 +1401,34 @@ export const dengueApi = createApi({
       async onQueryStarted(commentId, { dispatch, queryFulfilled }) {
         try {
           const { data } = await queryFulfilled;
-          console.log('[DEBUG] Remove admin post comment upvote successful:', data);
-          
+          console.log(
+            "[DEBUG] Remove admin post comment upvote successful:",
+            data
+          );
+
           // Update the cache for admin post comments
           dispatch(
-            dengueApi.util.updateQueryData('getAdminPostComments', data.adminPost, (draft) => {
-              const comment = draft.find(c => c._id === commentId);
-              if (comment) {
-                comment.upvotes = data.upvotes;
-                comment.downvotes = data.downvotes;
+            dengueApi.util.updateQueryData(
+              "getAdminPostComments",
+              data.adminPost,
+              (draft) => {
+                const comment = draft.find((c) => c._id === commentId);
+                if (comment) {
+                  comment.upvotes = data.upvotes;
+                  comment.downvotes = data.downvotes;
+                }
               }
-            })
+            )
           );
         } catch (error) {
-          console.error('[DEBUG] Remove admin post comment upvote failed:', error);
+          console.error(
+            "[DEBUG] Remove admin post comment upvote failed:",
+            error
+          );
         }
       },
       invalidatesTags: (result, error, commentId) => [
-        { type: "Comments", id: "LIST" }
+        { type: "Comments", id: "LIST" },
       ],
     }),
 
@@ -1244,38 +1440,48 @@ export const dengueApi = createApi({
       async onQueryStarted(commentId, { dispatch, queryFulfilled }) {
         try {
           const { data } = await queryFulfilled;
-          console.log('[DEBUG] Remove admin post comment downvote successful:', data);
-          
+          console.log(
+            "[DEBUG] Remove admin post comment downvote successful:",
+            data
+          );
+
           // Update the cache for admin post comments
           dispatch(
-            dengueApi.util.updateQueryData('getAdminPostComments', data.adminPost, (draft) => {
-              const comment = draft.find(c => c._id === commentId);
-              if (comment) {
-                comment.upvotes = data.upvotes;
-                comment.downvotes = data.downvotes;
+            dengueApi.util.updateQueryData(
+              "getAdminPostComments",
+              data.adminPost,
+              (draft) => {
+                const comment = draft.find((c) => c._id === commentId);
+                if (comment) {
+                  comment.upvotes = data.upvotes;
+                  comment.downvotes = data.downvotes;
+                }
               }
-            })
+            )
           );
         } catch (error) {
-          console.error('[DEBUG] Remove admin post comment downvote failed:', error);
+          console.error(
+            "[DEBUG] Remove admin post comment downvote failed:",
+            error
+          );
         }
       },
       invalidatesTags: (result, error, commentId) => [
-        { type: "Comments", id: "LIST" }
+        { type: "Comments", id: "LIST" },
       ],
     }),
 
     // Add this to the endpoints object
     getRecentReportsForBarangay: builder.mutation({
       query: (barangayName) => ({
-        url: 'barangays/get-recent-reports-for-barangay',
-        method: 'POST',
-        body: { barangay_name: barangayName }
+        url: "barangays/get-recent-reports-for-barangay",
+        method: "POST",
+        body: { barangay_name: barangayName },
       }),
       transformResponse: (response) => {
-        console.log('[DEBUG] Recent reports for barangay response:', response);
+        console.log("[DEBUG] Recent reports for barangay response:", response);
         return response;
-      }
+      },
     }),
 
     // Update profile photo
@@ -1296,6 +1502,76 @@ export const dengueApi = createApi({
         body: { bio },
       }),
       invalidatesTags: ["Accounts"],
+    }),
+
+    // Clusters endpoints
+    getClustersWithSubclusters: builder.query({
+      query: () => "clusters/get-clusters-with-subclusters",
+      providesTags: ["Clusters"],
+      transformResponse: (response) => {
+        console.log("[DEBUG] Clusters with subclusters response:", response);
+        return response;
+      },
+    }),
+
+    // Get specific cluster details
+    getSpecificCluster: builder.query({
+      query: (clusterId) => `clusters/${clusterId}`,
+      providesTags: (result, error, clusterId) => [
+        { type: "Clusters", id: clusterId },
+      ],
+      transformResponse: (response) => {
+        console.log("[DEBUG] Specific cluster response:", response);
+        return response;
+      },
+    }),
+
+    // Create sub-cluster
+    createSubCluster: builder.mutation({
+      query: (data) => ({
+        url: "clusters/sub-clusters",
+        method: "POST",
+        body: data,
+      }),
+      invalidatesTags: ["Clusters"],
+    }),
+
+    // Add reports to sub-cluster
+    addReportsToSubCluster: builder.mutation({
+      query: ({ subClusterId, reportIds }) => ({
+        url: `clusters/sub-clusters/${subClusterId}/add-reports`,
+        method: "PATCH",
+        body: { reportIds },
+      }),
+      invalidatesTags: ["Clusters"],
+    }),
+
+    // Remove reports from sub-cluster
+    removeReportsFromSubCluster: builder.mutation({
+      query: ({ subClusterId, reportIds, resetStatus = false }) => ({
+        url: `clusters/sub-clusters/${subClusterId}/remove-reports`,
+        method: "PATCH",
+        body: { reportIds, resetStatus },
+      }),
+      invalidatesTags: ["Clusters"],
+    }),
+
+    // Remove reports from a cluster (not sub-cluster)
+    removeReportsFromCluster: builder.mutation({
+      query: ({
+        clusterId,
+        reportIds,
+        permanentlyExclude = false,
+        resetStatus = false,
+      }) => ({
+        url: `clusters/${clusterId}/remove-reports`,
+        method: "PATCH",
+        body: { reportIds, permanentlyExclude, resetStatus },
+      }),
+      invalidatesTags: (result, error, { clusterId }) => [
+        { type: "Clusters", id: clusterId },
+        "Clusters",
+      ],
     }),
   }),
 });
@@ -1353,6 +1629,7 @@ export const {
 
   // Barangay hooks
   useGetBarangaysQuery,
+  useGetAdminBarangaysQuery,
 
   // Alert hooks
   useSendDengueAlertMutation,
@@ -1423,9 +1700,15 @@ export const {
 
   // Add this new endpoint
   useGetDeletedAccountsQuery,
+  useGetArchivedUsersQuery,
+  useGetArchivedAdminsQuery,
 
   // Add this new endpoint
   useGetBasicProfilesQuery,
+
+  // Add this new endpoint
+  useGenerateRecommendationMutation,
+  useGetRecommendationForInterventionQuery,
 
   // Add this to the exported hooks
   useGetRecentReportsForBarangayMutation,
@@ -1435,4 +1718,12 @@ export const {
 
   // Update user bio
   useUpdateBioMutation,
+
+  // Clusters hooks
+  useGetClustersWithSubclustersQuery,
+  useGetSpecificClusterQuery,
+  useCreateSubClusterMutation,
+  useAddReportsToSubClusterMutation,
+  useRemoveReportsFromSubClusterMutation,
+  useRemoveReportsFromClusterMutation,
 } = dengueApi;

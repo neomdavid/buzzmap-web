@@ -22,8 +22,9 @@ import { LogoNamed } from "../../components";
 import { useSelector, useDispatch } from "react-redux";
 import { logout } from "../../features/authSlice.js";
 import { toastSuccess } from "../../utils.jsx";
-import annotationPlugin from 'chartjs-plugin-annotation';
-import ChartJS from 'chart.js/auto';
+import annotationPlugin from "chartjs-plugin-annotation";
+import ChartJS from "chart.js/auto";
+import { UserCircleIcon } from "lucide-react";
 
 ChartJS.register(annotationPlugin);
 
@@ -40,8 +41,9 @@ const AdminLayout = () => {
     <div className="flex h-screen overflow-hidden">
       {/* Sidebar */}
       <aside
-        className={`z-100 fixed shadow-md z-40 top-0 left-0 h-full w-80 bg-white  p-8 flex flex-col justify-between transition-transform duration-300 md:relative md:translate-x-0 ${isSidebarOpen ? "translate-x-0" : "-translate-x-full"
-          }`}
+        className={`z-100 fixed shadow-md z-40 top-0 left-0 h-full w-80 bg-white  p-8 flex flex-col justify-between transition-transform duration-300 md:relative md:translate-x-0 ${
+          isSidebarOpen ? "translate-x-0" : "-translate-x-full"
+        }`}
       >
         <div className="flex flex-col h-[60%] justify-between">
           <div>
@@ -84,11 +86,6 @@ const AdminLayout = () => {
                 label: "Interventions",
               },
               {
-                to: "/admin/intervention-effectivity",
-                icon: <ChartBar weight="fill" size={20} />,
-                label: "Intervention Effectivity",
-              },
-              {
                 to: "/admin/cea",
                 icon: <UsersThree weight="fill" size={30} />,
                 label: "Community Engagement & Awareness",
@@ -98,7 +95,8 @@ const AdminLayout = () => {
                 key={to}
                 to={to}
                 className={({ isActive }) =>
-                  `flex items-center py-3 px-3 gap-x-3 rounded-xl hover:bg-gray-100 transition-all duration-200 ${isActive ? "text-primary font-extrabold" : "text-gray-500"
+                  `flex items-center py-3 px-3 gap-x-3 rounded-xl hover:bg-gray-100 transition-all duration-200 ${
+                    isActive ? "text-primary font-extrabold" : "text-gray-500"
                   }`
                 }
               >
@@ -132,9 +130,9 @@ const AdminLayout = () => {
       )}
 
       {/* Content */}
-      <div className=" flex flex-1 flex-col overflow-auto w-full bg-neutral-content">
+      <div className=" flex flex-1 flex-col overflow-auto w-full pt-10 bg-neutral-content">
         {/* Top navbar */}
-        <div className=" bg-transparent  w-full px-7 py-6  bg-neutral-content flex justify-between items-center">
+        <div className="fixed  w-full px-7 py-6 bg-transparent flex justify-between items-center z-[100]">
           <div className="md:hidden">
             <button
               className="btn btn-square btn-ghost"
@@ -143,6 +141,10 @@ const AdminLayout = () => {
               <List size={23} />
             </button>
           </div>
+          {/* 
+          <div className="">
+            <UserCircleIcon />
+          </div> */}
 
           {/* <div className="flex items-center gap-x-4 ml-auto">
             <div className="relative flex items-center">
@@ -159,10 +161,11 @@ const AdminLayout = () => {
         </div>
 
         <section
-          className={` px-6 py-4 bg-neutral-content  ${currentRoute === "/admin/dashboard"
-            ? "md:pt-[75px] md:mt-[-64px]"
-            : " md:pt-[57px] md:mt-[-64px]"
-            }  md:pl-6 lg:pl-8 text-primary`}
+          className={` px-6 py-4  bg-neutral-content  ${
+            currentRoute === "/admin/dashboard"
+              ? "md:pt-[75px] md:mt-[-64px]"
+              : " md:pt-[57px] md:mt-[-64px]"
+          } pt-20 md:pl-6 lg:pl-8 text-primary`}
         >
           <Outlet />
         </section>

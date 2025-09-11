@@ -6,6 +6,7 @@ import post2 from "../../assets/post2.jpg";
 import post3 from "../../assets/post3.jpg";
 import post4 from "../../assets/post4.jpg";
 import post5 from "../../assets/post5.jpg";
+import defaultProfile from "../../assets/default_profile.png";
 import { formatDistanceToNow } from "date-fns";
 import {
   PostCard,
@@ -17,17 +18,20 @@ import {
   SecondaryButton,
   DescriptionWithImages,
   NewPostModal,
+  PostCardSkeleton,
 } from "../../components";
 import {
   useGetPostsQuery,
   useCreatePostMutation,
   useCreatePostWithImageMutation,
   useGetAllAdminPostsQuery,
+  useGetBasicProfilesQuery,
 } from "../../api/dengueApi.js";
 import { useSelector } from "react-redux";
 import { toastInfo } from "../../utils.jsx";
 import React from "react";
 import { useNavigate } from "react-router-dom";
+import { useVoteSync } from "../../hooks/useLocalStorageVoting";
 
 const Community = () => {
   const [showAside, setShowAside] = useState(false);
@@ -41,136 +45,252 @@ const Community = () => {
   const [filter, setFilter] = useState("latest"); // 'latest', 'popular', 'myPosts'
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearching, setIsSearching] = useState(false);
-  const [page, setPage] = useState(1);
+  const [isFilterLoading, setIsFilterLoading] = useState(false);
   const userFromStore = useSelector((state) => state.auth?.user);
   const [searchParams, setSearchParams] = useState({
-    barangay: '',
-    report_type: '',
-    status: 'Validated',
-    username: '',
-    description: '',
-    sortBy: 'createdAt',
-    sortOrder: 'desc'
+    barangay: "",
+    report_type: "",
+    status: "Validated",
+    username: "",
+    description: "",
+    sortBy: "createdAt",
+    sortOrder: "desc",
   });
   const navigate = useNavigate();
 
+  // Initialize background vote sync
+  const { syncAllVotes, isSyncing } = useVoteSync();
+
   // Fetch admin posts
-  const { data: adminPosts, isLoading: isLoadingAdminPosts } = useGetAllAdminPostsQuery();
+  const { data: adminPosts, isLoading: isLoadingAdminPosts } =
+    useGetAllAdminPostsQuery();
+
+  // Get basic profiles for all users
+  const { data: basicProfiles = [] } = useGetBasicProfilesQuery();
 
   // Add debug logging
-  useEffect(() => {
-    console.log('[DEBUG] Admin Posts:', adminPosts);
-    console.log('[DEBUG] Is Loading Admin Posts:', isLoadingAdminPosts);
-  }, [adminPosts, isLoadingAdminPosts]);
+  useEffect(() => {}, [adminPosts, isLoadingAdminPosts]);
 
   // Get posts with pagination
   const { data, isLoading, isError } = useGetPostsQuery({
-    status: 'Validated',
+    status: "Validated",
     sortBy: searchParams.sortBy,
     sortOrder: searchParams.sortOrder,
-    ...searchParams
+    popular: filter === "popular",
+    recent: filter === "latest",
+    myPosts: filter === "myPosts",
+    ...searchParams,
   });
 
-  // Add debug logging for the API response
+  // Handle filter loading state - reset after a timeout
   useEffect(() => {
-    console.log('[DEBUG] API Response:', data);
-    console.log('[DEBUG] Is Loading:', isLoading);
-    console.log('[DEBUG] Is Error:', isError);
-  }, [data, isLoading, isError]);
+    if (isFilterLoading) {
+      const timer = setTimeout(() => {
+        setIsFilterLoading(false);
+      }, 1000); // 1 second timeout to prevent infinite loading
+      return () => clearTimeout(timer);
+    }
+  }, [isFilterLoading]);
 
-  // Intersection Observer for infinite scroll
-  const observer = useRef();
-  
-  // Memoize the intersection observer callback
-  const lastPostElementRef = useCallback(node => {
-    if (isLoading) return;
-    if (observer.current) observer.current.disconnect();
-    observer.current = new IntersectionObserver(entries => {
-      if (entries[0].isIntersecting && data?.pagination?.hasMore) {
-        setPage(prevPage => prevPage + 1);
+  // Also reset when data loads
+  useEffect(() => {
+    if (data && !isLoading) {
+      setIsFilterLoading(false);
+    }
+  }, [data, isLoading]);
+
+  // Reset loading state when filter changes (fallback)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsFilterLoading(false);
+    }, 2000); // 2 second fallback timeout
+    return () => clearTimeout(timer);
+  }, [filter]);
+
+  // Clear local vote updates only when posts are added/removed, not on vote updates
+  const [lastDataHash, setLastDataHash] = useState("");
+
+  useEffect(() => {
+    if (data && Array.isArray(data)) {
+      // Create a hash of post IDs to detect if posts were added/removed
+      const currentHash = data
+        .map((post) => post._id)
+        .sort()
+        .join(",");
+
+      if (lastDataHash && lastDataHash !== currentHash) {
+        // Posts were added/removed, clear local vote updates
+        setLocalVoteUpdates({});
       }
-    });
-    if (node) observer.current.observe(node);
-  }, [isLoading, data?.pagination?.hasMore]);
 
-  // Memoize filtered posts
+      setLastDataHash(currentHash);
+    }
+  }, [data, lastDataHash]);
+
+  // Intersection Observer for infinite scroll (disabled since pagination was removed)
+  const observer = useRef();
+
+  // Memoize the intersection observer callback
+  const lastPostElementRef = useCallback((node) => {
+    // Pagination disabled - no longer needed
+    return;
+  }, []);
+
+  // Local state for optimistic vote updates
+  const [localVoteUpdates, setLocalVoteUpdates] = useState({});
+
+  // Memoize filtered posts with local vote updates
   const filteredPosts = useMemo(() => {
-    console.log('[DEBUG] Raw data:', data);
     if (!data) return [];
-    
+
     let filtered = Array.isArray(data) ? data : [];
-    
+
+    // Apply local vote updates optimistically
+    filtered = filtered.map((post) => {
+      const localUpdate = localVoteUpdates[post._id];
+      if (localUpdate) {
+        return {
+          ...post,
+          upvotes: localUpdate.upvotes,
+          downvotes: localUpdate.downvotes,
+          upvotesArray: localUpdate.upvotesArray,
+          downvotesArray: localUpdate.downvotesArray,
+        };
+      }
+      return post;
+    });
+
     // Apply search filter if there's a search query
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(post => 
-        (post.user?.username?.toLowerCase().includes(query)) ||
-        (post.barangay?.toLowerCase().includes(query)) ||
-        (post.report_type?.toLowerCase().includes(query)) ||
-        (post.description?.toLowerCase().includes(query))
+      filtered = filtered.filter(
+        (post) =>
+          post.user?.username?.toLowerCase().includes(query) ||
+          post.barangay?.toLowerCase().includes(query) ||
+          post.report_type?.toLowerCase().includes(query) ||
+          post.description?.toLowerCase().includes(query)
       );
     }
-    
-    console.log('[DEBUG] Filtered posts:', filtered);
+
     return filtered;
-  }, [data, searchQuery]);
+  }, [data, searchQuery, localVoteUpdates]);
 
   // Memoize the latest admin post
   const latestAnnouncement = useMemo(() => {
-    console.log('[DEBUG] Getting latest admin post from:', adminPosts);
-    if (!adminPosts) {
-      console.log('[DEBUG] No admin posts available');
-      return null;
-    }
-    // Filter for active posts only
-    const activePosts = Array.isArray(adminPosts) ? adminPosts.filter(post => post.status === "active") : [];
-    console.log('[DEBUG] Active posts:', activePosts);
-    if (activePosts.length === 0) {
-      console.log('[DEBUG] No active posts found');
-      return null;
-    }
+    if (!adminPosts) return null;
+
+    // Filter for active posts with category 'announcement'
+    const activePosts = Array.isArray(adminPosts)
+      ? adminPosts.filter(
+          (post) => post.status === "active" && post.category === "announcement"
+        )
+      : [];
+
+    if (activePosts.length === 0) return null;
+
     // Sort by publishDate to get the latest scheduled post
-    activePosts.sort((a, b) => new Date(b.publishDate) - new Date(a.publishDate));
-    console.log('[DEBUG] Latest admin post:', activePosts[0]);
+    activePosts.sort(
+      (a, b) => new Date(b.publishDate) - new Date(a.publishDate)
+    );
+
     return activePosts[0];
   }, [adminPosts]);
 
+  // Helper function to get user profile from basic profiles
+  const getUserProfile = useCallback(
+    (userId) => {
+      const profile = basicProfiles.find((p) => p._id === userId);
+      if (!profile) {
+        return { username: "Unknown", profilePhotoUrl: defaultProfile };
+      }
+      // If profilePhotoUrl is empty string or null/undefined, use default
+      const profilePhotoUrl =
+        profile.profilePhotoUrl && profile.profilePhotoUrl.trim() !== ""
+          ? profile.profilePhotoUrl
+          : defaultProfile;
+      return { ...profile, profilePhotoUrl };
+    },
+    [basicProfiles]
+  );
+
   // Memoize the post card render function
-  const renderPostCard = useCallback((post, index) => (
-    <div 
-      key={post._id}
-      ref={index === filteredPosts.length - 1 ? lastPostElementRef : null}
-    >
-      <PostCard
-        profileImage={post.user?.profilePhotoUrl || 'https://i.ibb.co/0VvffYVH/a1c820a6453b.png'}
-        username={post.anonymous ? "Anonymous" : post.user?.username || "User"}
-        timestamp={formatDistanceToNow(new Date(post.createdAt), { addSuffix: true })}
-        barangay={post.barangay}
-        coordinates={post.specific_location?.coordinates || []}
-        dateTime={new Date(post.date_and_time).toLocaleString()}
-        reportType={post.report_type}
-        description={post.description}
-        likes={post.likesCount || "0"}
-        comments={post.commentsCount || "0"}
-        shares={post.sharesCount || "0"}
-        images={post.images}
-        postId={post._id}
-        upvotes={post.upvotes}
-        downvotes={post.downvotes}
-        commentsCount={post.commentsCount}
-        upvotesArray={post.upvotes}
-        downvotesArray={post.downvotes}
-        _commentCount={post.commentsCount}
-        userId={post.user?._id}
-        currentUserId={userFromStore?._id}
-        onVoteUpdate={(newUpvotes, newDownvotes) => {
-          console.log('[DEBUG] Community onVoteUpdate called for post:', post._id, { newUpvotes, newDownvotes });
-          // For Community page, we rely on RTK Query cache updates
-          // The mutations in dengueApi.js already handle cache updates automatically
-        }}
-      />
-    </div>
-  ), [lastPostElementRef, userFromStore]);
+  const renderPostCard = useCallback(
+    (post, index) => {
+      const userProfile = getUserProfile(post.user?._id);
+
+      // Debug logging for vote data
+      console.log(`[Community] Post ${post._id} vote data:`, {
+        upvotes: post.upvotes,
+        downvotes: post.downvotes,
+        upvotesLength: post.upvotes?.length || 0,
+        downvotesLength: post.downvotes?.length || 0,
+        upvotesType: typeof post.upvotes,
+        downvotesType: typeof post.downvotes,
+        upvotesIsArray: Array.isArray(post.upvotes),
+        downvotesIsArray: Array.isArray(post.downvotes),
+        upvotesArrayValue: post.upvotes || [],
+        downvotesArrayValue: post.downvotes || [],
+      });
+
+      return (
+        <div
+          key={post._id}
+          ref={index === filteredPosts.length - 1 ? lastPostElementRef : null}
+        >
+          <PostCard
+            profileImage={
+              post.isAnonymous ? defaultProfile : userProfile.profilePhotoUrl
+            }
+            username={
+              post.isAnonymous
+                ? post.anonymousId
+                : userProfile.username || "User"
+            }
+            timestamp={formatDistanceToNow(new Date(post.createdAt), {
+              addSuffix: true,
+            })}
+            barangay={post.barangay}
+            coordinates={post.specific_location?.coordinates || []}
+            dateTime={new Date(post.date_and_time).toLocaleString()}
+            reportType={post.report_type}
+            description={post.description}
+            likes={post.likesCount || "0"}
+            comments={post.commentsCount || "0"}
+            shares={post.sharesCount || "0"}
+            images={post.images}
+            postId={post._id}
+            upvotes={post.upvotes}
+            downvotes={post.downvotes}
+            commentsCount={post.commentsCount}
+            upvotesArray={Array.isArray(post.upvotes) ? post.upvotes : []}
+            downvotesArray={Array.isArray(post.downvotes) ? post.downvotes : []}
+            _commentCount={post.commentsCount}
+            userId={post.user?._id}
+            currentUserId={userFromStore?._id}
+            basicProfiles={basicProfiles}
+            onVoteUpdate={(newUpvotes, newDownvotes) => {
+              // Update local state immediately for optimistic UI
+              setLocalVoteUpdates((prev) => ({
+                ...prev,
+                [post._id]: {
+                  upvotes: newUpvotes.length,
+                  downvotes: newDownvotes.length,
+                  upvotesArray: newUpvotes,
+                  downvotesArray: newDownvotes,
+                },
+              }));
+            }}
+            onPostDeleted={(deletedPostId) => {
+              // The RTK Query cache will automatically update, but we can also
+              // manually remove the post from the local filtered posts if needed
+              // This is optional since RTK Query handles cache invalidation
+            }}
+          />
+        </div>
+      );
+    },
+    [lastPostElementRef, userFromStore, getUserProfile, basicProfiles]
+  );
 
   const getCurrentLocation = () => {
     if (navigator.geolocation) {
@@ -191,7 +311,6 @@ const Community = () => {
     try {
       return formatDistanceToNow(new Date(dateString), { addSuffix: true });
     } catch (error) {
-      console.error("Error formatting date:", error);
       return "just now";
     }
   };
@@ -216,9 +335,7 @@ const Community = () => {
       } else {
         await createPost(postData).unwrap();
       }
-    } catch (error) {
-      console.error("Failed to create post:", error);
-    }
+    } catch (error) {}
   };
 
   const handleSearch = (e) => {
@@ -234,26 +351,30 @@ const Community = () => {
       e.preventDefault();
     }
     setSearchParams({
-      barangay: '',
-      report_type: '',
-      status: 'Validated',
-      username: '',
-      description: '',
-      sortBy: 'createdAt',
-      sortOrder: 'desc'
+      barangay: "",
+      report_type: "",
+      status: "Validated",
+      username: "",
+      description: "",
+      sortBy: "createdAt",
+      sortOrder: "desc",
     });
-    setSearchQuery('');
+    setSearchQuery("");
     setIsSearching(false);
   };
 
   if (isLoadingAdminPosts || isLoading) {
-    return <div>Loading...</div>;
+    return (
+      <div className="w-full h-[100vh] flex justify-center items-center">
+        <span className="loading loading-spinner loading-2xl"></span>
+      </div>
+    );
   }
 
   return (
-    <main className="pl-6 pt-14 text-primary text-lg flex gap-x-6 max-w-[1350px] m-auto relative mt-12">
-      <article className="flex-8 shadow-xl p-12 rounded-lg w-[90vw] max-w-500 lg:w-[30vw]">
-        <form onSubmit={handleSearch} className="mb-6">
+    <main className="sm:pl-6 pt-14 text-primary text-lg flex gap-x-6 max-w-[1350px] m-auto relative mt-12">
+      <article className="flex-8 shadow-xl p-1 sm:p-12 rounded-lg sm:w-[90vw] max-w-500 lg:w-[30vw]">
+        <form onSubmit={handleSearch} className="mb-6 px-3 sm:px-0">
           <div className="relative">
             <input
               type="text"
@@ -269,40 +390,60 @@ const Community = () => {
         </form>
 
         {!searchQuery && (
-          <section className="flex gap-x-2 font-semibold w-full mb-8">
+          <section className="flex gap-x-2 font-semibold w-full mb-8 px-3 sm:px-0">
             <FilterButton
-              text="Popular"
+              text={
+                isFilterLoading && filter === "popular"
+                  ? "Loading..."
+                  : "Popular"
+              }
               active={filter === "popular"}
+              disabled={isFilterLoading}
               onClick={() => {
+                setIsFilterLoading(true);
                 setFilter("popular");
-                setSearchParams(prev => ({
+                setSearchParams((prev) => ({
                   ...prev,
-                  sortBy: 'likesCount',
-                  sortOrder: 'desc'
+                  sortBy: "likesCount",
+                  sortOrder: "desc",
+                  username: undefined, // Clear username when switching filters
                 }));
               }}
             />
             <FilterButton
-              text="Latest"
+              text={
+                isFilterLoading && filter === "latest" ? "Loading..." : "Latest"
+              }
               active={filter === "latest"}
+              disabled={isFilterLoading}
               onClick={() => {
+                setIsFilterLoading(true);
                 setFilter("latest");
-                setSearchParams(prev => ({
+                setSearchParams((prev) => ({
                   ...prev,
-                  sortBy: 'createdAt',
-                  sortOrder: 'desc'
+                  sortBy: "createdAt",
+                  sortOrder: "desc",
+                  username: undefined, // Clear username when switching filters
                 }));
               }}
             />
             {userFromStore && userFromStore.role === "user" && (
               <FilterButton
-                text="My Posts"
+                text={
+                  isFilterLoading && filter === "myPosts"
+                    ? "Loading..."
+                    : "My Posts"
+                }
                 active={filter === "myPosts"}
+                disabled={isFilterLoading}
                 onClick={() => {
+                  setIsFilterLoading(true);
                   setFilter("myPosts");
-                  setSearchParams(prev => ({
+                  setSearchParams((prev) => ({
                     ...prev,
-                    username: userFromStore.username
+                    sortBy: "createdAt",
+                    sortOrder: "desc",
+                    username: undefined, // Clear username - API will handle myPosts parameter
                   }));
                 }}
               />
@@ -312,9 +453,7 @@ const Community = () => {
 
         {isSearching && (
           <div className="flex justify-between items-center mb-8">
-            <p className="text-gray-600">
-              Search results for "{searchQuery}"
-            </p>
+            <p className="text-gray-600">Search results for "{searchQuery}"</p>
             <button
               onClick={handleClearSearch}
               className="text-primary hover:text-accent"
@@ -326,11 +465,21 @@ const Community = () => {
 
         <Heading
           text="Stay /ahead/ of dengue."
-          className="text-[47px] sm:text-7xl lg:text-8xl text-center mb-4 leading-21"
+          className="text-[47px] sm:text-7xl lg:text-8xl text-center mb-4 leading-[46px] px-3 sm:px-0"
         />
-        <p className="text-lg sm:text-xl sm:mt-0 text-center font-semibold text-primary mb-6">
+        <p className="text-lg sm:text-xl sm:mt-0 text-center font-semibold text-primary mb-6 px-3 sm:px-0">
           Real-Time Dengue Updates from the Community.
         </p>
+
+        {/* Vote sync status indicator */}
+        {isSyncing && (
+          <div className="text-center mb-4">
+            <div className="inline-flex items-center gap-2 text-sm text-gray-600">
+              <div className="loading loading-spinner loading-sm"></div>
+              Syncing votes...
+            </div>
+          </div>
+        )}
         <section className="bg-base-200 px-8 py-5 rounded-lg mb-4">
           <p className="font-semibold text-lg text-center mb-3 lg:text-left">
             Report a breeding site to Quezon City Epidemiology and Surveillance
@@ -345,18 +494,27 @@ const Community = () => {
             }}
             className="w-full hover:cursor-pointer"
           >
-            <CustomInput 
-              profileSrc={userFromStore?.profilePhotoUrl || 'https://i.ibb.co/0VvffYVH/a1c820a6453b.png'} 
-              showImagePicker={true} 
-              className="hover:cursor-pointer" 
+            <CustomInput
+              profileSrc={
+                userFromStore?.profilePhotoUrl &&
+                userFromStore.profilePhotoUrl.trim() !== ""
+                  ? userFromStore.profilePhotoUrl
+                  : defaultProfile
+              }
+              showImagePicker={true}
+              className="hover:cursor-pointer"
               readOnly
             />
           </button>
         </section>
         <NewPostModal onSubmit={handleClearSearch} />
-        <section className="bg-base-200 px-8 py-6 rounded-lg flex flex-col gap-y-6">
-          {isLoading && page === 1 ? (
-            <div className="text-center">Loading posts...</div>
+        <section className="bg-base-200 px-1.5 sm:px-8 py-6 rounded-lg flex flex-col gap-y-8">
+          {isLoading || isFilterLoading ? (
+            <div className="space-y-4">
+              {Array.from({ length: 3 }).map((_, index) => (
+                <PostCardSkeleton key={index} />
+              ))}
+            </div>
           ) : isError ? (
             <div className="text-center text-error">Error loading posts</div>
           ) : filteredPosts.length === 0 ? (
@@ -364,20 +522,18 @@ const Community = () => {
               {searchQuery
                 ? "No posts found matching your search."
                 : filter === "myPosts"
-                  ? "You haven't made any posts yet."
-                  : "No validated posts available."}
+                ? "You haven't made any posts yet."
+                : "No validated posts available."}
             </p>
           ) : (
             <>
               {searchQuery && (
                 <p className="text-sm text-gray-500 mb-4">
-                  Found {data?.pagination?.totalItems || 0} result{data?.pagination?.totalItems !== 1 ? 's' : ''}
+                  Found {filteredPosts.length} result
+                  {filteredPosts.length !== 1 ? "s" : ""}
                 </p>
               )}
               {filteredPosts.map((post, index) => renderPostCard(post, index))}
-              {isLoading && page > 1 && (
-                <div className="text-center py-4">Loading more posts...</div>
-              )}
             </>
           )}
         </section>
@@ -385,13 +541,15 @@ const Community = () => {
 
       <aside
         className={`bg-base-300 shadow-2xl rounded-sm overflow-y-scroll transition-transform duration-300 ease-in-out 
-        fixed inset-y-0 right-0 w-[80vw] top-[58px] sm:top-[65px] pb-4 max-w-170 z-10 lg:z-0 lg:sticky lg:top-19 lg:h-[calc(100vh-1.5rem)] 
+        fixed inset-y-0 right-0 w-[90vw] sm:w-[80vw] top-[58px] sm:top-[65px] pb-4 max-w-170 z-10 lg:z-0 lg:sticky lg:top-19 lg:h-[calc(100vh-1.5rem)] 
         lg:w-[40vw] lg:max-w-[450px] lg:shadow-sm ${
           showAside ? "translate-x-0" : "translate-x-full"
         } lg:translate-x-0`}
       >
         <div className="sticky top-0 bg-base-300  px-6 py-4 flex justify-between items-center z-100 border-b border-gray-300 pt-6 pb-4">
-          <p className="text-3xl font-bold text-primary">Official Announcement</p>
+          <p className="text-3xl font-bold text-primary">
+            Official Announcement
+          </p>
           <button
             onClick={() => setShowAside(false)}
             className="lg:hidden bg-primary text-white p-2 rounded-full hover:cursor-pointer hover:bg-white hover:text-primary transition-all duration-200"
@@ -399,12 +557,23 @@ const Community = () => {
             <ArrowLeft size={18} className="rotate-180" />
           </button>
         </div>
-        <div className="px-6 py-8">
-          {latestAnnouncement && (
-            <AnnouncementCard 
-              announcement={latestAnnouncement} 
+        <div className="px-3 sm:px-6 py-3 sm:py-8">
+          {latestAnnouncement ? (
+            <AnnouncementCard
+              announcement={latestAnnouncement}
               key={latestAnnouncement._id}
             />
+          ) : (
+            <div className="bg-base-200 rounded-lg p-8 text-center">
+              <p className="text-primary text-xl font-semibold mb-2">
+                No Announcements Available
+              </p>
+              <p className="text-primary/70">
+                There are no active announcements at the moment. Check back
+                later for updates from the Quezon City Epidemiology &
+                Surveillance Division.
+              </p>
+            </div>
           )}
         </div>
       </aside>

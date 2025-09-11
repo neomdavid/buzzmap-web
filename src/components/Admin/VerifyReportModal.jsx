@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useValidatePostMutation } from "../../api/dengueApi.js";
 import { toast } from "react-toastify";
+import { useGoogleMaps } from "../GoogleMapsProvider";
 
 const VerifyReportModal = ({
   reportId,
@@ -19,31 +20,50 @@ const VerifyReportModal = ({
   const modalRef = useRef(null);
   const streetViewRef = useRef(null);
   const [address, setAddress] = useState("");
-  const [showConfirmation, setShowConfirmation] = useState(type === 'verify' || type === 'reject');
-  const [actionType, setActionType] = useState(type === 'verify' || type === 'reject' ? type : null);
+  const [showConfirmation, setShowConfirmation] = useState(
+    type === "verify" || type === "reject"
+  );
+  const [actionType, setActionType] = useState(
+    type === "verify" || type === "reject" ? type : null
+  );
   const [validatePost, { isLoading }] = useValidatePostMutation();
   // Store the previous status for undo
   const [undoTimeout, setUndoTimeout] = useState(null);
   const [isUndoing, setIsUndoing] = useState(false);
+  const [isConfirming, setIsConfirming] = useState(false);
   const prevStatusRef = useRef(status);
+  const { isLoaded: isGoogleMapsLoaded } = useGoogleMaps();
 
   const handleConfirm = async () => {
-    if (typeof onConfirmAction === 'function') {
-      await onConfirmAction(actionType);
-      if (typeof onClose === "function") onClose();
-    } else {
-      // fallback: do the API call directly
-      const newStatus = actionType === "verify" ? "Validated" : "Rejected";
-      const requestPayload = { id: reportId, status: newStatus };
-      try {
+    setIsConfirming(true);
+    try {
+      if (typeof onConfirmAction === "function") {
+        await onConfirmAction(actionType);
+        // Show success toast
+        toast.success(
+          `Report ${
+            actionType === "verify" ? "verified" : "rejected"
+          } successfully!`
+        );
+        if (typeof onClose === "function") onClose();
+      } else {
+        // fallback: do the API call directly
+        const newStatus = actionType === "verify" ? "Validated" : "Rejected";
+        const requestPayload = { id: reportId, status: newStatus };
         await validatePost(requestPayload).unwrap();
-        toast.success(`Report ${newStatus === "Validated" ? "verified" : "rejected"} successfully!`);
+        toast.success(
+          `Report ${
+            newStatus === "Validated" ? "verified" : "rejected"
+          } successfully!`
+        );
         if (typeof onSuccess === "function") onSuccess();
         if (typeof onClose === "function") onClose();
-      } catch (error) {
-        console.error("Verify/Reject error:", error);
-        toast.error("Failed to update report status.");
       }
+    } catch (error) {
+      console.error("Verify/Reject error:", error);
+      toast.error("Failed to update report status.");
+    } finally {
+      setIsConfirming(false);
     }
   };
 
@@ -56,7 +76,7 @@ const VerifyReportModal = ({
 
   useEffect(() => {
     // Only run if Google Maps JS API is loaded and coordinates are valid
-    if (window.google && window.google.maps && coordinates?.length === 2) {
+    if (isGoogleMapsLoaded && coordinates?.length === 2) {
       const geocoder = new window.google.maps.Geocoder();
       const latLng = new window.google.maps.LatLng(
         coordinates[1],
@@ -80,7 +100,7 @@ const VerifyReportModal = ({
       }
     }
     modalRef.current?.showModal();
-  }, [coordinates]);
+  }, [coordinates, isGoogleMapsLoaded]);
 
   const handleActionClick = (action) => {
     setActionType(action);
@@ -88,15 +108,42 @@ const VerifyReportModal = ({
   };
 
   const handleCancel = () => {
-    if (typeof onClose === 'function') onClose();
+    if (typeof onClose === "function") onClose();
   };
+
+  // Show loading state if Google Maps is not loaded yet
+  if (!isGoogleMapsLoaded) {
+    return (
+      <dialog
+        ref={modalRef}
+        className="modal transition-transform duration-300 ease-in-out"
+      >
+        <div className="modal-box bg-white rounded-3xl shadow-2xl w-6/12 max-w-4xl p-6 py-14 relative">
+          <button
+            className="absolute top-4 right-4 text-2xl font-semibold hover:text-gray-500 transition-colors duration-200 hover:cursor-pointer"
+            onClick={onClose}
+          >
+            ✕
+          </button>
+          <div className="flex flex-col items-center justify-center py-20">
+            <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mb-4"></div>
+            <p className="text-lg text-gray-600">Loading Google Maps...</p>
+          </div>
+        </div>
+      </dialog>
+    );
+  }
 
   return (
     <dialog
       ref={modalRef}
       className="modal transition-transform duration-300 ease-in-out"
     >
-      <div className={`modal-box border-t-10 ${actionType === 'reject' ? 'border-t-error' : 'border-t-success'} bg-white rounded-3xl shadow-2xl w-6/12 max-w-4xl p-6 py-14 relative`}>
+      <div
+        className={`modal-box border-t-10 ${
+          actionType === "reject" ? "border-t-error" : "border-t-success"
+        } bg-white rounded-3xl shadow-2xl w-6/12 max-w-4xl p-6 py-14 relative`}
+      >
         <button
           className="absolute top-4 right-4 text-2xl font-semibold hover:text-gray-500 transition-colors duration-200 hover:cursor-pointer"
           onClick={onClose}
@@ -223,7 +270,7 @@ const VerifyReportModal = ({
                 Confirm {actionType === "verify" ? "Verification" : "Rejection"}
               </span>
             </p>
-            <hr className="border-gray-300 border-"/>
+            <hr className="border-gray-300 border-" />
 
             {/* Basic Report Details */}
             <div className="flex justify-center text-primary text-lg">
@@ -238,12 +285,14 @@ const VerifyReportModal = ({
                 </div>
                 <div className="flex flex-row gap-4 items-start">
                   <span className="w-28  font-semibold mt-1">Description:</span>
-                  <span className=" font-normal whitespace-pre-line">{description}</span>
+                  <span className=" font-normal whitespace-pre-line">
+                    {description}
+                  </span>
                 </div>
               </div>
             </div>
 
-            <hr className="border-gray-300 border-"/>
+            <hr className="border-gray-300 border-" />
             <div className="text-center ">
               <p className="text-xl  mb-8">
                 Are you sure you want to {actionType} this report?
@@ -254,13 +303,13 @@ const VerifyReportModal = ({
                   onClick={handleConfirm}
                   className={`${
                     actionType === "verify" ? "bg-success" : "bg-error"
-                  } text-white font-semibold px-8 py-3 rounded-xl hover:opacity-80 transition-all duration-200 flex items-center gap-2 hover:cursor-pointer hover:bg-opacity-80 transition-all duration-200`}
-                  disabled={isLoading}
+                  } text-white font-semibold px-8 py-3 rounded-xl hover:opacity-80 transition-all duration-200 flex items-center gap-2 hover:cursor-pointer hover:bg-opacity-80 transition-all duration-200 disabled:opacity-50`}
+                  disabled={isLoading || isConfirming}
                 >
-                  {isLoading ? (
+                  {isLoading || isConfirming ? (
                     <>
                       <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                      Processing...
+                      Confirming...
                     </>
                   ) : (
                     "Confirm"
@@ -268,8 +317,8 @@ const VerifyReportModal = ({
                 </button>
                 <button
                   onClick={handleCancel}
-                  className="bg-gray-300 text-gray-700 font-semibold px-8 py-3 rounded-xl hover:opacity-80 transition-all duration-200 hover:cursor-pointer hover:bg-opacity-80 transition-all duration-200"
-                  disabled={isLoading}
+                  className="bg-gray-300 text-gray-700 font-semibold px-8 py-3 rounded-xl hover:opacity-80 transition-all duration-200 hover:cursor-pointer hover:bg-opacity-80 transition-all duration-200 disabled:opacity-50"
+                  disabled={isLoading || isConfirming}
                 >
                   Cancel
                 </button>

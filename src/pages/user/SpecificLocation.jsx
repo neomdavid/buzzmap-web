@@ -2,19 +2,20 @@
 // It must be rewritten to use the plain Google Maps JS API if needed.
 import { useLocation, useParams, useNavigate } from "react-router-dom";
 import { useGoogleMaps } from "../../components/GoogleMapsProvider";
-import { useGetPostByIdQuery, useGetPostsQuery, useGetNearbyReportsMutation, useGetBasicProfilesQuery } from "../../api/dengueApi";
+import { useGetPostByIdQuery, useGetPostsQuery, useGetBasicProfilesQuery, useGetBarangaysQuery } from "../../api/dengueApi";
 import { skipToken } from "@reduxjs/toolkit/query";
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef, useMemo, useCallback } from "react";
 import Slider from "rc-slider";
 import "rc-slider/assets/index.css";
 import profile1 from "../../assets/profile1.png";
 import SideNavDetails from "../../components/Mapping/SideNavDetails";
 import { RecentReportCard } from "../../components";
-import stagnantIcon from "../../assets/icons/stagnant_water.svg";
-import standingIcon from '../../assets/icons/standing_water.svg';
-import garbageIcon from '../../assets/icons/garbage.svg';
-import othersIcon from '../../assets/icons/others.svg';
+import stagnantIcon from "../../assets/icons/stagnant_water.svg?url";
+import standingIcon from '../../assets/icons/standing_water.svg?url';
+import garbageIcon from '../../assets/icons/garbage.svg?url';
+import othersIcon from '../../assets/icons/others.svg?url';
 import defaultProfile from "../../assets/default_profile.png";
+import * as turf from '@turf/turf'; // Import turf for center calculations
 
 const containerStyle = {
   width: "100%",
@@ -29,6 +30,28 @@ const defaultCenter = {
   lat: 14.5995,
   lng: 120.9842
 };
+
+// Pattern colors (darker versions for better visibility)
+const PATTERN_COLORS = {
+  spike: "#D32F2F",        // darker red (error)
+  gradual_rise: "#FB8C00", // darker orange (warning)
+  decline: "#388E3C",      // darker green (success)
+  stability: "#0288D1",    // darker blue (info)
+  none: "#BDBDBD",         // darker gray (default for no pattern)
+  default: "#4a5568",      // darker gray (fallback)
+};
+
+// Helper function to normalize barangay names for comparison (from Mapping.jsx)
+function normalizeBarangayName(name) {
+  if (!name) return '';
+  return name
+    .toLowerCase()
+    .replace(/\bsr\.?\b/g, '') // Remove sr. or sr
+    .replace(/\bjr\.?\b/g, '') // Remove jr. or jr
+    .replace(/[.\-']/g, '')    // Remove periods, hyphens, apostrophes
+    .replace(/\s+/g, ' ')      // Normalize multiple spaces to single space
+    .trim();
+}
 
 // Haversine formula to calculate distance between two points
 function calculateDistance(lat1, lon1, lat2, lon2) {
@@ -65,6 +88,76 @@ function getRelativeTime(dateString) {
   return date.toLocaleDateString();
 }
 
+// Function to draw barangay polygons with pattern colors
+function drawBarangayPolygons(map, geoJsonData, barangaysList, highlightedBarangayName) {
+  if (!map || !geoJsonData || !window.google) return [];
+
+  const polygons = [];
+  
+  geoJsonData.features.forEach((feature) => {
+    const geometry = feature.geometry;
+    const barangayName = feature.properties.name;
+    const isHighlighted = highlightedBarangayName === barangayName;
+    
+    // Find matching barangay in barangaysList for pattern data
+    let barangayObj = barangaysList?.find(b => 
+      normalizeBarangayName(b.name) === normalizeBarangayName(barangayName)
+    );
+    
+    // Get pattern type
+    let patternType = (
+      barangayObj?.status_and_recommendation?.pattern_based?.status || 
+      feature.properties.patternType || 
+      feature.properties.pattern_type || 
+      'none'
+    ).toLowerCase();
+    
+    if (!patternType || patternType === '') patternType = 'none';
+    const patternColor = PATTERN_COLORS[patternType] || PATTERN_COLORS.default;
+    
+    // Handle both Polygon and MultiPolygon geometries
+    const coordsArray = geometry.type === 'Polygon' 
+      ? [geometry.coordinates] 
+      : geometry.type === 'MultiPolygon' 
+      ? geometry.coordinates 
+      : [];
+    
+    coordsArray.forEach((polygonCoords) => {
+      const path = polygonCoords[0].map(([lng, lat]) => ({ lat, lng }));
+      
+      const polygon = new window.google.maps.Polygon({
+        paths: path,
+        strokeColor: isHighlighted ? '#c9c9c9' : patternColor,
+        strokeOpacity: isHighlighted ? 1.0 : 0.8,
+        strokeWeight: isHighlighted ? 4 : 2,
+        fillOpacity: isHighlighted ? 0 : 0.4,
+        fillColor: patternColor,
+        map,
+        zIndex: isHighlighted ? 10 : 1,
+        clickable: false,
+        // Add dotted stroke pattern for highlighted barangay
+        ...(isHighlighted && {
+          strokePattern: [
+            {
+              icon: {
+                path: 'M 0,-1 0,1',
+                strokeOpacity: 1,
+                scale: 4
+              },
+              offset: '0',
+              repeat: '20px'
+            }
+          ]
+        })
+      });
+      
+      polygons.push(polygon);
+    });
+  });
+  
+  return polygons;
+}
+
 const BREEDING_SITE_TYPE_ICONS = {
   "Stagnant Water": stagnantIcon,
   "Standing Water": standingIcon,
@@ -72,6 +165,15 @@ const BREEDING_SITE_TYPE_ICONS = {
   "Others": othersIcon,
   "default": stagnantIcon
 };
+
+// Debug the icon URLs in deployment
+console.log('[DEBUG] SpecificLocation - Breeding Site Icons:', {
+  "Stagnant Water": stagnantIcon,
+  "Standing Water": standingIcon,
+  "Uncollected Garbage or Trash": garbageIcon,
+  "Others": othersIcon,
+  "default": stagnantIcon
+});
 
 const SpecificLocation = () => {
   const { isLoaded } = useGoogleMaps();
@@ -84,6 +186,11 @@ const SpecificLocation = () => {
   const polylinesRef = useRef([]);
   const infoWindowRef = useRef(null);
   const clustererRef = useRef(null);
+  
+  // State for barangay boundary data
+  const [barangayGeoJsonData, setBarangayGeoJsonData] = useState(null);
+  const [highlightedBarangay, setHighlightedBarangay] = useState(null);
+  const barangayPolygonsRef = useRef([]);
 
   console.log("[DEBUG] SpecificLocation: isLoaded =", isLoaded);
   console.log("[DEBUG] SpecificLocation: state =", state);
@@ -101,38 +208,85 @@ const SpecificLocation = () => {
   // Get all reports
   const { data: allReports = [] } = useGetPostsQuery();
 
-  // Get nearby reports
-  const [getNearbyReports] = useGetNearbyReportsMutation();
-  const [nearbyReports, setNearbyReports] = useState([]);
+  // Calculate nearby reports using frontend distance calculation
+  const nearbyReports = useMemo(() => {
+    if (report?.specific_location?.coordinates && allReports?.length > 0) {
+      const [currentLng, currentLat] = report.specific_location.coordinates;
+      const radiusKm = 1; // 1 km radius
+      
+      const nearby = allReports.filter(r => {
+        // Skip the current report
+        if (r._id === report._id) return false;
+        
+        // Skip reports without coordinates
+        if (!r.specific_location?.coordinates) return false;
+        
+        const [rLng, rLat] = r.specific_location.coordinates;
+        const distance = calculateDistance(currentLat, currentLng, rLat, rLng);
+        
+        return distance <= radiusKm;
+      });
+      
+      return nearby;
+    } else {
+      return [];
+    }
+  }, [report?._id, report?.specific_location?.coordinates?.[0], report?.specific_location?.coordinates?.[1], allReports]);
+
+  // Use nearby reports (calculated on frontend) and filter by validation status
+  const filteredReports = useMemo(() => {
+    return Array.isArray(nearbyReports) 
+      ? nearbyReports.filter((r) => r.status === "Validated")
+      : [];
+  }, [nearbyReports]);
+
+
+
+  // Filter out the current report from recent reports and only show validated posts
+  const recentReports = useMemo(() => {
+    return report 
+      ? filteredReports.filter(r => r._id !== report._id)
+      : [];
+  }, [filteredReports, report?._id]);
 
   // Get basic profiles
   const { data: basicProfiles = [] } = useGetBasicProfilesQuery();
+
+  // Get barangays list for pattern data
+  const { data: barangaysList = [] } = useGetBarangaysQuery();
+
+  // Preload SVG icons to ensure they're available when needed
+  useEffect(() => {
+    console.log('[DEBUG] Preloading SVG icons...');
+    const iconsToPreload = Object.values(BREEDING_SITE_TYPE_ICONS);
+    
+    iconsToPreload.forEach((iconUrl, index) => {
+      const img = new Image();
+      img.onload = () => console.log(`[DEBUG] Preloaded icon ${index + 1}/${iconsToPreload.length}:`, iconUrl);
+      img.onerror = () => console.error(`[ERROR] Failed to preload icon ${index + 1}/${iconsToPreload.length}:`, iconUrl);
+      img.src = iconUrl;
+    });
+  }, []);
+
+  // Load barangay boundary data
+  useEffect(() => {
+    console.log('[DEBUG] Loading boundary data...');
+    fetch("/quezon_barangays_boundaries.geojson")
+      .then((res) => res.json())
+      .then((data) => {
+        console.log('[DEBUG] Boundary data loaded successfully');
+        setBarangayGeoJsonData(data);
+      })
+      .catch((error) => {
+        console.error('[DEBUG] Error loading boundary data:', error);
+      });
+  }, []);
 
   // Helper function to get profile image
   const getProfileImage = (userId) => {
     const profile = basicProfiles.find(p => p._id === userId);
     return profile?.profilePhotoUrl || defaultProfile;
   };
-
-  useEffect(() => {
-    if (report?.specific_location?.coordinates) {
-      const [lng, lat] = report.specific_location.coordinates;
-      getNearbyReports({
-        coordinates: [lng, lat],
-        radius: 1, // Changed from 2 to 1 for 1km radius
-      })
-        .unwrap()
-        .then((data) => {
-          setNearbyReports(data);
-        })
-        .catch((error) => {
-          console.error("Error fetching nearby reports:", error);
-        });
-    }
-  }, [report, getNearbyReports]);
-
-  console.log("[DEBUG] SpecificLocation: report =", report);
-  console.log("[DEBUG] SpecificLocation: report coordinates =", report?.specific_location?.coordinates);
 
   // State for timeline
   const [range, setRange] = useState([0, 0]);
@@ -166,19 +320,6 @@ const SpecificLocation = () => {
     }, 500);
     return () => clearTimeout(timer);
   }, [isPlaying, range, maxDate]);
-
-  // Filter reports by range and validation status
-  const filteredReports = allReports.filter((r) => {
-    if (allReports.length < 5) return r.status === "Validated";
-    if (!range || !range.length) return r.status === "Validated";
-    const t = new Date(r.date_and_time).getTime();
-    return t >= range[0] && t <= range[1] && r.status === "Validated";
-  });
-
-  // Filter out the current report from recent reports and only show validated posts
-  const recentReports = report 
-    ? filteredReports.filter(r => r._id !== report._id)
-    : [];
 
   // Initialize map
   useEffect(() => {
@@ -246,11 +387,13 @@ const SpecificLocation = () => {
     }
 
     return () => {
-      // Cleanup markers and polylines
+      // Cleanup markers, polylines, and barangay polygons
       markersRef.current.forEach(marker => marker.setMap(null));
       markersRef.current = [];
       polylinesRef.current.forEach(line => line.setMap(null));
       polylinesRef.current = [];
+      barangayPolygonsRef.current.forEach(polygon => polygon.setMap(null));
+      barangayPolygonsRef.current = [];
       if (clustererRef.current) {
         clustererRef.current.clearMarkers();
       }
@@ -288,9 +431,24 @@ const SpecificLocation = () => {
     if (report?.specific_location?.coordinates) {
       const [lng, lat] = report.specific_location.coordinates;
       
-      // Create custom icon for main marker
+      // Create custom icon for main marker with error handling
       const iconUrl = BREEDING_SITE_TYPE_ICONS[report.report_type] || BREEDING_SITE_TYPE_ICONS.default;
+      console.log('[DEBUG] Main marker - Report type:', report.report_type, 'Icon URL:', iconUrl);
+      
       const glyphImg = document.createElement("img");
+      
+      // Add success and error handling for missing images
+      glyphImg.onload = function() {
+        console.log('[DEBUG] Successfully loaded main marker icon:', iconUrl);
+      };
+      
+      glyphImg.onerror = function() {
+        console.error('[ERROR] Failed to load main marker icon:', iconUrl, 'for report type:', report.report_type);
+        console.error('[ERROR] Available icon keys:', Object.keys(BREEDING_SITE_TYPE_ICONS));
+        // Fallback to a simple colored circle if image fails
+        this.style.display = 'none';
+      };
+      
       glyphImg.src = iconUrl;
       glyphImg.style.width = "28px";
       glyphImg.style.height = "28px";
@@ -348,7 +506,7 @@ const SpecificLocation = () => {
               <span class="font-bold">Barangay:</span> ${report.barangay}
             </p>
             <p class="text-xl">
-              <span class="font-bold">Reported by:</span> ${report.isAnonymous ? "Anonymous" : report.user?.username || "Unknown"}
+              <span class="font-bold">Reported by:</span> ${report.isAnonymous ? report.anonymousId : report.user?.username || "Unknown"}
             </p>
             <p class="text-xl">
               <span class="font-bold">Reported:</span> ${getRelativeTime(report.date_and_time)}
@@ -369,15 +527,32 @@ const SpecificLocation = () => {
       markersRef.current.push(mainMarker);
     }
 
-    // Add markers for filtered reports
-    const markers = filteredReports.map(r => {
+    // Add markers for all validated reports (not just nearby ones)
+    const allValidatedReports = allReports.filter(r => r.status === "Validated" && r._id !== report._id);
+    const markers = allValidatedReports.map(r => {
       if (!r.specific_location?.coordinates) return null;
 
       const [lng, lat] = r.specific_location.coordinates;
       
-      // Create custom icon for nearby markers
+      // Create custom icon for nearby markers with error handling
       const iconUrl = BREEDING_SITE_TYPE_ICONS[r.report_type] || BREEDING_SITE_TYPE_ICONS.default;
+      console.log('[DEBUG] Nearby marker - Report type:', r.report_type, 'Icon URL:', iconUrl);
+      
       const glyphImg = document.createElement("img");
+      
+      // Add success and error handling for missing images
+      glyphImg.onload = function() {
+        console.log('[DEBUG] Successfully loaded nearby marker icon:', iconUrl);
+      };
+      
+      glyphImg.onerror = function() {
+        console.error('[ERROR] Failed to load nearby marker icon:', iconUrl, 'for report type:', r.report_type);
+        console.error('[ERROR] Available icon keys:', Object.keys(BREEDING_SITE_TYPE_ICONS));
+        console.error('[ERROR] Report object:', r);
+        // Fallback to a simple colored circle if image fails
+        this.style.display = 'none';
+      };
+      
       glyphImg.src = iconUrl;
       glyphImg.style.width = "28px";
       glyphImg.style.height = "28px";
@@ -413,7 +588,7 @@ const SpecificLocation = () => {
                 <span class="font-bold">Barangay:</span> ${r.barangay}
               </p>
               <p class="text-xl">
-                <span class="font-bold">Reported by:</span> ${r.isAnonymous ? "Anonymous" : r.user?.username || "Unknown"}
+                <span class="font-bold">Reported by:</span> ${r.isAnonymous ? r.anonymousId : r.user?.username || "Unknown"}
               </p>
               <p class="text-xl">
                 <span class="font-bold">Reported:</span> ${getRelativeTime(r.date_and_time)}
@@ -454,7 +629,7 @@ const SpecificLocation = () => {
       markers.forEach(marker => markersRef.current.push(marker));
     }
 
-    // Add polylines from main report to each filtered report
+    // Add polylines from main report to each nearby report only (not all reports)
     if (report?.specific_location?.coordinates) {
       const [mainLng, mainLat] = report.specific_location.coordinates;
       filteredReports.forEach(r => {
@@ -477,7 +652,30 @@ const SpecificLocation = () => {
       });
     }
 
-  }, [filteredReports, report]);
+  }, [allReports, filteredReports, report]);
+
+  // Effect to draw/redraw barangay polygons when highlighted barangay changes
+  useEffect(() => {
+    if (!mapRef.current || !barangayGeoJsonData || !isLoaded) return;
+
+    console.log('[DEBUG] Drawing barangay polygons, highlighted:', highlightedBarangay);
+    
+    // Small delay to ensure map is fully ready and other overlays are drawn
+    const timeoutId = setTimeout(() => {
+      // Clear existing polygons
+      barangayPolygonsRef.current.forEach(polygon => polygon.setMap(null));
+      
+      // Draw new polygons
+      barangayPolygonsRef.current = drawBarangayPolygons(
+        mapRef.current, 
+        barangayGeoJsonData, 
+        barangaysList,
+        highlightedBarangay
+      );
+    }, 100);
+
+    return () => clearTimeout(timeoutId);
+  }, [barangayGeoJsonData, barangaysList, highlightedBarangay, report, isLoaded]);
 
   // Helper functions
   function getStatusColorClass(status) {
@@ -501,12 +699,69 @@ const SpecificLocation = () => {
     });
   }
 
+  // Memoize the onBarangaySelect callback to prevent unnecessary re-renders
+  const handleBarangaySelect = useCallback((barangay) => {
+    console.log('[DEBUG] Barangay selected:', barangay);
+    console.log('[DEBUG] Barangay keys:', Object.keys(barangay));
+    console.log('[DEBUG] Full barangay object:', JSON.stringify(barangay, null, 2));
+    
+    if (mapRef.current && barangay && barangayGeoJsonData) {
+      // Use the same approach as intervention modal - find barangay in GeoJSON and calculate center
+      const barangayName = barangay.displayName || barangay.name;
+      console.log('[DEBUG] Looking for barangay name:', barangayName);
+      
+      const selectedFeature = barangayGeoJsonData.features.find(
+        (feature) => feature.properties.name === barangayName
+      );
+      
+      if (selectedFeature && selectedFeature.geometry) {
+        try {
+          const center = turf.centerOfMass(selectedFeature);
+          if (center && center.geometry && center.geometry.coordinates) {
+            const [lng, lat] = center.geometry.coordinates;
+            console.log('[DEBUG] Calculated center using turf:', { lat, lng });
+            
+            // Pan to the calculated center
+            const centerLatLng = new window.google.maps.LatLng(lat, lng);
+            mapRef.current.panTo(centerLatLng);
+            mapRef.current.setZoom(15);
+            
+            // Set highlighted barangay for border highlighting
+            setHighlightedBarangay(barangayName);
+            console.log('[DEBUG] Pan completed to calculated center and highlighted:', barangayName);
+          } else {
+            console.warn('[DEBUG] Failed to get center coordinates from turf calculation');
+          }
+        } catch (err) {
+          console.error('[DEBUG] Error calculating center with turf:', err);
+        }
+      } else {
+        console.warn('[DEBUG] Barangay feature not found in GeoJSON:', barangayName);
+        console.log('[DEBUG] Available barangay names in GeoJSON:', 
+          barangayGeoJsonData.features.map(f => f.properties.name)
+        );
+      }
+    } else {
+      console.warn('[DEBUG] Missing requirements:', { 
+        hasMapRef: !!mapRef.current, 
+        hasBarangay: !!barangay, 
+        hasGeoJsonData: !!barangayGeoJsonData 
+      });
+    }
+  }, [barangayGeoJsonData]);
+
   if (!isLoaded) {
-    return <div>Loading map...</div>;
+    return <div className="h-screen w-screen flex flex-col gap-6 items-center justify-center">
+    <span className="loading loading-spinner loading-xl"></span>
+    <p className="text-primary text-3xl font-semibold">Loading map...</p>
+  </div>;
   }
 
   if (!report && isLoading) {
-    return <div>Loading report...</div>;
+    return <div className="h-screen w-screen flex flex-col gap-2 items-center justify-center">
+    <span className="loading loading-spinner loading-xl"></span>
+    <p className="text-primary text-3xl font-semibold">Loading report...</p>
+  </div>;
   }
 
   if (!report && error) {
@@ -518,10 +773,10 @@ const SpecificLocation = () => {
   }
 
   return (
-    <main className="text-2xl mt-[-69px]">
-      <div className="w-full h-[100vh] relative">
+    <main className="text-2xl mt-[-68px] ">
+      <div className="w-full h-[100-vh] relative">
         {/* Timeline Range Slider UI */}
-        {allReports.length >= 5 && (
+        {/* {allReports.length >= 5 && (
           <div className="absolute top-6 left-1/2 -translate-x-1/2 z-[1000] bg-white/90 rounded-lg shadow-lg px-6 py-4 flex flex-col gap-2 items-center max-w-xl w-[90vw]">
             <div className="flex items-center gap-3 w-full">
               <label className="font-semibold text-base">Timeline:</label>
@@ -560,8 +815,8 @@ const SpecificLocation = () => {
               <div className="text-gray-500 text-sm mt-2">No reports available for timeline.</div>
             )}
           </div>
-        )}
-        <div id="map" style={containerStyle}></div>
+        )} */}
+        <div id="map" style={containerStyle} className="h-[100vh]"></div>
       </div>
       <SideNavDetails
         report={report}
@@ -570,16 +825,17 @@ const SpecificLocation = () => {
         radius={1}
         onViewCommunityClick={() => navigate('/community')}
         onPreventionTipsClick={() => navigate('/buzzline')}
+        onBarangaySelect={handleBarangaySelect}
       />
       <article className="absolute z-100000 flex flex-col text-primary right-[10px] bottom-0 md:max-w-[60vw] lg:max-w-[62vw] xl:max-w-[69vw] 2xl:max-w-[72vw]">
         <p className="text-[20px] text-white shadow-sm font-semibold text-left mb-2 w-full">
-          Most Recent Reports
+          Nearby Reports
         </p>
         <section className="flex gap-x-2 text-[13px] overflow-x-scroll scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-100">
           {isLoading ? (
             <div className="text-gray-500 p-4">Loading reports...</div>
           ) : recentReports.length === 0 ? (
-            <div className="text-gray-500 p-4">No recent reports found.</div>
+            <div className="text-gray-500 p-4">No nearby reports found.</div>
           ) : (
             recentReports.map((r) => {
               const rawDate = r.date_and_time;

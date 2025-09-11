@@ -130,7 +130,12 @@ const AlertsTable = () => {
     <div className="flex flex-col h-[500px]">
       <p className="text-2xl font-bold mb-4">Recent Alerts</p>
       {isLoading ? (
-        <p>Loading...</p>
+        <div className="flex items-center justify-center h-[400px]">
+          <div className="text-center">
+            <span className="loading loading-spinner loading-lg text-primary"></span>
+            <p className="mt-4 text-lg text-gray-600">Loading alerts...</p>
+          </div>
+        </div>
       ) : (
         <div className="ag-theme-quartz h-[500px] w-full">
           <AgGridReact

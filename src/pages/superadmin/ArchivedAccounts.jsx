@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from "react";
 import { AgGridReact } from "ag-grid-react";
 import { themeQuartz } from "ag-grid-community";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 const customTheme = themeQuartz.withParams({
   borderRadius: 10,
@@ -62,6 +62,7 @@ const ArchivedAccounts = ({
   backLinkText = "Back to Active Accounts",
   emptyMessage = "No archived accounts found."
 }) => {
+  const navigate = useNavigate();
   const [paginationPageSize, setPaginationPageSize] = useState(10);
   const [paginationPageSizeOptions] = useState([5, 10, 20, 50]);
 
@@ -111,16 +112,21 @@ const ArchivedAccounts = ({
   return (
     <div className="flex flex-col h-[500px] py-6">
       <div className="flex justify-between items-center mb-6">
-        <p className="text-2xl font-bold text-5xl font-extrabold mb-12 md:mb-0 text-center md:justify-start md:text-left md:w-[48%] ">{title}</p>
-        <Link 
-          to={backLink}
-          className="btn btn-outline rounded-full"
+        <p className="text-5xl font-extrabold select-none pointer-events-none">{title}</p>
+        <button 
+          onClick={() => navigate(backLink)}
+          className="btn btn-outline rounded-full z-100000"
         >
           {backLinkText}
-        </Link>
+        </button>
       </div>
       {isLoading ? (
-        <p>Loading...</p>
+        <div className="flex items-center justify-center h-[400px]">
+          <div className="text-center">
+            <span className="loading loading-spinner loading-lg text-primary"></span>
+            <p className="mt-4 text-lg text-gray-600">Loading archived accounts...</p>
+          </div>
+        </div>
       ) : rows.length === 0 ? (
         <div className="h-[500px] flex items-center justify-center text-gray-500">
           {emptyMessage}
