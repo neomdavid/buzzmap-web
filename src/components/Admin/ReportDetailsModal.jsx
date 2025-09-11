@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useGoogleMaps } from "../GoogleMapsProvider";
+import ImageExpansionModal from "../ImageExpansionModal";
 
 const ReportDetailsModal = ({
   reportId,
@@ -21,6 +22,18 @@ const ReportDetailsModal = ({
   const streetViewModalRef = useRef(null);
   const [address, setAddress] = useState(location);
   const { isLoaded: isGoogleMapsLoaded } = useGoogleMaps();
+  const [isImageModalOpen, setIsImageModalOpen] = useState(false);
+  const [expandedImage, setExpandedImage] = useState(null);
+
+  const openImage = (src) => {
+    setExpandedImage(src);
+    setIsImageModalOpen(true);
+  };
+
+  const closeImage = () => {
+    setIsImageModalOpen(false);
+    setExpandedImage(null);
+  };
 
   useEffect(() => {
     if (!coordinates || coordinates.length !== 2) return;
@@ -208,7 +221,12 @@ const ReportDetailsModal = ({
                       key={index}
                       className="rounded-md overflow-hidden shadow-lg h-55"
                     >
-                      <img src={image} />
+                      <img
+                        src={image}
+                        alt={`Report image ${index + 1}`}
+                        className="w-full h-full object-cover hover:opacity-90 hover:cursor-zoom-in"
+                        onClick={() => openImage(image)}
+                      />
                     </div>
                   ))}
                 </div>
@@ -299,6 +317,13 @@ const ReportDetailsModal = ({
           </div>
         </div>
       </dialog>
+
+      {/* Image Expansion Modal */}
+      <ImageExpansionModal
+        isOpen={isImageModalOpen}
+        onClose={closeImage}
+        image={expandedImage}
+      />
     </>
   );
 };

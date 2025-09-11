@@ -5,12 +5,13 @@ import {
 } from "ag-grid-community";
 import { AgGridReact } from "ag-grid-react";
 import { useState, useMemo, useRef, useCallback, useEffect } from "react";
-import { IconSearch, IconBan, IconTrash } from "@tabler/icons-react";
+import { IconSearch, IconBan, IconTrash, IconSend } from "@tabler/icons-react";
 import {
   useGetAccountsQuery,
   useDeleteAccountMutation,
   useLoginMutation,
   useToggleAccountStatusMutation,
+  useResendOtpMutation,
 } from "../../api/dengueApi";
 import { useSelector } from "react-redux";
 import { toastSuccess, toastError } from "../../utils.jsx";
@@ -49,6 +50,11 @@ function UsersTable({ statusFilter, roleFilter, searchQuery }) {
   const [authError, setAuthError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isBanning, setIsBanning] = useState(true);
+  const [showResendModal, setShowResendModal] = useState(false);
+  const [resendTarget, setResendTarget] = useState(null);
+  const [resendPurpose, setResendPurpose] = useState("account-verification");
+  const [resendOtp, { isLoading: isResending }] = useResendOtpMutation();
+  const [resendCooldown, setResendCooldown] = useState(60);
 
   // Add mutations
   const [deleteAccount] = useDeleteAccountMutation();
@@ -110,6 +116,28 @@ function UsersTable({ statusFilter, roleFilter, searchQuery }) {
     setShowBanModal(true);
   };
 
+  const handleResendClick = (user) => {
+    setResendTarget(user);
+    setResendPurpose("account-verification");
+    setShowResendModal(true);
+    setResendCooldown(60);
+  };
+
+  const handleResendConfirm = async () => {
+    if (!resendTarget?.email) return;
+    try {
+      await resendOtp({
+        email: resendTarget.email,
+        purpose: resendPurpose,
+      }).unwrap();
+      toastSuccess("OTP resent to " + resendTarget.email);
+      setShowResendModal(false);
+      setResendTarget(null);
+    } catch (error) {
+      toastError(error?.data?.message || "Failed to resend OTP");
+    }
+  };
+
   const handleBanConfirm = async () => {
     if (!superAdminPassword.trim()) {
       setAuthError("Please enter your password");
@@ -165,16 +193,33 @@ function UsersTable({ statusFilter, roleFilter, searchQuery }) {
   const handleModalClose = () => {
     setShowDeleteModal(false);
     setShowBanModal(false);
+    setShowResendModal(false);
     setSelectedUser(null);
     setSuperAdminPassword("");
     setAuthError("");
     setIsSubmitting(false);
   };
 
+  // Cooldown while resend modal is open
+  useEffect(() => {
+    if (!showResendModal) return;
+    const intervalId = setInterval(() => {
+      setResendCooldown((prev) => {
+        if (prev <= 1) {
+          clearInterval(intervalId);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(intervalId);
+  }, [showResendModal]);
+
   // Move ActionsCell inside UsersTable component
   const ActionsCell = useCallback((p) => {
     const showBanButton =
       p.data.status === "active" || p.data.status === "banned";
+    const isUnverified = p.data.status === "unverified";
 
     return (
       <div className="py-2 h-full w-full flex items-center gap-2">
@@ -196,6 +241,15 @@ function UsersTable({ statusFilter, roleFilter, searchQuery }) {
           <IconTrash size={15} stroke={2.5} />
           <p className="text-sm">remove</p>
         </button>
+        {isUnverified && (
+          <button
+            onClick={() => handleResendClick(p.data)}
+            className="flex items-center gap-1 text-primary hover:bg-gray-200 p-1 rounded-md"
+          >
+            <IconSend size={15} stroke={2} />
+            <p className="text-sm">resend otp</p>
+          </button>
+        )}
       </div>
     );
   }, []); // Add empty dependency array since handlers are stable
@@ -502,6 +556,75 @@ function UsersTable({ statusFilter, roleFilter, searchQuery }) {
           <button onClick={handleModalClose}>close</button>
         </form>
       </dialog>
+
+      {/* Resend OTP Modal */}
+      <dialog id="resend_modal" className="modal" open={showResendModal}>
+        <div className="modal-box gap-6 text-lg w-10/12 max-w-xl p-8 sm:p-10 rounded-3xl">
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              handleResendConfirm();
+            }}
+          >
+            <div className="flex flex-col gap-6">
+              <p className="text-center text-2xl font-bold">
+                Resend Verification OTP
+              </p>
+              <p className="text-center text-gray-600">
+                Send a new verification code to {resendTarget?.email}
+              </p>
+
+              <div className="w-full flex flex-col gap-1">
+                <label className="text-primary font-bold">Purpose</label>
+                <select
+                  className="select select-bordered"
+                  value={resendPurpose}
+                  onChange={(e) => setResendPurpose(e.target.value)}
+                >
+                  <option value="account-verification">
+                    account-verification
+                  </option>
+                  <option value="password-reset">password-reset</option>
+                </select>
+              </div>
+
+              <div className="w-full flex justify-between items-center gap-3 mt-2">
+                <p className="text-sm text-gray-600">
+                  Didn't receive an OTP?{" "}
+                  {resendCooldown > 0 ? (
+                    <span className="text-gray-500">
+                      Resend ({resendCooldown}s)
+                    </span>
+                  ) : (
+                    <button
+                      type="submit"
+                      className={`text-primary underline ${
+                        isResending
+                          ? "opacity-70 cursor-wait"
+                          : "hover:opacity-80"
+                      }`}
+                      disabled={isResending}
+                    >
+                      Resend
+                    </button>
+                  )}
+                </p>
+                <button
+                  type="button"
+                  className="bg-gray-300 text-white px-6 py-2.5 rounded-xl hover:bg-gray-400 transition-colors hover:cursor-pointer"
+                  onClick={handleModalClose}
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </form>
+        </div>
+
+        <form method="dialog" className="modal-backdrop">
+          <button onClick={handleModalClose}>close</button>
+        </form>
+      </dialog>
     </>
   );
 }
@@ -522,6 +645,10 @@ const StatusCell = ({ value }) => {
   let textColor = "";
 
   switch (value) {
+    case "pending":
+      bgColor = "bg-warning";
+      textColor = "text-white";
+      break;
     case "active":
       bgColor = "bg-success";
       textColor = "text-white";

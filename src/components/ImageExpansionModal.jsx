@@ -5,7 +5,7 @@ const ImageExpansionModal = ({ isOpen, onClose, image }) => {
   if (!isOpen || !image) return null;
 
   return (
-    <dialog id="image-expansion-modal" className="modal" open={isOpen}>
+    <dialog id="image-expansion-modal" className="modal z-[1000]" open={isOpen}>
       <div className="modal-box  w-11/12 max-w-6xl h-[90vh] p-2 overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between p-4  text-primary">
@@ -33,7 +33,7 @@ const ImageExpansionModal = ({ isOpen, onClose, image }) => {
           </div>
         </div>
       </div>
-      <form method="dialog" className="modal-backdrop">
+      <form method="dialog" className="modal-backdrop z-[995]">
         <button onClick={onClose}>close</button>
       </form>
     </dialog>

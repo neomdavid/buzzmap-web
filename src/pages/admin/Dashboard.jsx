@@ -176,7 +176,9 @@ const Dashboard = () => {
       )}
 
       <div className="bg-primary text-white flex flex-col p-6 rounded-2xl mb-4">
-        <p className="text-5xl font-[Koulen] lowercase">Hello, {user.name}</p>
+        <p className="text-5xl font-extrabold capitalize tracking-[1px]">
+          Hello, {user.name}
+        </p>
         <p className="text-lg">Today is {formattedDate}</p>
       </div>
 
