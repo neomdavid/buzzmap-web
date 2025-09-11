@@ -33,6 +33,11 @@ export const handleAccountDisabledError = (
   navigate,
   errorMessage
 ) => {
+  // Prevent re-entrancy / duplicate handling bursts
+  if (window.__ACCOUNT_DISABLED_HANDLING__) {
+    return;
+  }
+  window.__ACCOUNT_DISABLED_HANDLING__ = true;
   console.log(
     "[AccountStatusHandler] Handling account disabled error:",
     errorMessage
@@ -47,11 +52,13 @@ export const handleAccountDisabledError = (
       "Your account has been disabled. Please contact an administrator."
   );
 
-  // Dispatch custom event for other components to listen
-  dispatchAccountDisabledEvent(errorMessage);
-
   // Redirect to login
   navigate("/login", { replace: true });
+
+  // Release the guard after a brief delay to avoid cascaded duplicate toasts
+  setTimeout(() => {
+    window.__ACCOUNT_DISABLED_HANDLING__ = false;
+  }, 1500);
 };
 
 /**

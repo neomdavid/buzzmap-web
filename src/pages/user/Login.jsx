@@ -80,6 +80,18 @@ const Login = () => {
         fullError: err,
       });
 
+      // Handle disabled account explicitly
+      const disabledMessageString =
+        typeof err?.data === "string" ? err.data : undefined;
+      if (err?.status === "ACCOUNT_DISABLED") {
+        toastError(
+          disabledMessageString ||
+            err?.data?.message ||
+            "Your account has been disabled. Please contact an administrator."
+        );
+        return;
+      }
+
       // Check for unverified account error
       const errorMessage = err?.data?.message?.toLowerCase() || "";
       if (
@@ -132,7 +144,7 @@ const Login = () => {
       }
 
       // Handle other errors - prioritize backend message
-      const backendMessage = err?.data?.message;
+      const backendMessage = err?.data?.message || disabledMessageString;
       if (backendMessage) {
         toastError(backendMessage);
       } else if (err?.status === 500) {
@@ -222,10 +234,14 @@ const Login = () => {
           </button>
           {isError && (
             <p className="z-10000000  font-semibold text-red-500 font-light italic text-md">
-              {error?.data?.message ||
-                (error?.status === 500
-                  ? "Network error. Please check your connection and try again."
-                  : "Login failed. Please check your credentials.")}
+              {typeof error?.data === "string"
+                ? error?.data
+                : error?.data?.message ||
+                  (error?.status === 500
+                    ? "Network error. Please check your connection and try again."
+                    : error?.status === "ACCOUNT_DISABLED"
+                    ? "Your account has been disabled. Please contact an administrator."
+                    : "Login failed. Please check your credentials.")}
             </p>
           )}
           {/* <div className="flex w-[60%] gap-x-4 mb-[-8px] ">
