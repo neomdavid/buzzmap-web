@@ -285,7 +285,11 @@ function InterventionsTable({
 
       {/* Add Intervention Modal */}
       {isAddModalOpen && (
-        <AddInterventionModal isOpen={isAddModalOpen} onClose={closeAddModal} />
+        <AddInterventionModal
+          isOpen={isAddModalOpen}
+          onClose={closeAddModal}
+          onRefetch={handleRefetch}
+        />
       )}
     </div>
   );
