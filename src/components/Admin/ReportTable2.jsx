@@ -20,9 +20,9 @@ ModuleRegistry.registerModules([AllCommunityModule]);
 const defaultColDef = {
   flex: 1,
   minWidth: 100,
-  filter: false,
-  floatingFilter: false,
+  filter: true,
   movable: false,
+  sortable: true,
   filterParams: {
     buttons: ["apply", "clear", "reset", "cancel"],
     closeOnApply: true,
@@ -320,13 +320,13 @@ function ReportTable2({
         field: "barangay",
         headerName: "Barangay",
         minWidth: 200,
-        filter: false,
+        filter: "agTextColumnFilter",
       },
       {
         field: "date",
         headerName: "Date & Time",
         minWidth: 120,
-        filter: false,
+        filter: "agDateColumnFilter",
         valueGetter: (params) => {
           return params.data.dateValue;
         },

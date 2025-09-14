@@ -82,6 +82,8 @@ const Analytics = () => {
   const [showInterventions, setShowInterventions] = useState(true);
 
   const [importProgress, setImportProgress] = useState(0);
+  const [retryCount, setRetryCount] = useState(0);
+  const [maxRetries] = useState(3);
   const authToken = useSelector((state) => state?.auth?.token);
 
   const { data: patternResultsData, isLoading: isLoadingPatterns } =
@@ -187,6 +189,23 @@ const Analytics = () => {
       if (!authToken) {
         throw new Error("Authentication invalid. Please log in again.");
       }
+
+      // Validate file type
+      if (
+        !file.type.includes("csv") &&
+        !file.name.toLowerCase().endsWith(".csv")
+      ) {
+        throw new Error("Please select a valid CSV file.");
+      }
+
+      // Validate file size (max 10MB)
+      const maxSize = 10 * 1024 * 1024; // 10MB
+      if (file.size > maxSize) {
+        throw new Error(
+          "File size too large. Please select a file smaller than 10MB."
+        );
+      }
+
       const formData = new FormData();
       formData.append("file", file);
 
@@ -204,10 +223,22 @@ const Analytics = () => {
       );
 
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(
-          error.details || error.message || "Failed to upload file"
-        );
+        let errorMessage = "Failed to upload file";
+        try {
+          const error = await response.json();
+          errorMessage = error.details || error.message || errorMessage;
+        } catch (parseError) {
+          // If response is not JSON, use status text
+          errorMessage = response.statusText || errorMessage;
+        }
+
+        // Handle specific backend errors
+        if (errorMessage.includes("fs.promises.unlinkSync")) {
+          errorMessage =
+            "Server error: File processing failed. Please try again or contact support if the issue persists.";
+        }
+
+        throw new Error(errorMessage);
       }
 
       const result = await response.json();
@@ -218,10 +249,14 @@ const Analytics = () => {
     }
   };
 
-  const handleImport = async () => {
+  const handleImport = async (isRetry = false) => {
     if (!csvFile) {
       setImportError("Please select a CSV file first");
       return;
+    }
+
+    if (!isRetry) {
+      setRetryCount(0);
     }
 
     setIsImporting(true);
@@ -268,9 +303,46 @@ const Analytics = () => {
       setShowSuccessModal(true);
     } catch (error) {
       console.error("Import error:", error);
-      setImportError(error.message || "Failed to import CSV file");
+
+      // Check if this is a retryable error and we haven't exceeded max retries
+      const isRetryableError =
+        error.message.includes("fs.promises.unlinkSync") ||
+        error.message.includes("Server error") ||
+        error.message.includes("Network") ||
+        error.message.includes("timeout");
+
+      if (isRetryableError && retryCount < maxRetries) {
+        const newRetryCount = retryCount + 1;
+        setRetryCount(newRetryCount);
+        setImportError(
+          `Upload failed (attempt ${newRetryCount}/${
+            maxRetries + 1
+          }). Retrying in 3 seconds...`
+        );
+
+        // Wait 3 seconds before retrying
+        setTimeout(() => {
+          handleImport(true);
+        }, 3000);
+        return;
+      }
+
+      // Final error message
+      const errorMessage =
+        retryCount >= maxRetries
+          ? `Upload failed after ${
+              maxRetries + 1
+            } attempts. Please try again later or contact support.`
+          : error.message || "Failed to import CSV file";
+
+      setImportError(errorMessage);
     } finally {
-      setIsImporting(false);
+      if (
+        retryCount >= maxRetries ||
+        !error?.message?.includes("fs.promises.unlinkSync")
+      ) {
+        setIsImporting(false);
+      }
     }
   };
 
@@ -797,7 +869,19 @@ const Analytics = () => {
               }}
               className="file-input file-input-bordered  w-full"
             />
-            {importError && <p className="text-error mt-2">{importError}</p>}
+            {importError && (
+              <div className="mt-2">
+                <p className="text-error">{importError}</p>
+                {retryCount >= maxRetries && !isImporting && (
+                  <button
+                    onClick={() => handleImport()}
+                    className="btn btn-sm btn-outline btn-primary mt-2"
+                  >
+                    Try Again
+                  </button>
+                )}
+              </div>
+            )}
             {isImporting && (
               <div className="mt-4">
                 <div className="w-full bg-gray-200 rounded-full h-6">
@@ -811,6 +895,11 @@ const Analytics = () => {
                     ? "Uploading CSV file..."
                     : "Analyzing dengue data..."}
                 </p>
+                {retryCount > 0 && (
+                  <p className="text-sm text-gray-500 mt-1">
+                    Attempt {retryCount + 1} of {maxRetries + 1}
+                  </p>
+                )}
               </div>
             )}
           </div>
@@ -821,6 +910,7 @@ const Analytics = () => {
                 setCsvFile(null);
                 setImportError("");
                 setImportProgress(0);
+                setRetryCount(0);
               }}
               className="btn btn-ghost"
             >
