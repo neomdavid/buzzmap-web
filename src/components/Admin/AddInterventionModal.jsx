@@ -141,6 +141,7 @@ const AddInterventionModal = ({
         setIsBoundaryDataLoaded(true);
         const barangayNames = data.features
           .map((feature) => feature.properties.name)
+          .filter((name) => name && name.trim() !== "") // Filter out empty, null, or whitespace-only names
           .sort();
         setBarangayOptions(barangayNames);
       })
