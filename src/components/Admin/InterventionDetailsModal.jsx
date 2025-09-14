@@ -341,7 +341,7 @@ const InterventionDetailsModal = ({
       className="modal transition-transform duration-300 ease-in-out"
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
-      <div className="modal-box bg-white rounded-4xl shadow-2xl w-11/12 max-w-3xl p-12 relative">
+      <div className="modal-box bg-white rounded-4xl shadow-2xl w-11/12 max-w-3xl max-h-[95vh] p-12 relative">
         <button
           className="absolute top-6 right-6 text-2xl font-semibold hover:text-gray-500 hover:cursor-pointer"
           onClick={onClose}

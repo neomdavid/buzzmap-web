@@ -101,7 +101,7 @@ const ReportDetailsModal = ({
         ref={modalRef}
         className="modal transition-transform duration-300 ease-in-out"
       >
-        <div className="modal-box bg-white rounded-3xl shadow-2xl w-9/12 max-w-4xl p-12 relative">
+        <div className="modal-box bg-white rounded-3xl shadow-2xl w-9/12 max-w-4xl  p-12 relative">
           <button
             className="absolute top-10 right-10 text-2xl font-semibold hover:text-gray-500 transition-colors duration-200 hover:cursor-pointer"
             onClick={onClose}
@@ -124,7 +124,7 @@ const ReportDetailsModal = ({
         ref={modalRef}
         className="modal transition-transform duration-300 ease-in-out"
       >
-        <div className="modal-box bg-white rounded-3xl shadow-2xl w-9/12 max-w-4xl p-12 relative">
+        <div className="modal-box bg-white rounded-3xl shadow-2xl w-9/12 max-w-4xl max-h-[95vh] p-12 relative">
           <button
             className="absolute top-10 right-10 text-2xl font-semibold hover:text-gray-500 transition-colors duration-200 hover:cursor-pointer"
             onClick={onClose}

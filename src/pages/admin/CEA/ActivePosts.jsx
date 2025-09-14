@@ -51,7 +51,7 @@ const ActivePosts = () => {
         {TABS.map((tab, idx) => (
           <button
             key={tab.id}
-            className={`px-6 py-2 text-lg font-semibold focus:outline-none transition-colors
+            className={`px-6 py-2 text-lg font-bold cursor-pointer focus:outline-none transition-colors
               border-x border-t
               ${
                 activeTab === tab.id
@@ -98,9 +98,9 @@ const ActivePosts = () => {
 
       {/* Modal for Forms using <dialog> */}
       <dialog ref={dialogRef} className="modal">
-        <div className="modal-box bg-transparent shadow-none rounded-3xl w-11/12 max-w-3xl  relative z-[-1]">
+        <div className="modal-box bg-transparent shadow-none rounded-3xl w-11/12 max-w-3xl relative">
           <button
-            className="absolute top-9 right-10 z-[-1] text-white text-xl font-semibold hover:text-gray-500 transition-all duration-200 hover:cursor-pointer"
+            className="absolute top-9 right-10 text-xl font-normal text-gray-300 hover:text-gray-500 transition-colors duration-200 hover:cursor-pointer z-10"
             onClick={closeModal}
           >
             ✕
