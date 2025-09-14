@@ -18,14 +18,14 @@ const customTheme = themeQuartz.withParams({
   wrapperBorderRadius: 0,
 });
 
-const Archives = ({ 
+const Archives = ({
   title = "Archived Posts",
   data = [],
   isLoading = false,
   columns = [],
   backLink = "/admin/cea",
   backLinkText = "Back to Active Posts",
-  emptyMessage = "No archived posts found."
+  emptyMessage = "No archived posts found.",
 }) => {
   const [paginationPageSize, setPaginationPageSize] = useState(10);
   const [paginationPageSizeOptions] = useState([5, 10, 20, 50]);
@@ -33,11 +33,15 @@ const Archives = ({
   const rows = useMemo(
     () =>
       (data || [])
-        .filter(item => item.status === "archived")
+        .filter((item) => item.status === "archived")
         .map((item) => ({
           ...item,
           publishDate: item.publishDate
-            ? new Date(item.publishDate).toLocaleString()
+            ? new Date(item.publishDate).toLocaleString(undefined, {
+                year: "numeric",
+                month: "long",
+                day: "numeric",
+              })
             : "N/A",
         })),
     [data]
@@ -47,10 +51,7 @@ const Archives = ({
     <div className="flex flex-col h-[500px]">
       <div className="flex justify-between items-center mb-4">
         <p className="text-2xl font-bold">{title}</p>
-        <Link 
-          to={backLink}
-          className="btn btn-outline rounded-full"
-        >
+        <Link to={backLink} className="btn btn-outline rounded-full">
           {backLinkText}
         </Link>
       </div>
@@ -78,7 +79,7 @@ const Archives = ({
               resizable: true,
             }}
             style={{
-              height: '100%',
+              height: "100%",
             }}
           />
         </div>
@@ -87,4 +88,4 @@ const Archives = ({
   );
 };
 
-export default Archives; 
+export default Archives;

@@ -10,7 +10,7 @@ console.log("VITE_MODE:", import.meta.env.VITE_MODE);
 const BASE_URL =
   import.meta.env.VITE_MODE === "PROD" || import.meta.env.MODE === "PROD"
     ? import.meta.env.VITE_API_BASE_URL
-    : "http://localhost:4000/";
+    : "/";
 
 console.log("Final BASE_URL:", BASE_URL);
 
@@ -32,6 +32,30 @@ const baseQueryWithErrorHandling = async (args, api, extraOptions) => {
 
     // Check for 401 Unauthorized response
     if (result.error?.status === 401) {
+      // Check if this is an account disabled error
+      const errorMessage =
+        result.error.data?.message || result.error.data || "";
+      if (
+        errorMessage.toLowerCase().includes("disabled") ||
+        errorMessage.toLowerCase().includes("account disabled") ||
+        errorMessage.toLowerCase().includes("inactive")
+      ) {
+        // Dispatch custom event for account disabled
+        const { dispatchAccountDisabledEvent } = await import(
+          "../utils/accountStatusHandler"
+        );
+        dispatchAccountDisabledEvent(
+          "Your account has been disabled. Please contact an administrator."
+        );
+
+        return {
+          error: {
+            status: "ACCOUNT_DISABLED",
+            data: "Your account has been disabled. Please contact an administrator.",
+          },
+        };
+      }
+
       // Preserve the original error message from the backend
       return {
         error: {
@@ -39,6 +63,32 @@ const baseQueryWithErrorHandling = async (args, api, extraOptions) => {
           data: result.error.data || "Please log in to perform this action",
         },
       };
+    }
+
+    // Check for 403 Forbidden response (account might be disabled)
+    if (result.error?.status === 403) {
+      const errorMessage =
+        result.error.data?.message || result.error.data || "";
+      if (
+        errorMessage.toLowerCase().includes("disabled") ||
+        errorMessage.toLowerCase().includes("account disabled") ||
+        errorMessage.toLowerCase().includes("inactive")
+      ) {
+        // Dispatch custom event for account disabled
+        const { dispatchAccountDisabledEvent } = await import(
+          "../utils/accountStatusHandler"
+        );
+        dispatchAccountDisabledEvent(
+          "Your account has been disabled. Please contact an administrator."
+        );
+
+        return {
+          error: {
+            status: "ACCOUNT_DISABLED",
+            data: "Your account has been disabled. Please contact an administrator.",
+          },
+        };
+      }
     }
 
     return result;
@@ -186,6 +236,9 @@ export const dengueApi = createApi({
         sortOrder,
         username,
         description,
+        popular,
+        recent,
+        myPosts,
         page = 1,
         limit = 10,
       } = {}) => {
@@ -203,6 +256,11 @@ export const dengueApi = createApi({
         if (sortOrder) params.append("sortOrder", sortOrder);
         if (username) params.append("username", username);
         if (description) params.append("description", description);
+
+        // Add filter parameters
+        if (popular) params.append("popular", "true");
+        if (recent) params.append("recent", "true");
+        if (myPosts) params.append("myPosts", "true");
 
         // Remove pagination params
         // params.append('page', page);
@@ -543,7 +601,7 @@ export const dengueApi = createApi({
         method: "PATCH",
         body: formData,
       }),
-      invalidatesTags: ["Post"],
+      invalidatesTags: [],
     }),
 
     // Delete an admin post
@@ -552,7 +610,7 @@ export const dengueApi = createApi({
         url: `adminPosts/${id}`,
         method: "DELETE",
       }),
-      invalidatesTags: ["Post"],
+      invalidatesTags: [],
     }),
 
     // Get all alerts (paginated)
@@ -678,6 +736,29 @@ export const dengueApi = createApi({
       providesTags: ["Accounts"],
     }),
 
+    // Archived accounts (separate endpoints for users and admins)
+    getArchivedUsers: builder.query({
+      query: () => ({
+        url: "accounts/archived/users",
+        method: "GET",
+      }),
+      transformResponse: (response) => {
+        // Expecting { message, accounts: [...], count }
+        return response;
+      },
+      providesTags: ["Accounts"],
+    }),
+    getArchivedAdmins: builder.query({
+      query: () => ({
+        url: "accounts/archived/admins",
+        method: "GET",
+      }),
+      transformResponse: (response) => {
+        return response;
+      },
+      providesTags: ["Accounts"],
+    }),
+
     // Add this new endpoint
     getBasicProfiles: builder.query({
       query: () => ({
@@ -767,7 +848,14 @@ export const dengueApi = createApi({
       async onQueryStarted(reportId, { dispatch, queryFulfilled }) {
         try {
           const { data } = await queryFulfilled;
-          console.log("[DEBUG] Upvote successful:", data);
+          console.log(
+            "[DEBUG] Vote API success - Post:",
+            reportId,
+            "Upvotes:",
+            data.upvotes,
+            "Downvotes:",
+            data.downvotes
+          );
 
           // Update the cache for both the specific post and the post list
           dispatch(
@@ -776,17 +864,17 @@ export const dengueApi = createApi({
               if (post) {
                 post.upvotes = data.upvotes;
                 post.downvotes = data.downvotes;
+                post.upvotesArray = data.upvotesArray || [];
+                post.downvotesArray = data.downvotesArray || [];
               }
             })
           );
         } catch (error) {
-          console.error("[DEBUG] Upvote failed:", error);
-          // The error will be handled by the component to show the toast
+          console.error("[DEBUG] Upvote API failed:", error);
         }
       },
       invalidatesTags: (result, error, reportId) => [
         { type: "Post", id: reportId },
-        { type: "Post", id: "LIST" },
       ],
     }),
     downvoteReport: builder.mutation({
@@ -809,6 +897,8 @@ export const dengueApi = createApi({
               if (post) {
                 post.upvotes = data.upvotes;
                 post.downvotes = data.downvotes;
+                post.upvotesArray = data.upvotesArray || [];
+                post.downvotesArray = data.downvotesArray || [];
               }
             })
           );
@@ -818,7 +908,6 @@ export const dengueApi = createApi({
       },
       invalidatesTags: (result, error, reportId) => [
         { type: "Post", id: reportId },
-        { type: "Post", id: "LIST" },
       ],
     }),
     removeUpvote: builder.mutation({
@@ -841,6 +930,8 @@ export const dengueApi = createApi({
               if (post) {
                 post.upvotes = data.upvotes;
                 post.downvotes = data.downvotes;
+                post.upvotesArray = data.upvotesArray || [];
+                post.downvotesArray = data.downvotesArray || [];
               }
             })
           );
@@ -850,7 +941,6 @@ export const dengueApi = createApi({
       },
       invalidatesTags: (result, error, reportId) => [
         { type: "Post", id: reportId },
-        { type: "Post", id: "LIST" },
       ],
     }),
     removeDownvote: builder.mutation({
@@ -873,6 +963,8 @@ export const dengueApi = createApi({
               if (post) {
                 post.upvotes = data.upvotes;
                 post.downvotes = data.downvotes;
+                post.upvotesArray = data.upvotesArray || [];
+                post.downvotesArray = data.downvotesArray || [];
               }
             })
           );
@@ -882,7 +974,6 @@ export const dengueApi = createApi({
       },
       invalidatesTags: (result, error, reportId) => [
         { type: "Post", id: reportId },
-        { type: "Post", id: "LIST" },
       ],
     }),
     addComment: builder.mutation({
@@ -1121,7 +1212,7 @@ export const dengueApi = createApi({
           console.error("[DEBUG] Admin post upvote failed:", error);
         }
       },
-      invalidatesTags: ["Post"],
+      invalidatesTags: [],
     }),
 
     downvoteAdminPost: builder.mutation({
@@ -1152,7 +1243,7 @@ export const dengueApi = createApi({
           console.error("[DEBUG] Admin post downvote failed:", error);
         }
       },
-      invalidatesTags: ["Post"],
+      invalidatesTags: [],
     }),
 
     removeAdminPostUpvote: builder.mutation({
@@ -1183,7 +1274,7 @@ export const dengueApi = createApi({
           console.error("[DEBUG] Remove admin post upvote failed:", error);
         }
       },
-      invalidatesTags: ["Post"],
+      invalidatesTags: [],
     }),
 
     removeAdminPostDownvote: builder.mutation({
@@ -1214,7 +1305,7 @@ export const dengueApi = createApi({
           console.error("[DEBUG] Remove admin post downvote failed:", error);
         }
       },
-      invalidatesTags: ["Post"],
+      invalidatesTags: [],
     }),
 
     // Admin post comments endpoints
@@ -1414,11 +1505,12 @@ export const dengueApi = createApi({
     }),
 
     // Clusters endpoints
-    getClustersWithSubclusters: builder.query({
-      query: () => "clusters/get-clusters-with-subclusters",
+    // New: Get clusters (replaces get-clusters-with-subclusters)
+    getClusters: builder.query({
+      query: () => "clusters/get-clusters",
       providesTags: ["Clusters"],
       transformResponse: (response) => {
-        console.log("[DEBUG] Clusters with subclusters response:", response);
+        console.log("[DEBUG] Clusters response:", response);
         return response;
       },
     }),
@@ -1476,6 +1568,19 @@ export const dengueApi = createApi({
         url: `clusters/${clusterId}/remove-reports`,
         method: "PATCH",
         body: { reportIds, permanentlyExclude, resetStatus },
+      }),
+      invalidatesTags: (result, error, { clusterId }) => [
+        { type: "Clusters", id: clusterId },
+        "Clusters",
+      ],
+    }),
+
+    // New: Resolve or unresolve selected reports in a cluster
+    resolveReports: builder.mutation({
+      query: ({ clusterId, reportIds, isResolved }) => ({
+        url: `clusters/${clusterId}/resolve-reports`,
+        method: "PATCH",
+        body: { reportIds, isResolved },
       }),
       invalidatesTags: (result, error, { clusterId }) => [
         { type: "Clusters", id: clusterId },
@@ -1609,6 +1714,8 @@ export const {
 
   // Add this new endpoint
   useGetDeletedAccountsQuery,
+  useGetArchivedUsersQuery,
+  useGetArchivedAdminsQuery,
 
   // Add this new endpoint
   useGetBasicProfilesQuery,
@@ -1627,10 +1734,11 @@ export const {
   useUpdateBioMutation,
 
   // Clusters hooks
-  useGetClustersWithSubclustersQuery,
+  useGetClustersQuery,
   useGetSpecificClusterQuery,
   useCreateSubClusterMutation,
   useAddReportsToSubClusterMutation,
   useRemoveReportsFromSubClusterMutation,
   useRemoveReportsFromClusterMutation,
+  useResolveReportsMutation,
 } = dengueApi;

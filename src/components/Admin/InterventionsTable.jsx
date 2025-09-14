@@ -90,10 +90,12 @@ function InterventionsTable({
   interventions,
   isActionable = true,
   onlyRecent = false,
+  refetchInterventions,
 }) {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   const [selectedIntervention, setSelectedIntervention] = useState(null);
+  const [isRefetching, setIsRefetching] = useState(false);
   const gridRef = useRef(null);
 
   let rowData = interventions.map((intervention) => ({
@@ -215,8 +217,31 @@ function InterventionsTable({
     setIsAddModalOpen(false);
   };
 
+  const handleRefetch = async () => {
+    if (refetchInterventions) {
+      setIsRefetching(true);
+      try {
+        await refetchInterventions();
+      } catch (error) {
+        console.error("Error refetching interventions:", error);
+      } finally {
+        setIsRefetching(false);
+      }
+    }
+  };
+
   return (
     <div className="flex flex-col h-full min-h-0 gap-6">
+      {isRefetching && (
+        <div className="flex items-center justify-center py-4">
+          <div className="flex items-center gap-2 text-primary">
+            <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+            <span className="text-sm font-medium">
+              Refreshing interventions...
+            </span>
+          </div>
+        </div>
+      )}
       <div
         className="ag-theme-quartz flex-1 min-h-0"
         ref={gridRef}
@@ -254,12 +279,17 @@ function InterventionsTable({
         <InterventionDetailsModal
           intervention={selectedIntervention} // Pass full intervention object
           onClose={closeDetailsModal}
+          onRefetch={handleRefetch}
         />
       )}
 
       {/* Add Intervention Modal */}
       {isAddModalOpen && (
-        <AddInterventionModal isOpen={isAddModalOpen} onClose={closeAddModal} />
+        <AddInterventionModal
+          isOpen={isAddModalOpen}
+          onClose={closeAddModal}
+          onRefetch={handleRefetch}
+        />
       )}
     </div>
   );

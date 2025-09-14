@@ -1,9 +1,10 @@
-import { useState, useRef } from "react";
+import { useEffect, useState, useRef } from "react";
+import { useLocation } from "react-router-dom";
 import {
   FormPublicPost,
   FormDengueAlert,
   AdminPostsTable,
-  AlertsTable
+  AlertsTable,
 } from "../../../components";
 import { Plus } from "phosphor-react";
 
@@ -13,9 +14,19 @@ const TABS = [
 ];
 
 const ActivePosts = () => {
+  const location = useLocation();
   const [activeTab, setActiveTab] = useState("public");
   const [modalType, setModalType] = useState(null); // 'public' or 'alerts'
   const dialogRef = useRef(null);
+
+  // Sync initial tab from query string (?tab=alerts|public)
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const tab = params.get("tab");
+    if (tab === "alerts" || tab === "public") {
+      setActiveTab(tab);
+    }
+  }, [location.search]);
 
   const openModal = (type) => {
     setModalType(type);
@@ -40,15 +51,16 @@ const ActivePosts = () => {
         {TABS.map((tab, idx) => (
           <button
             key={tab.id}
-            className={`px-6 py-2 text-lg font-semibold focus:outline-none transition-colors
+            className={`px-6 py-2 text-lg font-bold cursor-pointer focus:outline-none transition-colors
               border-x border-t
-              ${activeTab === tab.id
-                ? "border-primary border-b-white bg-white text-primary rounded-t-xl z-10"
-                : "border-gray-200 bg-gray-50 text-gray-500 hover:bg-gray-100 rounded-t-xl"
+              ${
+                activeTab === tab.id
+                  ? "border-primary border-b-white bg-white text-primary rounded-t-xl z-10"
+                  : "border-gray-200 bg-gray-50 text-gray-500 hover:bg-gray-100 rounded-t-xl"
               }
               ${idx === 0 ? "-ml-px" : ""}
             `}
-            style={{ marginBottom: '-2px' }}
+            style={{ marginBottom: "-2px" }}
             onClick={() => setActiveTab(tab.id)}
           >
             {tab.label}
@@ -86,19 +98,19 @@ const ActivePosts = () => {
 
       {/* Modal for Forms using <dialog> */}
       <dialog ref={dialogRef} className="modal">
-        <div className="modal-box bg-transparent shadow-none rounded-3xl w-11/12 max-w-3xl  relative">
+        <div className="modal-box bg-transparent shadow-none rounded-3xl w-11/12 max-w-3xl relative">
           <button
-            className="absolute top-9 right-10 z-40 text-white text-xl font-semibold hover:text-gray-500 transition-all duration-200 hover:cursor-pointer"
+            className="absolute top-9 right-10 text-xl font-normal text-gray-300 hover:text-gray-500 transition-colors duration-200 hover:cursor-pointer z-10"
             onClick={closeModal}
           >
             ✕
           </button>
-          {modalType === "public" && <FormPublicPost />}
-          {modalType === "alerts" && <FormDengueAlert />}
+          {modalType === "public" && <FormPublicPost onSuccess={closeModal} />}
+          {modalType === "alerts" && <FormDengueAlert onSuccess={closeModal} />}
         </div>
       </dialog>
     </main>
   );
 };
 
-export default ActivePosts; 
+export default ActivePosts;

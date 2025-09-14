@@ -1,6 +1,6 @@
 import React from "react";
 
-const ImageGrid = ({ images = [], sourceType = "server" }) => {
+const ImageGrid = ({ images = [], sourceType = "server", onImageClick }) => {
   if (images.length === 0) return null;
 
   return (
@@ -21,8 +21,9 @@ const ImageGrid = ({ images = [], sourceType = "server" }) => {
           <div key={index} className="relative">
             <img
               src={img} // Use the correct image path
-              className="w-full aspect-[4/3] object-cover rounded-md"
+              className="w-full aspect-[4/3] object-cover rounded-md cursor-pointer hover:opacity-90 transition-opacity"
               alt={`Image ${index + 1}`}
+              onClick={() => onImageClick?.(img)}
             />
             {index === 3 && images.length > 4 && (
               <div className="absolute inset-0 bg-gray-900/50 bg-opacity-20 flex items-center justify-center rounded-md">

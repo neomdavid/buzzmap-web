@@ -4,9 +4,16 @@ import {
   themeQuartz,
 } from "ag-grid-community";
 import { AgGridReact } from "ag-grid-react";
-import { useState, useMemo, useRef, useCallback } from "react";
-import { IconSearch, IconBan, IconTrash } from "@tabler/icons-react";
-import { useGetAccountsQuery, useDeleteAccountMutation, useLoginMutation, useToggleAccountStatusMutation } from "../../api/dengueApi";
+import { useState, useMemo, useRef, useCallback, useEffect } from "react";
+import { IconSearch, IconBan, IconTrash, IconSend } from "@tabler/icons-react";
+import {
+  useGetAccountsQuery,
+  useDeleteAccountMutation,
+  useLoginMutation,
+  useToggleAccountStatusMutation,
+  useResendOtpMutation,
+  useVerifyAdminOTPMutation,
+} from "../../api/dengueApi";
 import { useSelector } from "react-redux";
 import { toastSuccess, toastError } from "../../utils.jsx";
 
@@ -48,6 +55,10 @@ const StatusCell = ({ value }) => {
   let textColor = "";
 
   switch (value) {
+    case "pending":
+      bgColor = "bg-warning";
+      textColor = "text-white";
+      break;
     case "disabled":
       bgColor = "bg-error";
       textColor = "text-white";
@@ -116,6 +127,16 @@ function AdminsTable({ statusFilter, roleFilter, searchQuery }) {
   const [showStatusModal, setShowStatusModal] = useState(false);
   const [selectedAccount, setSelectedAccount] = useState(null);
   const [isDisabling, setIsDisabling] = useState(true);
+  const [showResendModal, setShowResendModal] = useState(false);
+  const [resendTarget, setResendTarget] = useState(null);
+  const [resendPurpose, setResendPurpose] = useState("account-verification");
+  const [resendOtp, { isLoading: isResending }] = useResendOtpMutation();
+  const [resendCooldown, setResendCooldown] = useState(60);
+  const [showVerifyModal, setShowVerifyModal] = useState(false);
+  const [verifyTarget, setVerifyTarget] = useState(null);
+  const [otpValue, setOtpValue] = useState("");
+  const [verifyOtp, { isLoading: isVerifying }] = useVerifyAdminOTPMutation();
+  const [verifyResendCooldown, setVerifyResendCooldown] = useState(60);
 
   const [deleteAccount] = useDeleteAccountMutation();
   const [login] = useLoginMutation();
@@ -132,7 +153,7 @@ function AdminsTable({ statusFilter, roleFilter, searchQuery }) {
       const loginData = {
         email: superAdminEmail,
         password: superAdminPassword,
-        role: "superadmin"
+        role: "superadmin",
       };
 
       const response = await login(loginData).unwrap();
@@ -184,6 +205,106 @@ function AdminsTable({ statusFilter, roleFilter, searchQuery }) {
     setShowStatusModal(true);
   };
 
+  const handleResendClick = (account) => {
+    setResendTarget(account);
+    setResendPurpose("account-verification");
+    setShowResendModal(true);
+    setResendCooldown(60);
+  };
+
+  const handleVerifyClick = (account) => {
+    if (!account?.email) return;
+    setVerifyTarget(account);
+    setOtpValue("");
+    setVerifyResendCooldown(60);
+    setShowVerifyModal(true);
+  };
+
+  const handleVerifyConfirm = async () => {
+    if (!otpValue.trim()) {
+      toastError("Please enter the OTP");
+      return;
+    }
+    try {
+      await verifyOtp({
+        email: verifyTarget.email,
+        otp: otpValue,
+        purpose: "account-verification",
+      }).unwrap();
+      toastSuccess("Email verified successfully!");
+      setShowVerifyModal(false);
+      setVerifyTarget(null);
+      setOtpValue("");
+      await refetch();
+    } catch (error) {
+      toastError(error?.data?.message || "Failed to verify OTP");
+    }
+  };
+
+  const handleVerifyResend = async () => {
+    if (!verifyTarget?.email) return;
+    try {
+      await resendOtp({
+        email: verifyTarget.email,
+        purpose: "account-verification",
+      }).unwrap();
+      toastSuccess("Verification OTP resent to " + verifyTarget.email);
+      setVerifyResendCooldown(60);
+    } catch (error) {
+      toastError(error?.data?.message || "Failed to resend OTP");
+    }
+  };
+
+  const handleResendConfirm = async () => {
+    if (!resendTarget?.email) return;
+    try {
+      await resendOtp({
+        email: resendTarget.email,
+        purpose: resendPurpose,
+      }).unwrap();
+      toastSuccess("OTP resent to " + resendTarget.email);
+      setShowResendModal(false);
+      setResendTarget(null);
+    } catch (error) {
+      toastError(error?.data?.message || "Failed to resend OTP");
+    }
+  };
+
+  const handleResendModalClose = () => {
+    setShowResendModal(false);
+    setResendTarget(null);
+  };
+
+  // Cooldown while resend modal is open
+  useEffect(() => {
+    if (!showResendModal) return;
+    const intervalId = setInterval(() => {
+      setResendCooldown((prev) => {
+        if (prev <= 1) {
+          clearInterval(intervalId);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(intervalId);
+  }, [showResendModal]);
+
+  // Cooldown while verify modal is open
+  useEffect(() => {
+    if (!showVerifyModal) return;
+    const intervalId = setInterval(() => {
+      setVerifyResendCooldown((prev) => {
+        if (prev <= 1) {
+          clearInterval(intervalId);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(intervalId);
+  }, [showVerifyModal]);
+
   const handleStatusConfirm = async () => {
     if (!superAdminPassword.trim()) {
       setAuthError("Please enter your password");
@@ -192,52 +313,59 @@ function AdminsTable({ statusFilter, roleFilter, searchQuery }) {
 
     setIsSubmitting(true);
     try {
-      console.log('Starting status toggle process for account:', selectedAccount);
-      
+      console.log(
+        "Starting status toggle process for account:",
+        selectedAccount
+      );
+
       const isVerified = await verifySuperAdmin();
-      console.log('Super admin verification result:', isVerified);
-      
+      console.log("Super admin verification result:", isVerified);
+
       if (!isVerified) {
         setIsSubmitting(false);
         return;
       }
 
       const newStatus = isDisabling ? "disabled" : "active";
-      console.log('Sending toggle status request:', {
+      console.log("Sending toggle status request:", {
         id: selectedAccount._id,
-        status: newStatus
+        status: newStatus,
       });
 
       const response = await toggleStatus({
         id: selectedAccount._id,
-        status: newStatus
+        status: newStatus,
       }).unwrap();
 
-      console.log('Toggle status API response:', response);
+      console.log("Toggle status API response:", response);
 
       // Force immediate refetch
       await refetch();
-      
+
       // Update local state
-      const updatedAccounts = accounts?.map(account => 
-        account._id === selectedAccount._id 
+      const updatedAccounts = accounts?.map((account) =>
+        account._id === selectedAccount._id
           ? { ...account, status: newStatus }
           : account
       );
 
-      toastSuccess(`Account ${isDisabling ? 'disabled' : 'enabled'} successfully`);
+      toastSuccess(
+        `Account ${isDisabling ? "disabled" : "enabled"} successfully`
+      );
       setShowStatusModal(false);
       setSuperAdminPassword("");
       setAuthError("");
-      
     } catch (error) {
-      console.error('Error in handleStatusConfirm:', {
+      console.error("Error in handleStatusConfirm:", {
         error,
         errorMessage: error?.data?.message,
         errorStatus: error?.status,
-        errorData: error?.data
+        errorData: error?.data,
       });
-      toastError(error?.data?.message || `Failed to ${isDisabling ? 'disable' : 'enable'} account`);
+      toastError(
+        error?.data?.message ||
+          `Failed to ${isDisabling ? "disable" : "enable"} account`
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -254,27 +382,50 @@ function AdminsTable({ statusFilter, roleFilter, searchQuery }) {
   const ActionsCell = (p) => {
     // Check if the account is a super admin
     const isSuperAdmin = p.data.role.toLowerCase() === "superadmin";
+    const isUnverified = p.data.status === "unverified";
+    const isPending = p.data.status === "pending";
 
     return (
       <div className="py-2 h-full w-full flex items-center gap-2">
         {/* Only show disable/enable button if not super admin */}
         {!isSuperAdmin && (
-          <button 
+          <button
             onClick={() => handleStatusClick(p.data)}
             className="flex items-center gap-1 text-warning hover:bg-gray-200 p-1 rounded-md"
           >
             <IconBan size={15} stroke={2} />
-            <p className="text-sm">{p.data.status === "disabled" ? "enable" : "disable"}</p>
+            <p className="text-sm">
+              {p.data.status === "disabled" ? "enable" : "disable"}
+            </p>
           </button>
         )}
         {/* Only show remove button if not super admin */}
         {!isSuperAdmin && (
-          <button 
+          <button
             onClick={() => handleDeleteClick(p.data._id)}
             className="flex items-center gap-1 text-error hover:bg-gray-200 p-1 rounded-md"
           >
             <IconTrash size={15} stroke={2.5} />
             <p className="text-sm">remove</p>
+          </button>
+        )}
+        {/* Resend OTP for unverified/pending accounts */}
+        {!isSuperAdmin && isUnverified && (
+          <button
+            onClick={() => handleResendClick(p.data)}
+            className="flex items-center gap-1 text-primary hover:bg-gray-200 p-1 rounded-md"
+          >
+            <IconSend size={15} stroke={2} />
+            <p className="text-sm">resend otp</p>
+          </button>
+        )}
+        {!isSuperAdmin && isPending && (
+          <button
+            onClick={() => handleVerifyClick(p.data)}
+            className="flex items-center gap-1 text-primary hover:bg-gray-200 p-1 rounded-md"
+          >
+            <IconSend size={15} stroke={2} />
+            <p className="text-sm">verify</p>
           </button>
         )}
       </div>
@@ -284,51 +435,65 @@ function AdminsTable({ statusFilter, roleFilter, searchQuery }) {
   // Update the rowData transformation to remove date filtering
   const rowData = useMemo(() => {
     if (!accounts) return [];
-    
+
     return accounts
-      .filter(account => {
+      .filter((account) => {
         // First filter by role (admin/superadmin) and not deleted
-        const roleMatch = account.role === 'admin' || account.role === 'superadmin';
-        const isNotDeleted = account.status !== 'deleted';
-        
+        const roleMatch =
+          account.role === "admin" || account.role === "superadmin";
+        const isNotDeleted = account.status !== "deleted";
+
         // Then apply status filter if it exists
-        const statusMatch = !statusFilter || 
-          (statusFilter === 'active' && account.status === 'active') ||
-          (statusFilter === 'disabled' && account.status === 'disabled') ||
-          (statusFilter === 'unverified' && !account.verified);
-        
+        const statusMatch =
+          !statusFilter ||
+          (statusFilter === "active" && account.status === "active") ||
+          (statusFilter === "disabled" && account.status === "disabled") ||
+          (statusFilter === "unverified" && !account.verified);
+
         // Then apply role filter if it exists
         const roleTypeMatch = !roleFilter || account.role === roleFilter;
 
         // Add search filter
-        const searchMatch = !searchQuery || 
+        const searchMatch =
+          !searchQuery ||
           account.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
           account.email.toLowerCase().includes(searchQuery.toLowerCase());
 
-        return roleMatch && isNotDeleted && statusMatch && roleTypeMatch && searchMatch;
+        return (
+          roleMatch &&
+          isNotDeleted &&
+          statusMatch &&
+          roleTypeMatch &&
+          searchMatch
+        );
       })
-      .map(account => ({
+      .map((account) => ({
         _id: account._id,
         username: account.username,
         email: account.email,
         role: account.role.charAt(0).toUpperCase() + account.role.slice(1),
         joined: account.createdAt || account.updatedAt,
-        status: account.status || (account.disabled ? "disabled" : 
-                (account.verified ? "active" : "unverified")),
+        status:
+          account.status ||
+          (account.disabled
+            ? "disabled"
+            : account.verified
+            ? "active"
+            : "unverified"),
       }));
   }, [accounts, statusFilter, roleFilter, searchQuery]);
 
   const columnDefs = useMemo(
     () => [
-      { 
-        field: "username", 
+      {
+        field: "username",
         minWidth: 120,
-        flex: 1 
+        flex: 1,
       },
-      { 
-        field: "email", 
+      {
+        field: "email",
         minWidth: 180,
-        flex: 1.5 
+        flex: 1.5,
       },
       {
         field: "role",
@@ -343,7 +508,7 @@ function AdminsTable({ statusFilter, roleFilter, searchQuery }) {
         flex: 1,
         cellRenderer: DateCell,
         sortable: true,
-        sort: 'desc'
+        sort: "desc",
       },
       {
         field: "status",
@@ -367,6 +532,16 @@ function AdminsTable({ statusFilter, roleFilter, searchQuery }) {
 
   const theme = useMemo(() => customTheme, []);
 
+  // Dynamic empty-state message
+  const noRowsMessage = useMemo(() => {
+    const hasFilters = Boolean(
+      statusFilter || roleFilter || (searchQuery && searchQuery.trim() !== "")
+    );
+    return hasFilters
+      ? "No admins match your current filters/search"
+      : "No admins found";
+  }, [statusFilter, roleFilter, searchQuery]);
+
   // Simplified onGridSizeChanged function
   const onGridSizeChanged = useCallback((params) => {
     if (gridRef.current) {
@@ -384,8 +559,9 @@ function AdminsTable({ statusFilter, roleFilter, searchQuery }) {
     const headerHeight = 48; // Height of the header
     const paginationHeight = 48; // Height of pagination
     const maxHeight = 600; // Maximum height
-    
-    const calculatedHeight = (rowData.length * rowHeight) + headerHeight + paginationHeight;
+
+    const calculatedHeight =
+      rowData.length * rowHeight + headerHeight + paginationHeight;
     return Math.min(calculatedHeight, maxHeight);
   };
 
@@ -394,10 +570,10 @@ function AdminsTable({ statusFilter, roleFilter, searchQuery }) {
       <div
         className="ag-theme-quartz"
         ref={gridRef}
-        style={{ 
+        style={{
           height: `${calculateHeight()}px`,
           width: "100%",
-          minHeight: "200px"
+          minHeight: "200px",
         }}
       >
         {isLoading ? (
@@ -418,7 +594,7 @@ function AdminsTable({ statusFilter, roleFilter, searchQuery }) {
             columnDefs={columnDefs}
             defaultColDef={{
               ...defaultColDef,
-              sortable: true
+              sortable: true,
             }}
             theme={theme}
             pagination={true}
@@ -430,6 +606,7 @@ function AdminsTable({ statusFilter, roleFilter, searchQuery }) {
             onFirstDataRendered={onFirstDataRendered}
             domLayout="normal"
             suppressPaginationPanel={false}
+            localeText={{ noRowsToShow: noRowsMessage }}
           />
         )}
       </div>
@@ -499,10 +676,11 @@ function AdminsTable({ statusFilter, roleFilter, searchQuery }) {
         <div className="modal-box gap-6 text-lg w-10/12 max-w-3xl p-8 sm:p-12 rounded-3xl">
           <div className="flex flex-col gap-6">
             <p className="text-center text-3xl font-bold text-warning">
-              Confirm Account {isDisabling ? 'Disable' : 'Enable'}
+              Confirm Account {isDisabling ? "Disable" : "Enable"}
             </p>
             <p className="text-center text-gray-600">
-              Please enter your super admin password to {isDisabling ? 'disable' : 'enable'} this account
+              Please enter your super admin password to{" "}
+              {isDisabling ? "disable" : "enable"} this account
             </p>
 
             <div className="w-full flex flex-col gap-1">
@@ -542,7 +720,9 @@ function AdminsTable({ statusFilter, roleFilter, searchQuery }) {
                 }`}
                 disabled={isSubmitting}
               >
-                {isSubmitting ? "Processing..." : `${isDisabling ? 'Disable' : 'Enable'} Account`}
+                {isSubmitting
+                  ? "Processing..."
+                  : `${isDisabling ? "Disable" : "Enable"} Account`}
               </button>
             </div>
           </div>
@@ -551,6 +731,139 @@ function AdminsTable({ statusFilter, roleFilter, searchQuery }) {
         {/* Click outside to close */}
         <form method="dialog" className="modal-backdrop">
           <button onClick={handleStatusModalClose}>close</button>
+        </form>
+      </dialog>
+
+      {/* Resend OTP Modal */}
+      <dialog id="resend_modal" className="modal" open={showResendModal}>
+        <div className="modal-box gap-6 text-lg w-10/12 max-w-xl p-8 sm:p-10 rounded-3xl">
+          <div className="flex flex-col gap-6">
+            <p className="text-center text-2xl font-bold">
+              Resend Verification OTP
+            </p>
+            <p className="text-center text-gray-600">
+              Send a new verification code to {resendTarget?.email}
+            </p>
+
+            <div className="w-full flex flex-col gap-1">
+              <label className="text-primary font-bold">Purpose</label>
+              <select
+                className="select select-bordered"
+                value={resendPurpose}
+                onChange={(e) => setResendPurpose(e.target.value)}
+              >
+                <option value="account-verification">
+                  account-verification
+                </option>
+                <option value="password-reset">password-reset</option>
+              </select>
+            </div>
+
+            <div className="w-full flex justify-between items-center gap-3 mt-2">
+              <p className="text-sm text-gray-600">
+                Didn't receive an OTP?{" "}
+                {resendCooldown > 0 ? (
+                  <span className="text-gray-500">
+                    Resend ({resendCooldown}s)
+                  </span>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleResendConfirm}
+                    className={`text-primary underline ${
+                      isResending
+                        ? "opacity-70 cursor-wait"
+                        : "hover:opacity-80"
+                    }`}
+                    disabled={isResending}
+                  >
+                    Resend
+                  </button>
+                )}
+              </p>
+              <button
+                type="button"
+                className="bg-gray-300 text-white px-6 py-2.5 rounded-xl hover:bg-gray-400 transition-colors hover:cursor-pointer"
+                onClick={handleResendModalClose}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <form method="dialog" className="modal-backdrop">
+          <button onClick={handleResendModalClose}>close</button>
+        </form>
+      </dialog>
+
+      {/* Verify OTP Modal */}
+      <dialog id="verify_modal" className="modal" open={showVerifyModal}>
+        <div className="modal-box gap-6 text-lg w-10/12 max-w-xl p-8 sm:p-10 rounded-3xl">
+          <div className="flex flex-col gap-6">
+            <p className="text-center text-2xl font-bold">Verify Email</p>
+            <p className="text-center text-gray-600">
+              Enter the OTP sent to {verifyTarget?.email}
+            </p>
+
+            <div className="w-full flex flex-col gap-1">
+              <label className="text-primary font-bold">OTP*</label>
+              <input
+                type="text"
+                value={otpValue}
+                onChange={(e) => setOtpValue(e.target.value)}
+                className="p-3 bg-base-200 text-primary rounded-xl border-none"
+                placeholder="Enter OTP"
+              />
+            </div>
+
+            <div className="w-full flex justify-between items-center gap-3 mt-2">
+              <p className="text-sm text-gray-600">
+                Didn't receive an OTP?{" "}
+                {verifyResendCooldown > 0 ? (
+                  <span className="text-gray-500">
+                    Resend ({verifyResendCooldown}s)
+                  </span>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleVerifyResend}
+                    className={`text-primary underline ${
+                      isResending
+                        ? "opacity-70 cursor-wait"
+                        : "hover:opacity-80"
+                    }`}
+                    disabled={isResending}
+                  >
+                    Resend
+                  </button>
+                )}
+              </p>
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  className="bg-gray-300 text-white px-6 py-2.5 rounded-xl hover:bg-gray-400 transition-colors hover:cursor-pointer"
+                  onClick={() => setShowVerifyModal(false)}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleVerifyConfirm}
+                  className={`flex items-center gap-2 bg-primary text-white px-6 py-2.5 rounded-xl hover:opacity-90 transition-opacity hover:cursor-pointer ${
+                    isVerifying ? "opacity-70 cursor-wait" : ""
+                  }`}
+                  disabled={isVerifying}
+                >
+                  {isVerifying ? "Verifying..." : "Verify"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <form method="dialog" className="modal-backdrop">
+          <button onClick={() => setShowVerifyModal(false)}>close</button>
         </form>
       </dialog>
     </>

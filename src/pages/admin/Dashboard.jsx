@@ -87,6 +87,9 @@ const Dashboard = () => {
     : [];
   const safeInterventions = Array.isArray(interventions) ? interventions : [];
 
+  // Recent posts slice used by Recent Reports table (top 5 as-is)
+  const recentPosts = safePosts.slice(0, 5);
+
   // Calculate counts for reports
   const reportCounts = safePosts.reduce(
     (acc, post) => {
@@ -173,7 +176,9 @@ const Dashboard = () => {
       )}
 
       <div className="bg-primary text-white flex flex-col p-6 rounded-2xl mb-4">
-        <p className="text-5xl font-[Koulen] lowercase">Hello, {user.name}</p>
+        <p className="text-5xl font-extrabold capitalize tracking-[1px]">
+          Hello, {user.name}
+        </p>
         <p className="text-lg">Today is {formattedDate}</p>
       </div>
 
@@ -209,7 +214,10 @@ const Dashboard = () => {
         </div>
 
         {/* ReportCard for Total Alerts Sent */}
-        <div className="cursor-pointer" onClick={() => navigate("/admin/CEA")}>
+        <div
+          className="cursor-pointer"
+          onClick={() => navigate("/admin/cea?tab=alerts")}
+        >
           <ReportCard
             title="Total Alerts Sent"
             count={totalAlerts}
@@ -285,6 +293,10 @@ const Dashboard = () => {
             <MapOnly
               style={{ height: "300px", width: "100%" }}
               useAdminEndpoint={true}
+              showBreedingSites={true}
+              recentOnly={true}
+              recentCount={5}
+              recentPosts={recentPosts}
             />
           </div>
           {/* <div className="flex flex-col ">

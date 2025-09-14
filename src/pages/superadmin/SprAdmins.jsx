@@ -2,7 +2,13 @@ import { AdminsTable } from "../../components";
 import { IconPlus, IconArrowRight, IconArrowLeft } from "@tabler/icons-react";
 import { useState, useEffect } from "react";
 import { toastSuccess, toastError } from "../../utils.jsx";
-import { useCreateAdminMutation, useVerifyAdminOTPMutation, useLoginMutation, useGetAccountsQuery } from "../../api/dengueApi";
+import {
+  useCreateAdminMutation,
+  useVerifyAdminOTPMutation,
+  useLoginMutation,
+  useGetAccountsQuery,
+  useResendOtpMutation,
+} from "../../api/dengueApi";
 import { useSelector } from "react-redux";
 import { UserGear, CheckCircle, XCircle, Clock } from "phosphor-react";
 import { Link } from "react-router-dom";
@@ -17,6 +23,7 @@ function SprAdmins() {
     confirmPassword: "",
   });
   const [otp, setOtp] = useState("");
+  const [resendCooldown, setResendCooldown] = useState(60);
   const [superAdminAuth, setSuperAdminAuth] = useState({
     password: "",
   });
@@ -26,6 +33,7 @@ function SprAdmins() {
 
   const [createAdmin] = useCreateAdminMutation();
   const [verifyOTP] = useVerifyAdminOTPMutation();
+  const [resendOtp, { isLoading: isResending }] = useResendOtpMutation();
   const [login] = useLoginMutation();
   const { data: accounts } = useGetAccountsQuery();
 
@@ -38,7 +46,7 @@ function SprAdmins() {
     activeAdmins: 0,
     disabledAdmins: 0,
     unverifiedAdmins: 0,
-    lastUpdated: new Date()
+    lastUpdated: new Date(),
   });
 
   // Add these new states
@@ -49,13 +57,17 @@ function SprAdmins() {
   // Update stats when accounts data changes
   useEffect(() => {
     if (accounts) {
-      const adminAccounts = accounts.filter(acc => acc.role === 'admin');
+      const adminAccounts = accounts.filter((acc) => acc.role === "admin");
       setStats({
         totalAdmins: adminAccounts.length,
-        activeAdmins: adminAccounts.filter(acc => acc.status === 'active').length,
-        disabledAdmins: adminAccounts.filter(acc => acc.status === 'disabled').length,
-        unverifiedAdmins: adminAccounts.filter(acc => acc.status === 'unverified').length,
-        lastUpdated: new Date()
+        activeAdmins: adminAccounts.filter((acc) => acc.status === "active")
+          .length,
+        disabledAdmins: adminAccounts.filter((acc) => acc.status === "disabled")
+          .length,
+        unverifiedAdmins: adminAccounts.filter(
+          (acc) => acc.status === "unverified"
+        ).length,
+        lastUpdated: new Date(),
       });
     }
   }, [accounts]);
@@ -76,7 +88,8 @@ function SprAdmins() {
         if (!value) error = "Password is required";
         else if (value.length < 8) error = "Must be at least 8 characters";
         else if (!/(?=.*[a-z])/.test(value)) error = "Needs a lowercase letter";
-        else if (!/(?=.*[A-Z])/.test(value)) error = "Needs an uppercase letter";
+        else if (!/(?=.*[A-Z])/.test(value))
+          error = "Needs an uppercase letter";
         else if (!/(?=.*\d)/.test(value)) error = "Needs a number";
         else if (!/(?=.*\W)/.test(value)) error = "Needs a special character";
         break;
@@ -128,15 +141,16 @@ function SprAdmins() {
   const handleNextStep = async () => {
     if (validateForm()) {
       // Check if email already exists in active accounts only
-      const emailExists = accounts?.some(account => 
-        account.email.toLowerCase() === formData.email.trim().toLowerCase() &&
-        account.status !== 'deleted' // Only check non-deleted accounts
+      const emailExists = accounts?.some(
+        (account) =>
+          account.email.toLowerCase() === formData.email.trim().toLowerCase() &&
+          account.status !== "deleted" // Only check non-deleted accounts
       );
 
       if (emailExists) {
-        setErrors(prev => ({
+        setErrors((prev) => ({
           ...prev,
-          email: "An active account with this email already exists"
+          email: "An active account with this email already exists",
         }));
         return; // Don't proceed to next step if email exists in active accounts
       }
@@ -155,7 +169,7 @@ function SprAdmins() {
       const loginData = {
         email: superAdminEmail,
         password: superAdminAuth.password,
-        role: "superadmin"
+        role: "superadmin",
       };
 
       const response = await login(loginData).unwrap();
@@ -175,11 +189,11 @@ function SprAdmins() {
       username: formData.username.trim(),
       email: formData.email.trim(),
       password: formData.password,
-      role: "admin"
+      role: "admin",
     };
 
-    console.log('[DEBUG] Creating admin account with data:', requestData);
-    console.log('[DEBUG] API URL:', 'http://localhost:4000/api/v1/accounts');
+    console.log("[DEBUG] Creating admin account with data:", requestData);
+    console.log("[DEBUG] API URL:", "http://localhost:4000/api/v1/accounts");
 
     try {
       const isVerified = await verifySuperAdmin();
@@ -188,17 +202,19 @@ function SprAdmins() {
         return;
       }
 
-      console.log('[DEBUG] Sending create admin request...');
+      console.log("[DEBUG] Sending create admin request...");
       const response = await createAdmin(requestData).unwrap();
-      console.log('[DEBUG] Create admin response:', response);
-      
-      toastSuccess("Admin account created successfully. Please check your email for verification.");
+      console.log("[DEBUG] Create admin response:", response);
+
+      toastSuccess(
+        "Admin account created successfully. Please check your email for verification."
+      );
       setCurrentStep(3);
     } catch (error) {
-      console.error('[DEBUG] Admin creation failed:', {
+      console.error("[DEBUG] Admin creation failed:", {
         errorStatus: error?.status,
         errorMessage: error?.data?.message,
-        errorData: error?.data
+        errorData: error?.data,
       });
       toastError(error?.data?.message || "Failed to create admin");
     } finally {
@@ -217,7 +233,7 @@ function SprAdmins() {
       await verifyOTP({
         email: formData.email,
         otp: otp,
-        purpose: "account-verification"
+        purpose: "account-verification",
       }).unwrap();
 
       toastSuccess("Email verified successfully!");
@@ -234,6 +250,43 @@ function SprAdmins() {
       toastError(error?.data?.message || "Failed to verify OTP");
     }
   };
+
+  const handleResendOTP = async () => {
+    if (!formData.email || !/^\S+@\S+\.\S+$/.test(formData.email)) {
+      toastError("Valid email is required to resend OTP");
+      return;
+    }
+    try {
+      await resendOtp({
+        email: formData.email,
+        purpose: "account-verification",
+      }).unwrap();
+      toastSuccess(
+        "Verification OTP resent. Please check the inbox/spam of " +
+          formData.email
+      );
+      setResendCooldown(60);
+    } catch (error) {
+      toastError(error?.data?.message || "Failed to resend OTP");
+    }
+  };
+
+  // Cooldown timer for resend OTP on step 3
+  useEffect(() => {
+    if (isModalOpen && currentStep === 3) {
+      setResendCooldown((prev) => (prev > 0 ? prev : 60));
+      const intervalId = setInterval(() => {
+        setResendCooldown((prev) => {
+          if (prev <= 1) {
+            clearInterval(intervalId);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+      return () => clearInterval(intervalId);
+    }
+  }, [isModalOpen, currentStep]);
 
   const isFormValid =
     Object.values(errors).every((error) => !error) &&
@@ -279,7 +332,9 @@ function SprAdmins() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-500">Active Admins</p>
-              <p className="text-2xl font-bold text-success">{stats.activeAdmins}</p>
+              <p className="text-2xl font-bold text-success">
+                {stats.activeAdmins}
+              </p>
             </div>
             <div className="bg-success/10 p-3 rounded-lg">
               <CheckCircle size={24} className="text-success" />
@@ -291,7 +346,9 @@ function SprAdmins() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-500">Disabled Admins</p>
-              <p className="text-2xl font-bold text-error">{stats.disabledAdmins}</p>
+              <p className="text-2xl font-bold text-error">
+                {stats.disabledAdmins}
+              </p>
             </div>
             <div className="bg-error/10 p-3 rounded-lg">
               <XCircle size={24} className="text-error" />
@@ -303,7 +360,9 @@ function SprAdmins() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-500">Unverified Admins</p>
-              <p className="text-2xl font-bold text-warning">{stats.unverifiedAdmins}</p>
+              <p className="text-2xl font-bold text-warning">
+                {stats.unverifiedAdmins}
+              </p>
             </div>
             <div className="bg-warning/10 p-3 rounded-lg">
               <Clock size={24} className="text-warning" />
@@ -312,14 +371,15 @@ function SprAdmins() {
         </div>
       </div>
 
-    
-
       <div className="flex flex-col items-center md:flex-row md:items-center md:justify-between mb-8 gap-4 mt-6">
         <p className="flex justify-center text-5xl font-extrabold mb-12 md:mb-0 text-center md:justify-start md:text-left md:w-[48%] ">
           Admin Management
         </p>
         <div className="flex items-center gap-6">
-          <Link to="/superadmin/admins/archives" className="btn btn-outline rounded-full">
+          <Link
+            to="/superadmin/admins/archives"
+            className="btn btn-outline rounded-full"
+          >
             View Archives
           </Link>
           <button
@@ -332,8 +392,8 @@ function SprAdmins() {
         </div>
       </div>
 
-        {/* Add Filters Section */}
-        <div className="bg-white p-4 rounded-xl shadow-sm mb-8">
+      {/* Add Filters Section */}
+      <div className="bg-white p-4 rounded-xl shadow-sm mb-8">
         <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
           <div className="flex flex-col md:flex-row gap-4 w-full">
             <div className="flex-1">
@@ -346,7 +406,7 @@ function SprAdmins() {
               />
             </div>
             <div className="flex gap-4">
-              <select 
+              <select
                 className="select select-bordered w-full max-w-xs hover:cursor-pointer"
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
@@ -357,7 +417,7 @@ function SprAdmins() {
                 <option value="unverified">Unverified</option>
               </select>
 
-              <select 
+              <select
                 className="select select-bordered w-full max-w-xs hover:cursor-pointer"
                 value={roleFilter}
                 onChange={(e) => setRoleFilter(e.target.value)}
@@ -370,7 +430,7 @@ function SprAdmins() {
           </div>
 
           <div className="flex gap-2">
-            <button 
+            <button
               className="btn btn-ghost"
               onClick={() => {
                 setStatusFilter("");
@@ -385,8 +445,8 @@ function SprAdmins() {
       </div>
 
       <div className="bg-white rounded-xl shadow-sm p-4">
-        <AdminsTable 
-          statusFilter={statusFilter} 
+        <AdminsTable
+          statusFilter={statusFilter}
           roleFilter={roleFilter}
           searchQuery={searchQuery}
         />
@@ -405,11 +465,13 @@ function SprAdmins() {
         onClose={handleModalClose}
       >
         <div className="modal-box gap-6 text-lg w-10/12 max-w-3xl p-8 sm:p-12 rounded-3xl">
-          <form onSubmit={(e) => {
-            e.preventDefault();
-            console.log('[DEBUG] Form submitted');
-            handleSubmit(e);
-          }}>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              console.log("[DEBUG] Form submitted");
+              handleSubmit(e);
+            }}
+          >
             {currentStep === 1 ? (
               <div className="flex flex-col gap-6">
                 <p className="text-center text-3xl font-bold">
@@ -545,7 +607,7 @@ function SprAdmins() {
                   </button>
                   <button
                     type="submit"
-                    onClick={() => console.log('[DEBUG] Submit button clicked')}
+                    onClick={() => console.log("[DEBUG] Submit button clicked")}
                     className={`flex items-center gap-2 bg-gradient-to-r from-[#245261] to-[#4AA8C7] text-white px-6 py-2.5 rounded-xl hover:opacity-90 transition-opacity hover:cursor-pointer ${
                       isSubmitting ? "opacity-70 cursor-wait" : ""
                     }`}
@@ -563,9 +625,7 @@ function SprAdmins() {
               </div>
             ) : (
               <div className="flex flex-col gap-6">
-                <p className="text-center text-3xl font-bold">
-                  Verify Email
-                </p>
+                <p className="text-center text-3xl font-bold">Verify Email</p>
                 <p className="text-center text-gray-600">
                   Please enter the OTP sent to {formData.email}
                 </p>
@@ -596,6 +656,30 @@ function SprAdmins() {
                   >
                     Verify OTP
                   </button>
+                </div>
+
+                <div className="w-full flex justify-center mt-2">
+                  <p className="text-sm text-gray-600">
+                    Didn't receive an OTP?{" "}
+                    {resendCooldown > 0 ? (
+                      <span className="text-gray-500">
+                        Resend ({resendCooldown}s)
+                      </span>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={handleResendOTP}
+                        className={`text-primary underline ${
+                          isResending
+                            ? "opacity-70 cursor-wait"
+                            : "hover:opacity-80"
+                        }`}
+                        disabled={isResending}
+                      >
+                        Resend
+                      </button>
+                    )}
+                  </p>
                 </div>
               </div>
             )}

@@ -18,6 +18,7 @@ import {
   SecondaryButton,
   DescriptionWithImages,
   NewPostModal,
+  PostCardSkeleton,
 } from "../../components";
 import {
   useGetPostsQuery,
@@ -30,6 +31,7 @@ import { useSelector } from "react-redux";
 import { toastInfo } from "../../utils.jsx";
 import React from "react";
 import { useNavigate } from "react-router-dom";
+import { useVoteSync } from "../../hooks/useLocalStorageVoting";
 
 const Community = () => {
   const [showAside, setShowAside] = useState(false);
@@ -43,6 +45,7 @@ const Community = () => {
   const [filter, setFilter] = useState("latest"); // 'latest', 'popular', 'myPosts'
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearching, setIsSearching] = useState(false);
+  const [isFilterLoading, setIsFilterLoading] = useState(false);
   const userFromStore = useSelector((state) => state.auth?.user);
   const [searchParams, setSearchParams] = useState({
     barangay: "",
@@ -55,6 +58,9 @@ const Community = () => {
   });
   const navigate = useNavigate();
 
+  // Initialize background vote sync
+  const { syncAllVotes, isSyncing } = useVoteSync();
+
   // Fetch admin posts
   const { data: adminPosts, isLoading: isLoadingAdminPosts } =
     useGetAllAdminPostsQuery();
@@ -63,25 +69,63 @@ const Community = () => {
   const { data: basicProfiles = [] } = useGetBasicProfilesQuery();
 
   // Add debug logging
-  useEffect(() => {
-    console.log("[DEBUG] Admin Posts:", adminPosts);
-    console.log("[DEBUG] Is Loading Admin Posts:", isLoadingAdminPosts);
-  }, [adminPosts, isLoadingAdminPosts]);
+  useEffect(() => {}, [adminPosts, isLoadingAdminPosts]);
 
   // Get posts with pagination
   const { data, isLoading, isError } = useGetPostsQuery({
     status: "Validated",
     sortBy: searchParams.sortBy,
     sortOrder: searchParams.sortOrder,
+    popular: filter === "popular",
+    recent: filter === "latest",
+    myPosts: filter === "myPosts",
     ...searchParams,
   });
 
-  // Add debug logging for the API response
+  // Handle filter loading state - reset after a timeout
   useEffect(() => {
-    console.log("[DEBUG] API Response:", data);
-    console.log("[DEBUG] Is Loading:", isLoading);
-    console.log("[DEBUG] Is Error:", isError);
-  }, [data, isLoading, isError]);
+    if (isFilterLoading) {
+      const timer = setTimeout(() => {
+        setIsFilterLoading(false);
+      }, 1000); // 1 second timeout to prevent infinite loading
+      return () => clearTimeout(timer);
+    }
+  }, [isFilterLoading]);
+
+  // Also reset when data loads
+  useEffect(() => {
+    if (data && !isLoading) {
+      setIsFilterLoading(false);
+    }
+  }, [data, isLoading]);
+
+  // Reset loading state when filter changes (fallback)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsFilterLoading(false);
+    }, 2000); // 2 second fallback timeout
+    return () => clearTimeout(timer);
+  }, [filter]);
+
+  // Clear local vote updates only when posts are added/removed, not on vote updates
+  const [lastDataHash, setLastDataHash] = useState("");
+
+  useEffect(() => {
+    if (data && Array.isArray(data)) {
+      // Create a hash of post IDs to detect if posts were added/removed
+      const currentHash = data
+        .map((post) => post._id)
+        .sort()
+        .join(",");
+
+      if (lastDataHash && lastDataHash !== currentHash) {
+        // Posts were added/removed, clear local vote updates
+        setLocalVoteUpdates({});
+      }
+
+      setLastDataHash(currentHash);
+    }
+  }, [data, lastDataHash]);
 
   // Intersection Observer for infinite scroll (disabled since pagination was removed)
   const observer = useRef();
@@ -92,12 +136,29 @@ const Community = () => {
     return;
   }, []);
 
-  // Memoize filtered posts
+  // Local state for optimistic vote updates
+  const [localVoteUpdates, setLocalVoteUpdates] = useState({});
+
+  // Memoize filtered posts with local vote updates
   const filteredPosts = useMemo(() => {
-    console.log("[DEBUG] Raw data:", data);
     if (!data) return [];
 
     let filtered = Array.isArray(data) ? data : [];
+
+    // Apply local vote updates optimistically
+    filtered = filtered.map((post) => {
+      const localUpdate = localVoteUpdates[post._id];
+      if (localUpdate) {
+        return {
+          ...post,
+          upvotes: localUpdate.upvotes,
+          downvotes: localUpdate.downvotes,
+          upvotesArray: localUpdate.upvotesArray,
+          downvotesArray: localUpdate.downvotesArray,
+        };
+      }
+      return post;
+    });
 
     // Apply search filter if there's a search query
     if (searchQuery) {
@@ -111,33 +172,27 @@ const Community = () => {
       );
     }
 
-    console.log("[DEBUG] Filtered posts:", filtered);
     return filtered;
-  }, [data, searchQuery]);
+  }, [data, searchQuery, localVoteUpdates]);
 
   // Memoize the latest admin post
   const latestAnnouncement = useMemo(() => {
-    console.log("[DEBUG] Getting latest admin post from:", adminPosts);
-    if (!adminPosts) {
-      console.log("[DEBUG] No admin posts available");
-      return null;
-    }
+    if (!adminPosts) return null;
+
     // Filter for active posts with category 'announcement'
     const activePosts = Array.isArray(adminPosts)
       ? adminPosts.filter(
           (post) => post.status === "active" && post.category === "announcement"
         )
       : [];
-    console.log("[DEBUG] Active announcement posts:", activePosts);
-    if (activePosts.length === 0) {
-      console.log("[DEBUG] No active announcement posts found");
-      return null;
-    }
+
+    if (activePosts.length === 0) return null;
+
     // Sort by publishDate to get the latest scheduled post
     activePosts.sort(
       (a, b) => new Date(b.publishDate) - new Date(a.publishDate)
     );
-    console.log("[DEBUG] Latest announcement post:", activePosts[0]);
+
     return activePosts[0];
   }, [adminPosts]);
 
@@ -162,6 +217,20 @@ const Community = () => {
   const renderPostCard = useCallback(
     (post, index) => {
       const userProfile = getUserProfile(post.user?._id);
+
+      // Debug logging for vote data
+      console.log(`[Community] Post ${post._id} vote data:`, {
+        upvotes: post.upvotes,
+        downvotes: post.downvotes,
+        upvotesLength: post.upvotes?.length || 0,
+        downvotesLength: post.downvotes?.length || 0,
+        upvotesType: typeof post.upvotes,
+        downvotesType: typeof post.downvotes,
+        upvotesIsArray: Array.isArray(post.upvotes),
+        downvotesIsArray: Array.isArray(post.downvotes),
+        upvotesArrayValue: post.upvotes || [],
+        downvotesArrayValue: post.downvotes || [],
+      });
 
       return (
         <div
@@ -193,23 +262,25 @@ const Community = () => {
             upvotes={post.upvotes}
             downvotes={post.downvotes}
             commentsCount={post.commentsCount}
-            upvotesArray={post.upvotes}
-            downvotesArray={post.downvotes}
+            upvotesArray={Array.isArray(post.upvotes) ? post.upvotes : []}
+            downvotesArray={Array.isArray(post.downvotes) ? post.downvotes : []}
             _commentCount={post.commentsCount}
             userId={post.user?._id}
             currentUserId={userFromStore?._id}
             basicProfiles={basicProfiles}
             onVoteUpdate={(newUpvotes, newDownvotes) => {
-              console.log(
-                "[DEBUG] Community onVoteUpdate called for post:",
-                post._id,
-                { newUpvotes, newDownvotes }
-              );
-              // For Community page, we rely on RTK Query cache updates
-              // The mutations in dengueApi.js already handle cache updates automatically
+              // Update local state immediately for optimistic UI
+              setLocalVoteUpdates((prev) => ({
+                ...prev,
+                [post._id]: {
+                  upvotes: newUpvotes.length,
+                  downvotes: newDownvotes.length,
+                  upvotesArray: newUpvotes,
+                  downvotesArray: newDownvotes,
+                },
+              }));
             }}
             onPostDeleted={(deletedPostId) => {
-              console.log("[DEBUG] Post deleted:", deletedPostId);
               // The RTK Query cache will automatically update, but we can also
               // manually remove the post from the local filtered posts if needed
               // This is optional since RTK Query handles cache invalidation
@@ -240,7 +311,6 @@ const Community = () => {
     try {
       return formatDistanceToNow(new Date(dateString), { addSuffix: true });
     } catch (error) {
-      console.error("Error formatting date:", error);
       return "just now";
     }
   };
@@ -265,9 +335,7 @@ const Community = () => {
       } else {
         await createPost(postData).unwrap();
       }
-    } catch (error) {
-      console.error("Failed to create post:", error);
-    }
+    } catch (error) {}
   };
 
   const handleSearch = (e) => {
@@ -324,38 +392,58 @@ const Community = () => {
         {!searchQuery && (
           <section className="flex gap-x-2 font-semibold w-full mb-8 px-3 sm:px-0">
             <FilterButton
-              text="Popular"
+              text={
+                isFilterLoading && filter === "popular"
+                  ? "Loading..."
+                  : "Popular"
+              }
               active={filter === "popular"}
+              disabled={isFilterLoading}
               onClick={() => {
+                setIsFilterLoading(true);
                 setFilter("popular");
                 setSearchParams((prev) => ({
                   ...prev,
                   sortBy: "likesCount",
                   sortOrder: "desc",
+                  username: undefined, // Clear username when switching filters
                 }));
               }}
             />
             <FilterButton
-              text="Latest"
+              text={
+                isFilterLoading && filter === "latest" ? "Loading..." : "Latest"
+              }
               active={filter === "latest"}
+              disabled={isFilterLoading}
               onClick={() => {
+                setIsFilterLoading(true);
                 setFilter("latest");
                 setSearchParams((prev) => ({
                   ...prev,
                   sortBy: "createdAt",
                   sortOrder: "desc",
+                  username: undefined, // Clear username when switching filters
                 }));
               }}
             />
             {userFromStore && userFromStore.role === "user" && (
               <FilterButton
-                text="My Posts"
+                text={
+                  isFilterLoading && filter === "myPosts"
+                    ? "Loading..."
+                    : "My Posts"
+                }
                 active={filter === "myPosts"}
+                disabled={isFilterLoading}
                 onClick={() => {
+                  setIsFilterLoading(true);
                   setFilter("myPosts");
                   setSearchParams((prev) => ({
                     ...prev,
-                    username: userFromStore.username,
+                    sortBy: "createdAt",
+                    sortOrder: "desc",
+                    username: undefined, // Clear username - API will handle myPosts parameter
                   }));
                 }}
               />
@@ -382,6 +470,16 @@ const Community = () => {
         <p className="text-lg sm:text-xl sm:mt-0 text-center font-semibold text-primary mb-6 px-3 sm:px-0">
           Real-Time Dengue Updates from the Community.
         </p>
+
+        {/* Vote sync status indicator */}
+        {isSyncing && (
+          <div className="text-center mb-4">
+            <div className="inline-flex items-center gap-2 text-sm text-gray-600">
+              <div className="loading loading-spinner loading-sm"></div>
+              Syncing votes...
+            </div>
+          </div>
+        )}
         <section className="bg-base-200 px-8 py-5 rounded-lg mb-4">
           <p className="font-semibold text-lg text-center mb-3 lg:text-left">
             Report a breeding site to Quezon City Epidemiology and Surveillance
@@ -411,8 +509,12 @@ const Community = () => {
         </section>
         <NewPostModal onSubmit={handleClearSearch} />
         <section className="bg-base-200 px-1.5 sm:px-8 py-6 rounded-lg flex flex-col gap-y-8">
-          {isLoading ? (
-            <div className="text-center">Loading posts...</div>
+          {isLoading || isFilterLoading ? (
+            <div className="space-y-4">
+              {Array.from({ length: 3 }).map((_, index) => (
+                <PostCardSkeleton key={index} />
+              ))}
+            </div>
           ) : isError ? (
             <div className="text-center text-error">Error loading posts</div>
           ) : filteredPosts.length === 0 ? (

@@ -47,6 +47,7 @@ import ActivePosts from "./pages/admin/CEA/ActivePosts";
 import ArchivedAdminPosts from "./pages/admin/CEA/ArchivedAdminPosts";
 import ArchivedUsers from "./pages/superadmin/ArchivedUsers";
 import ArchivedAdmins from "./pages/superadmin/ArchivedAdmins";
+import AuthGuard from "./components/AuthGuard";
 
 // Helper functions
 const getUserData = () => {
@@ -90,7 +91,7 @@ const PrivateRoute = ({ children, requiredRole }) => {
     return <Navigate to="/login" replace />;
   }
 
-  // For admin/superadmin routes, check both user data and token
+  // For admin/superadmin routes, use AuthGuard for enhanced session validation
   if (requiredRole === "admin" || requiredRole === "superadmin") {
     // First check user role from storage
     if (user.role !== requiredRole) {
@@ -152,6 +153,9 @@ const PrivateRoute = ({ children, requiredRole }) => {
       toastError("Invalid session. Please log in again.");
       return <Navigate to="/login" replace />;
     }
+
+    // Use AuthGuard for admin/superadmin routes to handle account status validation
+    return <AuthGuard requiredRole={requiredRole}>{children}</AuthGuard>;
   }
 
   // For user role, just verify user exists and role matches
@@ -241,9 +245,11 @@ const AppWithProviders = () => {
     {
       path: "/admin",
       element: (
-        <PrivateRoute requiredRole="admin">
-          <AdminLayout />
-        </PrivateRoute>
+        <GoogleMapsProvider>
+          <PrivateRoute requiredRole="admin">
+            <AdminLayout />
+          </PrivateRoute>
+        </GoogleMapsProvider>
       ),
       children: [
         { index: true, element: <Navigate to="/admin/dashboard" replace /> },

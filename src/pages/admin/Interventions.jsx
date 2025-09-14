@@ -54,6 +54,7 @@ const Interventions = () => {
     data: interventions,
     isLoading: isLoadingInterventions,
     error: errorInterventions,
+    refetch: refetchInterventions,
   } = useGetAllInterventionsQuery();
   const {
     data: posts,
@@ -747,7 +748,11 @@ const Interventions = () => {
           </Link>
         </div>
         <div className="h-135">
-          <InterventionsTable interventions={interventions} onlyRecent={true} />
+          <InterventionsTable
+            interventions={interventions}
+            onlyRecent={true}
+            refetchInterventions={refetchInterventions}
+          />
         </div>
       </section>
 

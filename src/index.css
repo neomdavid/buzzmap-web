@@ -1,0 +1,20 @@
+/* Ensure React-Toastify toasts appear above modals/dialogs */
+.Toastify__toast-container {
+  z-index: 2147483647 !important; /* Max practical z-index */
+}
+
+.Toastify__toast {
+  z-index: 2147483647 !important;
+}
+
+/* Ensure app modals stay below toasts */
+.modal,
+.modal-box {
+  z-index: 2147483646 !important;
+}
+
+/* Place dialog backdrops below toasts as well */
+dialog::backdrop,
+.modal::backdrop {
+  z-index: 2147483646 !important;
+}

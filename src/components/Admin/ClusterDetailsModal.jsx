@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from "react";
-import { useRemoveReportsFromClusterMutation } from "@/api/dengueApi";
+import {
+  useRemoveReportsFromClusterMutation,
+  useResolveReportsMutation,
+} from "@/api/dengueApi";
 import { toast } from "react-toastify";
 import { CheckCircle, Circle, MapPinLine, Hourglass } from "phosphor-react";
-import SubClusterEditModal from "./SubClusterEditModal";
 import ImageExpansionModal from "../ImageExpansionModal";
 
 const ClusterDetailsModal = ({
@@ -24,12 +26,11 @@ const ClusterDetailsModal = ({
   getRejectedReportsCount,
   getResolvedReportsCount,
   hasResolvedReports,
-  canFormSubCluster,
-  getRemainingReports,
-  subClusters,
   mapOnlyRef,
   highlightReportMarker,
-  onReportRemovedFromSubCluster,
+  canFormSubCluster,
+  getRemainingReports,
+  refetchSpecificCluster,
 }) => {
   if (!showClusterDetailsModal || !selectedCluster) return null;
 
@@ -43,10 +44,8 @@ const ClusterDetailsModal = ({
   const [removingId, setRemovingId] = useState(null);
   const [removeReportsFromCluster, { isLoading: isRemoving }] =
     useRemoveReportsFromClusterMutation();
-
-  // Sub-cluster edit modal state
-  const [showSubClusterEditModal, setShowSubClusterEditModal] = useState(false);
-  const [selectedSubCluster, setSelectedSubCluster] = useState(null);
+  const [resolveReports, { isLoading: isResolving }] =
+    useResolveReportsMutation();
 
   // Image expansion modal state
   const [showImageModal, setShowImageModal] = useState(false);
@@ -76,48 +75,6 @@ const ClusterDetailsModal = ({
 
   const isPendingRemoval = (id) => pendingRemovals.includes(id);
   const isLocallyRemoved = (id) => removedReportIds.includes(id);
-
-  const handleViewSubCluster = (subCluster) => {
-    console.log("Opening sub-cluster for editing:", subCluster);
-
-    // Extract actual report data from the main cluster's reports using the sub-cluster's report IDs
-    const subClusterReportIds = subCluster.reports || [];
-    console.log("Sub-cluster report IDs:", subClusterReportIds);
-    console.log(
-      "Available reports:",
-      reports.map((r) => ({ id: r._id || r.id, type: r.report_type }))
-    );
-
-    const actualReports = reports.filter((report) =>
-      subClusterReportIds.includes(report._id || report.id)
-    );
-
-    console.log("Filtered actual reports:", actualReports);
-
-    // Create a new sub-cluster object with the actual report data
-    const subClusterWithReports = {
-      ...subCluster,
-      reports: actualReports,
-    };
-
-    console.log("Sub-cluster with reports:", subClusterWithReports);
-
-    setSelectedSubCluster(subClusterWithReports);
-    setShowSubClusterEditModal(true);
-  };
-
-  const handleReportRemovedFromSubCluster = (subClusterId, reportId) => {
-    console.log("Report removed from sub-cluster:", subClusterId, reportId);
-
-    // Close the modal after successful removal
-    setShowSubClusterEditModal(false);
-    setSelectedSubCluster(null);
-
-    // Call the parent's refetch function to update the data
-    if (onReportRemovedFromSubCluster) {
-      onReportRemovedFromSubCluster(subClusterId, reportId);
-    }
-  };
 
   // Image expansion modal handlers
   const handleImageClick = (image) => {
@@ -200,6 +157,9 @@ const ClusterDetailsModal = ({
       if (selectedReports?.includes?.(id)) {
         handleReportSelection(id, "deselect");
       }
+      if (typeof refetchSpecificCluster === "function") {
+        refetchSpecificCluster();
+      }
     } catch (error) {
       console.error("[Cluster] Failed to remove report from cluster:", error);
       const msg =
@@ -214,6 +174,30 @@ const ClusterDetailsModal = ({
     }
   };
 
+  const markResolved = async (id) => {
+    try {
+      await resolveReports({
+        clusterId,
+        reportIds: [id],
+        isResolved: true,
+      }).unwrap();
+      toast.success("Marked as resolved");
+      if (selectedReports?.includes?.(id)) {
+        handleReportSelection(id, "deselect");
+      }
+      if (typeof refetchSpecificCluster === "function") {
+        refetchSpecificCluster();
+      }
+    } catch (error) {
+      const msg =
+        error?.data?.message ||
+        error?.error ||
+        error?.message ||
+        "Request failed";
+      toast.error(`Failed to resolve: ${msg}`);
+    }
+  };
+
   // Helper: determine if a report is removed from cluster (local or backend)
   const isReportRemoved = (report) => {
     const id = report._id || report.id;
@@ -225,57 +209,41 @@ const ClusterDetailsModal = ({
   const barangay =
     clusterData.barangay || clusterData.barangays?.[0] || "Unknown";
   const clusterId = clusterData._id || clusterData.id;
-  const subClustersData = clusterData.sub_clusters || subClusters || [];
   const severity = clusterData.severity || "medium";
 
-  // Count of validated sub-clusters
-  const validatedCount = subClustersData.filter(
-    (sc) => sc.cluster_type === "validated"
-  ).length;
-
   // Check if cluster is resolved (no unprocessed reports)
-  const unprocessedReports = clusterData.unprocessed_reports || [];
-  const unprocessedCount = clusterData.unprocessed_count || 0;
-  const processedCount = clusterData.processed_count || 0;
-
-  // Create a set of report IDs that are already in validated sub-clusters
-  const validatedSubClusterReportIds = new Set();
-  subClustersData.forEach((subCluster) => {
-    if (subCluster.cluster_type === "validated" && subCluster.reports) {
-      subCluster.reports.forEach((reportId) => {
-        validatedSubClusterReportIds.add(reportId);
-      });
-    }
-  });
-
-  // Helper function to check if a report is already in a validated sub-cluster
-  const isReportInValidatedSubCluster = (reportId) => {
-    return validatedSubClusterReportIds.has(reportId);
-  };
+  const breakdown = clusterData.breakdown || {};
+  const totalReportsCount = Array.isArray(reports) ? reports.length : 0;
+  const unprocessedCount =
+    clusterData.unprocessed_count !== undefined
+      ? clusterData.unprocessed_count
+      : Math.max(
+          0,
+          totalReportsCount -
+            ((breakdown.validated_reports || 0) +
+              (breakdown.rejected_reports || 0) +
+              (breakdown.resolved_reports || 0) +
+              (breakdown.excluded_reports || 0))
+        );
+  // Treat "processed" as actually resolved within the cluster
+  const resolvedCount =
+    breakdown.resolved_reports !== undefined
+      ? breakdown.resolved_reports
+      : reports.filter((r) => r?.isResolved === true).length;
 
   // Individual validation/rejection no longer used in modal
 
-  // Check if all reports are in sub-clusters (cluster is fully resolved)
-  const allReportIds = new Set(reports.map((r) => r._id || r.id));
-  const subClusterReportIds = new Set();
-  subClustersData.forEach((subCluster) => {
-    if (subCluster.reports) {
-      subCluster.reports.forEach((reportId) => {
-        subClusterReportIds.add(reportId);
-      });
-    }
-  });
-
   // Cluster is resolved when all reports are processed at cluster level (no unprocessed)
-  const totalProcessedCount = processedCount;
-  const isClusterResolved = unprocessedCount === 0 && reports.length > 0;
+  const totalProcessedCount = resolvedCount;
+  const isClusterResolved =
+    resolvedCount === totalReportsCount && totalReportsCount > 0;
 
-  // Derived counts for summary (exclude reports already in validated sub-clusters)
+  // Derived counts for summary
   const selectableReportIds = new Set(
     effectiveReports
       .filter((r) => !isReportRemoved(r))
       .map((r) => r._id || r.id)
-      .filter((id) => id && !isReportInValidatedSubCluster(id))
+      .filter((id) => id)
   );
   const localSelectedCount = selectedReports.filter((id) =>
     selectableReportIds.has(id)
@@ -301,7 +269,7 @@ const ClusterDetailsModal = ({
   return (
     <dialog
       id="cluster-verification-modal"
-      className="modal"
+      className="modal z-[1000]"
       open={showClusterDetailsModal}
     >
       <div className="modal-box bg-white rounded-3xl shadow-2xl w-11/12 max-w-7xl p-0 max-h-[95vh] overflow-hidden">
@@ -348,13 +316,7 @@ const ClusterDetailsModal = ({
               <div className="stat">
                 <div className="stat-title text-sm">Resolved Reports</div>
                 <div className="stat-value text-2xl text-success">
-                  {totalProcessedCount}
-                </div>
-              </div>
-              <div className="stat">
-                <div className="stat-title text-sm">Removed Reports</div>
-                <div className="stat-value text-2xl text-gray-500">
-                  {effectiveReports.filter((r) => isReportRemoved(r)).length}
+                  {resolvedCount}
                 </div>
               </div>
               {/* Removed individual selected/unselected stats */}
@@ -485,8 +447,6 @@ const ClusterDetailsModal = ({
                       className={`card shadow-md border-2 transition-all relative ${
                         isRemoved
                           ? "border-gray-300 bg-gray-100 opacity-70"
-                          : isReportInValidatedSubCluster(reportId)
-                          ? "border-success bg-success/5 opacity-75"
                           : isSelected
                           ? "border-success bg-success/5"
                           : "border-base-300 hover:border-primary/50 bg-base-100"
@@ -498,11 +458,6 @@ const ClusterDetailsModal = ({
                           {isRemoved ? (
                             <div className="badge badge-ghost badge-sm">
                               Removed from Cluster
-                            </div>
-                          ) : isReportInValidatedSubCluster(reportId) ? (
-                            <div className="badge badge-success badge-sm">
-                              <CheckCircle size={12} />
-                              Validated as a cluster
                             </div>
                           ) : isSelected ? (
                             <div className="badge badge-success badge-sm">
@@ -603,30 +558,39 @@ const ClusterDetailsModal = ({
 
                         {/* Action Buttons */}
                         <div className="flex gap-2 flex-wrap">
-                          {!isRemoved &&
-                            !isReportInValidatedSubCluster(reportId) && (
-                              <>
-                                {!rejectedReports.includes(reportId) &&
-                                  !isReportInValidatedSubCluster(reportId) && (
-                                    <>
-                                      {/* Toggle select/unselect */}
-                                      {!pendingRejections.includes(
-                                        reportId
-                                      ) && (
+                          {!isRemoved && (
+                            <>
+                              {!rejectedReports.includes(reportId) && (
+                                <>
+                                  {/* Toggle select/unselect */}
+                                  {!pendingRejections.includes(reportId) &&
+                                    (() => {
+                                      const isResolvedInCluster =
+                                        report.isResolved === true;
+                                      return (
                                         <button
                                           onClick={() => {
-                                            handleReportSelection(
-                                              reportId,
-                                              isSelected ? "deselect" : "select"
-                                            );
+                                            if (!isResolvedInCluster) {
+                                              handleReportSelection(
+                                                reportId,
+                                                isSelected
+                                                  ? "deselect"
+                                                  : "select"
+                                              );
+                                            }
                                           }}
                                           className={`btn btn-sm ${
-                                            isSelected
+                                            isResolvedInCluster
+                                              ? "btn-disabled"
+                                              : isSelected
                                               ? "btn-success"
                                               : "btn-outline btn-success"
                                           }`}
+                                          disabled={isResolvedInCluster}
                                         >
-                                          {isSelected ? (
+                                          {isResolvedInCluster ? (
+                                            "Resolved"
+                                          ) : isSelected ? (
                                             <>
                                               <CheckCircle size={14} />
                                               Unselect
@@ -638,55 +602,76 @@ const ClusterDetailsModal = ({
                                             </>
                                           )}
                                         </button>
-                                      )}
-                                      {/* Remove from cluster with inline confirm */}
-                                      {pendingRemovals.includes(reportId) ? (
-                                        <>
-                                          <button
-                                            onClick={() =>
-                                              confirmRemoveFromCluster(reportId)
-                                            }
-                                            className={`btn btn-warning btn-sm ${
-                                              removingId === reportId
-                                                ? "btn-disabled"
-                                                : ""
-                                            }`}
-                                            disabled={removingId === reportId}
-                                          >
-                                            {removingId === reportId ? (
-                                              <>
-                                                <span className="loading loading-spinner loading-xs"></span>
-                                                Removing...
-                                              </>
-                                            ) : (
-                                              "Confirm Remove"
-                                            )}
-                                          </button>
-                                          <button
-                                            onClick={() =>
-                                              cancelRemoveFromCluster(reportId)
-                                            }
-                                            className="btn btn-outline btn-ghost btn-sm"
-                                          >
-                                            Cancel
-                                          </button>
-                                        </>
-                                      ) : (
+                                      );
+                                    })()}
+                                  {/* Remove from cluster with inline confirm */}
+                                  {pendingRemovals.includes(reportId) ? (
+                                    <>
+                                      <button
+                                        onClick={() =>
+                                          confirmRemoveFromCluster(reportId)
+                                        }
+                                        className={`btn btn-warning btn-sm ${
+                                          removingId === reportId
+                                            ? "btn-disabled"
+                                            : ""
+                                        }`}
+                                        disabled={removingId === reportId}
+                                      >
+                                        {removingId === reportId ? (
+                                          <>
+                                            <span className="loading loading-spinner loading-xs"></span>
+                                            Removing...
+                                          </>
+                                        ) : (
+                                          "Confirm Remove"
+                                        )}
+                                      </button>
+                                      <button
+                                        onClick={() =>
+                                          cancelRemoveFromCluster(reportId)
+                                        }
+                                        className="btn btn-outline btn-ghost btn-sm"
+                                      >
+                                        Cancel
+                                      </button>
+                                    </>
+                                  ) : (
+                                    <div className="flex gap-2">
+                                      <button
+                                        onClick={() =>
+                                          requestRemoveFromCluster(reportId)
+                                        }
+                                        className="btn btn-outline btn-warning btn-sm"
+                                      >
+                                        Remove from Cluster
+                                      </button>
+                                      {report.isResolved !== true && (
                                         <button
-                                          onClick={() =>
-                                            requestRemoveFromCluster(reportId)
-                                          }
-                                          className="btn btn-outline btn-warning btn-sm"
+                                          onClick={() => markResolved(reportId)}
+                                          className={`btn btn-success btn-sm ${
+                                            isResolving ? "btn-disabled" : ""
+                                          }`}
+                                          disabled={isResolving}
                                         >
-                                          Remove from Cluster
+                                          {isResolving ? (
+                                            <>
+                                              <span className="loading loading-spinner loading-xs"></span>
+                                              Processing...
+                                            </>
+                                          ) : (
+                                            "Mark Resolved"
+                                          )}
                                         </button>
                                       )}
-                                    </>
+                                    </div>
                                   )}
+                                </>
+                              )}
 
-                                {/* Unreject removed per updated design */}
-                              </>
-                            )}
+                              {/* Unreject removed per updated design */}
+                            </>
+                          )}
 
                           <button
                             onClick={() => {
@@ -765,71 +750,25 @@ const ClusterDetailsModal = ({
             )}
 
             {/* Resolution Status */}
-            {subClustersData.length > 0 || !isClusterResolved ? (
-              <div
-                className={`card ${
-                  isClusterResolved
-                    ? "bg-success/10 border-success"
-                    : "bg-warning/10 border-warning"
-                } mb-6`}
-              >
+            {!isClusterResolved && (
+              <div className="card bg-warning/10 border-warning mb-6">
                 <div className="card-body">
-                  <h4
-                    className={`card-title ${
-                      isClusterResolved ? "text-success" : "text-warning"
-                    }`}
-                  >
+                  <h4 className="card-title text-warning">
                     <CheckCircle size={20} />
                     Resolution Status
                   </h4>
                   <div className="text-sm">
                     <p className="mb-2">
-                      {isClusterResolved ? (
-                        <>
-                          <strong>Resolved</strong> — All {reports.length}{" "}
-                          reports processed
-                          {validatedCount > 0 && (
-                            <span>
-                              {" "}
-                              ({validatedCount} sub-cluster
-                              {validatedCount > 1 ? "s" : ""})
-                            </span>
-                          )}
-                        </>
-                      ) : (
-                        <>
-                          <strong>Active</strong> —{" "}
-                          {reports.length - totalProcessedCount} unprocessed{" "}
-                          {reports.length - totalProcessedCount === 1
-                            ? "report"
-                            : "reports"}
-                        </>
-                      )}
+                      <strong>Active</strong> —{" "}
+                      {reports.length - totalProcessedCount} unprocessed{" "}
+                      {reports.length - totalProcessedCount === 1
+                        ? "report"
+                        : "reports"}
                     </p>
-
-                    {validatedCount > 0 && (
-                      <p className="text-gray-600">
-                        Reports in validated sub-clusters are automatically
-                        marked as resolved (green)
-                      </p>
-                    )}
-
-                    {validatedSubClusterReportIds.size > 0 && (
-                      <div className="mt-2 p-2 bg-success/10 rounded border border-success/20">
-                        <p className="text-success text-xs">
-                          <strong>Note:</strong> No action required for{" "}
-                          {validatedSubClusterReportIds.size}{" "}
-                          {validatedSubClusterReportIds.size === 1
-                            ? "report"
-                            : "reports"}{" "}
-                          (already validated)
-                        </p>
-                      </div>
-                    )}
                   </div>
                 </div>
               </div>
-            ) : null}
+            )}
 
             {/* Similarity Analysis */}
             <div className="card bg-base-100 shadow-md mb-6">
@@ -908,95 +847,24 @@ const ClusterDetailsModal = ({
                   <div className="flex justify-between">
                     <span className="text-gray-600">Unprocessed:</span>
                     <span className="font-semibold text-warning">
-                      {unprocessedCount}
+                      {Math.max(0, (reports?.length || 0) - resolvedCount)}
                     </span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-600">Processed:</span>
+                    <span className="text-gray-600">Resolved:</span>
                     <span className="font-semibold text-success">
-                      {processedCount}
+                      {resolvedCount}
                     </span>
                   </div>
                 </div>
               </div>
             </div>
-
-            {/* Sub-clusters */}
-            {subClustersData.length > 0 && (
-              <div className="card bg-base-100 shadow-md mb-6">
-                <div className="card-body">
-                  <h4 className="card-title text-primary">
-                    Sub-clusters Created
-                  </h4>
-                  <div className="space-y-3">
-                    {subClustersData.map((subCluster) => {
-                      const subClusterId = subCluster._id || subCluster.id;
-                      const subClusterReports = subCluster.reports || [];
-                      const subClusterDateRange = subCluster.date_range || {};
-                      const subClusterType =
-                        subCluster.cluster_type || "Unknown";
-
-                      return (
-                        <div
-                          key={subClusterId}
-                          className="border rounded-lg p-3 bg-info/5"
-                        >
-                          <div className="flex items-center justify-between mb-2">
-                            <h5 className="font-semibold text-sm">
-                              {subClusterType} Sub-cluster
-                            </h5>
-                            <span className="badge badge-info badge-sm">
-                              {subClusterReports.length} reports
-                            </span>
-                          </div>
-                          <div className="text-xs text-gray-600">
-                            <p>Created from resolved reports</p>
-                            <p>
-                              Active:{" "}
-                              {subClusterDateRange.start_date &&
-                              subClusterDateRange.end_date
-                                ? formatDateRange(
-                                    subClusterDateRange.start_date,
-                                    subClusterDateRange.end_date
-                                  )
-                                : "Date range unavailable"}
-                            </p>
-                            <p className="font-mono text-xs mt-1">
-                              ID: {subClusterId}
-                            </p>
-                          </div>
-                          <button
-                            onClick={() => handleViewSubCluster(subCluster)}
-                            className="btn btn-outline btn-primary btn-xs mt-2"
-                          >
-                            View Sub-cluster
-                          </button>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              </div>
-            )}
           </div>
         </div>
       </div>
       <form method="dialog" className="modal-backdrop">
         <button onClick={() => setShowClusterDetailsModal(false)}>close</button>
       </form>
-
-      {/* Sub-cluster Edit Modal */}
-      <SubClusterEditModal
-        isOpen={showSubClusterEditModal}
-        onClose={() => {
-          setShowSubClusterEditModal(false);
-          setSelectedSubCluster(null);
-        }}
-        subCluster={selectedSubCluster}
-        onReportRemoved={handleReportRemovedFromSubCluster}
-        mapOnlyRef={mapOnlyRef}
-        highlightReportMarker={highlightReportMarker}
-      />
 
       {/* Image Expansion Modal */}
       <ImageExpansionModal

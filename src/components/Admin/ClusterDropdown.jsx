@@ -28,7 +28,7 @@ const ClusterDropdown = ({
         {isLoadingClusters ? (
           <span className="flex items-center gap-2">
             <span className="loading loading-spinner loading-xs"></span>
-            <span className="sr-only">Loading</span>
+            Loading clusters...
           </span>
         ) : (
           (() => {
@@ -55,50 +55,10 @@ const ClusterDropdown = ({
             Detected Clusters
           </div>
           {isLoadingClusters ? (
-            <div className="max-h-96 overflow-y-auto px-3 py-3">
-              {/* Skeleton groups */}
-              <div className="mb-3">
-                <div className="px-4 py-2 bg-gray-50 border-b border-gray-200 text-sm font-semibold text-gray-600">
-                  <div className="skeleton h-4 w-40" />
-                </div>
-                <ul>
-                  {[...Array(3)].map((_, idx) => (
-                    <li key={idx} className="px-4 py-3 flex items-start gap-3">
-                      <div className="skeleton h-3 w-3 rounded-full mt-1" />
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center justify-between gap-2">
-                          <div className="skeleton h-4 w-36" />
-                          <div className="skeleton h-4 w-10 rounded-full" />
-                        </div>
-                        <div className="skeleton h-3 w-40 mt-2" />
-                        <div className="flex gap-2 mt-2">
-                          <div className="skeleton h-6 w-24 rounded" />
-                          <div className="skeleton h-6 w-24 rounded" />
-                        </div>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-              <div className="mb-3">
-                <div className="px-4 py-2 bg-gray-50 border-b border-gray-200 text-sm font-semibold text-gray-600">
-                  <div className="skeleton h-4 w-44" />
-                </div>
-                <ul>
-                  {[...Array(2)].map((_, idx) => (
-                    <li key={idx} className="px-4 py-3 flex items-start gap-3">
-                      <div className="skeleton h-3 w-3 rounded-full mt-1" />
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center justify-between gap-2">
-                          <div className="skeleton h-4 w-32" />
-                          <div className="skeleton h-4 w-10 rounded-full" />
-                        </div>
-                        <div className="skeleton h-3 w-36 mt-2" />
-                        <div className="skeleton h-6 w-28 mt-2 rounded" />
-                      </div>
-                    </li>
-                  ))}
-                </ul>
+            <div className="max-h-96 overflow-y-auto px-3 py-4 text-sm text-gray-500">
+              <div className="flex items-center gap-2">
+                <span className="loading loading-spinner loading-sm"></span>
+                Fetching clusters...
               </div>
             </div>
           ) : flaggedClusters.length === 0 ? (
@@ -280,7 +240,7 @@ const ClusterDropdown = ({
                           </p>
                           <div className="flex items-center gap-2 mt-1">
                             <span className="text-xs text-green-600 bg-green-100 px-2 py-0.5 rounded">
-                              All {c.processedCount} reports resolved
+                              All {c.resolvedCount || 0} reports resolved
                             </span>
                           </div>
                           <div className="flex gap-2 mt-2">

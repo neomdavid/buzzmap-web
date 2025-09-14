@@ -80,6 +80,9 @@ const MapOnly = forwardRef(
       interventions = [],
       onMarkerClick = null,
       useAdminEndpoint = false, // New prop to determine which endpoint to use
+      recentOnly = false, // Show only recent validated reports markers
+      recentCount = 5, // How many recent markers to show when recentOnly is true
+      recentPosts = null, // Optional: provide the same recent posts as table
     },
     ref
   ) => {
@@ -337,7 +340,31 @@ const MapOnly = forwardRef(
           ) {
             const { AdvancedMarkerElement, PinElement } =
               window.google.maps.marker;
-            breedingMarkers = breedingSites.map((site) => {
+            let sitesToRender = breedingSites;
+            if (recentOnly) {
+              if (Array.isArray(recentPosts) && recentPosts.length > 0) {
+                const recentIdSet = new Set(
+                  recentPosts.map((p) => p._id).filter(Boolean)
+                );
+                sitesToRender = breedingSites.filter((site) =>
+                  recentIdSet.has(site._id)
+                );
+              } else {
+                sitesToRender = [...breedingSites]
+                  .sort((a, b) => {
+                    const da = new Date(
+                      a.date_and_time || a.createdAt || 0
+                    ).getTime();
+                    const db = new Date(
+                      b.date_and_time || b.createdAt || 0
+                    ).getTime();
+                    return db - da;
+                  })
+                  .slice(0, Math.max(0, recentCount || 0));
+              }
+            }
+
+            breedingMarkers = sitesToRender.map((site) => {
               const iconUrl =
                 BREEDING_SITE_TYPE_ICONS[site.report_type] ||
                 BREEDING_SITE_TYPE_ICONS.default;

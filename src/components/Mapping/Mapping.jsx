@@ -145,10 +145,16 @@ const Mapping = () => {
       setSelectedBarangayFeature(feature);
       setSelectedBreedingSite(null);
       setSelectedIntervention(null);
+
+      // Update dropdown to show the selected barangay name
+      const barangayName = feature.properties?.name;
+      if (barangayName) {
+        setSelectedBarangay(barangayName);
+      }
     } else {
-      // When barangay is deselected, just clear the selection
-      // Don't automatically restore breeding sites/interventions state
+      // When barangay is deselected, clear both feature and dropdown selection
       setSelectedBarangayFeature(null);
+      setSelectedBarangay(""); // Reset dropdown to "Choose a barangay"
     }
   };
 
@@ -168,6 +174,7 @@ const Mapping = () => {
         selectedBarangay={selectedBarangay}
         handleBarangaySelect={handleBarangaySelect}
         barangayData={barangayData}
+        barangayDataLoading={barangayDataLoading}
         selectedIntervention={selectedIntervention}
         setSelectedIntervention={setSelectedIntervention}
       />

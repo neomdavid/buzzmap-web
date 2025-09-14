@@ -5,8 +5,14 @@ import {
 } from "ag-grid-community";
 import { AgGridReact } from "ag-grid-react";
 import { useState, useMemo, useRef, useCallback, useEffect } from "react";
-import { IconSearch, IconBan, IconTrash } from "@tabler/icons-react";
-import { useGetAccountsQuery, useDeleteAccountMutation, useLoginMutation, useToggleAccountStatusMutation } from "../../api/dengueApi";
+import { IconSearch, IconBan, IconTrash, IconSend } from "@tabler/icons-react";
+import {
+  useGetAccountsQuery,
+  useDeleteAccountMutation,
+  useLoginMutation,
+  useToggleAccountStatusMutation,
+  useResendOtpMutation,
+} from "../../api/dengueApi";
 import { useSelector } from "react-redux";
 import { toastSuccess, toastError } from "../../utils.jsx";
 
@@ -35,7 +41,7 @@ const customTheme = themeQuartz.withParams({
 function UsersTable({ statusFilter, roleFilter, searchQuery }) {
   const { data: accounts, isLoading, error, refetch } = useGetAccountsQuery();
   const gridRef = useRef(null);
-  
+
   // Add state for modals and actions
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showBanModal, setShowBanModal] = useState(false);
@@ -44,6 +50,11 @@ function UsersTable({ statusFilter, roleFilter, searchQuery }) {
   const [authError, setAuthError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isBanning, setIsBanning] = useState(true);
+  const [showResendModal, setShowResendModal] = useState(false);
+  const [resendTarget, setResendTarget] = useState(null);
+  const [resendPurpose, setResendPurpose] = useState("account-verification");
+  const [resendOtp, { isLoading: isResending }] = useResendOtpMutation();
+  const [resendCooldown, setResendCooldown] = useState(60);
 
   // Add mutations
   const [deleteAccount] = useDeleteAccountMutation();
@@ -56,7 +67,7 @@ function UsersTable({ statusFilter, roleFilter, searchQuery }) {
       const loginData = {
         email: superAdminEmail,
         password: superAdminPassword,
-        role: "superadmin"
+        role: "superadmin",
       };
 
       const response = await login(loginData).unwrap();
@@ -105,6 +116,28 @@ function UsersTable({ statusFilter, roleFilter, searchQuery }) {
     setShowBanModal(true);
   };
 
+  const handleResendClick = (user) => {
+    setResendTarget(user);
+    setResendPurpose("account-verification");
+    setShowResendModal(true);
+    setResendCooldown(60);
+  };
+
+  const handleResendConfirm = async () => {
+    if (!resendTarget?.email) return;
+    try {
+      await resendOtp({
+        email: resendTarget.email,
+        purpose: resendPurpose,
+      }).unwrap();
+      toastSuccess("OTP resent to " + resendTarget.email);
+      setShowResendModal(false);
+      setResendTarget(null);
+    } catch (error) {
+      toastError(error?.data?.message || "Failed to resend OTP");
+    }
+  };
+
   const handleBanConfirm = async () => {
     if (!superAdminPassword.trim()) {
       setAuthError("Please enter your password");
@@ -113,44 +146,45 @@ function UsersTable({ statusFilter, roleFilter, searchQuery }) {
 
     setIsSubmitting(true);
     try {
-      console.log('Starting ban/unban process for user:', selectedUser);
-      
+      console.log("Starting ban/unban process for user:", selectedUser);
+
       const isVerified = await verifySuperAdmin();
-      console.log('Super admin verification result:', isVerified);
-      
+      console.log("Super admin verification result:", isVerified);
+
       if (!isVerified) {
         setIsSubmitting(false);
         return;
       }
 
       const newStatus = isBanning ? "banned" : "active";
-      console.log('Sending toggle status request:', {
+      console.log("Sending toggle status request:", {
         id: selectedUser._id,
-        status: newStatus
+        status: newStatus,
       });
 
       const response = await toggleStatus({
         id: selectedUser._id,
-        status: newStatus
+        status: newStatus,
       }).unwrap();
 
-      console.log('Toggle status API response:', response);
+      console.log("Toggle status API response:", response);
 
-      toastSuccess(`User ${isBanning ? 'banned' : 'unbanned'} successfully`);
+      toastSuccess(`User ${isBanning ? "banned" : "unbanned"} successfully`);
       setShowBanModal(false);
       setSuperAdminPassword("");
       setAuthError("");
-      
-      console.log('Refreshing data...');
+
+      console.log("Refreshing data...");
       await refetch();
-      
     } catch (error) {
-      console.error('Error in handleBanConfirm:', {
+      console.error("Error in handleBanConfirm:", {
         error,
         errorMessage: error?.data?.message,
-        errorStatus: error?.status
+        errorStatus: error?.status,
       });
-      toastError(error?.data?.message || `Failed to ${isBanning ? 'ban' : 'unban'} user`);
+      toastError(
+        error?.data?.message || `Failed to ${isBanning ? "ban" : "unban"} user`
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -159,34 +193,63 @@ function UsersTable({ statusFilter, roleFilter, searchQuery }) {
   const handleModalClose = () => {
     setShowDeleteModal(false);
     setShowBanModal(false);
+    setShowResendModal(false);
     setSelectedUser(null);
     setSuperAdminPassword("");
     setAuthError("");
     setIsSubmitting(false);
   };
 
+  // Cooldown while resend modal is open
+  useEffect(() => {
+    if (!showResendModal) return;
+    const intervalId = setInterval(() => {
+      setResendCooldown((prev) => {
+        if (prev <= 1) {
+          clearInterval(intervalId);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(intervalId);
+  }, [showResendModal]);
+
   // Move ActionsCell inside UsersTable component
   const ActionsCell = useCallback((p) => {
-    const showBanButton = p.data.status === 'active' || p.data.status === 'banned';
-    
+    const showBanButton =
+      p.data.status === "active" || p.data.status === "banned";
+    const isUnverified = p.data.status === "unverified";
+
     return (
       <div className="py-2 h-full w-full flex items-center gap-2">
         {showBanButton && (
-          <button 
+          <button
             onClick={() => handleBanClick(p.data)}
             className="flex items-center gap-1 text-warning hover:bg-gray-200 p-1 rounded-md"
           >
             <IconBan size={15} stroke={2} />
-            <p className="text-sm">{p.data.status === "banned" ? "unban" : "ban"}</p>
+            <p className="text-sm">
+              {p.data.status === "banned" ? "unban" : "ban"}
+            </p>
           </button>
         )}
-        <button 
+        <button
           onClick={() => handleDeleteClick(p.data)}
           className="flex items-center gap-1 text-error hover:bg-gray-200 p-1 rounded-md"
         >
           <IconTrash size={15} stroke={2.5} />
           <p className="text-sm">remove</p>
         </button>
+        {isUnverified && (
+          <button
+            onClick={() => handleResendClick(p.data)}
+            className="flex items-center gap-1 text-primary hover:bg-gray-200 p-1 rounded-md"
+          >
+            <IconSend size={15} stroke={2} />
+            <p className="text-sm">resend otp</p>
+          </button>
+        )}
       </div>
     );
   }, []); // Add empty dependency array since handlers are stable
@@ -194,29 +257,32 @@ function UsersTable({ statusFilter, roleFilter, searchQuery }) {
   // Transform the data for the grid
   const rowData = useMemo(() => {
     if (!accounts) return [];
-    
-    console.log('Raw accounts data before transformation:', accounts);
-    
+
+    console.log("Raw accounts data before transformation:", accounts);
+
     const transformedData = accounts
-      .filter(account => {
+      .filter((account) => {
         // First filter for users only and not deleted
-        const isUser = account.role === 'user';
-        const isNotDeleted = account.status !== 'deleted';
-        
+        const isUser = account.role === "user";
+        const isNotDeleted = account.status !== "deleted";
+
         // Then apply status filter
         const statusMatch = !statusFilter || account.status === statusFilter;
-        
+
         // Then apply role filter
         const roleMatch = !roleFilter || account.role === roleFilter;
 
         // Apply search filter
-        const searchMatch = !searchQuery || 
+        const searchMatch =
+          !searchQuery ||
           account.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
           account.email.toLowerCase().includes(searchQuery.toLowerCase());
 
-        return isUser && isNotDeleted && statusMatch && roleMatch && searchMatch;
+        return (
+          isUser && isNotDeleted && statusMatch && roleMatch && searchMatch
+        );
       })
-      .map(account => ({
+      .map((account) => ({
         _id: account._id,
         username: account.username,
         email: account.email,
@@ -225,27 +291,27 @@ function UsersTable({ statusFilter, roleFilter, searchQuery }) {
         status: account.status,
       }));
 
-    console.log('Final transformed data:', transformedData);
+    console.log("Final transformed data:", transformedData);
     return transformedData;
   }, [accounts, statusFilter, roleFilter, searchQuery]);
 
   const columnDefs = useMemo(
     () => [
-      { 
-        field: "username", 
+      {
+        field: "username",
         minWidth: 120,
-        flex: 1 
+        flex: 1,
       },
-      { 
-        field: "email", 
+      {
+        field: "email",
         minWidth: 180,
-        flex: 1.5 
+        flex: 1.5,
       },
-      { 
-        field: "role", 
-        minWidth: 100, 
+      {
+        field: "role",
+        minWidth: 100,
         cellRenderer: RoleCell,
-        flex: 1 
+        flex: 1,
       },
       {
         field: "joined",
@@ -254,14 +320,14 @@ function UsersTable({ statusFilter, roleFilter, searchQuery }) {
         cellRenderer: DateCell,
         flex: 1,
         sortable: true,
-        sort: 'desc'
+        sort: "desc",
       },
       {
         field: "status",
         headerName: "Status",
         minWidth: 140,
         cellRenderer: StatusCell,
-        flex: 1
+        flex: 1,
       },
       {
         field: "actions",
@@ -278,6 +344,16 @@ function UsersTable({ statusFilter, roleFilter, searchQuery }) {
   );
 
   const theme = useMemo(() => customTheme, []);
+
+  // Dynamic empty-state message
+  const noRowsMessage = useMemo(() => {
+    const hasFilters = Boolean(
+      statusFilter || roleFilter || (searchQuery && searchQuery.trim() !== "")
+    );
+    return hasFilters
+      ? "No users match your current filters/search"
+      : "No users found";
+  }, [statusFilter, roleFilter, searchQuery]);
 
   // Simplified onGridSizeChanged function
   const onGridSizeChanged = useCallback((params) => {
@@ -296,8 +372,9 @@ function UsersTable({ statusFilter, roleFilter, searchQuery }) {
     const headerHeight = 48; // Height of the header
     const paginationHeight = 48; // Height of pagination
     const maxHeight = 600; // Maximum height
-    
-    const calculatedHeight = (rowData.length * rowHeight) + headerHeight + paginationHeight;
+
+    const calculatedHeight =
+      rowData.length * rowHeight + headerHeight + paginationHeight;
     return Math.min(calculatedHeight, maxHeight);
   };
 
@@ -306,10 +383,10 @@ function UsersTable({ statusFilter, roleFilter, searchQuery }) {
       <div
         className="ag-theme-quartz"
         ref={gridRef}
-        style={{ 
+        style={{
           height: `${calculateHeight()}px`,
           width: "100%",
-          minHeight: "200px"
+          minHeight: "200px",
         }}
       >
         {isLoading ? (
@@ -330,7 +407,7 @@ function UsersTable({ statusFilter, roleFilter, searchQuery }) {
             columnDefs={columnDefs}
             defaultColDef={{
               ...defaultColDef,
-              sortable: true
+              sortable: true,
             }}
             theme={theme}
             pagination={true}
@@ -342,6 +419,7 @@ function UsersTable({ statusFilter, roleFilter, searchQuery }) {
             onFirstDataRendered={onFirstDataRendered}
             domLayout="normal"
             suppressPaginationPanel={false}
+            localeText={{ noRowsToShow: noRowsMessage }}
           />
         )}
       </div>
@@ -349,7 +427,12 @@ function UsersTable({ statusFilter, roleFilter, searchQuery }) {
       {/* Delete Confirmation Modal */}
       <dialog id="delete_modal" className="modal" open={showDeleteModal}>
         <div className="modal-box gap-6 text-lg w-10/12 max-w-3xl p-8 sm:p-12 rounded-3xl">
-          <form onSubmit={(e) => { e.preventDefault(); handleDeleteConfirm(); }}>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              handleDeleteConfirm();
+            }}
+          >
             <div className="flex flex-col gap-6">
               <p className="text-center text-3xl font-bold text-error">
                 Confirm User Deletion
@@ -409,13 +492,19 @@ function UsersTable({ statusFilter, roleFilter, searchQuery }) {
       {/* Ban Confirmation Modal */}
       <dialog id="ban_modal" className="modal" open={showBanModal}>
         <div className="modal-box gap-6 text-lg w-10/12 max-w-3xl p-8 sm:p-12 rounded-3xl">
-          <form onSubmit={(e) => { e.preventDefault(); handleBanConfirm(); }}>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              handleBanConfirm();
+            }}
+          >
             <div className="flex flex-col gap-6">
               <p className="text-center text-3xl font-bold text-warning">
-                Confirm User {isBanning ? 'Ban' : 'Unban'}
+                Confirm User {isBanning ? "Ban" : "Unban"}
               </p>
               <p className="text-center text-gray-600">
-                Please enter your super admin password to {isBanning ? 'ban' : 'unban'} this user
+                Please enter your super admin password to{" "}
+                {isBanning ? "ban" : "unban"} this user
               </p>
 
               <div className="w-full flex flex-col gap-1">
@@ -454,7 +543,78 @@ function UsersTable({ statusFilter, roleFilter, searchQuery }) {
                   }`}
                   disabled={isSubmitting}
                 >
-                  {isSubmitting ? "Processing..." : `${isBanning ? 'Ban' : 'Unban'} User`}
+                  {isSubmitting
+                    ? "Processing..."
+                    : `${isBanning ? "Ban" : "Unban"} User`}
+                </button>
+              </div>
+            </div>
+          </form>
+        </div>
+
+        <form method="dialog" className="modal-backdrop">
+          <button onClick={handleModalClose}>close</button>
+        </form>
+      </dialog>
+
+      {/* Resend OTP Modal */}
+      <dialog id="resend_modal" className="modal" open={showResendModal}>
+        <div className="modal-box gap-6 text-lg w-10/12 max-w-xl p-8 sm:p-10 rounded-3xl">
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              handleResendConfirm();
+            }}
+          >
+            <div className="flex flex-col gap-6">
+              <p className="text-center text-2xl font-bold">
+                Resend Verification OTP
+              </p>
+              <p className="text-center text-gray-600">
+                Send a new verification code to {resendTarget?.email}
+              </p>
+
+              <div className="w-full flex flex-col gap-1">
+                <label className="text-primary font-bold">Purpose</label>
+                <select
+                  className="select select-bordered"
+                  value={resendPurpose}
+                  onChange={(e) => setResendPurpose(e.target.value)}
+                >
+                  <option value="account-verification">
+                    account-verification
+                  </option>
+                  <option value="password-reset">password-reset</option>
+                </select>
+              </div>
+
+              <div className="w-full flex justify-between items-center gap-3 mt-2">
+                <p className="text-sm text-gray-600">
+                  Didn't receive an OTP?{" "}
+                  {resendCooldown > 0 ? (
+                    <span className="text-gray-500">
+                      Resend ({resendCooldown}s)
+                    </span>
+                  ) : (
+                    <button
+                      type="submit"
+                      className={`text-primary underline ${
+                        isResending
+                          ? "opacity-70 cursor-wait"
+                          : "hover:opacity-80"
+                      }`}
+                      disabled={isResending}
+                    >
+                      Resend
+                    </button>
+                  )}
+                </p>
+                <button
+                  type="button"
+                  className="bg-gray-300 text-white px-6 py-2.5 rounded-xl hover:bg-gray-400 transition-colors hover:cursor-pointer"
+                  onClick={handleModalClose}
+                >
+                  Cancel
                 </button>
               </div>
             </div>
@@ -485,6 +645,10 @@ const StatusCell = ({ value }) => {
   let textColor = "";
 
   switch (value) {
+    case "pending":
+      bgColor = "bg-warning";
+      textColor = "text-white";
+      break;
     case "active":
       bgColor = "bg-success";
       textColor = "text-white";

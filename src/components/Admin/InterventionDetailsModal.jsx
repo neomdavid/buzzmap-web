@@ -32,6 +32,7 @@ const InterventionDetailsModal = ({
   onClose,
   onSave,
   onDelete,
+  onRefetch,
 }) => {
   const modalRef = useRef(null);
   const [barangayData, setBarangayData] = useState(null);
@@ -62,21 +63,25 @@ const InterventionDetailsModal = ({
     specific_location: intervention.specific_location || null,
   });
 
-  // Coerce status if date is not past
+  // Only coerce status when editing, not when viewing
   useEffect(() => {
-    const derived = computeStatusFromDate(formData.date); // Complete if past, Scheduled otherwise
-    const today = isToday(formData.date);
-    // If future (not past and not today), disallow Complete and Ongoing
-    if (derived !== "Complete" && !today) {
-      if (formData.status === "Complete" || formData.status === "Ongoing") {
-        setFormData((prev) => ({ ...prev, status: "Scheduled" }));
-      }
-    }
-    // If today, disallow Complete as default selection
-    if (today && formData.status === "Complete") {
+    if (!isEditing) return; // Don't alter status when just viewing
+
+    const now = new Date();
+    const interventionDate = new Date(formData.date);
+    const isPast = interventionDate < now;
+    const isTodayDate = isToday(formData.date);
+    const isFuture = interventionDate > now;
+
+    // If future date and not today, force status to Scheduled
+    if (isFuture && !isTodayDate) {
       setFormData((prev) => ({ ...prev, status: "Scheduled" }));
     }
-  }, [formData.date]);
+    // If past date, force status away from Scheduled (can't be scheduled in the past)
+    else if (isPast && formData.status === "Scheduled") {
+      setFormData((prev) => ({ ...prev, status: "Complete" }));
+    }
+  }, [formData.date, isEditing]);
 
   // Handle input changes
   const handleChange = (e) => {
@@ -219,10 +224,8 @@ const InterventionDetailsModal = ({
     e.preventDefault();
     setIsLoading(true); // Show loading indicator
     try {
-      // Enforce correct status based on date before sending
-      const derivedStatus = computeStatusFromDate(formData.date);
-      const statusToSend =
-        derivedStatus === "Complete" ? "Complete" : formData.status;
+      // Use the user's selected status (already validated by dropdown options)
+      const statusToSend = formData.status;
 
       // Format the data before sending to the backend
       const formattedData = {
@@ -261,7 +264,14 @@ const InterventionDetailsModal = ({
         );
       } catch {}
 
-      setIsEditing(false); // Switch back to readonly mode
+      // Refetch the interventions data
+      if (onRefetch) {
+        await onRefetch();
+      }
+
+      // Close modal and show success toast
+      onClose();
+      toastSuccess("Intervention updated successfully");
     } catch (error) {
       // Debug logs: error details
       console.error("[EditIntervention] Update failed", error);
@@ -274,10 +284,9 @@ const InterventionDetailsModal = ({
           );
         } catch {}
       }
+      toastError("Failed to update intervention. Please try again.");
     } finally {
       setIsLoading(false); // Hide loading indicator after the request completes
-      onClose();
-      toastSuccess("Intervention updated successfully");
     }
   };
 
@@ -294,17 +303,26 @@ const InterventionDetailsModal = ({
   // Handle delete confirmation
   const handleConfirmDelete = async () => {
     console.log("Start delete action...");
-    setIsLoading(true); // Hide loading indicator after the request completes
+    setIsLoading(true);
     try {
       const response = await deleteIntervention(intervention._id);
-      setIsLoading(false); // Hide loading indicator after the request completes
-    } catch (err) {
-      console.error("Error during delete:", err); // Log error in detail
-      toastError(err.message);
-    } finally {
-      toastError("Intervention Deleted");
-      console.log("Finally block reached...");
+      console.log("Delete successful:", response);
+
+      // Show success toast
+      toastSuccess("Intervention deleted successfully");
+
+      // Refetch the interventions data
+      if (onRefetch) {
+        await onRefetch();
+      }
+
+      // Close the modal
       onClose();
+    } catch (err) {
+      console.error("Error during delete:", err);
+      toastError("Failed to delete intervention. Please try again.");
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -341,7 +359,7 @@ const InterventionDetailsModal = ({
       className="modal transition-transform duration-300 ease-in-out"
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
-      <div className="modal-box bg-white rounded-4xl shadow-2xl w-11/12 max-w-3xl p-12 relative">
+      <div className="modal-box bg-white rounded-4xl shadow-2xl w-11/12 max-w-3xl max-h-[95vh] p-12 relative">
         <button
           className="absolute top-6 right-6 text-2xl font-semibold hover:text-gray-500 hover:cursor-pointer"
           onClick={onClose}
@@ -382,16 +400,16 @@ const InterventionDetailsModal = ({
             <div className="flex justify-center mb-6">
               <p
                 className={`${
-                  intervention.status === "Complete"
+                  formData.status === "Complete"
                     ? "bg-success"
-                    : intervention.status === "Scheduled"
-                    ? "bg-warning"
-                    : intervention.status === "Ongoing"
+                    : formData.status === "Scheduled"
                     ? "bg-info"
+                    : formData.status === "Ongoing"
+                    ? "bg-warning"
                     : "bg-gray-300"
                 } w-[40%] text-center rounded-xl py-1.5 text-white font-extrabold text-xl`}
               >
-                {intervention.status}
+                {formData.status}
               </p>
             </div>
 
@@ -583,29 +601,37 @@ const InterventionDetailsModal = ({
                   <div className="flex flex-col gap-2">
                     <label className="text-primary text-lg">Status</label>
                     {(() => {
-                      const derivedStatus = computeStatusFromDate(
-                        formData.date
-                      );
-                      const past = derivedStatus === "Complete";
-                      const today = isToday(formData.date);
+                      const now = new Date();
+                      const interventionDate = new Date(formData.date);
+                      const isPast = interventionDate < now;
+                      const isTodayDate = isToday(formData.date);
+                      const isFuture = interventionDate > now;
+
+                      // Check if intervention is within 24 hours for Ongoing option
+                      const hoursDiff =
+                        (now - interventionDate) / (1000 * 60 * 60);
+                      const within24Hours = hoursDiff <= 24;
+
                       return (
                         <select
                           name="status"
                           value={formData.status}
                           onChange={handleChange}
                           className="border-2 font-normal border-primary/60 p-3 rounded-lg w-full"
-                          disabled={past}
                         >
-                          {past ? (
-                            <option value="Complete">Complete</option>
-                          ) : today ? (
+                          {isFuture && !isTodayDate ? (
+                            <option value="Scheduled">Scheduled</option>
+                          ) : isTodayDate && !isPast ? (
                             <>
                               <option value="Scheduled">Scheduled</option>
                               <option value="Ongoing">Ongoing</option>
                             </>
                           ) : (
                             <>
-                              <option value="Scheduled">Scheduled</option>
+                              {within24Hours && (
+                                <option value="Ongoing">Ongoing</option>
+                              )}
+                              <option value="Complete">Complete</option>
                             </>
                           )}
                         </select>

@@ -56,6 +56,7 @@ const AddInterventionModal = ({
   patternType,
   patternUrgency,
   transformedBarangays = [],
+  onRefetch,
 }) => {
   const modalRef = useRef(null);
   const [formData, setFormData] = useState({
@@ -107,27 +108,34 @@ const AddInterventionModal = ({
   const getAllowedStatuses = (dateStr) => {
     const now = new Date();
     const selectedDate = new Date(dateStr);
+    const isPast = selectedDate < now;
+    const isToday =
+      selectedDate.getFullYear() === now.getFullYear() &&
+      selectedDate.getMonth() === now.getMonth() &&
+      selectedDate.getDate() === now.getDate();
+    const isFuture = selectedDate > now;
 
-    // Reset hours, minutes, seconds, and milliseconds for date comparison
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const selectedDay = new Date(
-      selectedDate.getFullYear(),
-      selectedDate.getMonth(),
-      selectedDate.getDate()
-    );
+    // Check if intervention is within 24 hours for Ongoing option
+    const hoursDiff = (now - selectedDate) / (1000 * 60 * 60);
+    const within24Hours = hoursDiff <= 24;
 
-    // If date is in the past, only allow "Complete"
-    if (selectedDay < today) {
-      return ["Complete"];
+    // If future date and not today, only allow "Scheduled"
+    if (isFuture && !isToday) {
+      return ["Scheduled"];
     }
 
-    // If date is today, allow "Scheduled" and "Ongoing"
-    if (selectedDay.getTime() === today.getTime()) {
+    // If today and not past, allow "Scheduled" and "Ongoing"
+    if (isToday && !isPast) {
       return ["Scheduled", "Ongoing"];
     }
 
-    // If date is in the future, only allow "Scheduled"
-    return ["Scheduled"];
+    // If past date (including past times today), allow "Ongoing" (if within 24 hours) and "Complete"
+    const options = [];
+    if (within24Hours) {
+      options.push("Ongoing");
+    }
+    options.push("Complete");
+    return options;
   };
 
   // Add loading state for boundary data
@@ -141,6 +149,7 @@ const AddInterventionModal = ({
         setIsBoundaryDataLoaded(true);
         const barangayNames = data.features
           .map((feature) => feature.properties.name)
+          .filter((name) => name && name.trim() !== "") // Filter out empty, null, or whitespace-only names
           .sort();
         setBarangayOptions(barangayNames);
       })
@@ -329,7 +338,19 @@ const AddInterventionModal = ({
 
     // If barangay is changed, update the highlighted barangay, pattern data, and pan map
     if (name === "barangay") {
+      console.log("[DEBUG] Setting highlightedBarangay to:", value);
       setHighlightedBarangay(value);
+
+      // Clear previous pin data when barangay changes
+      setFormData((prev) => ({
+        ...prev,
+        location: null,
+        specific_location: null,
+        address: "",
+      }));
+      setIsLocationValid(false);
+      setSubmissionError("");
+
       const patternData = getBarangayPatternData(value);
       // Always update the pattern data, even if it's null/empty
       setCurrentBarangayPattern(patternData);
@@ -500,6 +521,12 @@ const AddInterventionModal = ({
       const response = await createIntervention(formattedData).unwrap();
       console.log("[Modal DEBUG] Intervention created successfully");
       console.log("[Modal DEBUG] Response:", response);
+
+      // Refetch the interventions data
+      if (onRefetch) {
+        await onRefetch();
+      }
+
       toast.success("Intervention created successfully!");
       onClose();
     } catch (error) {
@@ -577,7 +604,7 @@ const AddInterventionModal = ({
       className="modal transition-transform duration-300 ease-in-out"
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
-      <div className="modal-box bg-white rounded-3xl shadow-3xl w-11/12 max-w-5xl p-12 pt-12 relative">
+      <div className="modal-box bg-white rounded-3xl shadow-3xl w-11/12 max-w-5xl max-h-[95vh] p-12 pt-12 relative">
         <button
           className="absolute top-10 right-10 text-2xl font-semibold hover:text-gray-500 transition-colors duration-200 hover:cursor-pointer"
           onClick={onClose}
@@ -889,6 +916,10 @@ const AddInterventionModal = ({
                         preselectedBarangay={preselectedBarangay}
                         highlightedBarangay={highlightedBarangay}
                       />
+                      {/* Debug info */}
+                      <div className="text-xs text-gray-500 mt-2">
+                        Debug: highlightedBarangay = "{highlightedBarangay}"
+                      </div>
                     </div>
                   </div>
 

@@ -44,7 +44,11 @@ const DateCell = (p) => {
 
 const AdminPostsTable = () => {
   const token = useSelector((state) => state.auth.token);
-  const { data: adminPosts, isLoading } = useGetAllAdminPostsQuery(undefined, {
+  const {
+    data: adminPosts,
+    isLoading,
+    refetch,
+  } = useGetAllAdminPostsQuery(undefined, {
     skip: !token,
   });
   const [updateAdminPost] = useUpdateAdminPostMutation();
@@ -57,30 +61,46 @@ const AdminPostsTable = () => {
   const [paginationPageSize, setPaginationPageSize] = useState(10);
   const [paginationPageSizeOptions] = useState([5, 10, 20, 50]);
 
+  const stringCollator = useMemo(
+    () =>
+      new Intl.Collator(undefined, {
+        sensitivity: "base",
+        numeric: true,
+        ignorePunctuation: true,
+      }),
+    []
+  );
+
+  const normalizeForSort = (value) =>
+    (value ?? "").toString().trim().replace(/\s+/g, " ");
+
   const columns = useMemo(
     () => [
       {
         headerName: "Title",
         field: "title",
         flex: 1,
-        filter: 'agTextColumnFilter',
+        filter: "agTextColumnFilter",
+        sortable: false,
       },
       {
         headerName: "Category",
         field: "category",
         flex: 1,
-        filter: 'agSetColumnFilter',
+        filter: "agTextColumnFilter",
+        comparator: (a, b) =>
+          stringCollator.compare(normalizeForSort(a), normalizeForSort(b)),
       },
       {
         headerName: "Publish Date",
         field: "publishDate",
         flex: 1,
-        filter: 'agDateColumnFilter',
+        filter: "agDateColumnFilter",
         cellRenderer: DateCell,
-        sort: 'desc', // Default sort by date descending
+        sort: "desc", // Default sort by date descending
         comparator: (dateA, dateB) => {
           return dateA.getTime() - dateB.getTime();
-        }
+        },
       },
       {
         headerName: "Image",
@@ -140,7 +160,7 @@ const AdminPostsTable = () => {
   const rows = useMemo(
     () =>
       (adminPosts || [])
-        .filter(post => post.status === "active")
+        .filter((post) => post.status === "active")
         .map((post) => ({
           ...post,
           publishDate: post.publishDate ? new Date(post.publishDate) : null,
@@ -154,7 +174,7 @@ const AdminPostsTable = () => {
     if (file) {
       setEditingPost({
         ...editingPost,
-        images: [file] // Store the file object directly
+        images: [file], // Store the file object directly
       });
     }
   };
@@ -165,22 +185,24 @@ const AdminPostsTable = () => {
     setIsSubmitting(true);
     try {
       const formData = new FormData();
-      formData.append('title', editingPost.title);
-      formData.append('content', editingPost.content);
-      formData.append('category', editingPost.category);
-      formData.append('publishDate', new Date().toISOString());
+      formData.append("title", editingPost.title);
+      formData.append("content", editingPost.content);
+      formData.append("category", editingPost.category);
+      formData.append("publishDate", new Date().toISOString());
 
       await updateAdminPost({
         id: editingPost.id || editingPost._id,
-        formData: formData
+        formData: formData,
       }).unwrap();
 
+      await refetch();
       setEditingPost(null);
       editDialogRef.current?.close();
       toastSuccess("Post updated successfully!");
     } catch (error) {
-      console.error('Error updating post:', error);
-      const errorMessage = error.data?.message || error.error || "Failed to update post";
+      console.error("Error updating post:", error);
+      const errorMessage =
+        error.data?.message || error.error || "Failed to update post";
       toastError(errorMessage);
     } finally {
       setIsSubmitting(false);
@@ -192,13 +214,14 @@ const AdminPostsTable = () => {
     setIsSubmitting(true);
     try {
       await deleteAdminPost(deletingPost.id || deletingPost._id).unwrap();
-      setTimeout(() => {
+      setTimeout(async () => {
+        await refetch();
         setDeletingPost(null);
         deleteDialogRef.current?.close();
         toastSuccess("Post deleted successfully!");
       }, 0);
     } catch (error) {
-      console.error('Error deleting post:', error);
+      console.error("Error deleting post:", error);
       toastError("Failed to delete post");
     } finally {
       setIsSubmitting(false);
@@ -209,7 +232,10 @@ const AdminPostsTable = () => {
     <div className="flex flex-col h-[500px]">
       <div className="flex justify-between items-center mb-4">
         <p className="text-2xl font-bold">Recent Admin Posts</p>
-        <Link to="/admin/cea/ap/archives" className="btn btn-outline rounded-full">
+        <Link
+          to="/admin/cea/ap/archives"
+          className="btn btn-outline rounded-full"
+        >
           View Archives
         </Link>
       </div>
@@ -242,7 +268,7 @@ const AdminPostsTable = () => {
               resizable: true,
             }}
             style={{
-              height: '100%',
+              height: "100%",
             }}
           />
         </div>
@@ -284,15 +310,19 @@ const AdminPostsTable = () => {
                 <label className="label text-primary text-lg font-bold mb-1">
                   Category
                 </label>
-                <input
+                <select
                   name="category"
                   value={editingPost.category}
                   onChange={(e) =>
                     setEditingPost({ ...editingPost, category: e.target.value })
                   }
-                  className="input border-0 rounded-lg w-full bg-base-200 text-lg py-2"
+                  className="select border-0 rounded-lg w-full bg-base-200 text-lg py-2"
                   required
-                />
+                >
+                  <option value="news">News</option>
+                  <option value="announcement">Announcement</option>
+                  <option value="tip">Tip</option>
+                </select>
               </div>
 
               <div className="form-control">
@@ -339,10 +369,13 @@ const AdminPostsTable = () => {
       </dialog>
 
       {/* Delete Dialog */}
-      <dialog ref={deleteDialogRef} className="modal">
-        <div className="modal-box bg-white rounded-3xl shadow-3xl w-9/12 max-w-5xl p-12 relative">
+      <dialog
+        ref={deleteDialogRef}
+        className="modal transition-transform duration-300 ease-in-out"
+      >
+        <div className="modal-box border-t-10 border-t-error bg-white rounded-3xl shadow-2xl w-6/12 max-w-4xl p-6 py-14 relative">
           <button
-            className="absolute top-10 right-10 text-2xl font-semibold hover:text-gray-500"
+            className="absolute top-4 right-4 text-2xl font-semibold hover:text-gray-500 transition-colors duration-200 hover:cursor-pointer"
             onClick={() => {
               deleteDialogRef.current?.close();
               setDeletingPost(null);
@@ -351,31 +384,42 @@ const AdminPostsTable = () => {
             ✕
           </button>
 
-          <div className="text-center">
-            <p className="text-3xl font-extrabold mb-4">Delete Admin Post</p>
-            <p className="mb-6">Are you sure you want to delete this post?</p>
-            <div className="flex justify-center gap-4">
-              <button
-                className="btn btn-error"
-                onClick={handleDelete}
-                disabled={isSubmitting}
-              >
-                {isSubmitting ? (
-                  <span className="loading loading-spinner"></span>
-                ) : (
-                  "Delete"
-                )}
-              </button>
-              <button
-                className="btn btn-outline"
-                onClick={() => {
-                  deleteDialogRef.current?.close();
-                  setDeletingPost(null);
-                }}
-                disabled={isSubmitting}
-              >
-                Cancel
-              </button>
+          <div className="space-y-6">
+            <p className="text-center text-3xl font-bold mb-2">
+              <span className="text-error">Confirm Deletion</span>
+            </p>
+            <hr className="border-gray-300" />
+
+            <div className="text-center ">
+              <p className="text-xl mb-8">
+                Are you sure you want to delete this admin post?
+              </p>
+              <div className="flex justify-center gap-6">
+                <button
+                  onClick={handleDelete}
+                  className="bg-error text-white font-semibold px-8 py-3 rounded-xl hover:opacity-80 transition-all duration-200 flex items-center gap-2 hover:cursor-pointer disabled:opacity-50"
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? (
+                    <>
+                      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      Deleting...
+                    </>
+                  ) : (
+                    "Confirm"
+                  )}
+                </button>
+                <button
+                  onClick={() => {
+                    deleteDialogRef.current?.close();
+                    setDeletingPost(null);
+                  }}
+                  className="bg-gray-300 text-gray-700 font-semibold px-8 py-3 rounded-xl hover:opacity-80 transition-all duration-200 hover:cursor-pointer disabled:opacity-50"
+                  disabled={isSubmitting}
+                >
+                  Cancel
+                </button>
+              </div>
             </div>
           </div>
         </div>

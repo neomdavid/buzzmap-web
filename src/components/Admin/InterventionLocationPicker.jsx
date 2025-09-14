@@ -69,10 +69,28 @@ const InterventionLocationPicker = ({
   const [highlightedBarangayName, setHighlightedBarangayName] = useState(
     highlightedBarangay || ""
   );
+  const highlightedBarangayRef = useRef(highlightedBarangay);
+  const errorTimeoutRef = useRef(null);
 
   // Sync highlightedBarangayName with highlightedBarangay prop
   useEffect(() => {
+    console.log(
+      "[DEBUG] InterventionLocationPicker received highlightedBarangay:",
+      highlightedBarangay
+    );
     setHighlightedBarangayName(highlightedBarangay || "");
+    highlightedBarangayRef.current = highlightedBarangay;
+    console.log(
+      "[DEBUG] Set highlightedBarangayName to:",
+      highlightedBarangay || ""
+    );
+
+    // Clear marker when barangay changes
+    if (highlightedBarangay) {
+      console.log("Clearing marker due to barangay change");
+      setCurrentMarker(null);
+      setErrorMessage("");
+    }
   }, [highlightedBarangay]);
 
   // Load barangay boundaries
@@ -80,10 +98,7 @@ const InterventionLocationPicker = ({
     fetch("/quezon_barangays_boundaries.geojson")
       .then((res) => res.json())
       .then((data) => {
-        const filteredFeatures = data.features.filter(
-          (feature) => feature.properties.name !== "Laging Handa"
-        );
-        setQcBoundaryFeatures(filteredFeatures);
+        setQcBoundaryFeatures(data.features);
         setIsBoundaryDataLoaded(true);
       })
       .catch((error) => {
@@ -94,6 +109,10 @@ const InterventionLocationPicker = ({
   // Helper: validate coordinates
   const validateCoordinates = useCallback(
     (latLng) => {
+      console.log(
+        "[DEBUG] validateCoordinates called with highlightedBarangay:",
+        highlightedBarangayRef.current
+      );
       if (!isBoundaryDataLoaded || !qcBoundaryFeatures.length) {
         return {
           barangayName: null,
@@ -107,16 +126,26 @@ const InterventionLocationPicker = ({
       for (const feature of qcBoundaryFeatures) {
         if (feature.geometry) {
           let isInside = false;
-          if (feature.geometry.type === "Polygon") {
-            isInside = turf.booleanPointInPolygon(point, feature);
-          } else if (feature.geometry.type === "MultiPolygon") {
-            for (const polygonCoords of feature.geometry.coordinates) {
-              const polygonFeature = turf.polygon(polygonCoords);
-              if (turf.booleanPointInPolygon(point, polygonFeature)) {
-                isInside = true;
-                break;
+          try {
+            if (feature.geometry.type === "Polygon") {
+              isInside = turf.booleanPointInPolygon(point, feature);
+            } else if (feature.geometry.type === "MultiPolygon") {
+              for (const polygonCoords of feature.geometry.coordinates) {
+                const polygonFeature = turf.polygon(polygonCoords);
+                if (turf.booleanPointInPolygon(point, polygonFeature)) {
+                  isInside = true;
+                  break;
+                }
               }
             }
+          } catch (error) {
+            console.warn(
+              "Error checking point in polygon for feature:",
+              feature.properties.name,
+              error
+            );
+            // Skip this feature if there's an error
+            continue;
           }
           if (isInside) {
             foundBarangayName = feature.properties.name || "Unknown Barangay";
@@ -126,23 +155,67 @@ const InterventionLocationPicker = ({
         }
       }
       if (!isWithinAnyBarangay) {
-        return {
-          barangayName: null,
-          isValid: false,
-          error: "Pinned location is outside Quezon City boundaries.",
+        // Fallback: Check if point is within Quezon City bounding box
+        const qcBounds = {
+          north: 14.8,
+          south: 14.5,
+          east: 121.2,
+          west: 120.9,
         };
+
+        const isWithinQCBounds =
+          latLng.lat >= qcBounds.south &&
+          latLng.lat <= qcBounds.north &&
+          latLng.lng >= qcBounds.west &&
+          latLng.lng <= qcBounds.east;
+
+        if (!isWithinQCBounds) {
+          return {
+            barangayName: null,
+            isValid: false,
+            error: "Pinned location is outside Quezon City boundaries.",
+          };
+        }
+
+        // If within QC bounds but not in any barangay, allow it but show warning
+        console.warn(
+          "Point is within QC bounds but not in any barangay polygon"
+        );
+        foundBarangayName = "Unknown Barangay";
+        isWithinAnyBarangay = true;
       }
-      // Enforce highlightedBarangay only
-      if (highlightedBarangay && foundBarangayName !== highlightedBarangay) {
-        return {
-          barangayName: foundBarangayName,
-          isValid: false,
-          error: `Pin must be within ${highlightedBarangay} only`,
-        };
+      // Enforce highlightedBarangay only - use case-insensitive and trimmed comparison
+      if (highlightedBarangayRef.current && foundBarangayName) {
+        const normalizedFound = foundBarangayName.trim().toLowerCase();
+        const normalizedHighlighted = highlightedBarangayRef.current
+          .trim()
+          .toLowerCase();
+
+        // Debug logging
+        console.log("Barangay name comparison:", {
+          foundBarangayName,
+          highlightedBarangay: highlightedBarangayRef.current,
+          normalizedFound,
+          normalizedHighlighted,
+          match: normalizedFound === normalizedHighlighted,
+        });
+
+        if (normalizedFound !== normalizedHighlighted) {
+          return {
+            barangayName: foundBarangayName,
+            isValid: false,
+            error: `Pin must be within ${highlightedBarangayRef.current} only`,
+          };
+        }
+      }
+
+      // If no highlighted barangay is set, allow pinning anywhere within QC
+      if (!highlightedBarangayRef.current && foundBarangayName) {
+        console.log("No highlighted barangay set, allowing pin anywhere in QC");
       }
       return { barangayName: foundBarangayName, isValid: true, error: "" };
     },
-    [qcBoundaryFeatures, isBoundaryDataLoaded, highlightedBarangay]
+    [qcBoundaryFeatures, isBoundaryDataLoaded]
   );
 
   // Effect: handle initialPin
@@ -299,16 +372,51 @@ const InterventionLocationPicker = ({
       // Click handler with barangay enforcement
       mapInstance.current.addListener("click", (e) => {
         const coords = { lat: e.latLng.lat(), lng: e.latLng.lng() };
+        console.log("Map clicked at:", coords);
+        console.log(
+          "Current highlightedBarangayName:",
+          highlightedBarangayName
+        );
+        console.log("Current highlightedBarangay prop:", highlightedBarangay);
+        console.log(
+          "Current highlightedBarangayRef:",
+          highlightedBarangayRef.current
+        );
+
         const validation = validateCoordinates(coords);
+        console.log("Validation result:", validation);
+
         if (!validation.isValid) {
           // Show inline message and do not place marker
+          console.log("Validation failed, showing error:", validation.error);
           setErrorMessage(validation.error || "Invalid location");
+
+          // Clear any existing timeout
+          if (errorTimeoutRef.current) {
+            clearTimeout(errorTimeoutRef.current);
+          }
+
+          // Clear error message after 5 seconds
+          errorTimeoutRef.current = setTimeout(() => {
+            setErrorMessage("");
+            errorTimeoutRef.current = null;
+          }, 5000);
           return;
         }
         // Place marker only when valid and within highlighted barangay (if provided)
+        console.log("Setting current marker to:", coords);
         setCurrentMarker(coords);
+
+        // Clear any existing error timeout and error message
+        if (errorTimeoutRef.current) {
+          clearTimeout(errorTimeoutRef.current);
+          errorTimeoutRef.current = null;
+        }
+        setErrorMessage(""); // Clear any error message
+
         mapInstance.current.panTo(coords);
         mapInstance.current.setZoom(18);
+        console.log("Calling drawMapFeatures with coords:", coords);
         drawMapFeatures(
           mapInstance.current,
           qcBoundaryFeatures,
@@ -322,6 +430,10 @@ const InterventionLocationPicker = ({
   // Redraw polygons/marker when highlight or marker changes
   useEffect(() => {
     if (!isBoundaryDataLoaded || !mapInstance.current) return;
+    console.log(
+      "useEffect redraw triggered with currentMarker:",
+      currentMarker
+    );
     drawMapFeatures(
       mapInstance.current,
       qcBoundaryFeatures,
@@ -337,6 +449,7 @@ const InterventionLocationPicker = ({
 
   // Draw polygons and marker
   function drawMapFeatures(map, features, highlightedBarangayName, markerPos) {
+    console.log("drawMapFeatures called with markerPos:", markerPos);
     overlaysRef.current.forEach((o) => o.setMap(null));
     overlaysRef.current = [];
     // Pattern color map - use centralized configuration
@@ -378,13 +491,16 @@ const InterventionLocationPicker = ({
     });
     // Draw marker
     if (markerPos) {
+      console.log("Creating marker at position:", markerPos);
       if (markerRef.current) markerRef.current.setMap(null);
       markerRef.current = new window.google.maps.Marker({
         position: markerPos,
         map,
         title: "Pinned Location",
       });
+      console.log("Marker created:", markerRef.current);
     } else {
+      console.log("No marker position provided, removing existing marker");
       if (markerRef.current) markerRef.current.setMap(null);
     }
   }

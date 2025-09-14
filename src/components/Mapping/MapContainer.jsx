@@ -26,8 +26,7 @@ const MapContainer = ({
   setShowControlPanel,
 }) => {
   // Debug: Log the color map to verify it's loaded correctly
-  console.log("USER_PATTERN_COLORS_MAP loaded:", USER_PATTERN_COLORS_MAP);
-  console.log("no_change color value:", USER_PATTERN_COLORS_MAP.no_change);
+
   const mapRef = useRef(null);
   const overlaysRef = useRef([]);
   const infoWindowRef = useRef(null);
@@ -236,6 +235,23 @@ const MapContainer = ({
                   </p>
                 </div>
               </div>
+              <div class="mt-2 p-2 bg-gray-50 rounded text-xs">
+                <p class="text-gray-600 mb-1">Color Legend:</p>
+                <div class="flex justify-center gap-4 text-xs">
+                  <div class="flex items-center gap-1">
+                    <div class="w-3 h-3 rounded" style="background-color: #e53e3e;"></div>
+                    <span>Increasing</span>
+                  </div>
+                  <div class="flex items-center gap-1">
+                    <div class="w-3 h-3 rounded" style="background-color: #38a169;"></div>
+                    <span>Decreasing</span>
+                  </div>
+                  <div class="flex items-center gap-1">
+                    <div class="w-3 h-3 rounded" style="background-color: #718096;"></div>
+                    <span>Stable</span>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         `;
@@ -253,6 +269,11 @@ const MapContainer = ({
         // Remove highlight and InfoWindow when closed
         infoWindow.addListener("closeclick", () => {
           setSelectedBarangayFeature(null);
+          // Pan out to show full view
+          if (mapInstance) {
+            mapInstance.panTo({ lat: 14.676, lng: 121.0437 });
+            mapInstance.setZoom(13);
+          }
         });
       } catch (error) {
         console.error("Error calculating barangay center:", error);
@@ -319,26 +340,8 @@ const MapContainer = ({
         "none"
       ).toLowerCase();
 
-      // Debug logging for initial polygon pattern type
-      console.log("Initial polygon pattern debug:", {
-        barangayName: feature.properties.name,
-        patternType: patternType,
-        originalStatus:
-          barangayObj?.status_and_recommendation?.pattern_based?.status,
-        fallbackPatternType:
-          feature.properties.patternType || feature.properties.pattern_type,
-      });
-
       if (!patternType || patternType === "" || patternType === "none")
         patternType = "no_change";
-
-      // Debug logging for color selection
-      console.log("Initial polygon color debug:", {
-        patternType: patternType,
-        availableColors: Object.keys(USER_PATTERN_COLORS_MAP),
-        selectedColor: USER_PATTERN_COLORS_MAP[patternType],
-        fallbackColor: USER_PATTERN_COLORS_MAP.default,
-      });
 
       // Ensure no_change, empty status, and none status get the same blue color
       let patternColor;
@@ -349,15 +352,10 @@ const MapContainer = ({
         patternType === "none"
       ) {
         patternColor = USER_PATTERN_COLORS_MAP.no_change;
-        console.log("Initial polygon using no_change color:", patternColor);
       } else {
         patternColor =
           USER_PATTERN_COLORS_MAP[patternType] ||
           USER_PATTERN_COLORS_MAP.default;
-        console.log(
-          "Initial polygon using pattern-specific color:",
-          patternColor
-        );
       }
 
       coordsArray.forEach((polygonCoords) => {
@@ -512,6 +510,23 @@ const MapContainer = ({
                       </p>
                     </div>
                   </div>
+                  <div class="mt-2 p-2 bg-gray-50 rounded text-xs">
+                    <p class="text-gray-600 mb-1">Color Legend:</p>
+                    <div class="flex justify-center gap-4 text-xs">
+                      <div class="flex items-center gap-1">
+                        <div class="w-3 h-3 rounded" style="background-color: #e53e3e;"></div>
+                        <span>Increasing</span>
+                      </div>
+                      <div class="flex items-center gap-1">
+                        <div class="w-3 h-3 rounded" style="background-color: #38a169;"></div>
+                        <span>Decreasing</span>
+                      </div>
+                      <div class="flex items-center gap-1">
+                        <div class="w-3 h-3 rounded" style="background-color: #718096;"></div>
+                        <span>Stable</span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
         `;
@@ -522,6 +537,11 @@ const MapContainer = ({
           // Remove highlight and InfoWindow when closed
           infoWindow.addListener("closeclick", () => {
             setSelectedBarangayFeature(null);
+            // Pan out to show full view
+            if (mapInstance) {
+              mapInstance.panTo({ lat: 14.676, lng: 121.0437 });
+              mapInstance.setZoom(13);
+            }
           });
         });
 
@@ -573,6 +593,11 @@ const MapContainer = ({
           if (infoWindowRef.current) {
             infoWindowRef.current.close();
             setSelectedBarangayFeature(null);
+            // Pan out to show full view
+            if (mapInstance) {
+              mapInstance.panTo({ lat: 14.676, lng: 121.0437 });
+              mapInstance.setZoom(13);
+            }
           }
 
           // Pan to marker position and zoom in
@@ -638,6 +663,15 @@ const MapContainer = ({
         `;
           infoWindow.setContent(content);
           infoWindow.open(map, marker);
+
+          // Add close event handler to pan out when info window is closed
+          infoWindow.addListener("closeclick", () => {
+            // Pan out to show full view
+            if (mapInstance) {
+              mapInstance.panTo({ lat: 14.676, lng: 121.0437 });
+              mapInstance.setZoom(13);
+            }
+          });
         });
 
         return marker;
@@ -707,6 +741,11 @@ const MapContainer = ({
             if (infoWindowRef.current) {
               infoWindowRef.current.close();
               setSelectedBarangayFeature(null);
+              // Pan out to show full view
+              if (mapInstance) {
+                mapInstance.panTo({ lat: 14.676, lng: 121.0437 });
+                mapInstance.setZoom(13);
+              }
             }
 
             // Pan to marker position and zoom in
@@ -764,6 +803,15 @@ const MapContainer = ({
               lng: intervention.specific_location.coordinates[0],
             });
             infoWindow.open(map, marker);
+
+            // Add close event handler to pan out when info window is closed
+            infoWindow.addListener("closeclick", () => {
+              // Pan out to show full view
+              if (mapInstance) {
+                mapInstance.panTo({ lat: 14.676, lng: 121.0437 });
+                mapInstance.setZoom(13);
+              }
+            });
           });
 
           overlaysRef.current.push(marker);

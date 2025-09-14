@@ -12,8 +12,8 @@ createRoot(document.getElementById("root")).render(
       position="top-center"
       newestOnTop
       toastClassName="text-sm"
-      className="z-[999999]"
-      style={{ zIndex: 999999 }}
+      className="z-[99999999999]"
+      style={{ zIndex: 9999999999 }}
     />
     <App />
   </Provider>

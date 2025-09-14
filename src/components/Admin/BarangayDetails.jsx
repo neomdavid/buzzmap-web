@@ -304,21 +304,9 @@ const BarangayDetails = ({
                                   day: "numeric",
                                 }
                               )}
-                              : <span className="font-bold">Status:</span>{" "}
-                              <span
-                                className={`inline-block px-3 py-1 rounded-full text-white text-md font-bold capitalize ${(() => {
-                                  const status =
-                                    selectedBarangay.status_and_recommendation.report_based.status.toLowerCase();
-                                  if (status === "low") return "bg-success";
-                                  if (status === "medium") return "bg-warning";
-                                  if (status === "high") return "bg-error";
-                                  return "bg-gray-400";
-                                })()}`}
-                              >
-                                {
-                                  selectedBarangay.status_and_recommendation
-                                    .report_based.status
-                                }
+                              :{" "}
+                              <span className="font-normal">
+                                {intervention.interventionType}
                               </span>
                             </p>
                           </div>
