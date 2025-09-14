@@ -1,5 +1,6 @@
 export { default as Navbar } from "./Navbar.jsx";
 export { default as LogoNamed } from "./LogoNamed.jsx";
+export { default as InstallAppModal } from "./InstallAppModal.jsx";
 export { default as SecondaryButton } from "./SecondaryButton.jsx";
 export { default as Heading } from "./Heading.jsx";
 export { default as CustomSearchBar } from "./CustomSearchBar.jsx";

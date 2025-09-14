@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { NavLink, useLocation, useNavigate, matchPath } from "react-router-dom";
 import { navLinks } from "../utils";
-import { LogoNamed } from "./";
-import { Menu, X } from "lucide-react";
+import { LogoNamed, InstallAppModal } from "./";
+import { Menu, X, Smartphone } from "lucide-react";
 import { useSelector, useDispatch } from "react-redux";
 import { logout } from "../features/authSlice.js";
 import { toastSuccess } from "../utils.jsx";
@@ -10,6 +10,7 @@ import { IconCaretDownFilled, IconUserCircle } from "@tabler/icons-react";
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
+  const [showInstallModal, setShowInstallModal] = useState(false);
   const currentRoute = useLocation().pathname;
   const dispatch = useDispatch();
   const navigate = useNavigate();
@@ -43,7 +44,8 @@ const Navbar = () => {
                   ? "text-secondary"
                   : "text-accent"
                 : currentRoute.startsWith("/mapping") ||
-                  /^\/buzzline\/\w+/.test(currentRoute) || currentRoute === "/profile"
+                  /^\/buzzline\/\w+/.test(currentRoute) ||
+                  currentRoute === "/profile"
                 ? "text-white"
                 : "text-primary"
             } font-semibold text-lg`
@@ -61,11 +63,13 @@ const Navbar = () => {
         tabIndex="0"
         role="button"
         className="flex items-center gap-2 hover:cursor-pointer"
-        onClick={() => navigate('/profile')}
+        onClick={() => navigate("/profile")}
       >
-        <img 
-          src={user.profilePhotoUrl || 'https://i.ibb.co/0VvffYVH/a1c820a6453b.png'} 
-          alt="profile" 
+        <img
+          src={
+            user.profilePhotoUrl || "https://i.ibb.co/0VvffYVH/a1c820a6453b.png"
+          }
+          alt="profile"
           className="w-10 h-10 rounded-full object-cover border-2 border-white"
         />
         <span
@@ -83,12 +87,15 @@ const Navbar = () => {
       >
         <div className="p-6 flex flex-col gap-1">
           <div className="w-full flex justify-center mb-3">
-            <img 
-              src={user.profilePhotoUrl || 'https://i.ibb.co/0VvffYVH/a1c820a6453b.png'} 
-              alt="profile" 
+            <img
+              src={
+                user.profilePhotoUrl ||
+                "https://i.ibb.co/0VvffYVH/a1c820a6453b.png"
+              }
+              alt="profile"
               className="w-16 h-16 rounded-full object-cover border-2 border-white hover:cursor-pointer hover:opacity-80 transition-all duration-300"
               onClick={() => {
-                navigate('/profile');
+                navigate("/profile");
                 setIsOpen(false);
               }}
             />
@@ -126,59 +133,95 @@ const Navbar = () => {
     </button>
   );
 
+  const renderInstallAppButton = (darkMode = false) => (
+    <button
+      onClick={() => setShowInstallModal(true)}
+      className={`font-semibold py-2 px-4 rounded-lg border transition-all duration-300 text-lg hover:cursor-pointer flex items-center gap-2 ${
+        darkMode
+          ? "text-white border-white hover:bg-white hover:text-primary"
+          : "text-primary border-primary hover:bg-primary hover:text-white"
+      }`}
+    >
+      <Smartphone size={20} />
+      Install App
+    </button>
+  );
+
   const baseClass =
     "z-50 fixed top-0 left-0 right-0 flex justify-between items-center px-6 py-4 lg:px-10";
 
-  if (currentRoute === "/mapping" || /^\/buzzline\/\w+/.test(currentRoute) || currentRoute === "/profile") {
-    return (
-      <nav className={`${baseClass} bg-primary text-white`}>
-        <LogoNamed theme="dark" />
-        <div className="hidden md:flex items-center gap-x-6">
-          {renderLinks()}
-          {user.name !== "Guest"
-            ? renderProfile(true)
-            : renderLoginButton(true)}
-        </div>
-        <button className="md:hidden text-white" onClick={toggleDrawer}>
-          {isOpen ? <X size={28}  className="hover:cursor-pointer"/> : <Menu size={28} className="hover:cursor-pointer"/>}
-        </button>
-        {isOpen && (
-          <div className="absolute top-full left-0 w-full bg-primary px-6 py-4 flex flex-col gap-y-4 md:hidden">
-            {renderLinks(true)}
+  return (
+    <>
+      {/* Render the appropriate navbar based on route */}
+      {currentRoute === "/mapping" ||
+      /^\/buzzline\/\w+/.test(currentRoute) ||
+      currentRoute === "/profile" ? (
+        <nav className={`${baseClass} bg-primary text-white`}>
+          <LogoNamed theme="dark" />
+          <div className="hidden md:flex items-center gap-x-6">
+            {renderLinks()}
+            {renderInstallAppButton(true)}
             {user.name !== "Guest"
               ? renderProfile(true)
               : renderLoginButton(true)}
           </div>
-        )}
-      </nav>
-    );
-  } else if (/^\/mapping\/.+$/.test(currentRoute)) {
-    return (
-      <nav className="z-50 fixed right-6 top-6 text-white text-md bg-primary py-3.5 px-6 rounded-2xl shadow-md flex items-center gap-x-6">
-        {renderLinks()}
-        {user.name !== "Guest" ? renderProfile(true) : renderLoginButton(true)}
-      </nav>
-    );
-  } else {
-    return (
-      <nav className={`${baseClass} bg-white shadow-sm`}>
-        <LogoNamed />
-        <div className="hidden md:flex items-center gap-x-6">
+          <button className="md:hidden text-white" onClick={toggleDrawer}>
+            {isOpen ? (
+              <X size={28} className="hover:cursor-pointer" />
+            ) : (
+              <Menu size={28} className="hover:cursor-pointer" />
+            )}
+          </button>
+          {isOpen && (
+            <div className="absolute top-full left-0 w-full bg-primary px-6 py-4 flex flex-col gap-y-4 md:hidden">
+              {renderLinks(true)}
+              {renderInstallAppButton(true)}
+              {user.name !== "Guest"
+                ? renderProfile(true)
+                : renderLoginButton(true)}
+            </div>
+          )}
+        </nav>
+      ) : /^\/mapping\/.+$/.test(currentRoute) ? (
+        <nav className="z-50 fixed right-6 top-6 text-white text-md bg-primary py-3.5 px-6 rounded-2xl shadow-md flex items-center gap-x-6">
           {renderLinks()}
-          {user.name !== "Guest" ? renderProfile() : renderLoginButton()}
-        </div>
-        <button className="md:hidden text-primary" onClick={toggleDrawer}>
-          {isOpen ? <X size={28}  className="hover:cursor-pointer"/> : <Menu size={28} className="hover:cursor-pointer"/>}
-        </button>
-        {isOpen && (
-          <div className="absolute top-full left-0 w-full bg-white px-6 py-4 flex flex-col gap-y-4 md:hidden shadow-md">
-            {renderLinks(true)}
+          {renderInstallAppButton(true)}
+          {user.name !== "Guest"
+            ? renderProfile(true)
+            : renderLoginButton(true)}
+        </nav>
+      ) : (
+        <nav className={`${baseClass} bg-white shadow-sm`}>
+          <LogoNamed />
+          <div className="hidden md:flex items-center gap-x-6">
+            {renderLinks()}
+            {renderInstallAppButton()}
             {user.name !== "Guest" ? renderProfile() : renderLoginButton()}
           </div>
-        )}
-      </nav>
-    );
-  }
+          <button className="md:hidden text-primary" onClick={toggleDrawer}>
+            {isOpen ? (
+              <X size={28} className="hover:cursor-pointer" />
+            ) : (
+              <Menu size={28} className="hover:cursor-pointer" />
+            )}
+          </button>
+          {isOpen && (
+            <div className="absolute top-full left-0 w-full bg-white px-6 py-4 flex flex-col gap-y-4 md:hidden shadow-md">
+              {renderLinks(true)}
+              {renderInstallAppButton()}
+              {user.name !== "Guest" ? renderProfile() : renderLoginButton()}
+            </div>
+          )}
+        </nav>
+      )}
+
+      {/* Install App Modal */}
+      <InstallAppModal
+        isOpen={showInstallModal}
+        onClose={() => setShowInstallModal(false)}
+      />
+    </>
+  );
 };
 
 export default Navbar;
