@@ -330,7 +330,19 @@ const AddInterventionModal = ({
 
     // If barangay is changed, update the highlighted barangay, pattern data, and pan map
     if (name === "barangay") {
+      console.log("[DEBUG] Setting highlightedBarangay to:", value);
       setHighlightedBarangay(value);
+
+      // Clear previous pin data when barangay changes
+      setFormData((prev) => ({
+        ...prev,
+        location: null,
+        specific_location: null,
+        address: "",
+      }));
+      setIsLocationValid(false);
+      setSubmissionError("");
+
       const patternData = getBarangayPatternData(value);
       // Always update the pattern data, even if it's null/empty
       setCurrentBarangayPattern(patternData);
@@ -890,6 +902,10 @@ const AddInterventionModal = ({
                         preselectedBarangay={preselectedBarangay}
                         highlightedBarangay={highlightedBarangay}
                       />
+                      {/* Debug info */}
+                      <div className="text-xs text-gray-500 mt-2">
+                        Debug: highlightedBarangay = "{highlightedBarangay}"
+                      </div>
                     </div>
                   </div>
 

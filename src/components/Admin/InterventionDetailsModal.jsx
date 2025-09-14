@@ -32,6 +32,7 @@ const InterventionDetailsModal = ({
   onClose,
   onSave,
   onDelete,
+  onRefetch,
 }) => {
   const modalRef = useRef(null);
   const [barangayData, setBarangayData] = useState(null);
@@ -294,17 +295,26 @@ const InterventionDetailsModal = ({
   // Handle delete confirmation
   const handleConfirmDelete = async () => {
     console.log("Start delete action...");
-    setIsLoading(true); // Hide loading indicator after the request completes
+    setIsLoading(true);
     try {
       const response = await deleteIntervention(intervention._id);
-      setIsLoading(false); // Hide loading indicator after the request completes
-    } catch (err) {
-      console.error("Error during delete:", err); // Log error in detail
-      toastError(err.message);
-    } finally {
-      toastError("Intervention Deleted");
-      console.log("Finally block reached...");
+      console.log("Delete successful:", response);
+
+      // Show success toast
+      toastSuccess("Intervention deleted successfully");
+
+      // Refetch the interventions data
+      if (onRefetch) {
+        await onRefetch();
+      }
+
+      // Close the modal
       onClose();
+    } catch (err) {
+      console.error("Error during delete:", err);
+      toastError("Failed to delete intervention. Please try again.");
+    } finally {
+      setIsLoading(false);
     }
   };
 
