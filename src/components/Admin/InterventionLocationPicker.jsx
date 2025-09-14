@@ -84,6 +84,10 @@ const InterventionLocationPicker = ({
       "[DEBUG] Set highlightedBarangayName to:",
       highlightedBarangay || ""
     );
+    console.log(
+      "[DEBUG] highlightedBarangayRef.current is now:",
+      highlightedBarangayRef.current
+    );
 
     // Clear marker when barangay changes
     if (highlightedBarangay) {
@@ -128,15 +132,123 @@ const InterventionLocationPicker = ({
           let isInside = false;
           try {
             if (feature.geometry.type === "Polygon") {
-              isInside = turf.booleanPointInPolygon(point, feature);
-            } else if (feature.geometry.type === "MultiPolygon") {
-              for (const polygonCoords of feature.geometry.coordinates) {
-                const polygonFeature = turf.polygon(polygonCoords);
-                if (turf.booleanPointInPolygon(point, polygonFeature)) {
-                  isInside = true;
-                  break;
+              // First, try to fix the polygon if it has common issues
+              let validFeature = feature;
+              const coords = feature.geometry.coordinates[0];
+
+              if (coords && coords.length > 0) {
+                const firstCoord = coords[0];
+                const lastCoord = coords[coords.length - 1];
+
+                // Check if the ring is not closed and fix it
+                if (
+                  firstCoord[0] !== lastCoord[0] ||
+                  firstCoord[1] !== lastCoord[1]
+                ) {
+                  console.log(
+                    "Fixing unclosed polygon ring for",
+                    feature.properties.name
+                  );
+                  // Close the ring by adding the first coordinate at the end
+                  const fixedCoords = [...coords, firstCoord];
+                  validFeature = {
+                    ...feature,
+                    geometry: {
+                      ...feature.geometry,
+                      coordinates: [fixedCoords],
+                    },
+                  };
                 }
               }
+
+              // Now try to validate the (possibly fixed) polygon
+              try {
+                isInside = turf.booleanPointInPolygon(point, validFeature);
+                if (validFeature !== feature) {
+                  console.log(
+                    "Successfully used fixed polygon for",
+                    feature.properties.name
+                  );
+                }
+              } catch (validationError) {
+                console.warn(
+                  "Polygon validation failed for",
+                  feature.properties.name,
+                  "even after fixing:",
+                  validationError.message
+                );
+                continue;
+              }
+            } else if (feature.geometry.type === "MultiPolygon") {
+              // First, try to fix each polygon in the MultiPolygon
+              const fixedPolygonCoords = feature.geometry.coordinates.map(
+                (ring) => {
+                  if (ring.length > 0) {
+                    const firstCoord = ring[0];
+                    const lastCoord = ring[ring.length - 1];
+                    if (
+                      firstCoord[0] !== lastCoord[0] ||
+                      firstCoord[1] !== lastCoord[1]
+                    ) {
+                      console.log(
+                        "Fixing unclosed ring in MultiPolygon for",
+                        feature.properties.name
+                      );
+                      return [...ring, firstCoord];
+                    }
+                  }
+                  return ring;
+                }
+              );
+
+              // Try to create a valid MultiPolygon feature
+              let validMultiPolygonFeature = feature;
+              if (
+                JSON.stringify(fixedPolygonCoords) !==
+                JSON.stringify(feature.geometry.coordinates)
+              ) {
+                validMultiPolygonFeature = {
+                  ...feature,
+                  geometry: {
+                    ...feature.geometry,
+                    coordinates: fixedPolygonCoords,
+                  },
+                };
+                console.log(
+                  "Using fixed MultiPolygon for",
+                  feature.properties.name
+                );
+              }
+
+              // Now try to validate each polygon in the MultiPolygon
+              for (const polygonCoords of validMultiPolygonFeature.geometry
+                .coordinates) {
+                try {
+                  const polygonFeature = turf.polygon(polygonCoords);
+                  if (turf.booleanPointInPolygon(point, polygonFeature)) {
+                    isInside = true;
+                    break;
+                  }
+                } catch (multiPolygonError) {
+                  console.warn(
+                    "Error in MultiPolygon ring for",
+                    feature.properties.name,
+                    multiPolygonError
+                  );
+                  continue;
+                }
+              }
+            }
+
+            // Debug logging for Laging Handa specifically
+            if (feature.properties.name === "Laging Handa") {
+              console.log("Checking Laging Handa polygon:", {
+                featureName: feature.properties.name,
+                geometryType: feature.geometry.type,
+                isInside,
+                coordinates: latLng,
+                point: point,
+              });
             }
           } catch (error) {
             console.warn(
@@ -150,6 +262,11 @@ const InterventionLocationPicker = ({
           if (isInside) {
             foundBarangayName = feature.properties.name || "Unknown Barangay";
             isWithinAnyBarangay = true;
+            console.log("Point is inside barangay:", {
+              barangayName: foundBarangayName,
+              coordinates: latLng,
+              featureName: feature.properties.name,
+            });
             break;
           }
         }
@@ -186,26 +303,67 @@ const InterventionLocationPicker = ({
       }
       // Enforce highlightedBarangay only - use case-insensitive and trimmed comparison
       if (highlightedBarangayRef.current && foundBarangayName) {
-        const normalizedFound = foundBarangayName.trim().toLowerCase();
+        // More robust normalization - remove extra spaces, normalize unicode, and handle special characters
+        const normalizedFound = foundBarangayName
+          .trim()
+          .toLowerCase()
+          .replace(/\s+/g, " ") // Replace multiple spaces with single space
+          .normalize("NFD") // Normalize unicode
+          .replace(/[\u0300-\u036f]/g, ""); // Remove diacritics
+
         const normalizedHighlighted = highlightedBarangayRef.current
           .trim()
-          .toLowerCase();
+          .toLowerCase()
+          .replace(/\s+/g, " ") // Replace multiple spaces with single space
+          .normalize("NFD") // Normalize unicode
+          .replace(/[\u0300-\u036f]/g, ""); // Remove diacritics
 
-        // Debug logging
+        // Debug logging with more details
         console.log("Barangay name comparison:", {
           foundBarangayName,
           highlightedBarangay: highlightedBarangayRef.current,
           normalizedFound,
           normalizedHighlighted,
           match: normalizedFound === normalizedHighlighted,
+          foundLength: foundBarangayName.length,
+          highlightedLength: highlightedBarangayRef.current.length,
+          foundCharCodes: foundBarangayName
+            .split("")
+            .map((c) => c.charCodeAt(0)),
+          highlightedCharCodes: highlightedBarangayRef.current
+            .split("")
+            .map((c) => c.charCodeAt(0)),
         });
 
+        // Try exact match first
         if (normalizedFound !== normalizedHighlighted) {
-          return {
-            barangayName: foundBarangayName,
-            isValid: false,
-            error: `Pin must be within ${highlightedBarangayRef.current} only`,
-          };
+          // Try a more flexible comparison - check if one contains the other
+          const foundWords = normalizedFound.split(" ");
+          const highlightedWords = normalizedHighlighted.split(" ");
+
+          // Check if all words in highlighted are found in the found name
+          const isFlexibleMatch = highlightedWords.every((word) =>
+            foundWords.some(
+              (foundWord) =>
+                foundWord.includes(word) || word.includes(foundWord)
+            )
+          );
+
+          console.log("Flexible match check:", {
+            foundWords,
+            highlightedWords,
+            isFlexibleMatch,
+          });
+
+          if (!isFlexibleMatch) {
+            return {
+              barangayName: foundBarangayName,
+              isValid: false,
+              error: `Pin must be within ${highlightedBarangayRef.current} only`,
+            };
+          } else {
+            console.log("Using flexible match for barangay validation");
+          }
         }
       }
 
@@ -381,6 +539,12 @@ const InterventionLocationPicker = ({
         console.log(
           "Current highlightedBarangayRef:",
           highlightedBarangayRef.current
+        );
+        console.log(
+          "Boundary data loaded:",
+          isBoundaryDataLoaded,
+          "Features count:",
+          qcBoundaryFeatures.length
         );
 
         const validation = validateCoordinates(coords);
