@@ -3,7 +3,7 @@ import { DescriptionWithImages, SecondaryButton } from "../";
 // import profile1 from "../../assets/profile1.png";
 import defaultProfile from "../../assets/default_profile.png";
 import { MapPicker } from "../";
-import { showCustomToast, toastError } from "../../utils.jsx";
+import { showCustomToast, toastError, toastSuccess } from "../../utils.jsx";
 import {
   useCreatePostMutation,
   useCreatePostWithImageMutation,
@@ -180,7 +180,7 @@ const NewPostModal = forwardRef(
         const response = await createPostWithImage(formData).unwrap();
 
         console.log("✅ Post uploaded successfully", response);
-        showCustomToast("Post reported to surveillance", "success");
+        toastSuccess("Post reported to surveillance");
 
         // Reset form
         setBarangay("");
@@ -202,7 +202,10 @@ const NewPostModal = forwardRef(
         // If backend error occurs, display the custom toast with error message
         console.error("❌ Failed to create post:", error);
         console.error("Error details:", error.data || error.message);
-        toastError(error.data?.message || "Failed to create post");
+        showCustomToast(
+          error.data?.message || "Failed to create post",
+          "error"
+        );
       }
     };
 
@@ -466,7 +469,7 @@ const NewPostModal = forwardRef(
                           onChange={(e) => {
                             const selected = e.target.value;
                             setDate(selected);
-                            // If selecting today and current time is in the future relative to now, show toast
+                            // If selecting today and the existing time is in the future, clamp to now and toast
                             if (
                               selected === getTodayString() &&
                               time &&
@@ -476,6 +479,7 @@ const NewPostModal = forwardRef(
                                 "Time cannot be in the future.",
                                 "error"
                               );
+                              setTime(getCurrentHHMM());
                             }
                           }}
                           max={new Date().toISOString().split("T")[0]}
@@ -503,12 +507,12 @@ const NewPostModal = forwardRef(
                               date === getTodayString() &&
                               val > getCurrentHHMM()
                             ) {
-                              // Keep user's value, but show custom toast instead of inline error
-                              setTime(val);
+                              // Reject future time: clamp back to current time and toast
                               showCustomToast(
                                 "Time cannot be in the future.",
                                 "error"
                               );
+                              setTime(getCurrentHHMM());
                             } else {
                               setTime(val);
                             }
