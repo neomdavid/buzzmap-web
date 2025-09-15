@@ -23,7 +23,7 @@ const ImageGrid = ({ images = [], sourceType = "server", onImageClick }) => {
               src={img} // Use the correct image path
               className="w-full aspect-[4/3] object-cover rounded-md cursor-pointer hover:opacity-90 transition-opacity"
               alt={`Image ${index + 1}`}
-              onClick={() => onImageClick?.(img)}
+              onClick={(e) => onImageClick?.(img, e)}
             />
             {index === 3 && images.length > 4 && (
               <div className="absolute inset-0 bg-gray-900/50 bg-opacity-20 flex items-center justify-center rounded-md">

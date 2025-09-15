@@ -237,7 +237,7 @@ const CommentModal = forwardRef(
         ref={ref}
         className="modal text-xl text-primary"
       >
-        <div className="modal-box w-11/12 max-w-4xl max-h-[90vh] flex flex-col p-0">
+        <div className="modal-box w-11/12 max-w-4xl max-h-[90vh] flex flex-col p-0 cursor-default">
           {toast && (
             <div
               className={`fixed top-[10%] left-1/2 -translate-x-1/2 px-5 py-2.5 rounded-lg text-white text-[13px] shadow-lg z-[999999] transition-all duration-300 ${
@@ -258,7 +258,7 @@ const CommentModal = forwardRef(
               </button>
             </form>
           </div>
-          <div className="flex-1 overflow-y-auto py-5 pb-16">
+          <div className="flex-1 overflow-y-auto py-5 pb-16 cursor-default">
             <div className="">
               <div className="flex flex-col">
                 <div className="flex flex-col gap-4 px-6 mb-5">
