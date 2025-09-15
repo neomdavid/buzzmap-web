@@ -36,6 +36,15 @@ const MapContainer = ({
   const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
   const mapId = import.meta.env.VITE_GOOGLE_MAPS_MAP_ID;
 
+  // Treat certain common variants as equivalent (e.g., with/without 'Sr')
+  const namesAreEquivalent = (nameA, nameB) => {
+    const a = normalizeBarangayName(nameA || "");
+    const b = normalizeBarangayName(nameB || "");
+    if (a === b) return true;
+    const stripSr = (s) => s.replace(/sr$/i, "");
+    return stripSr(a) === stripSr(b);
+  };
+
   // Process breeding sites from posts data
   const breedingSites = React.useMemo(() => {
     if (!posts) return [];
@@ -86,21 +95,28 @@ const MapContainer = ({
 
   // Show info window when barangay is selected from dropdown
   useEffect(() => {
-    console.log("Dropdown selection effect triggered:", {
-      mapInstance: !!mapInstance,
+    console.log("[MapContainer] Dropdown selection effect triggered:", {
+      hasMapInstance: !!mapInstance,
       isValidMap: isValidMap(),
-      selectedBarangayFeature: !!selectedBarangayFeature,
-      infoWindowRef: !!infoWindowRef.current,
+      hasSelectedBarangayFeature: !!selectedBarangayFeature,
+      hasInfoWindow: !!infoWindowRef.current,
+      selectedBarangayName: selectedBarangayFeature?.properties?.name,
     });
 
-    if (
-      !mapInstance ||
-      !isValidMap() ||
-      !selectedBarangayFeature ||
-      !infoWindowRef.current
-    ) {
-      console.log("Early return from dropdown effect");
+    if (!mapInstance || !isValidMap() || !selectedBarangayFeature) {
+      console.log(
+        "[MapContainer] Early return from dropdown effect (missing deps)"
+      );
       return;
+    }
+
+    if (!infoWindowRef.current) {
+      console.log(
+        "[MapContainer] Creating InfoWindow instance (dropdown effect)"
+      );
+      infoWindowRef.current = new window.google.maps.InfoWindow({
+        maxWidth: 500,
+      });
     }
 
     const infoWindow = infoWindowRef.current;
@@ -111,26 +127,30 @@ const MapContainer = ({
     // Find the center of the selected barangay
     if (selectedBarangayFeature.geometry) {
       try {
-        // Use turf.js to calculate the center properly
         const center = turf.center(selectedBarangayFeature.geometry);
         const [lng, lat] = center.geometry.coordinates;
+        console.log("[MapContainer] Dropdown center computed:", { lat, lng });
 
-        // Validate coordinates before using them
         if (isNaN(lat) || isNaN(lng) || !isFinite(lat) || !isFinite(lng)) {
-          console.error("Invalid coordinates calculated:", { lat, lng });
+          console.error("[MapContainer] Invalid coordinates calculated:", {
+            lat,
+            lng,
+          });
           return;
         }
 
-        // Pan to the selected barangay and zoom in
         mapInstance.panTo({ lat, lng });
         mapInstance.setZoom(15);
 
         // Find matching barangay in barangaysList for pattern data
-        let barangayObj = barangaysList?.find(
-          (b) =>
-            normalizeBarangayName(b.name) ===
-            normalizeBarangayName(selectedBarangayFeature.properties.name)
+        let barangayObj = barangaysList?.find((b) =>
+          namesAreEquivalent(b.name, selectedBarangayFeature.properties.name)
         );
+        console.log("[MapContainer] Dropdown matched API barangay:", {
+          selectedName: selectedBarangayFeature.properties.name,
+          matchedName: barangayObj?.name,
+          found: !!barangayObj,
+        });
 
         let patternBased =
           barangayObj?.status_and_recommendation?.pattern_based;
@@ -140,50 +160,15 @@ const MapContainer = ({
           "none"
         ).toLowerCase();
 
-        // Debug logging for pattern type
-        console.log("Pattern debug:", {
-          barangayName: selectedBarangayFeature.properties.name,
-          patternBased: patternBased,
-          patternType: patternType,
-          originalStatus: patternBased?.status,
-          fallbackPatternType: selectedBarangayFeature.properties.patternType,
+        console.log("[MapContainer] Dropdown pattern details:", {
+          patternType,
+          patternBased,
+          reportBased: barangayObj?.status_and_recommendation?.report_based,
+          deathPriority: barangayObj?.status_and_recommendation?.death_priority,
+          statusAndRec: barangayObj?.status_and_recommendation,
         });
 
         if (!patternType || patternType === "") patternType = "no_change";
-
-        // Debug logging for color selection
-        console.log("Color selection debug:", {
-          patternType: patternType,
-          availableColors: Object.keys(USER_PATTERN_COLORS_MAP),
-          selectedColor: USER_PATTERN_COLORS_MAP[patternType],
-          fallbackColor: USER_PATTERN_COLORS_MAP.default,
-          noChangeColor: USER_PATTERN_COLORS_MAP.no_change,
-          finalColor:
-            patternType === "no_change" ||
-            !patternType ||
-            patternType === "" ||
-            patternType === "none"
-              ? USER_PATTERN_COLORS_MAP.no_change
-              : USER_PATTERN_COLORS_MAP[patternType] ||
-                USER_PATTERN_COLORS_MAP.default,
-        });
-
-        // Ensure no_change, empty status, and none status get the same blue color
-        let patternCardColor;
-        if (
-          patternType === "no_change" ||
-          !patternType ||
-          patternType === "" ||
-          patternType === "none"
-        ) {
-          patternCardColor = USER_PATTERN_COLORS_MAP.no_change;
-          console.log("Using no_change color:", patternCardColor);
-        } else {
-          patternCardColor =
-            USER_PATTERN_COLORS_MAP[patternType] ||
-            USER_PATTERN_COLORS_MAP.default;
-          console.log("Using pattern-specific color:", patternCardColor);
-        }
 
         let reportBased = barangayObj?.status_and_recommendation?.report_based;
         let reportAlert = reportBased?.alert;
@@ -197,7 +182,15 @@ const MapContainer = ({
             ? "border-success bg-success/5"
             : "border-gray-400 bg-gray-100";
 
-        // Create info window content
+        const patternCardColor =
+          patternType === "no_change" ||
+          !patternType ||
+          patternType === "" ||
+          patternType === "none"
+            ? USER_PATTERN_COLORS_MAP.no_change
+            : USER_PATTERN_COLORS_MAP[patternType] ||
+              USER_PATTERN_COLORS_MAP.default;
+
         const content = document.createElement("div");
         content.innerHTML = `
           <div class="bg-white p-4 rounded-lg text-center h-auto">
@@ -235,48 +228,30 @@ const MapContainer = ({
                   </p>
                 </div>
               </div>
-              <div class="mt-2 p-2 bg-gray-50 rounded text-xs">
-                <p class="text-gray-600 mb-1">Color Legend:</p>
-                <div class="flex justify-center gap-4 text-xs">
-                  <div class="flex items-center gap-1">
-                    <div class="w-3 h-3 rounded" style="background-color: #e53e3e;"></div>
-                    <span>Increasing</span>
-                  </div>
-                  <div class="flex items-center gap-1">
-                    <div class="w-3 h-3 rounded" style="background-color: #38a169;"></div>
-                    <span>Decreasing</span>
-                  </div>
-                  <div class="flex items-center gap-1">
-                    <div class="w-3 h-3 rounded" style="background-color: #718096;"></div>
-                    <span>Stable</span>
-                  </div>
-                </div>
-              </div>
             </div>
           </div>
         `;
 
         infoWindow.setContent(content);
         infoWindow.setPosition({ lat, lng });
-
-        // Debug logging
-        console.log("Opening info window at:", { lat, lng });
-        console.log("Info window content:", content.innerHTML);
-
-        // Open the info window on the map
+        console.log("[MapContainer] Opening InfoWindow (dropdown) at:", {
+          lat,
+          lng,
+        });
         infoWindow.open(mapInstance);
 
-        // Remove highlight and InfoWindow when closed
         infoWindow.addListener("closeclick", () => {
           setSelectedBarangayFeature(null);
-          // Pan out to show full view
           if (mapInstance) {
             mapInstance.panTo({ lat: 14.676, lng: 121.0437 });
             mapInstance.setZoom(13);
           }
         });
       } catch (error) {
-        console.error("Error calculating barangay center:", error);
+        console.error(
+          "[MapContainer] Error calculating barangay center:",
+          error
+        );
         return;
       }
     }
@@ -327,10 +302,8 @@ const MapContainer = ({
           : [];
 
       // Find matching barangay in barangaysList
-      let barangayObj = barangaysList?.find(
-        (b) =>
-          normalizeBarangayName(b.name) ===
-          normalizeBarangayName(feature.properties.name)
+      let barangayObj = barangaysList?.find((b) =>
+        namesAreEquivalent(b.name, feature.properties.name)
       );
 
       let patternType = (
@@ -364,8 +337,10 @@ const MapContainer = ({
         // Highlight if selected
         const isSelected =
           selectedBarangayFeature &&
-          normalizeBarangayName(selectedBarangayFeature.properties.name) ===
-            normalizeBarangayName(feature.properties.name);
+          namesAreEquivalent(
+            selectedBarangayFeature.properties.name,
+            feature.properties.name
+          );
 
         const polygon = new window.google.maps.Polygon({
           paths: path,
@@ -402,11 +377,14 @@ const MapContainer = ({
 
           setSelectedBarangayFeature(feature); // highlight
 
-          let barangayObj = barangaysList?.find(
-            (b) =>
-              normalizeBarangayName(b.name) ===
-              normalizeBarangayName(feature.properties.name)
+          let barangayObj = barangaysList?.find((b) =>
+            namesAreEquivalent(b.name, feature.properties.name)
           );
+          console.log("[MapContainer] Polygon click - matching API barangay:", {
+            featureName: feature.properties.name,
+            matchedName: barangayObj?.name,
+            found: !!barangayObj,
+          });
 
           let patternBased =
             barangayObj?.status_and_recommendation?.pattern_based;
@@ -415,6 +393,15 @@ const MapContainer = ({
             feature.properties.patternType ||
             "none"
           ).toLowerCase();
+
+          console.log("[MapContainer] Polygon click pattern details:", {
+            patternType,
+            patternBased,
+            reportBased: barangayObj?.status_and_recommendation?.report_based,
+            deathPriority:
+              barangayObj?.status_and_recommendation?.death_priority,
+            statusAndRec: barangayObj?.status_and_recommendation,
+          });
 
           // Debug logging for polygon click pattern type
           console.log("Polygon click pattern debug:", {

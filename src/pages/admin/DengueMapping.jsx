@@ -63,6 +63,15 @@ const normalizeBarangayName = (name) => {
     .replace(/[^a-z0-9]/g, ""); // Remove special characters
 };
 
+// Treat common variants as equivalent (e.g., with/without 'Sr')
+const namesAreEquivalent = (a, b) => {
+  const na = normalizeBarangayName(a || "");
+  const nb = normalizeBarangayName(b || "");
+  if (na === nb) return true;
+  const stripSr = (s) => s.replace(/sr$/i, "");
+  return stripSr(na) === stripSr(nb);
+};
+
 // Add breeding site type icon mapping
 const BREEDING_SITE_TYPE_ICONS = {
   "Stagnant Water": stagnantIcon,
@@ -785,8 +794,7 @@ const DengueMapping = () => {
       return (
         post.barangay &&
         selectedBarangay.properties?.name &&
-        normalizeBarangayName(post.barangay) ===
-          normalizeBarangayName(selectedBarangay.properties.name)
+        namesAreEquivalent(post.barangay, selectedBarangay.properties.name)
       );
     });
 
@@ -915,11 +923,17 @@ const DengueMapping = () => {
     setSearchQuery(query);
     if (!barangaysList) return;
 
-    const filtered = barangaysList.filter(
-      (barangay) =>
-        barangay.name.toLowerCase().includes(query.toLowerCase()) ||
-        barangay.displayName?.toLowerCase().includes(query.toLowerCase())
-    );
+    const q = (query || "").toLowerCase().trim();
+    const filtered = barangaysList.filter((barangay) => {
+      const name = barangay.name || "";
+      const display = barangay.displayName || "";
+      return (
+        name.toLowerCase().includes(q) ||
+        display.toLowerCase().includes(q) ||
+        // Allow loose match for variants like 'E. Rodriguez' vs 'E. Rodriguez Sr.'
+        namesAreEquivalent(name, q)
+      );
+    });
     setFilteredBarangays(filtered);
   };
 
@@ -929,19 +943,26 @@ const DengueMapping = () => {
     // If this is a GeoJSON feature (clicked on map)
     if (barangay.type === "Feature") {
       // Find matching barangay from barangaysList
-      const matching = barangaysList?.find(
-        (b) =>
-          normalizeBarangayName(b.name) ===
-          normalizeBarangayName(barangay.properties?.name)
+      const matching = barangaysList?.find((b) =>
+        namesAreEquivalent(b.name, barangay.properties?.name)
       );
+      console.log("[DengueMapping] Map click select:", {
+        featureName: barangay.properties?.name,
+        matchedName: matching?.name,
+        found: !!matching,
+      });
 
       // Merge the data, ensuring all properties are properly set
       const merged = {
         ...barangay,
         properties: {
           ...barangay.properties,
-          name: barangay.properties?.name,
-          displayName: matching?.displayName || barangay.properties?.name,
+          // Use canonical API name when available to avoid 'Sr' inconsistencies
+          name: matching?.name || barangay.properties?.name,
+          displayName:
+            matching?.displayName ||
+            matching?.name ||
+            barangay.properties?.name,
           patternType:
             matching?.status_and_recommendation?.pattern_based?.status ||
             barangay.properties?.patternType ||
@@ -978,10 +999,8 @@ const DengueMapping = () => {
     fetch("/quezon_barangays_boundaries.geojson")
       .then((res) => res.json())
       .then((geoData) => {
-        const feature = geoData.features.find(
-          (f) =>
-            normalizeBarangayName(f.properties.name) ===
-            normalizeBarangayName(barangay.name)
+        const feature = geoData.features.find((f) =>
+          namesAreEquivalent(f.properties.name, barangay.name)
         );
 
         if (feature) {
@@ -1004,6 +1023,13 @@ const DengueMapping = () => {
 
           // Call handleBarangaySelect again with the GeoJSON feature
           handleBarangaySelect(geoJSONFeature);
+        } else {
+          console.warn(
+            "[DengueMapping] Dropdown select - no GeoJSON feature matched",
+            {
+              requestName: barangay.name,
+            }
+          );
         }
       })
       .catch((error) => {

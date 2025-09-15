@@ -136,7 +136,7 @@ const Navbar = () => {
   const renderInstallAppButton = (darkMode = false) => (
     <button
       onClick={() => setShowInstallModal(true)}
-      className={`font-semibold py-2 px-4 rounded-lg border transition-all duration-300 text-lg hover:cursor-pointer flex items-center gap-2 ${
+      className={`font-semibold flex justify-center py-2 px-4 rounded-lg border transition-all duration-300 text-lg hover:cursor-pointer flex items-center gap-2 ${
         darkMode
           ? "text-white border-white hover:bg-white hover:text-primary"
           : "text-primary border-primary hover:bg-primary hover:text-white"
