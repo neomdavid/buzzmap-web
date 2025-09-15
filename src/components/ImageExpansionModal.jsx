@@ -1,11 +1,33 @@
-import React from "react";
+import React, { useEffect, useRef } from "react";
 import { X } from "phosphor-react";
 
 const ImageExpansionModal = ({ isOpen, onClose, image }) => {
-  if (!isOpen || !image) return null;
+  const dialogRef = useRef(null);
+
+  useEffect(() => {
+    const dialogEl = dialogRef.current;
+    if (!dialogEl) return;
+
+    if (isOpen && image) {
+      // Use native modal top-layer so it appears above any other dialog
+      if (!dialogEl.open) {
+        try {
+          dialogEl.showModal();
+        } catch (e) {
+          // Fallback if already open
+        }
+      }
+    } else if (dialogEl.open) {
+      dialogEl.close();
+    }
+
+    return () => {
+      if (dialogEl && dialogEl.open) dialogEl.close();
+    };
+  }, [isOpen, image]);
 
   return (
-    <dialog id="image-expansion-modal" className="modal z-[1000]" open={isOpen}>
+    <dialog ref={dialogRef} id="image-expansion-modal" className="modal">
       <div className="modal-box w-auto max-w-[90vw] max-h-[90vh] p-2 overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between p-4  text-primary">
@@ -32,7 +54,7 @@ const ImageExpansionModal = ({ isOpen, onClose, image }) => {
           </div>
         </div>
       </div>
-      <form method="dialog" className="modal-backdrop z-[995]">
+      <form method="dialog" className="modal-backdrop">
         <button onClick={onClose}>close</button>
       </form>
     </dialog>
