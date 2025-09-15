@@ -67,10 +67,6 @@ const StatusCell = ({ value }) => {
       bgColor = "bg-success";
       textColor = "text-white";
       break;
-    case "unverified":
-      bgColor = "bg-warning";
-      textColor = "text-white";
-      break;
     default:
       bgColor = "bg-gray-100";
       textColor = "text-gray-600";
@@ -119,6 +115,7 @@ const RoleCell = ({ value }) => {
 function AdminsTable({ statusFilter, roleFilter, searchQuery }) {
   const { data: accounts, isLoading, error, refetch } = useGetAccountsQuery();
   const gridRef = useRef(null);
+  const [hasGridFilter, setHasGridFilter] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [selectedAccountId, setSelectedAccountId] = useState(null);
   const [superAdminPassword, setSuperAdminPassword] = useState("");
@@ -382,7 +379,6 @@ function AdminsTable({ statusFilter, roleFilter, searchQuery }) {
   const ActionsCell = (p) => {
     // Check if the account is a super admin
     const isSuperAdmin = p.data.role.toLowerCase() === "superadmin";
-    const isUnverified = p.data.status === "unverified";
     const isPending = p.data.status === "pending";
 
     return (
@@ -409,8 +405,8 @@ function AdminsTable({ statusFilter, roleFilter, searchQuery }) {
             <p className="text-sm">remove</p>
           </button>
         )}
-        {/* Resend OTP for unverified/pending accounts */}
-        {!isSuperAdmin && isUnverified && (
+        {/* Resend OTP for pending accounts */}
+        {!isSuperAdmin && isPending && (
           <button
             onClick={() => handleResendClick(p.data)}
             className="flex items-center gap-1 text-primary hover:bg-gray-200 p-1 rounded-md"
@@ -448,7 +444,7 @@ function AdminsTable({ statusFilter, roleFilter, searchQuery }) {
           !statusFilter ||
           (statusFilter === "active" && account.status === "active") ||
           (statusFilter === "disabled" && account.status === "disabled") ||
-          (statusFilter === "unverified" && !account.verified);
+          (statusFilter === "pending" && account.status === "pending");
 
         // Then apply role filter if it exists
         const roleTypeMatch = !roleFilter || account.role === roleFilter;
@@ -479,7 +475,7 @@ function AdminsTable({ statusFilter, roleFilter, searchQuery }) {
             ? "disabled"
             : account.verified
             ? "active"
-            : "unverified"),
+            : "pending"),
       }));
   }, [accounts, statusFilter, roleFilter, searchQuery]);
 
@@ -534,13 +530,12 @@ function AdminsTable({ statusFilter, roleFilter, searchQuery }) {
 
   // Dynamic empty-state message
   const noRowsMessage = useMemo(() => {
-    const hasFilters = Boolean(
+    const hasExternalFilters = Boolean(
       statusFilter || roleFilter || (searchQuery && searchQuery.trim() !== "")
     );
-    return hasFilters
-      ? "No admins match your current filters/search"
-      : "No admins found";
-  }, [statusFilter, roleFilter, searchQuery]);
+    const anyFilters = hasExternalFilters || hasGridFilter;
+    return anyFilters ? "No records found" : "No admins found";
+  }, [statusFilter, roleFilter, searchQuery, hasGridFilter]);
 
   // Simplified onGridSizeChanged function
   const onGridSizeChanged = useCallback((params) => {
@@ -604,6 +599,14 @@ function AdminsTable({ statusFilter, roleFilter, searchQuery }) {
             paginationPageSizeSelector={[5, 10, 20, 50]}
             onGridSizeChanged={onGridSizeChanged}
             onFirstDataRendered={onFirstDataRendered}
+            onFilterChanged={(e) => {
+              try {
+                const api = e.api || gridRef.current?.api;
+                setHasGridFilter(Boolean(api?.isAnyFilterPresent?.()));
+              } catch (_) {
+                setHasGridFilter(false);
+              }
+            }}
             domLayout="normal"
             suppressPaginationPanel={false}
             localeText={{ noRowsToShow: noRowsMessage }}

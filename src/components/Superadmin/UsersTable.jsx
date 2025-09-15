@@ -41,6 +41,7 @@ const customTheme = themeQuartz.withParams({
 function UsersTable({ statusFilter, roleFilter, searchQuery }) {
   const { data: accounts, isLoading, error, refetch } = useGetAccountsQuery();
   const gridRef = useRef(null);
+  const [hasGridFilter, setHasGridFilter] = useState(false);
 
   // Add state for modals and actions
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -347,13 +348,12 @@ function UsersTable({ statusFilter, roleFilter, searchQuery }) {
 
   // Dynamic empty-state message
   const noRowsMessage = useMemo(() => {
-    const hasFilters = Boolean(
+    const hasExternalFilters = Boolean(
       statusFilter || roleFilter || (searchQuery && searchQuery.trim() !== "")
     );
-    return hasFilters
-      ? "No users match your current filters/search"
-      : "No users found";
-  }, [statusFilter, roleFilter, searchQuery]);
+    const anyFilters = hasExternalFilters || hasGridFilter;
+    return anyFilters ? "No records found" : "No users found";
+  }, [statusFilter, roleFilter, searchQuery, hasGridFilter]);
 
   // Simplified onGridSizeChanged function
   const onGridSizeChanged = useCallback((params) => {
@@ -417,6 +417,14 @@ function UsersTable({ statusFilter, roleFilter, searchQuery }) {
             paginationPageSizeSelector={[5, 10, 20, 50]}
             onGridSizeChanged={onGridSizeChanged}
             onFirstDataRendered={onFirstDataRendered}
+            onFilterChanged={(e) => {
+              try {
+                const api = e.api || gridRef.current?.api;
+                setHasGridFilter(Boolean(api?.isAnyFilterPresent?.()));
+              } catch (_) {
+                setHasGridFilter(false);
+              }
+            }}
             domLayout="normal"
             suppressPaginationPanel={false}
             localeText={{ noRowsToShow: noRowsMessage }}
@@ -653,7 +661,7 @@ const StatusCell = ({ value }) => {
       bgColor = "bg-success";
       textColor = "text-white";
       break;
-    case "unverified":
+    case "pending":
       bgColor = "bg-warning";
       textColor = "text-white";
       break;

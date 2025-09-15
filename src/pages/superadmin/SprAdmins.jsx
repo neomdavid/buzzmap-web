@@ -45,7 +45,7 @@ function SprAdmins() {
     totalAdmins: 0,
     activeAdmins: 0,
     disabledAdmins: 0,
-    unverifiedAdmins: 0,
+    pendingAdmins: 0,
     lastUpdated: new Date(),
   });
 
@@ -64,9 +64,8 @@ function SprAdmins() {
           .length,
         disabledAdmins: adminAccounts.filter((acc) => acc.status === "disabled")
           .length,
-        unverifiedAdmins: adminAccounts.filter(
-          (acc) => acc.status === "unverified"
-        ).length,
+        pendingAdmins: adminAccounts.filter((acc) => acc.status === "pending")
+          .length,
         lastUpdated: new Date(),
       });
     }
@@ -359,9 +358,9 @@ function SprAdmins() {
         <div className="bg-white p-6 rounded-xl shadow-sm">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-500">Unverified Admins</p>
+              <p className="text-sm text-gray-500">Pending Admins</p>
               <p className="text-2xl font-bold text-warning">
-                {stats.unverifiedAdmins}
+                {stats.pendingAdmins}
               </p>
             </div>
             <div className="bg-warning/10 p-3 rounded-lg">
@@ -414,7 +413,7 @@ function SprAdmins() {
                 <option value="">All Status</option>
                 <option value="active">Active</option>
                 <option value="disabled">Disabled</option>
-                <option value="unverified">Unverified</option>
+                <option value="pending">Pending</option>
               </select>
 
               <select
