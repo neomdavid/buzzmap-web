@@ -174,15 +174,6 @@ const AlertsTable = () => {
               <div className="grid grid-cols-2 gap-4">
                 <div className="form-control">
                   <label className="label text-primary text-lg font-bold mb-1">
-                    Severity
-                  </label>
-                  <div className="p-3 bg-base-200 rounded-lg">
-                    {selectedAlert.severity}
-                  </div>
-                </div>
-
-                <div className="form-control">
-                  <label className="label text-primary text-lg font-bold mb-1">
                     Date
                   </label>
                   <div className="p-3 bg-base-200 rounded-lg">

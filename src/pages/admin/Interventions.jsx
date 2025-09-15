@@ -85,12 +85,15 @@ const Interventions = () => {
 
       return {
         name: b.name,
+        _id: b._id,
         patternType: normalizePatternType(patternBased.status) || "none",
         issueDetected: patternBased.alert || "",
         suggestedAction:
           patternBased.admin_recommendation ||
           patternBased.recommendation ||
           "",
+        ongoing_interventions: b.ongoing_interventions || 0,
+        scheduled_interventions: b.scheduled_interventions || 0,
         report_based: {
           count: reportBased.count || 0,
           alert: reportBased.alert || "",
@@ -646,6 +649,7 @@ const Interventions = () => {
                       >
                         <ActionRecommendationCard
                           barangay={item.name}
+                          barangayId={item._id}
                           pattern_based={{
                             status: item.patternType,
                             alert: item.issueDetected,
@@ -653,6 +657,8 @@ const Interventions = () => {
                           }}
                           death_priority={item.death_priority}
                           hideSharedInfo={true}
+                          ongoing_interventions={item.ongoing_interventions}
+                          scheduled_interventions={item.scheduled_interventions}
                           hasValidIntervention={item.hasValidIntervention}
                           onApply={(barangay, patternType) => {
                             setSelectedBarangay(barangay);

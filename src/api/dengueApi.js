@@ -515,6 +515,19 @@ export const dengueApi = createApi({
       ],
     }),
 
+    // Get grouped interventions (ongoing and scheduled) for a barangay by ID
+    getGroupedInterventionsByBarangay: builder.query({
+      query: (barangayId) => `interventions/barangay/${barangayId}/grouped`,
+      transformResponse: (response) => {
+        // Expecting { ongoing: [...], scheduled: [...] }
+        return response || { ongoing: [], scheduled: [] };
+      },
+      providesTags: (result, error, barangayId) => [
+        { type: "Intervention", id: barangayId },
+        { type: "Intervention", id: "LIST" },
+      ],
+    }),
+
     // Create an intervention
     createIntervention: builder.mutation({
       query: (interventionData) => ({
@@ -1765,6 +1778,7 @@ export const {
   // Add this new endpoint
   useGenerateRecommendationMutation,
   useGetRecommendationForInterventionQuery,
+  useGetGroupedInterventionsByBarangayQuery,
 
   // Add this to the exported hooks
   useGetRecentReportsForBarangayMutation,
