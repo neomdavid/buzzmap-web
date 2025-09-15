@@ -404,7 +404,7 @@ const Community = () => {
                 setFilter("popular");
                 setSearchParams((prev) => ({
                   ...prev,
-                  sortBy: "likesCount",
+                  sortBy: "upvotes",
                   sortOrder: "desc",
                   username: undefined, // Clear username when switching filters
                 }));
