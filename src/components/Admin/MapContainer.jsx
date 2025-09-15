@@ -1,4 +1,4 @@
-import React from 'react';
+import React from "react";
 import MapOnly from "../Mapping/MapOnly";
 
 const MapContainer = ({
@@ -10,7 +10,8 @@ const MapContainer = ({
   handleBarangaySelect,
   activeInterventions,
   setSelectedFullReport,
-  setShowFullReport
+  setShowFullReport,
+  clusters = [],
 }) => {
   return (
     <div className="flex h-[50vh] mb-4" ref={mapContainerRef}>
@@ -21,6 +22,7 @@ const MapContainer = ({
         selectedBarangay={selectedBarangay}
         onBarangaySelect={handleBarangaySelect}
         interventions={showInterventions ? activeInterventions : []}
+        clusters={clusters}
         style={{ height: "100%", width: "100%" }}
         useAdminEndpoint={true}
         onMarkerClick={(item, type) => {

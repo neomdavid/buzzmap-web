@@ -305,6 +305,16 @@ const DengueMapping = () => {
     );
   }, [flaggedClusters]);
 
+  // Use raw clusters from backend for accurate circle grouping
+  const rawClusters = useMemo(() => {
+    const list = Array.isArray(clustersData)
+      ? clustersData
+      : Array.isArray(clustersData?.data)
+      ? clustersData.data
+      : [];
+    return list;
+  }, [clustersData]);
+
   const getSeverityColor = (severity) => {
     if (severity === "high") return "#dc2626"; // red-600
     if (severity === "medium") return "#f59e0b"; // amber-500
@@ -1274,6 +1284,7 @@ const DengueMapping = () => {
           activeInterventions={activeInterventions}
           setSelectedFullReport={setSelectedFullReport}
           setShowFullReport={setShowFullReport}
+          clusters={rawClusters}
         />
 
         {/* Map Controls Overlay - Top Left */}

@@ -759,11 +759,8 @@ const ClusterDetailsModal = ({
                   </h4>
                   <div className="text-sm">
                     <p className="mb-2">
-                      <strong>Active</strong> —{" "}
-                      {reports.length - totalProcessedCount} unprocessed{" "}
-                      {reports.length - totalProcessedCount === 1
-                        ? "report"
-                        : "reports"}
+                      <strong>Active</strong> — {unprocessedCount} unprocessed{" "}
+                      {unprocessedCount === 1 ? "report" : "reports"}
                     </p>
                   </div>
                 </div>
@@ -847,7 +844,7 @@ const ClusterDetailsModal = ({
                   <div className="flex justify-between">
                     <span className="text-gray-600">Unprocessed:</span>
                     <span className="font-semibold text-warning">
-                      {Math.max(0, (reports?.length || 0) - resolvedCount)}
+                      {unprocessedCount}
                     </span>
                   </div>
                   <div className="flex justify-between">

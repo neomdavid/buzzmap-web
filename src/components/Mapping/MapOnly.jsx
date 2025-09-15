@@ -78,6 +78,7 @@ const MapOnly = forwardRef(
       selectedBarangay = null,
       onBarangaySelect = null,
       interventions = [],
+      clusters = [], // optional list of clusters with center and counts
       onMarkerClick = null,
       useAdminEndpoint = false, // New prop to determine which endpoint to use
       recentOnly = false, // Show only recent validated reports markers
@@ -89,6 +90,7 @@ const MapOnly = forwardRef(
     const mapRef = useRef(null);
     const mapInstance = useRef(null);
     const overlaysRef = useRef([]);
+    const markerClusterRef = useRef(null);
     const isMountedRef = useRef(true);
     const infoWindowRef = useRef(null);
     const [error, setError] = useState(null);
@@ -103,6 +105,8 @@ const MapOnly = forwardRef(
     const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
     const mapId = import.meta.env.VITE_GOOGLE_MAPS_MAP_ID;
     const [infoWindow, setInfoWindow] = useState(null);
+    const clusterOverlaysRef = useRef([]);
+    const breedingMarkersRef = useRef([]);
 
     useEffect(() => {
       return () => {
@@ -110,6 +114,15 @@ const MapOnly = forwardRef(
         if (mapInstance.current) {
           overlaysRef.current.forEach((o) => o.setMap(null));
           overlaysRef.current = [];
+          clusterOverlaysRef.current.forEach((o) => o.setMap && o.setMap(null));
+          clusterOverlaysRef.current = [];
+          if (markerClusterRef.current) {
+            try {
+              markerClusterRef.current.setMap(null);
+            } catch (_) {}
+            markerClusterRef.current = null;
+          }
+          breedingMarkersRef.current = [];
           cleanupMapInstance(mapInstance.current);
           mapInstance.current = null;
         }
@@ -137,7 +150,8 @@ const MapOnly = forwardRef(
               : [];
             const validatedSites = validPosts.filter(
               (post) =>
-                post.status === "Validated" &&
+                // Show validated posts OR posts that are part of a cluster
+                (post.status === "Validated" || post.isInCluster === true) &&
                 post.specific_location &&
                 Array.isArray(post.specific_location.coordinates) &&
                 post.specific_location.coordinates.length === 2
@@ -195,6 +209,15 @@ const MapOnly = forwardRef(
           if (!isMountedRef.current) return;
           overlaysRef.current.forEach((o) => o.setMap(null));
           overlaysRef.current = [];
+          clusterOverlaysRef.current.forEach((o) => o.setMap && o.setMap(null));
+          clusterOverlaysRef.current = [];
+          if (markerClusterRef.current) {
+            try {
+              markerClusterRef.current.setMap(null);
+            } catch (_) {}
+            markerClusterRef.current = null;
+          }
+          breedingMarkersRef.current = [];
           if (!mapInstance.current) {
             try {
               mapInstance.current = new window.google.maps.Map(mapRef.current, {
@@ -364,6 +387,16 @@ const MapOnly = forwardRef(
               }
             }
 
+            // Compute slight offsets for markers with identical coordinates to avoid exact overlap
+            const groupCounts = new Map();
+            sitesToRender.forEach((s) => {
+              const key = `${s.specific_location.coordinates[1].toFixed(
+                6
+              )},${s.specific_location.coordinates[0].toFixed(6)}`;
+              groupCounts.set(key, (groupCounts.get(key) || 0) + 1);
+            });
+            const groupIndex = new Map();
+
             breedingMarkers = sitesToRender.map((site) => {
               const iconUrl =
                 BREEDING_SITE_TYPE_ICONS[site.report_type] ||
@@ -377,21 +410,85 @@ const MapOnly = forwardRef(
               glyphImg.style.borderRadius = "100%";
               glyphImg.style.padding = "2px";
 
+              // Indicator styling: cluster members use violet regardless of validation
+              const isValidated = site.status === "Validated";
+              const isClusterMember = site.isInCluster === true;
               const pin = new PinElement({
                 glyph: glyphImg,
-                background: "#FF6347",
-                borderColor: "#FF6347",
+                background: isClusterMember ? "#8B5CF6" : "#FF6347",
+                borderColor: isClusterMember ? "#8B5CF6" : "#FF6347",
                 scale: 1.5,
               });
+
+              // Wrap the pin in a container to add a small pending dot indicator
+              const markerContent = document.createElement("div");
+              markerContent.style.position = "relative";
+              markerContent.appendChild(pin.element);
+
+              const isPending =
+                typeof site.status === "string" &&
+                site.status.toLowerCase().includes("pending");
+
+              if (isClusterMember && isPending) {
+                const badge = document.createElement("div");
+                badge.textContent = "P";
+                badge.style.position = "absolute";
+                badge.style.top = "-4px";
+                badge.style.right = "-4px";
+                badge.style.minWidth = "12px";
+                badge.style.height = "12px";
+                badge.style.padding = "0 3px";
+                badge.style.display = "flex";
+                badge.style.alignItems = "center";
+                badge.style.justifyContent = "center";
+                badge.style.fontSize = "8px";
+                badge.style.lineHeight = "1";
+                badge.style.fontWeight = "700";
+                badge.style.color = "#FFFFFF";
+                badge.style.backgroundColor = "#8B5CF6"; // violet to match cluster
+                badge.style.border = "1px solid #FFFFFF";
+                badge.style.borderRadius = "9999px";
+                badge.style.boxShadow = "0 0 2px rgba(0,0,0,0.3)";
+                markerContent.appendChild(badge);
+              }
+
+              // Determine adjusted position if overlapping at the exact same coordinates
+              const originalLat = site.specific_location.coordinates[1];
+              const originalLng = site.specific_location.coordinates[0];
+              const key = `${originalLat.toFixed(6)},${originalLng.toFixed(6)}`;
+              const count = groupCounts.get(key) || 1;
+              let adjLat = originalLat;
+              let adjLng = originalLng;
+              if (count > 1) {
+                const idx = groupIndex.get(key) || 0;
+                groupIndex.set(key, idx + 1);
+                const angle = (2 * Math.PI * idx) / count;
+                const radiusMeters = 8; // small ring radius
+                const metersPerDegLat = 111320; // approx
+                const metersPerDegLng =
+                  111320 * Math.cos((originalLat * Math.PI) / 180);
+                adjLat =
+                  originalLat +
+                  (radiusMeters * Math.sin(angle)) / metersPerDegLat;
+                adjLng =
+                  originalLng +
+                  (radiusMeters * Math.cos(angle)) / metersPerDegLng;
+              }
 
               const marker = new AdvancedMarkerElement({
                 map,
                 position: {
-                  lat: site.specific_location.coordinates[1],
-                  lng: site.specific_location.coordinates[0],
+                  lat: adjLat,
+                  lng: adjLng,
                 },
-                content: pin.element,
-                title: site.report_type || "Breeding Site",
+                content: markerContent,
+                collisionBehavior:
+                  window.google?.maps?.marker?.CollisionBehavior
+                    ?.REQUIRED_AND_HIDES_OPTIONAL,
+                title:
+                  (site.report_type || "Breeding Site") +
+                  (isClusterMember ? " (Cluster)" : "") +
+                  (isClusterMember && isPending ? " (Pending)" : ""),
               });
 
               marker.addListener("click", () => {
@@ -417,6 +514,11 @@ const MapOnly = forwardRef(
                   ${site.report_type || "Breeding Site"}
                 </p>
                 <div class=\"flex flex-col items-center mt-2 space-y-1 font-normal text-center\">
+                  ${
+                    isClusterMember
+                      ? '<div class="mb-1"><span class="px-2 py-1 rounded-full text-white text-xs font-bold" style="background-color:#8B5CF6">Cluster Member</span></div>'
+                      : ""
+                  }
                   <p class=\"text-xl\">
                     <span class=\"font-bold\">Barangay:</span> ${
                       site.barangay || ""
@@ -467,7 +569,10 @@ const MapOnly = forwardRef(
 
               return marker;
             });
+            // Disable default MarkerClusterer; manage visibility with zoom + cluster circles
+            breedingMarkers.forEach((m) => m.setMap(map));
             overlays.push(...breedingMarkers);
+            breedingMarkersRef.current = breedingMarkers;
           }
 
           // Draw intervention markers
@@ -581,7 +686,199 @@ const MapOnly = forwardRef(
             overlays.push(...interventionMarkers);
           }
 
+          // Draw cluster center indicators (optional)
+          try {
+            clusterOverlaysRef.current.forEach(
+              (o) => o.setMap && o.setMap(null)
+            );
+            clusterOverlaysRef.current = [];
+            if (Array.isArray(clusters) && clusters.length > 0) {
+              clusters.forEach((c) => {
+                // True cluster members only
+                const memberReports = Array.isArray(c.reports)
+                  ? c.reports.filter(
+                      (r) =>
+                        r?.isInCluster === true &&
+                        r?.exclude_from_clustering !== true &&
+                        (r?.cluster === c._id || r?.cluster === c.id)
+                    )
+                  : [];
+
+                const count = memberReports.length;
+                if (count === 0) return;
+                // Color by resolved state: green if fully resolved, red otherwise (pending)
+                const totalInCluster = count;
+                const resolvedInCluster =
+                  (typeof c.resolvedCount === "number" && c.resolvedCount) ||
+                  (typeof c?.breakdown?.resolved_reports === "number"
+                    ? c.breakdown.resolved_reports
+                    : memberReports.filter((r) => r?.isResolved === true)
+                        .length);
+                const isResolvedCluster =
+                  totalInCluster > 0 && resolvedInCluster === totalInCluster;
+                const color = isResolvedCluster ? "#10b981" : "#dc2626";
+
+                // Compute coords list for members
+                const coords = memberReports
+                  .map((r) =>
+                    r?.specific_location?.coordinates
+                      ? {
+                          lat: r.specific_location.coordinates[1],
+                          lng: r.specific_location.coordinates[0],
+                        }
+                      : r?.coordinates
+                  )
+                  .filter(
+                    (p) =>
+                      p &&
+                      typeof p.lat === "number" &&
+                      typeof p.lng === "number"
+                  );
+
+                // Determine circle center: prefer backend center; fallback to average of member coords
+                let centerLat = c?.center?.lat;
+                let centerLng = c?.center?.lng;
+                if (
+                  typeof centerLat !== "number" ||
+                  typeof centerLng !== "number"
+                ) {
+                  const sum = coords.reduce(
+                    (acc, p) => {
+                      acc.lat += p.lat;
+                      acc.lng += p.lng;
+                      return acc;
+                    },
+                    { lat: 0, lng: 0 }
+                  );
+                  centerLat = sum.lat / coords.length;
+                  centerLng = sum.lng / coords.length;
+                }
+
+                let bounds;
+                if (coords.length > 0 && window.google?.maps?.LatLngBounds) {
+                  bounds = new window.google.maps.LatLngBounds();
+                  coords.forEach((p) => bounds.extend(p));
+                }
+
+                // Estimate radius in meters from center to farthest point with padding
+                let radiusMeters = 15; // default smaller radius
+                if (coords.length > 0) {
+                  const metersPerDegLat = 111320;
+                  const metersPerDegLng =
+                    111320 * Math.cos((centerLat * Math.PI) / 180);
+                  let maxMeters = 0;
+                  coords.forEach((p) => {
+                    const dLatM = Math.abs(p.lat - centerLat) * metersPerDegLat;
+                    const dLngM = Math.abs(p.lng - centerLng) * metersPerDegLng;
+                    const dist = Math.sqrt(dLatM * dLatM + dLngM * dLngM);
+                    if (dist > maxMeters) maxMeters = dist;
+                  });
+                  radiusMeters = Math.max(8, maxMeters + 6); // reduced padding & min radius
+                }
+
+                // Draw a map circle that scales with zoom
+                if (window.google?.maps?.Circle) {
+                  const circle = new window.google.maps.Circle({
+                    strokeColor: color,
+                    strokeOpacity: 0.9,
+                    strokeWeight: 2,
+                    fillColor: color,
+                    fillOpacity: 0.12,
+                    center: { lat: centerLat, lng: centerLng },
+                    radius: radiusMeters,
+                    map,
+                  });
+                  clusterOverlaysRef.current.push(circle);
+
+                  circle.addListener("click", () => {
+                    if (mapInstance.current) {
+                      if (bounds) {
+                        mapInstance.current.fitBounds(bounds, 80);
+                      } else {
+                        mapInstance.current.panTo({
+                          lat: centerLat,
+                          lng: centerLng,
+                        });
+                        mapInstance.current.setZoom(16);
+                      }
+                    }
+                  });
+                }
+
+                // Add a small count badge at the center
+                const container = document.createElement("div");
+                container.style.position = "relative";
+                const label = document.createElement("div");
+                label.textContent = String(count);
+                label.style.minWidth = "18px";
+                label.style.height = "18px";
+                label.style.padding = "0 4px";
+                label.style.borderRadius = "9999px";
+                label.style.background = "#ffffff";
+                label.style.border = `2px solid ${color}`;
+                label.style.color = "#111827";
+                label.style.fontSize = "12px";
+                label.style.fontWeight = "800";
+                label.style.display = "flex";
+                label.style.alignItems = "center";
+                label.style.justifyContent = "center";
+                label.style.boxShadow = "0 1px 3px rgba(0,0,0,0.2)";
+                container.appendChild(label);
+
+                if (window.google?.maps?.marker?.AdvancedMarkerElement) {
+                  const { AdvancedMarkerElement } = window.google.maps.marker;
+                  const badgeMarker = new AdvancedMarkerElement({
+                    map,
+                    position: { lat: centerLat, lng: centerLng },
+                    content: container,
+                    title: `Cluster (${count})`,
+                  });
+                  badgeMarker.addListener("click", () => {
+                    if (mapInstance.current) {
+                      if (bounds) {
+                        mapInstance.current.fitBounds(bounds, 80);
+                      } else {
+                        mapInstance.current.panTo({
+                          lat: centerLat,
+                          lng: centerLng,
+                        });
+                        mapInstance.current.setZoom(16);
+                      }
+                    }
+                  });
+                  clusterOverlaysRef.current.push(badgeMarker);
+                }
+              });
+            }
+          } catch (e) {
+            // no-op if marker library missing
+          }
+
           overlaysRef.current = overlays;
+
+          // Toggle visibility based on zoom: always show circles; toggle report markers
+          const updateVisibility = () => {
+            try {
+              const z = map.getZoom ? map.getZoom() : 13;
+              const showMarkers = z >= 15;
+              // Toggle report markers
+              breedingMarkersRef.current.forEach((m) =>
+                m.setMap(showMarkers ? map : null)
+              );
+              // Always keep cluster overlays visible
+              clusterOverlaysRef.current.forEach(
+                (o) => o.setMap && o.setMap(map)
+              );
+            } catch (_) {}
+          };
+          updateVisibility();
+          if (map && map.addListener) {
+            window.google.maps.event.addListener(
+              map,
+              "zoom_changed",
+              updateVisibility
+            );
+          }
         })
         .catch((err) => {
           if (isMountedRef.current) {
@@ -591,8 +888,20 @@ const MapOnly = forwardRef(
       return () => {
         overlaysRef.current.forEach((o) => o.setMap(null));
         overlaysRef.current = [];
+        if (markerClusterRef.current) {
+          try {
+            markerClusterRef.current.setMap(null);
+          } catch (_) {}
+          markerClusterRef.current = null;
+        }
       };
-    }, [barangayData, barangaysList, selectedBarangay, onBarangaySelect]);
+    }, [
+      barangayData,
+      barangaysList,
+      selectedBarangay,
+      onBarangaySelect,
+      clusters,
+    ]);
 
     // Add this effect to initialize the info window
     useEffect(() => {
