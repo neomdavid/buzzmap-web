@@ -236,7 +236,8 @@ const toastOptions = {
   pauseOnFocusLoss: false, // <-- this ensures it closes even if you switch tabs
   draggable: true,
   className: "text-[15px] mt-10",
-  style: { zIndex: 999999999999999 },
+  // Use a safe, max practical z-index across browsers
+  style: { zIndex: 2147483647 },
 };
 
 export const toastSuccess = (message) => toast.success(message, toastOptions);
@@ -249,14 +250,16 @@ export const showCustomToast = (message, type) => {
   const toast = document.createElement("div");
   toast.innerText = message;
   toast.style.position = "fixed";
-  toast.style.top = "7%";
+  toast.style.top = "10%";
   toast.style.left = "50%";
   toast.style.transform = "translateX(-50%)";
   toast.style.padding = "10px 20px";
   toast.style.borderRadius = "8px";
   toast.style.boxShadow = "0 4px 6px rgba(0, 0, 0, 0.1)";
   toast.style.fontSize = "14px";
-  toast.style.zIndex = "1000000000000000"; // Maximum valid z-index value
+  // Use a safe, max practical z-index across browsers
+  toast.style.zIndex = "2147483647";
+  toast.style.pointerEvents = "none";
   toast.style.opacity = "0";
   toast.style.transition = "opacity 0.5s";
   toast.style.color = "#FFFFFF"; // Set text color to white for visibility
@@ -270,8 +273,13 @@ export const showCustomToast = (message, type) => {
     toast.style.backgroundColor = "#FF9800"; // Orange for warning
   }
 
-  // Append the toast to the body
-  document.body.appendChild(toast);
+  // Append inside an open dialog if present so it renders above the modal backdrop
+  const openDialog = document.querySelector("dialog[open]");
+  if (openDialog) {
+    openDialog.appendChild(toast);
+  } else {
+    document.body.appendChild(toast);
+  }
 
   // Fade in the toast
   setTimeout(() => {
@@ -282,7 +290,9 @@ export const showCustomToast = (message, type) => {
   setTimeout(() => {
     toast.style.opacity = "0";
     setTimeout(() => {
-      document.body.removeChild(toast);
+      if (toast.parentElement) {
+        toast.parentElement.removeChild(toast);
+      }
     }, 500);
   }, 3000);
 };
@@ -299,18 +309,18 @@ export const formatDateForInput = (dateString) => {
 };
 
 export const formatArticleDate = (dateString) => {
-  if (!dateString) return '';
+  if (!dateString) return "";
   const date = new Date(dateString);
-  return date.toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric'
+  return date.toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
   });
 };
 
 export const formatDateWithRelativeTime = (dateString) => {
-  if (!dateString) return '';
-  
+  if (!dateString) return "";
+
   const date = new Date(dateString);
   const now = new Date();
   const diffTime = Math.abs(now - date);
@@ -318,15 +328,15 @@ export const formatDateWithRelativeTime = (dateString) => {
   const diffMonths = Math.floor(diffDays / 30);
   const diffWeeks = Math.floor(diffDays / 7);
 
-  let relativeTime = '';
+  let relativeTime = "";
   if (diffMonths > 0) {
-    relativeTime = `${diffMonths} ${diffMonths === 1 ? 'month' : 'months'} ago`;
+    relativeTime = `${diffMonths} ${diffMonths === 1 ? "month" : "months"} ago`;
   } else if (diffWeeks > 0) {
-    relativeTime = `${diffWeeks} ${diffWeeks === 1 ? 'week' : 'weeks'} ago`;
+    relativeTime = `${diffWeeks} ${diffWeeks === 1 ? "week" : "weeks"} ago`;
   } else if (diffDays > 0) {
-    relativeTime = `${diffDays} ${diffDays === 1 ? 'day' : 'days'} ago`;
+    relativeTime = `${diffDays} ${diffDays === 1 ? "day" : "days"} ago`;
   } else {
-    relativeTime = 'today';
+    relativeTime = "today";
   }
 
   return `${formatArticleDate(dateString)} (${relativeTime})`;

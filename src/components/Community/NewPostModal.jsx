@@ -281,7 +281,7 @@ const NewPostModal = forwardRef(
       <dialog id="my_modal_4" ref={ref} className="modal text-xl text-primary ">
         <div className="modal-box w-11/12 max-w-5xl max-h-[95vh] p-0">
           {/* Fixed Header */}
-          <div className="sticky top-0 bg-base-100 z-10000 w-full border-b border-gray-200">
+          <div className="sticky top-0 bg-base-100 z-[1000] w-full border-b border-gray-200">
             <div className="flex justify-between items-center px-8 py-4">
               <p className="text-4xl font-bold">Report to Surveillance</p>
               <form method="dialog">
@@ -443,7 +443,7 @@ const NewPostModal = forwardRef(
                       {/* <p className="font-bold text-xl">
                       🕑Date & Time: <span className="text-error">*</span>
                     </p> */}
-                      {formErrors.datetime && (
+                      {false && formErrors.datetime && (
                         <span className="text-error text-sm">
                           {formErrors.datetime}
                         </span>
@@ -466,23 +466,16 @@ const NewPostModal = forwardRef(
                           onChange={(e) => {
                             const selected = e.target.value;
                             setDate(selected);
-                            // If selecting today and current time is in the future relative to now, show persistent inline error
+                            // If selecting today and current time is in the future relative to now, show toast
                             if (
                               selected === getTodayString() &&
                               time &&
                               time > getCurrentHHMM()
                             ) {
-                              setFormErrors((prev) => ({
-                                ...prev,
-                                time: "Time cannot be in the future.",
-                              }));
-                            } else {
-                              // Clear time error if date change makes it valid
-                              setFormErrors((prev) => {
-                                if (!prev.time) return prev;
-                                const { time, ...rest } = prev;
-                                return rest;
-                              });
+                              showCustomToast(
+                                "Time cannot be in the future.",
+                                "error"
+                              );
                             }
                           }}
                           max={new Date().toISOString().split("T")[0]}
@@ -510,20 +503,14 @@ const NewPostModal = forwardRef(
                               date === getTodayString() &&
                               val > getCurrentHHMM()
                             ) {
-                              // Keep user's value, but show persistent inline error
+                              // Keep user's value, but show custom toast instead of inline error
                               setTime(val);
-                              setFormErrors((prev) => ({
-                                ...prev,
-                                time: "Time cannot be in the future.",
-                              }));
+                              showCustomToast(
+                                "Time cannot be in the future.",
+                                "error"
+                              );
                             } else {
                               setTime(val);
-                              // Clear time error once valid
-                              setFormErrors((prev) => {
-                                if (!prev.time && !prev.datetime) return prev;
-                                const { time, datetime, ...rest } = prev;
-                                return rest;
-                              });
                             }
                           }}
                           max={
@@ -532,7 +519,7 @@ const NewPostModal = forwardRef(
                               : undefined
                           }
                         />
-                        {formErrors.time && (
+                        {false && formErrors.time && (
                           <div className="text-error text-sm mt-1">
                             {formErrors.time}
                           </div>

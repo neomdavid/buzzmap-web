@@ -219,17 +219,10 @@ const PostCard = ({
     };
   }, []);
 
-  const handleCardClick = (e) => {
-    // Ignore clicks on option button and inside its dropdown
-    if (e.target.closest(".options-container")) return;
-    handleCommentClick();
-  };
+  // Removed card-level click to avoid unintended modal opens
 
   return (
-    <div
-      className="shadow-sm bg-white rounded-lg px-6 pt-6 pb-4 cursor-pointer"
-      onClick={handleCardClick}
-    >
+    <div className="shadow-sm bg-white rounded-lg px-6 pt-6 pb-4">
       {/* Header with user details and options */}
       <div className="flex justify-between items-start mb-4">
         <UserDetailsTab
@@ -308,7 +301,7 @@ const PostCard = ({
         </p>
       </div>
 
-      <div onClick={handleCommentClick} className="cursor-pointer">
+      <div onClick={(e) => e.stopPropagation()}>
         <ImageGrid images={images} onImageClick={handleImageClick} />
       </div>
 
