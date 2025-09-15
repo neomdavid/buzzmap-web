@@ -70,6 +70,7 @@ const Analytics = () => {
   const [uploadedFileName, setUploadedFileName] = useState("");
   const [uploadSuccessMessage, setUploadSuccessMessage] = useState("");
   const [importSuccess, setImportSuccess] = useState(false);
+  const fileInputRef = useRef(null);
   const { refetch: refetchAnalytics } = useGetAnalyticsQuery();
   const { refetch: refetchPosts } = useGetPostsQuery();
   const { refetch: refetchInterventions } = useGetAllInterventionsQuery();
@@ -137,6 +138,19 @@ const Analytics = () => {
       setMapSelectedBarangay(spikeRecommendationDetails.barangay);
     }
   }, [spikeRecommendationDetails]);
+
+  // Ensure file input and related state are cleared whenever the modal closes
+  useEffect(() => {
+    if (!showImportModal) {
+      setCsvFile(null);
+      setImportError("");
+      setImportProgress(0);
+      setRetryCount(0);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    }
+  }, [showImportModal]);
 
   // Handle barangay selection from analytics UI (PatternAlerts, TrendChart, etc)
   const handleAnalyticsBarangaySelect = (barangayName) => {
@@ -304,12 +318,17 @@ const Analytics = () => {
     } catch (error) {
       console.error("Import error:", error);
 
+      // Immediately stop and reset progress visuals on error
+      setIsImporting(false);
+      setImportProgress(0);
+
       // Check if this is a retryable error and we haven't exceeded max retries
+      const message = error?.message || "";
       const isRetryableError =
-        error.message.includes("fs.promises.unlinkSync") ||
-        error.message.includes("Server error") ||
-        error.message.includes("Network") ||
-        error.message.includes("timeout");
+        message.includes("fs.promises.unlinkSync") ||
+        message.includes("Server error") ||
+        message.includes("Network") ||
+        message.includes("timeout");
 
       if (isRetryableError && retryCount < maxRetries) {
         const newRetryCount = retryCount + 1;
@@ -320,29 +339,25 @@ const Analytics = () => {
           }). Retrying in 3 seconds...`
         );
 
-        // Wait 3 seconds before retrying
+        // Retry after a short delay; progress UI remains hidden until retry starts
         setTimeout(() => {
           handleImport(true);
         }, 3000);
         return;
       }
 
-      // Final error message
+      // Final error message (non-retryable or retries exhausted)
       const errorMessage =
         retryCount >= maxRetries
           ? `Upload failed after ${
               maxRetries + 1
             } attempts. Please try again later or contact support.`
-          : error.message || "Failed to import CSV file";
+          : error?.message || "Failed to import CSV file";
 
       setImportError(errorMessage);
     } finally {
-      if (
-        retryCount >= maxRetries ||
-        !error?.message?.includes("fs.promises.unlinkSync")
-      ) {
-        setIsImporting(false);
-      }
+      // Ensure importing is stopped in all cases; it'll re-enable at retry start
+      setIsImporting(false);
     }
   };
 
@@ -861,6 +876,7 @@ const Analytics = () => {
             <input
               type="file"
               accept=".csv"
+              ref={fileInputRef}
               onChange={(e) => {
                 if (e.target.files && e.target.files.length > 0) {
                   setCsvFile(e.target.files[0]);
@@ -911,6 +927,9 @@ const Analytics = () => {
                 setImportError("");
                 setImportProgress(0);
                 setRetryCount(0);
+                if (fileInputRef.current) {
+                  fileInputRef.current.value = "";
+                }
               }}
               className="btn btn-ghost"
             >

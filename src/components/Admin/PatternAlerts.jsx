@@ -30,6 +30,13 @@ export default function PatternAlerts({
   const [showDetailedRecommendations, setShowDetailedRecommendations] =
     useState(false);
 
+  // Search state
+  const [searchQuery, setSearchQuery] = useState("");
+  const normalizedSearch = useMemo(
+    () => (searchQuery || "").toLowerCase().trim(),
+    [searchQuery]
+  );
+
   // Function to generate AI recommendation for a barangay
   const handleGenerateRecommendation = async (barangayName) => {
     if (aiRecommendations[barangayName]) {
@@ -126,11 +133,19 @@ export default function PatternAlerts({
           shouldInclude = true;
       }
 
-      return shouldInclude;
+      if (!shouldInclude) return false;
+
+      // Apply name search filtering. Always allow search to further narrow results,
+      // especially under the All Alerts tab.
+      if (normalizedSearch.length > 0) {
+        return item.name.toLowerCase().includes(normalizedSearch);
+      }
+
+      return true;
     });
 
     return filtered;
-  }, [patternResultsData, selectedTab, selectedBarangay]);
+  }, [patternResultsData, selectedTab, selectedBarangay, normalizedSearch]);
 
   if (isLoading) {
     return (
@@ -160,6 +175,14 @@ export default function PatternAlerts({
           type="text"
           placeholder="Search barangays..."
           className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              // No-op; filtering is live, but prevent form submissions if any
+              e.preventDefault();
+            }
+          }}
         />
       </div>
 

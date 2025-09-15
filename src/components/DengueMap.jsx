@@ -290,12 +290,22 @@ const DengueMap = ({
       .replace(/[^a-z0-9]/g, ""); // Remove special characters
   }
 
+  // Treat certain common variants as equivalent (e.g., with/without 'Sr')
+  function namesAreEquivalent(nameA, nameB) {
+    const a = normalizeBarangayName(nameA);
+    const b = normalizeBarangayName(nameB);
+    if (a === b) return true;
+    const stripSr = (s) => s.replace(/sr$/i, "");
+    if (stripSr(a) === stripSr(b)) return true;
+    return false;
+  }
+
   // Merge pattern/status from barangaysList into geojsonBarangays
   const mergedBarangays = useMemo(() => {
     return geojsonBarangays.map((feature) => {
       const geoName = normalizeBarangayName(feature.properties?.name);
-      const apiBarangay = barangaysList.find(
-        (b) => normalizeBarangayName(b.name) === geoName
+      const apiBarangay = barangaysList.find((b) =>
+        namesAreEquivalent(b.name, feature.properties?.name)
       );
       return {
         ...feature,
@@ -385,7 +395,9 @@ const DengueMap = ({
       const barangayNorm = normalizeBarangayName(
         barangay.properties?.name || ""
       );
-      const isSelected = barangayNorm === selectedNorm;
+      const isSelected =
+        selectedNorm &&
+        namesAreEquivalent(barangay.properties?.name || "", searchQuery || "");
       let coordsArray = [];
       if (barangay.geometry.type === "Polygon") {
         coordsArray = [barangay.geometry.coordinates];
@@ -579,9 +591,8 @@ const DengueMap = ({
     const map = mapInstanceRef.current;
     if (!map) return;
     const selectedNorm = normalizeBarangayName(searchQuery);
-    const selectedBarangay = mergedBarangays.find(
-      (barangay) =>
-        normalizeBarangayName(barangay.properties?.name) === selectedNorm
+    const selectedBarangay = mergedBarangays.find((barangay) =>
+      namesAreEquivalent(barangay.properties?.name, searchQuery)
     );
     if (selectedBarangay && selectedBarangay.geometry?.coordinates) {
       let bounds = new window.google.maps.LatLngBounds();
@@ -965,8 +976,8 @@ const DengueMap = ({
       const geoName = normalizeBarangayName(feature.properties?.name);
       console.log("[DengueMap DEBUG] Normalized Barangay Name:", geoName);
 
-      const apiBarangay = barangaysList.find(
-        (b) => normalizeBarangayName(b.name) === geoName
+      const apiBarangay = barangaysList.find((b) =>
+        namesAreEquivalent(b.name, feature.properties?.name)
       );
       console.log("[DengueMap DEBUG] Found API Barangay:", apiBarangay);
       console.log("[DengueMap DEBUG] Original Feature:", feature);
@@ -1070,18 +1081,14 @@ const DengueMap = ({
       return;
 
     // Find the matching barangay feature
-    const matchingFeature = geojsonBarangays.find(
-      (feature) =>
-        normalizeBarangayName(feature.properties.name) ===
-        normalizeBarangayName(selectedBarangay)
+    const matchingFeature = geojsonBarangays.find((feature) =>
+      namesAreEquivalent(feature.properties.name, selectedBarangay)
     );
 
     if (matchingFeature) {
       // Find the matching barangay in the API data
-      const apiBarangay = barangaysList.find(
-        (b) =>
-          normalizeBarangayName(b.name) ===
-          normalizeBarangayName(selectedBarangay)
+      const apiBarangay = barangaysList.find((b) =>
+        namesAreEquivalent(b.name, selectedBarangay)
       );
 
       // Create a feature object with all necessary properties
@@ -1192,10 +1199,11 @@ const DengueMap = ({
 
     // Highlight selected polygon if exists
     if (selectedBarangayFeature) {
-      const selectedPolygon = polygonsRef.current.find(
-        (polygon) =>
-          normalizeBarangayName(polygon.feature?.properties?.name) ===
-          normalizeBarangayName(selectedBarangayFeature.properties.name)
+      const selectedPolygon = polygonsRef.current.find((polygon) =>
+        namesAreEquivalent(
+          polygon.feature?.properties?.name,
+          selectedBarangayFeature.properties.name
+        )
       );
 
       if (selectedPolygon) {

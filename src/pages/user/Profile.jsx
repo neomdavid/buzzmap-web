@@ -304,6 +304,7 @@ function Profile() {
                 comments={report._comments?.length || 0}
                 shares="0"
                 currentUserId={user?._id}
+                readOnly={activeTab === "pending" || activeTab === "rejected"}
                 onVoteUpdate={(newUpvotes, newDownvotes) => {
                   console.log("[DEBUG] Profile onVoteUpdate called:", {
                     newUpvotes,

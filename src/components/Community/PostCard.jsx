@@ -39,6 +39,7 @@ const PostCard = ({
   onVoteUpdate, // Add onVoteUpdate prop
   basicProfiles = [], // Add basicProfiles prop
   onPostDeleted, // Add callback for when post is deleted
+  readOnly = false, // New prop to disable interactions
 }) => {
   const userFromStore = useSelector((state) => state.auth?.user);
   const commentModalRef = useRef(null);
@@ -314,42 +315,46 @@ const PostCard = ({
       <ImageGrid images={images} onImageClick={handleImageClick} />
 
       <hr className="text-gray-200 mt-4 mb-2" />
-      <ReactionsTab
-        postId={postId}
-        upvotes={upvotes}
-        downvotes={downvotes}
-        commentsCount={localCommentCount}
-        upvotesArray={localUpvotes}
-        downvotesArray={localDownvotes}
-        currentUserId={currentUserId}
-        onCommentClick={handleCommentClick}
-        iconSize={30}
-        onVoteUpdate={(newUpvotes, newDownvotes) => {
-          setLocalUpvotes(newUpvotes);
-          setLocalDownvotes(newDownvotes);
-          // Also call the parent's onVoteUpdate if provided
-          onVoteUpdate?.(newUpvotes, newDownvotes);
-        }}
-      />
+      {!readOnly && (
+        <ReactionsTab
+          postId={postId}
+          upvotes={upvotes}
+          downvotes={downvotes}
+          commentsCount={localCommentCount}
+          upvotesArray={localUpvotes}
+          downvotesArray={localDownvotes}
+          currentUserId={currentUserId}
+          onCommentClick={handleCommentClick}
+          iconSize={30}
+          onVoteUpdate={(newUpvotes, newDownvotes) => {
+            setLocalUpvotes(newUpvotes);
+            setLocalDownvotes(newDownvotes);
+            // Also call the parent's onVoteUpdate if provided
+            onVoteUpdate?.(newUpvotes, newDownvotes);
+          }}
+        />
+      )}
 
-      <CommentModal
-        ref={commentModalRef}
-        postId={postId}
-        upvotes={upvotes}
-        downvotes={downvotes}
-        commentsCount={localCommentCount}
-        upvotesArray={localUpvotes}
-        downvotesArray={localDownvotes}
-        onVoteUpdate={(newUpvotes, newDownvotes) => {
-          setLocalUpvotes(newUpvotes);
-          setLocalDownvotes(newDownvotes);
-          // Also call the parent's onVoteUpdate if provided
-          onVoteUpdate?.(newUpvotes, newDownvotes);
-        }}
-        onCommentAdded={() => {
-          setLocalCommentCount((prev) => prev + 1);
-        }}
-      />
+      {!readOnly && (
+        <CommentModal
+          ref={commentModalRef}
+          postId={postId}
+          upvotes={upvotes}
+          downvotes={downvotes}
+          commentsCount={localCommentCount}
+          upvotesArray={localUpvotes}
+          downvotesArray={localDownvotes}
+          onVoteUpdate={(newUpvotes, newDownvotes) => {
+            setLocalUpvotes(newUpvotes);
+            setLocalDownvotes(newDownvotes);
+            // Also call the parent's onVoteUpdate if provided
+            onVoteUpdate?.(newUpvotes, newDownvotes);
+          }}
+          onCommentAdded={() => {
+            setLocalCommentCount((prev) => prev + 1);
+          }}
+        />
+      )}
 
       {/* Delete Confirmation Modal - DaisyUI Style */}
       <dialog ref={deleteModalRef} className="modal">
