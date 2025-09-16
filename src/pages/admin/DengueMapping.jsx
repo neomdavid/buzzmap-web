@@ -21,6 +21,7 @@ import {
   useResolveReportsMutation,
   useAddReportsToSubClusterMutation,
   useRemoveReportsFromSubClusterMutation,
+  useGetGroupedReportsQuery,
   useValidatePostMutation,
 } from "@/api/dengueApi";
 import ClusterDetailsSkeleton from "@/components/Skeletons/ClusterDetailsSkeleton";
@@ -141,6 +142,10 @@ const DengueMapping = () => {
   // Get clusters from API
   const { data: clustersData, isLoading: isLoadingClusters } =
     useGetClustersQuery();
+
+  // New: fetch grouped reports (individual + clusters)
+  const { data: groupedReportsData, refetch: refetchGroupedReports } =
+    useGetGroupedReportsQuery();
 
   // Get specific cluster details when selected
   const {
@@ -305,15 +310,42 @@ const DengueMapping = () => {
     );
   }, [flaggedClusters]);
 
-  // Use raw clusters from backend for accurate circle grouping
+  // Prefer new grouped endpoint for map rendering
   const rawClusters = useMemo(() => {
+    if (groupedReportsData && Array.isArray(groupedReportsData.clusters)) {
+      // Normalize: attach a stable id and center if missing
+      return groupedReportsData.clusters.map((c) => {
+        const reports = Array.isArray(c.reports) ? c.reports : [];
+        const coords = reports
+          .map((r) => r?.specific_location?.coordinates)
+          .filter((p) => Array.isArray(p) && p.length === 2);
+        const center = coords.length
+          ? {
+              lng: coords.reduce((s, p) => s + p[0], 0) / coords.length,
+              lat: coords.reduce((s, p) => s + p[1], 0) / coords.length,
+            }
+          : { ...QC_CENTER };
+        return {
+          _id: c.parentClusterId || c._id || c.id,
+          id: c.parentClusterId || c._id || c.id,
+          barangay: c.barangay,
+          reports,
+          center,
+          isResolved: !!c.isResolved,
+          breakdown: {
+            resolved_reports: c?.cluster_summary?.validated || 0,
+          },
+        };
+      });
+    }
+    // Fallback to old clusters data
     const list = Array.isArray(clustersData)
       ? clustersData
       : Array.isArray(clustersData?.data)
       ? clustersData.data
       : [];
     return list;
-  }, [clustersData]);
+  }, [groupedReportsData, clustersData]);
 
   const getSeverityColor = (severity) => {
     if (severity === "high") return "#dc2626"; // red-600
@@ -1450,6 +1482,7 @@ const DengueMapping = () => {
         highlightReportMarker={highlightReportMarker}
         onReportRemovedFromSubCluster={handleReportRemovedFromSubCluster}
         refetchSpecificCluster={refetchSpecificCluster}
+        refetchGroupedReports={refetchGroupedReports}
       />
 
       {/* Loading Skeleton for Cluster Details */}

@@ -9,6 +9,7 @@ import {
   useGetBarangaysQuery,
   useGetAdminBarangaysQuery,
   useGetPostsQuery,
+  useGetGroupedReportsQuery,
 } from "../../api/dengueApi";
 import * as turf from "@turf/turf";
 import LoadingSpinner from "../ui/LoadingSpinner";
@@ -102,6 +103,7 @@ const MapOnly = forwardRef(
       ? useGetAdminBarangaysQuery()
       : useGetBarangaysQuery();
     const { data: posts } = useGetPostsQuery();
+    const { data: groupedReports } = useGetGroupedReportsQuery();
     const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
     const mapId = import.meta.env.VITE_GOOGLE_MAPS_MAP_ID;
     const [infoWindow, setInfoWindow] = useState(null);
@@ -142,7 +144,28 @@ const MapOnly = forwardRef(
           if (isMountedRef.current) {
             setBarangayData(barangayGeoJson);
           }
-          if (posts) {
+          // Prefer grouped endpoint: include individuals and cluster members
+          if (groupedReports) {
+            const individuals = Array.isArray(groupedReports.individual_reports)
+              ? groupedReports.individual_reports
+              : [];
+            const clusterMembers = Array.isArray(groupedReports.clusters)
+              ? groupedReports.clusters.flatMap((c) =>
+                  Array.isArray(c.reports)
+                    ? c.reports.filter(
+                        (r) =>
+                          r?.specific_location &&
+                          Array.isArray(r.specific_location.coordinates) &&
+                          r.specific_location.coordinates.length === 2
+                      )
+                    : []
+                )
+              : [];
+            const merged = [...individuals, ...clusterMembers];
+            if (isMountedRef.current) {
+              setBreedingSites(merged);
+            }
+          } else if (posts) {
             const validPosts = Array.isArray(posts?.posts)
               ? posts.posts
               : Array.isArray(posts)
@@ -150,7 +173,6 @@ const MapOnly = forwardRef(
               : [];
             const validatedSites = validPosts.filter(
               (post) =>
-                // Show validated posts OR posts that are part of a cluster
                 (post.status === "Validated" || post.isInCluster === true) &&
                 post.specific_location &&
                 Array.isArray(post.specific_location.coordinates) &&
@@ -159,10 +181,8 @@ const MapOnly = forwardRef(
             if (isMountedRef.current) {
               setBreedingSites(validatedSites);
             }
-          } else {
-            if (isMountedRef.current) {
-              setBreedingSites([]);
-            }
+          } else if (isMountedRef.current) {
+            setBreedingSites([]);
           }
         } catch (err) {
           if (isMountedRef.current) {
@@ -171,7 +191,7 @@ const MapOnly = forwardRef(
         }
       };
       fetchData();
-    }, [barangaysList, posts]);
+    }, [barangaysList, posts, groupedReports]);
 
     useImperativeHandle(
       ref,
@@ -431,21 +451,13 @@ const MapOnly = forwardRef(
 
               if (isClusterMember && isPending) {
                 const badge = document.createElement("div");
-                badge.textContent = "P";
                 badge.style.position = "absolute";
-                badge.style.top = "-4px";
-                badge.style.right = "-4px";
-                badge.style.minWidth = "12px";
-                badge.style.height = "12px";
-                badge.style.padding = "0 3px";
-                badge.style.display = "flex";
-                badge.style.alignItems = "center";
-                badge.style.justifyContent = "center";
-                badge.style.fontSize = "8px";
-                badge.style.lineHeight = "1";
-                badge.style.fontWeight = "700";
-                badge.style.color = "#FFFFFF";
-                badge.style.backgroundColor = "#8B5CF6"; // violet to match cluster
+                badge.style.top = "-2px";
+                badge.style.right = "0px";
+                badge.style.width = "10px";
+                badge.style.height = "10px";
+                badge.style.display = "block";
+                badge.style.backgroundColor = "#f59e0b"; // orange circle for pending
                 badge.style.border = "1px solid #FFFFFF";
                 badge.style.borderRadius = "9999px";
                 badge.style.boxShadow = "0 0 2px rgba(0,0,0,0.3)";
@@ -706,7 +718,7 @@ const MapOnly = forwardRef(
 
                 const count = memberReports.length;
                 if (count === 0) return;
-                // Color by resolved state: green if fully resolved, red otherwise (pending)
+                // Color by resolved state: prefer backend isResolved, fallback to counts
                 const totalInCluster = count;
                 const resolvedInCluster =
                   (typeof c.resolvedCount === "number" && c.resolvedCount) ||
@@ -715,7 +727,10 @@ const MapOnly = forwardRef(
                     : memberReports.filter((r) => r?.isResolved === true)
                         .length);
                 const isResolvedCluster =
-                  totalInCluster > 0 && resolvedInCluster === totalInCluster;
+                  typeof c.isResolved === "boolean"
+                    ? c.isResolved
+                    : totalInCluster > 0 &&
+                      resolvedInCluster === totalInCluster;
                 const color = isResolvedCluster ? "#10b981" : "#dc2626";
 
                 // Compute coords list for members
@@ -859,13 +874,9 @@ const MapOnly = forwardRef(
           // Toggle visibility based on zoom: always show circles; toggle report markers
           const updateVisibility = () => {
             try {
-              const z = map.getZoom ? map.getZoom() : 13;
-              const showMarkers = z >= 15;
-              // Toggle report markers
-              breedingMarkersRef.current.forEach((m) =>
-                m.setMap(showMarkers ? map : null)
-              );
-              // Always keep cluster overlays visible
+              const showMarkers = true; // Always show individual report markers at all zoom levels
+              breedingMarkersRef.current.forEach((m) => m.setMap(map));
+              // Keep cluster overlays visible as well
               clusterOverlaysRef.current.forEach(
                 (o) => o.setMap && o.setMap(map)
               );

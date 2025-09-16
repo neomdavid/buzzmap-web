@@ -1570,6 +1570,16 @@ export const dengueApi = createApi({
       },
     }),
 
+    // Grouped breeding site reports (individual + clusters)
+    getGroupedReports: builder.query({
+      query: () => "reports/grouped",
+      providesTags: ["Clusters"],
+      transformResponse: (response) => {
+        console.log("[DEBUG] Grouped reports response:", response);
+        return response;
+      },
+    }),
+
     // Get specific cluster details
     getSpecificCluster: builder.query({
       query: (clusterId) => `clusters/${clusterId}`,
@@ -1797,4 +1807,5 @@ export const {
   useRemoveReportsFromSubClusterMutation,
   useRemoveReportsFromClusterMutation,
   useResolveReportsMutation,
+  useGetGroupedReportsQuery,
 } = dengueApi;
