@@ -731,7 +731,7 @@ const ActionRecommendationCard = ({
       <dialog className="modal" open={showInterventionsModal}>
         <div className="modal-box bg-gradient-to-br from-white to-gray-50 rounded-3xl shadow-2xl w-11/12 max-h-[90vh] overflow-y-auto max-w-5xl p-0 relative border-0">
           {/* Header */}
-          <div className="sticky top-0 bg-white text-gray-900 px-6 py-6 rounded-t-3xl relative border-b border-gray-200">
+          <div className="sticky top-0 bg-white text-gray-900 p-10 rounded-t-3xl relative border-b border-gray-200">
             <button
               className="btn btn-ghost btn-circle text-gray-600 hover:bg-gray-100 transition-all duration-200 absolute right-4 top-3"
               onClick={() => setShowInterventionsModal(false)}
@@ -751,7 +751,7 @@ const ActionRecommendationCard = ({
               </svg>
             </button>
             <div className="flex flex-col items-center justify-center text-center">
-              <p className="text-3xl font-bold">
+              <p className="text-3xl  text-primary font-bold">
                 Interventions for <span className="font-bold">{barangay}</span>
               </p>
               {pattern_based?.status && (

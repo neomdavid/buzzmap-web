@@ -294,7 +294,37 @@ const CommentModal = forwardRef(
                     </div>
                     {/* <DotsThree size={28} /> */}
                   </div>
-                  <p className="text-black">{post?.description}</p>
+
+                  {/* Post Details Section */}
+                  <div className="rounded-lg py-4 space-y-2 text-md">
+                    <p>
+                      <span className="font-bold">📍 Barangay:</span>{" "}
+                      {post?.barangay || "Not specified"}
+                    </p>
+                    {post?.specific_location?.coordinates &&
+                      post.specific_location.coordinates.length > 0 && (
+                        <p>
+                          <span className="font-bold">📍 Coordinates:</span>{" "}
+                          {post.specific_location.coordinates.join(", ")}
+                        </p>
+                      )}
+                    <p>
+                      <span className="font-bold">🕑 Date & Time:</span>{" "}
+                      {post?.date_and_time
+                        ? new Date(post.date_and_time).toLocaleString()
+                        : "Not specified"}
+                    </p>
+                    <p>
+                      <span className="font-bold">⚠️ Report Type:</span>{" "}
+                      {post?.report_type || "Not specified"}
+                    </p>
+                    <p className="font-bold">
+                      📝 Description: <br />
+                      <span className="font-normal block ml-1 text-gray-700">
+                        {post?.description || "No description provided"}
+                      </span>
+                    </p>
+                  </div>
                 </div>
                 {post?.images && post.images.length > 0 && (
                   <div className="w-full rounded-b-2xl bg-black flex justify-center items-center aspect-video max-h-170 relative overflow-hidden">
