@@ -138,6 +138,17 @@ const DengueMapping = () => {
   const [validatePost] = useValidatePostMutation();
 
   const [recentDengueCases, setRecentDengueCases] = useState(null);
+  // Debug: confirm we're in Admin DengueMapping and using admin baseUrl
+  useEffect(() => {
+    try {
+      console.debug("[Admin/DengueMapping] Mounted", {
+        locationPath:
+          typeof window !== "undefined"
+            ? window.location.pathname
+            : "(no-window)",
+      });
+    } catch (_) {}
+  }, []);
 
   // Get clusters from API
   const { data: clustersData, isLoading: isLoadingClusters } =

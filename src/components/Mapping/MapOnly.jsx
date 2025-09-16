@@ -85,6 +85,7 @@ const MapOnly = forwardRef(
       recentOnly = false, // Show only recent validated reports markers
       recentCount = 5, // How many recent markers to show when recentOnly is true
       recentPosts = null, // Optional: provide the same recent posts as table
+      baseUrl = "/mapping",
     },
     ref
   ) => {
@@ -107,6 +108,28 @@ const MapOnly = forwardRef(
     const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
     const mapId = import.meta.env.VITE_GOOGLE_MAPS_MAP_ID;
     const [infoWindow, setInfoWindow] = useState(null);
+    const effectiveBaseUrl = useRef(null);
+    if (effectiveBaseUrl.current === null) {
+      if (baseUrl && typeof baseUrl === "string" && baseUrl.length > 0) {
+        effectiveBaseUrl.current = baseUrl;
+      } else {
+        const path =
+          typeof window !== "undefined" ? window.location.pathname : "";
+        effectiveBaseUrl.current = path.includes("/admin")
+          ? "/admin/mapping"
+          : "/mapping";
+      }
+      try {
+        console.debug("[MapOnly] Base URL debug", {
+          propBaseUrl: baseUrl,
+          effectiveBaseUrl: effectiveBaseUrl.current,
+          locationPath:
+            typeof window !== "undefined"
+              ? window.location.pathname
+              : "(no-window)",
+        });
+      } catch (_) {}
+    }
     const clusterOverlaysRef = useRef([]);
     const breedingMarkersRef = useRef([]);
 
@@ -564,11 +587,72 @@ const MapOnly = forwardRef(
                       : ""
                   }
                 </div>
-                <button class=\"mt-4 px-4 py-2 bg-primary w-[40%] text-white rounded-lg shadow hover:bg-primary/80 hover:cursor-pointer font-bold\" onclick=\"window.location.href='/mapping/${
+                <button data-report-id=\"${
                   site._id
-                }'\">View Details</button>
+                }\" id=\"bm-view-details-btn\" class=\"mt-4 px-4 py-2 bg-primary w-[40%] text-white rounded-lg shadow hover:bg-primary/80 hover:cursor-pointer font-bold\">View Details</button>
               </div>
             `;
+
+                try {
+                  console.debug("[MapOnly] InfoWindow open", {
+                    reportId: site._id,
+                    isClusterMember,
+                    status: site.status,
+                    propBaseUrl: baseUrl,
+                    effectiveBaseUrl: effectiveBaseUrl.current,
+                    locationPath:
+                      typeof window !== "undefined"
+                        ? window.location.pathname
+                        : "(no-window)",
+                  });
+                } catch (_) {}
+
+                // Attach explicit button click handler with robust base URL choice
+                try {
+                  const btn = content.querySelector("#bm-view-details-btn");
+                  if (btn) {
+                    btn.addEventListener("click", () => {
+                      try {
+                        const reportId = String(site._id || "");
+                        const path =
+                          window && window.location && window.location.pathname
+                            ? window.location.pathname
+                            : "";
+                        const derived =
+                          path.indexOf("/admin") > -1
+                            ? "/admin/mapping"
+                            : "/mapping";
+                        const finalBase =
+                          effectiveBaseUrl.current &&
+                          typeof effectiveBaseUrl.current === "string" &&
+                          effectiveBaseUrl.current.length > 0
+                            ? effectiveBaseUrl.current
+                            : baseUrl &&
+                              typeof baseUrl === "string" &&
+                              baseUrl.length > 0
+                            ? baseUrl
+                            : derived;
+                        console.debug("[MapOnly] Navigate click (listener)", {
+                          reportId,
+                          path,
+                          derived,
+                          baseProp: baseUrl,
+                          effectiveBase: effectiveBaseUrl.current,
+                          finalBase,
+                        });
+                        window.location.href = `${finalBase}/${reportId}`;
+                      } catch (e) {
+                        console.error(
+                          "[MapOnly] Navigate click error (listener)",
+                          e
+                        );
+                        window.location.href = `/mapping/${site._id}`;
+                      }
+                    });
+                  }
+                } catch (e) {
+                  console.error("[MapOnly] Failed to bind click listener", e);
+                }
 
                 infoWindow.setContent(content);
                 infoWindow.setPosition({
@@ -874,11 +958,12 @@ const MapOnly = forwardRef(
           // Toggle visibility based on zoom: always show circles; toggle report markers
           const updateVisibility = () => {
             try {
-              const showMarkers = true; // Always show individual report markers at all zoom levels
-              breedingMarkersRef.current.forEach((m) => m.setMap(map));
-              // Keep cluster overlays visible as well
+              const visibleMap = showBreedingSites ? map : null;
+              // Show/hide individual report markers based on toggle
+              breedingMarkersRef.current.forEach((m) => m.setMap(visibleMap));
+              // Show/hide cluster overlays based on toggle
               clusterOverlaysRef.current.forEach(
-                (o) => o.setMap && o.setMap(map)
+                (o) => o.setMap && o.setMap(visibleMap)
               );
             } catch (_) {}
           };
@@ -913,6 +998,18 @@ const MapOnly = forwardRef(
       onBarangaySelect,
       clusters,
     ]);
+
+    // React to Breeding Sites toggle without redrawing map
+    useEffect(() => {
+      const map = mapInstance.current;
+      const visibleMap = showBreedingSites ? map : null;
+      try {
+        breedingMarkersRef.current.forEach((m) => m.setMap(visibleMap));
+        clusterOverlaysRef.current.forEach(
+          (o) => o.setMap && o.setMap(visibleMap)
+        );
+      } catch (_) {}
+    }, [showBreedingSites]);
 
     // Add this effect to initialize the info window
     useEffect(() => {

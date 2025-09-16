@@ -161,6 +161,9 @@ const ClusterDetailsModal = ({
       if (typeof refetchSpecificCluster === "function") {
         refetchSpecificCluster();
       }
+      if (typeof refetchGroupedReports === "function") {
+        refetchGroupedReports();
+      }
     } catch (error) {
       console.error("[Cluster] Failed to remove report from cluster:", error);
       const msg =
@@ -269,6 +272,7 @@ const ClusterDetailsModal = ({
 
   // Precompute IDs eligible for resolve-all (exclude removed & validated sub-cluster)
   const resolveAllIds = Array.from(selectableReportIds);
+  const isClusterTooSmall = resolveAllIds.length <= 1 && !isClusterResolved;
 
   return (
     <dialog
@@ -338,6 +342,13 @@ const ClusterDetailsModal = ({
                   </p>
                 </div>
               </div>
+            ) : isClusterTooSmall ? (
+              <div className="w-full">
+                <div className="px-4 py-3 rounded-lg border border-gray-200 bg-gray-50 text-gray-700 text-sm">
+                  This cluster now contains only one report and is no longer
+                  considered a cluster. No further actions are available here.
+                </div>
+              </div>
             ) : !hasResolvedReports() ? (
               <div className="flex gap-2">
                 <button
@@ -363,26 +374,9 @@ const ClusterDetailsModal = ({
                   </button>
                 )}
                 {resolveAllIds.length === 1 && (
-                  <div className="flex items-center gap-2 text-sm text-gray-600">
-                    <span>
-                      Only 1 report remaining - cannot form sub-cluster
-                    </span>
-                    <button
-                      onClick={() => {
-                        confirmRemoveFromCluster(resolveAllIds[0]);
-                      }}
-                      className="btn btn-error btn-sm"
-                      disabled={removingId === resolveAllIds[0]}
-                    >
-                      {removingId === resolveAllIds[0] ? (
-                        <>
-                          <span className="loading loading-spinner loading-sm"></span>
-                          Removing...
-                        </>
-                      ) : (
-                        "Remove Report"
-                      )}
-                    </button>
+                  <div className="w-full px-4 py-3 rounded-lg border border-gray-200 bg-gray-50 text-gray-700 text-sm">
+                    This cluster now contains only one report and is no longer
+                    considered a cluster.
                   </div>
                 )}
                 {/* Reject All removed per updated flow */}
@@ -562,7 +556,7 @@ const ClusterDetailsModal = ({
 
                         {/* Action Buttons */}
                         <div className="flex gap-2 flex-wrap">
-                          {!isRemoved && (
+                          {!isRemoved && !isClusterTooSmall && (
                             <>
                               {!rejectedReports.includes(reportId) && (
                                 <>
@@ -675,6 +669,12 @@ const ClusterDetailsModal = ({
 
                               {/* Unreject removed per updated design */}
                             </>
+                          )}
+                          {isClusterTooSmall && (
+                            <div className="text-sm text-gray-600">
+                              Actions have been disabled because this is no
+                              longer a cluster.
+                            </div>
                           )}
 
                           <button
