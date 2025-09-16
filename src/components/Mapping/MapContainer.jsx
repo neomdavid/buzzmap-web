@@ -24,6 +24,7 @@ const MapContainer = ({
   selectedBarangayFeature,
   setSelectedBarangayFeature,
   setShowControlPanel,
+  baseUrl = "/mapping", // Default to user mapping URL
 }) => {
   // Debug: Log the color map to verify it's loaded correctly
 
@@ -643,9 +644,9 @@ const MapContainer = ({
                   : ""
               }
             </div>
-            <button class="mt-4 px-4 py-2 bg-primary w-[40%] text-white rounded-lg shadow hover:bg-primary/80 hover:cursor-pointer font-bold" onclick="window.location.href='/mapping/${
-              site._id
-            }'">View Details</button>
+            <button class="mt-4 px-4 py-2 bg-primary w-[40%] text-white rounded-lg shadow hover:bg-primary/80 hover:cursor-pointer font-bold" onclick="window.location.href='${baseUrl}/${
+            site._id
+          }'">View Details</button>
           </div>
         `;
           infoWindow.setContent(content);

@@ -67,10 +67,6 @@ const StatusCell = ({ value }) => {
       bgColor = "bg-success";
       textColor = "text-white";
       break;
-    case "unverified":
-      bgColor = "bg-warning";
-      textColor = "text-white";
-      break;
     default:
       bgColor = "bg-gray-100";
       textColor = "text-gray-600";
@@ -119,6 +115,7 @@ const RoleCell = ({ value }) => {
 function AdminsTable({ statusFilter, roleFilter, searchQuery }) {
   const { data: accounts, isLoading, error, refetch } = useGetAccountsQuery();
   const gridRef = useRef(null);
+  const [hasGridFilter, setHasGridFilter] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [selectedAccountId, setSelectedAccountId] = useState(null);
   const [superAdminPassword, setSuperAdminPassword] = useState("");
@@ -127,16 +124,13 @@ function AdminsTable({ statusFilter, roleFilter, searchQuery }) {
   const [showStatusModal, setShowStatusModal] = useState(false);
   const [selectedAccount, setSelectedAccount] = useState(null);
   const [isDisabling, setIsDisabling] = useState(true);
-  const [showResendModal, setShowResendModal] = useState(false);
-  const [resendTarget, setResendTarget] = useState(null);
-  const [resendPurpose, setResendPurpose] = useState("account-verification");
   const [resendOtp, { isLoading: isResending }] = useResendOtpMutation();
-  const [resendCooldown, setResendCooldown] = useState(60);
   const [showVerifyModal, setShowVerifyModal] = useState(false);
   const [verifyTarget, setVerifyTarget] = useState(null);
   const [otpValue, setOtpValue] = useState("");
   const [verifyOtp, { isLoading: isVerifying }] = useVerifyAdminOTPMutation();
   const [verifyResendCooldown, setVerifyResendCooldown] = useState(60);
+  const [verifyStep, setVerifyStep] = useState(1); // 1 = resend step, 2 = verify step
 
   const [deleteAccount] = useDeleteAccountMutation();
   const [login] = useLoginMutation();
@@ -205,19 +199,28 @@ function AdminsTable({ statusFilter, roleFilter, searchQuery }) {
     setShowStatusModal(true);
   };
 
-  const handleResendClick = (account) => {
-    setResendTarget(account);
-    setResendPurpose("account-verification");
-    setShowResendModal(true);
-    setResendCooldown(60);
-  };
-
   const handleVerifyClick = (account) => {
     if (!account?.email) return;
     setVerifyTarget(account);
     setOtpValue("");
     setVerifyResendCooldown(60);
+    setVerifyStep(1); // Start with step 1 (resend OTP)
     setShowVerifyModal(true);
+  };
+
+  const handleVerifyResend = async () => {
+    if (!verifyTarget?.email) return;
+    try {
+      await resendOtp({
+        email: verifyTarget.email,
+        purpose: "account-verification",
+      }).unwrap();
+      toastSuccess("Verification OTP sent to " + verifyTarget.email);
+      setVerifyResendCooldown(60);
+      setVerifyStep(2); // Move to step 2 (verify OTP)
+    } catch (error) {
+      toastError(error?.data?.message || "Failed to send OTP");
+    }
   };
 
   const handleVerifyConfirm = async () => {
@@ -241,56 +244,7 @@ function AdminsTable({ statusFilter, roleFilter, searchQuery }) {
     }
   };
 
-  const handleVerifyResend = async () => {
-    if (!verifyTarget?.email) return;
-    try {
-      await resendOtp({
-        email: verifyTarget.email,
-        purpose: "account-verification",
-      }).unwrap();
-      toastSuccess("Verification OTP resent to " + verifyTarget.email);
-      setVerifyResendCooldown(60);
-    } catch (error) {
-      toastError(error?.data?.message || "Failed to resend OTP");
-    }
-  };
-
-  const handleResendConfirm = async () => {
-    if (!resendTarget?.email) return;
-    try {
-      await resendOtp({
-        email: resendTarget.email,
-        purpose: resendPurpose,
-      }).unwrap();
-      toastSuccess("OTP resent to " + resendTarget.email);
-      setShowResendModal(false);
-      setResendTarget(null);
-    } catch (error) {
-      toastError(error?.data?.message || "Failed to resend OTP");
-    }
-  };
-
-  const handleResendModalClose = () => {
-    setShowResendModal(false);
-    setResendTarget(null);
-  };
-
-  // Cooldown while resend modal is open
-  useEffect(() => {
-    if (!showResendModal) return;
-    const intervalId = setInterval(() => {
-      setResendCooldown((prev) => {
-        if (prev <= 1) {
-          clearInterval(intervalId);
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-    return () => clearInterval(intervalId);
-  }, [showResendModal]);
-
-  // Cooldown while verify modal is open
+  // Cooldown timer for resend OTP in verify modal
   useEffect(() => {
     if (!showVerifyModal) return;
     const intervalId = setInterval(() => {
@@ -382,7 +336,6 @@ function AdminsTable({ statusFilter, roleFilter, searchQuery }) {
   const ActionsCell = (p) => {
     // Check if the account is a super admin
     const isSuperAdmin = p.data.role.toLowerCase() === "superadmin";
-    const isUnverified = p.data.status === "unverified";
     const isPending = p.data.status === "pending";
 
     return (
@@ -409,23 +362,14 @@ function AdminsTable({ statusFilter, roleFilter, searchQuery }) {
             <p className="text-sm">remove</p>
           </button>
         )}
-        {/* Resend OTP for unverified/pending accounts */}
-        {!isSuperAdmin && isUnverified && (
-          <button
-            onClick={() => handleResendClick(p.data)}
-            className="flex items-center gap-1 text-primary hover:bg-gray-200 p-1 rounded-md"
-          >
-            <IconSend size={15} stroke={2} />
-            <p className="text-sm">resend otp</p>
-          </button>
-        )}
+        {/* Verify Email for pending accounts - automatically resends OTP */}
         {!isSuperAdmin && isPending && (
           <button
             onClick={() => handleVerifyClick(p.data)}
             className="flex items-center gap-1 text-primary hover:bg-gray-200 p-1 rounded-md"
           >
             <IconSend size={15} stroke={2} />
-            <p className="text-sm">verify</p>
+            <p className="text-sm">verify email</p>
           </button>
         )}
       </div>
@@ -448,7 +392,7 @@ function AdminsTable({ statusFilter, roleFilter, searchQuery }) {
           !statusFilter ||
           (statusFilter === "active" && account.status === "active") ||
           (statusFilter === "disabled" && account.status === "disabled") ||
-          (statusFilter === "unverified" && !account.verified);
+          (statusFilter === "pending" && account.status === "pending");
 
         // Then apply role filter if it exists
         const roleTypeMatch = !roleFilter || account.role === roleFilter;
@@ -479,7 +423,7 @@ function AdminsTable({ statusFilter, roleFilter, searchQuery }) {
             ? "disabled"
             : account.verified
             ? "active"
-            : "unverified"),
+            : "pending"),
       }));
   }, [accounts, statusFilter, roleFilter, searchQuery]);
 
@@ -534,13 +478,12 @@ function AdminsTable({ statusFilter, roleFilter, searchQuery }) {
 
   // Dynamic empty-state message
   const noRowsMessage = useMemo(() => {
-    const hasFilters = Boolean(
+    const hasExternalFilters = Boolean(
       statusFilter || roleFilter || (searchQuery && searchQuery.trim() !== "")
     );
-    return hasFilters
-      ? "No admins match your current filters/search"
-      : "No admins found";
-  }, [statusFilter, roleFilter, searchQuery]);
+    const anyFilters = hasExternalFilters || hasGridFilter;
+    return anyFilters ? "No records found" : "No admins found";
+  }, [statusFilter, roleFilter, searchQuery, hasGridFilter]);
 
   // Simplified onGridSizeChanged function
   const onGridSizeChanged = useCallback((params) => {
@@ -604,6 +547,14 @@ function AdminsTable({ statusFilter, roleFilter, searchQuery }) {
             paginationPageSizeSelector={[5, 10, 20, 50]}
             onGridSizeChanged={onGridSizeChanged}
             onFirstDataRendered={onFirstDataRendered}
+            onFilterChanged={(e) => {
+              try {
+                const api = e.api || gridRef.current?.api;
+                setHasGridFilter(Boolean(api?.isAnyFilterPresent?.()));
+              } catch (_) {
+                setHasGridFilter(false);
+              }
+            }}
             domLayout="normal"
             suppressPaginationPanel={false}
             localeText={{ noRowsToShow: noRowsMessage }}
@@ -734,136 +685,121 @@ function AdminsTable({ statusFilter, roleFilter, searchQuery }) {
         </form>
       </dialog>
 
-      {/* Resend OTP Modal */}
-      <dialog id="resend_modal" className="modal" open={showResendModal}>
-        <div className="modal-box gap-6 text-lg w-10/12 max-w-xl p-8 sm:p-10 rounded-3xl">
-          <div className="flex flex-col gap-6">
-            <p className="text-center text-2xl font-bold">
-              Resend Verification OTP
-            </p>
-            <p className="text-center text-gray-600">
-              Send a new verification code to {resendTarget?.email}
-            </p>
-
-            <div className="w-full flex flex-col gap-1">
-              <label className="text-primary font-bold">Purpose</label>
-              <select
-                className="select select-bordered"
-                value={resendPurpose}
-                onChange={(e) => setResendPurpose(e.target.value)}
-              >
-                <option value="account-verification">
-                  account-verification
-                </option>
-                <option value="password-reset">password-reset</option>
-              </select>
-            </div>
-
-            <div className="w-full flex justify-between items-center gap-3 mt-2">
-              <p className="text-sm text-gray-600">
-                Didn't receive an OTP?{" "}
-                {resendCooldown > 0 ? (
-                  <span className="text-gray-500">
-                    Resend ({resendCooldown}s)
-                  </span>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={handleResendConfirm}
-                    className={`text-primary underline ${
-                      isResending
-                        ? "opacity-70 cursor-wait"
-                        : "hover:opacity-80"
-                    }`}
-                    disabled={isResending}
-                  >
-                    Resend
-                  </button>
-                )}
-              </p>
-              <button
-                type="button"
-                className="bg-gray-300 text-white px-6 py-2.5 rounded-xl hover:bg-gray-400 transition-colors hover:cursor-pointer"
-                onClick={handleResendModalClose}
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <form method="dialog" className="modal-backdrop">
-          <button onClick={handleResendModalClose}>close</button>
-        </form>
-      </dialog>
-
       {/* Verify OTP Modal */}
       <dialog id="verify_modal" className="modal" open={showVerifyModal}>
         <div className="modal-box gap-6 text-lg w-10/12 max-w-xl p-8 sm:p-10 rounded-3xl">
           <div className="flex flex-col gap-6">
-            <p className="text-center text-2xl font-bold">Verify Email</p>
-            <p className="text-center text-gray-600">
-              Enter the OTP sent to {verifyTarget?.email}
-            </p>
+            {verifyStep === 1 ? (
+              // Step 1: Resend OTP
+              <>
+                <p className="text-center text-2xl font-bold">
+                  Resend Verification OTP
+                </p>
+                <p className="text-center text-gray-600">
+                  Send a new verification code to {verifyTarget?.email}
+                </p>
 
-            <div className="w-full flex flex-col gap-1">
-              <label className="text-primary font-bold">OTP*</label>
-              <input
-                type="text"
-                value={otpValue}
-                onChange={(e) => setOtpValue(e.target.value)}
-                className="p-3 bg-base-200 text-primary rounded-xl border-none"
-                placeholder="Enter OTP"
-              />
-            </div>
-
-            <div className="w-full flex justify-between items-center gap-3 mt-2">
-              <p className="text-sm text-gray-600">
-                Didn't receive an OTP?{" "}
-                {verifyResendCooldown > 0 ? (
-                  <span className="text-gray-500">
-                    Resend ({verifyResendCooldown}s)
-                  </span>
-                ) : (
+                <div className="w-full flex justify-center gap-3 mt-4">
+                  <button
+                    type="button"
+                    className="bg-gray-300 text-white px-6 py-2.5 rounded-xl hover:bg-gray-400 transition-colors hover:cursor-pointer"
+                    onClick={() => {
+                      setShowVerifyModal(false);
+                      setVerifyStep(1);
+                    }}
+                  >
+                    Cancel
+                  </button>
                   <button
                     type="button"
                     onClick={handleVerifyResend}
-                    className={`text-primary underline ${
-                      isResending
-                        ? "opacity-70 cursor-wait"
-                        : "hover:opacity-80"
+                    className={`flex items-center gap-2 bg-primary text-white px-8 py-3 rounded-xl hover:opacity-90 transition-opacity hover:cursor-pointer ${
+                      isResending ? "opacity-70 cursor-wait" : ""
                     }`}
                     disabled={isResending}
                   >
-                    Resend
+                    {isResending ? "Sending..." : "Resend OTP"}
                   </button>
-                )}
-              </p>
-              <div className="flex gap-3">
-                <button
-                  type="button"
-                  className="bg-gray-300 text-white px-6 py-2.5 rounded-xl hover:bg-gray-400 transition-colors hover:cursor-pointer"
-                  onClick={() => setShowVerifyModal(false)}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  onClick={handleVerifyConfirm}
-                  className={`flex items-center gap-2 bg-primary text-white px-6 py-2.5 rounded-xl hover:opacity-90 transition-opacity hover:cursor-pointer ${
-                    isVerifying ? "opacity-70 cursor-wait" : ""
-                  }`}
-                  disabled={isVerifying}
-                >
-                  {isVerifying ? "Verifying..." : "Verify"}
-                </button>
-              </div>
-            </div>
+                </div>
+              </>
+            ) : (
+              // Step 2: Verify OTP
+              <>
+                <p className="text-center text-2xl font-bold">Verify Email</p>
+                <p className="text-center text-gray-600">
+                  Enter the OTP sent to {verifyTarget?.email}
+                </p>
+
+                <div className="w-full flex flex-col gap-1">
+                  <label className="text-primary font-bold">OTP*</label>
+                  <input
+                    type="text"
+                    value={otpValue}
+                    onChange={(e) => setOtpValue(e.target.value)}
+                    className="p-3 bg-base-200 text-primary rounded-xl border-none"
+                    placeholder="Enter OTP"
+                  />
+                </div>
+
+                <div className="w-full flex justify-between items-center gap-3 mt-2">
+                  <p className="text-sm text-gray-600">
+                    Didn't receive an OTP?{" "}
+                    {verifyResendCooldown > 0 ? (
+                      <span className="text-gray-500">
+                        Resend ({verifyResendCooldown}s)
+                      </span>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={handleVerifyResend}
+                        className={`text-primary underline ${
+                          isResending
+                            ? "opacity-70 cursor-wait"
+                            : "hover:opacity-80"
+                        }`}
+                        disabled={isResending}
+                      >
+                        Resend
+                      </button>
+                    )}
+                  </p>
+                  <div className="flex gap-3">
+                    <button
+                      type="button"
+                      className="bg-gray-300 text-white px-6 py-2.5 rounded-xl hover:bg-gray-400 transition-colors hover:cursor-pointer"
+                      onClick={() => {
+                        setShowVerifyModal(false);
+                        setVerifyStep(1);
+                      }}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleVerifyConfirm}
+                      className={`flex items-center gap-2 bg-primary text-white px-6 py-2.5 rounded-xl hover:opacity-90 transition-opacity hover:cursor-pointer ${
+                        isVerifying ? "opacity-70 cursor-wait" : ""
+                      }`}
+                      disabled={isVerifying}
+                    >
+                      {isVerifying ? "Verifying..." : "Verify"}
+                    </button>
+                  </div>
+                </div>
+              </>
+            )}
           </div>
         </div>
 
         <form method="dialog" className="modal-backdrop">
-          <button onClick={() => setShowVerifyModal(false)}>close</button>
+          <button
+            onClick={() => {
+              setShowVerifyModal(false);
+              setVerifyStep(1);
+            }}
+          >
+            close
+          </button>
         </form>
       </dialog>
     </>

@@ -237,7 +237,7 @@ const CommentModal = forwardRef(
         ref={ref}
         className="modal text-xl text-primary"
       >
-        <div className="modal-box w-11/12 max-w-4xl max-h-[90vh] flex flex-col p-0">
+        <div className="modal-box w-11/12 max-w-4xl max-h-[90vh] flex flex-col p-0 cursor-default">
           {toast && (
             <div
               className={`fixed top-[10%] left-1/2 -translate-x-1/2 px-5 py-2.5 rounded-lg text-white text-[13px] shadow-lg z-[999999] transition-all duration-300 ${
@@ -258,7 +258,7 @@ const CommentModal = forwardRef(
               </button>
             </form>
           </div>
-          <div className="flex-1 overflow-y-auto py-5 pb-16">
+          <div className="flex-1 overflow-y-auto py-5 pb-16 cursor-default">
             <div className="">
               <div className="flex flex-col">
                 <div className="flex flex-col gap-4 px-6 mb-5">
@@ -294,7 +294,37 @@ const CommentModal = forwardRef(
                     </div>
                     {/* <DotsThree size={28} /> */}
                   </div>
-                  <p className="text-black">{post?.description}</p>
+
+                  {/* Post Details Section */}
+                  <div className="rounded-lg py-4 space-y-2 text-md">
+                    <p>
+                      <span className="font-bold">📍 Barangay:</span>{" "}
+                      {post?.barangay || "Not specified"}
+                    </p>
+                    {post?.specific_location?.coordinates &&
+                      post.specific_location.coordinates.length > 0 && (
+                        <p>
+                          <span className="font-bold">📍 Coordinates:</span>{" "}
+                          {post.specific_location.coordinates.join(", ")}
+                        </p>
+                      )}
+                    <p>
+                      <span className="font-bold">🕑 Date & Time:</span>{" "}
+                      {post?.date_and_time
+                        ? new Date(post.date_and_time).toLocaleString()
+                        : "Not specified"}
+                    </p>
+                    <p>
+                      <span className="font-bold">⚠️ Report Type:</span>{" "}
+                      {post?.report_type || "Not specified"}
+                    </p>
+                    <p className="font-bold">
+                      📝 Description: <br />
+                      <span className="font-normal block ml-1 text-gray-700">
+                        {post?.description || "No description provided"}
+                      </span>
+                    </p>
+                  </div>
                 </div>
                 {post?.images && post.images.length > 0 && (
                   <div className="w-full rounded-b-2xl bg-black flex justify-center items-center aspect-video max-h-170 relative overflow-hidden">

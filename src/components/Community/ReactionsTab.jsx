@@ -32,6 +32,8 @@ const ReactionsTab = ({
 }) => {
   // State for preventing rapid clicking
   const [isVoting, setIsVoting] = useState(false);
+  const expectedStateRef = useRef(null);
+  const votingTimeoutRef = useRef(null);
   const lastVoteTime = useRef(0);
   const VOTE_DEBOUNCE_MS = 500; // 500ms debounce
 
@@ -80,6 +82,18 @@ const ReactionsTab = ({
     }
     lastVoteTime.current = now;
     setIsVoting(true);
+    // Expectation: after action, user should have upvoted and not downvoted
+    expectedStateRef.current = {
+      type: "upvote",
+      expectHasUpvoted: !hasUpvoted,
+      expectHasDownvoted: false,
+    };
+    // Fallback timeout to re-enable even if refetch delays
+    clearTimeout(votingTimeoutRef.current);
+    votingTimeoutRef.current = setTimeout(() => {
+      setIsVoting(false);
+      expectedStateRef.current = null;
+    }, 5000);
 
     if (!currentUserId) {
       if (onShowToast) {
@@ -99,6 +113,7 @@ const ReactionsTab = ({
         } else {
           await removeUpvote(postId).unwrap();
         }
+        // Wait for refetch to update counts
       } else {
         // Add upvote
         if (isAdminPost) {
@@ -106,6 +121,7 @@ const ReactionsTab = ({
         } else {
           await upvoteReport(postId).unwrap();
         }
+        // Wait for refetch to update counts
       }
     } catch (error) {
       console.error("[VOTE] Failed to upvote post:", postId, error);
@@ -115,7 +131,7 @@ const ReactionsTab = ({
         showCustomToast("Failed to vote. Please try again.", "error");
       }
     } finally {
-      setIsVoting(false);
+      // Wait for prop changes to re-enable (handled by effect)
     }
   };
 
@@ -127,6 +143,18 @@ const ReactionsTab = ({
     }
     lastVoteTime.current = now;
     setIsVoting(true);
+    // Expectation: after action, user should have downvoted and not upvoted
+    expectedStateRef.current = {
+      type: "downvote",
+      expectHasUpvoted: false,
+      expectHasDownvoted: !hasDownvoted,
+    };
+    // Fallback timeout
+    clearTimeout(votingTimeoutRef.current);
+    votingTimeoutRef.current = setTimeout(() => {
+      setIsVoting(false);
+      expectedStateRef.current = null;
+    }, 5000);
 
     if (!currentUserId) {
       if (onShowToast) {
@@ -146,6 +174,7 @@ const ReactionsTab = ({
         } else {
           await removeDownvote(postId).unwrap();
         }
+        // Wait for refetch to update counts
       } else {
         // Add downvote
         if (isAdminPost) {
@@ -153,6 +182,7 @@ const ReactionsTab = ({
         } else {
           await downvoteReport(postId).unwrap();
         }
+        // Wait for refetch to update counts
       }
     } catch (error) {
       console.error("[VOTE] Failed to downvote post:", postId, error);
@@ -162,9 +192,39 @@ const ReactionsTab = ({
         showCustomToast("Failed to vote. Please try again.", "error");
       }
     } finally {
-      setIsVoting(false);
+      // Wait for prop changes to re-enable (handled by effect)
     }
   };
+
+  // Re-enable buttons when backend-refetched arrays reflect expected state
+  React.useEffect(() => {
+    if (!isVoting || !expectedStateRef.current) return;
+    const { expectHasUpvoted, expectHasDownvoted } = expectedStateRef.current;
+    const currentHasUp =
+      Array.isArray(upvotesArray) &&
+      upvotesArray.some((vote) =>
+        typeof vote === "object"
+          ? vote._id === currentUserId
+          : vote === currentUserId
+      );
+    const currentHasDown =
+      Array.isArray(downvotesArray) &&
+      downvotesArray.some((vote) =>
+        typeof vote === "object"
+          ? vote._id === currentUserId
+          : vote === currentUserId
+      );
+    if (
+      currentHasUp === expectHasUpvoted &&
+      currentHasDown === expectHasDownvoted
+    ) {
+      setIsVoting(false);
+      expectedStateRef.current = null;
+      clearTimeout(votingTimeoutRef.current);
+    }
+  }, [upvotesArray, downvotesArray, currentUserId, isVoting]);
+
+  React.useEffect(() => () => clearTimeout(votingTimeoutRef.current), []);
 
   return (
     <div className={`flex justify-between items-center ${className}`}>
@@ -179,7 +239,10 @@ const ReactionsTab = ({
           } rounded-full p-1.5 ${
             hasUpvoted ? "text-success" : "text-gray-400"
           }`}
-          onClick={isVoting ? undefined : handleUpvote}
+          onClick={(e) => {
+            e.stopPropagation();
+            if (!isVoting) handleUpvote();
+          }}
         />
         <span className={`font-normal ${textSize}`}>{netVotes}</span>
         <ArrowFatDown
@@ -192,11 +255,17 @@ const ReactionsTab = ({
           } rounded-full p-1.5 ${
             hasDownvoted ? "text-error" : "text-gray-400"
           }`}
-          onClick={isVoting ? undefined : handleDownvote}
+          onClick={(e) => {
+            e.stopPropagation();
+            if (!isVoting) handleDownvote();
+          }}
         />
       </div>
       <div
-        onClick={onCommentClick}
+        onClick={(e) => {
+          e.stopPropagation();
+          onCommentClick?.();
+        }}
         className="flex items-center cursor-pointer gap-x-2 py-1 px-3 pr-4 hover:bg-gray-200/80 rounded-full"
       >
         <ChatCircleDots

@@ -50,7 +50,8 @@ const PostCard = ({
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
 
   // Handle image click
-  const handleImageClick = (image) => {
+  const handleImageClick = (image, e) => {
+    e?.stopPropagation();
     setSelectedImage(image);
     setIsImageModalOpen(true);
   };
@@ -108,10 +109,6 @@ const PostCard = ({
     skip: !postId,
   });
 
-  // Initialize local state with props
-  const [localUpvotes, setLocalUpvotes] = useState(upvotesArray);
-  const [localDownvotes, setLocalDownvotes] = useState(downvotesArray);
-
   // Calculate actual comment count from fetched comments
   const actualCommentCount = actualComments ? actualComments.length : 0;
   const [localCommentCount, setLocalCommentCount] = useState(
@@ -127,31 +124,15 @@ const PostCard = ({
 
   // No longer need to fetch user profile data individually since we get it from basicProfiles
 
-  // Only update local state when props change and they're different
+  // Only update from props if we don't have actual comments data
   useEffect(() => {
-    if (JSON.stringify(upvotesArray) !== JSON.stringify(localUpvotes)) {
-      setLocalUpvotes(upvotesArray);
-    }
-    if (JSON.stringify(downvotesArray) !== JSON.stringify(localDownvotes)) {
-      setLocalDownvotes(downvotesArray);
-    }
-    // Only update from props if we don't have actual comments data
     if (!actualComments) {
       const newCommentCount = commentsCount || _commentCount || 0;
       if (newCommentCount !== localCommentCount) {
         setLocalCommentCount(newCommentCount);
       }
     }
-  }, [
-    upvotesArray,
-    downvotesArray,
-    commentsCount,
-    _commentCount,
-    localCommentCount,
-    localUpvotes,
-    localDownvotes,
-    actualComments,
-  ]);
+  }, [actualComments, commentsCount, _commentCount, localCommentCount]);
 
   const handleCommentClick = () => {
     if (commentModalRef.current) {
@@ -238,6 +219,8 @@ const PostCard = ({
     };
   }, []);
 
+  // Removed card-level click to avoid unintended modal opens
+
   return (
     <div className="shadow-sm bg-white rounded-lg px-6 pt-6 pb-4">
       {/* Header with user details and options */}
@@ -250,7 +233,10 @@ const PostCard = ({
 
         {/* Options menu - only show if user can delete */}
         {canDeletePost && (
-          <div className="relative options-container">
+          <div
+            className="relative options-container"
+            onClick={(e) => e.stopPropagation()}
+          >
             <button
               onClick={() => setShowOptionsDropdown(!showOptionsDropdown)}
               className="p-2 hover:bg-gray-100 rounded-full transition-colors"
@@ -280,7 +266,10 @@ const PostCard = ({
         )}
       </div>
 
-      <div className="text-primary flex flex-col gap-2">
+      <div
+        className="text-primary flex flex-col gap-2 cursor-pointer"
+        onClick={handleCommentClick}
+      >
         <p>
           <span className="font-bold">📍 Barangay:</span> {barangay}
         </p>
@@ -312,7 +301,9 @@ const PostCard = ({
         </p>
       </div>
 
-      <ImageGrid images={images} onImageClick={handleImageClick} />
+      <div onClick={(e) => e.stopPropagation()}>
+        <ImageGrid images={images} onImageClick={handleImageClick} />
+      </div>
 
       <hr className="text-gray-200 mt-4 mb-2" />
       {!readOnly && (
@@ -321,17 +312,12 @@ const PostCard = ({
           upvotes={upvotes}
           downvotes={downvotes}
           commentsCount={localCommentCount}
-          upvotesArray={localUpvotes}
-          downvotesArray={localDownvotes}
+          upvotesArray={upvotesArray}
+          downvotesArray={downvotesArray}
           currentUserId={currentUserId}
           onCommentClick={handleCommentClick}
           iconSize={30}
-          onVoteUpdate={(newUpvotes, newDownvotes) => {
-            setLocalUpvotes(newUpvotes);
-            setLocalDownvotes(newDownvotes);
-            // Also call the parent's onVoteUpdate if provided
-            onVoteUpdate?.(newUpvotes, newDownvotes);
-          }}
+          onVoteUpdate={undefined}
         />
       )}
 
@@ -342,14 +328,9 @@ const PostCard = ({
           upvotes={upvotes}
           downvotes={downvotes}
           commentsCount={localCommentCount}
-          upvotesArray={localUpvotes}
-          downvotesArray={localDownvotes}
-          onVoteUpdate={(newUpvotes, newDownvotes) => {
-            setLocalUpvotes(newUpvotes);
-            setLocalDownvotes(newDownvotes);
-            // Also call the parent's onVoteUpdate if provided
-            onVoteUpdate?.(newUpvotes, newDownvotes);
-          }}
+          upvotesArray={upvotesArray}
+          downvotesArray={downvotesArray}
+          onVoteUpdate={undefined}
           onCommentAdded={() => {
             setLocalCommentCount((prev) => prev + 1);
           }}

@@ -140,11 +140,9 @@ const AddInterventionModal = ({
 
   // Add loading state for boundary data
   useEffect(() => {
-    console.log("[Modal DEBUG] Fetching boundary data...");
     fetch("/quezon_barangays_boundaries.geojson")
       .then((res) => res.json())
       .then((data) => {
-        console.log("[Modal DEBUG] Boundary data loaded successfully");
         setBarangayGeoJsonData(data);
         setIsBoundaryDataLoaded(true);
         const barangayNames = data.features
@@ -172,12 +170,6 @@ const AddInterventionModal = ({
     ) {
       setFormData((prev) => ({ ...prev, barangay: preselectedBarangay }));
       // Set focusCommand to highlight the barangay on the map
-      console.log(
-        "[AddInterventionModal] useEffect: isOpen:",
-        isOpen,
-        "preselectedBarangay:",
-        preselectedBarangay
-      );
       const selectedFeature = barangayGeoJsonData.features.find(
         (feature) => feature.properties.name === preselectedBarangay
       );
@@ -186,13 +178,6 @@ const AddInterventionModal = ({
           const center = turf.centerOfMass(selectedFeature);
           if (center && center.geometry && center.geometry.coordinates) {
             const [lng, lat] = center.geometry.coordinates;
-            console.log(
-              "[AddInterventionModal] Found center for",
-              preselectedBarangay,
-              "at",
-              lat,
-              lng
-            );
             setFocusCommand({
               type: "barangay",
               name: preselectedBarangay,
@@ -200,32 +185,11 @@ const AddInterventionModal = ({
               zoomLevel: 15,
             });
           } else {
-            console.log(
-              "[AddInterventionModal] No center found for",
-              preselectedBarangay
-            );
           }
-        } catch (err) {
-          console.log(
-            "[AddInterventionModal] Error calculating center for",
-            preselectedBarangay,
-            err
-          );
-        }
+        } catch (err) {}
       } else {
-        console.log(
-          "[AddInterventionModal] No feature/geometry found for",
-          preselectedBarangay
-        );
       }
     } else {
-      if (!isOpen) console.log("[AddInterventionModal] Modal not open");
-      if (!preselectedBarangay)
-        console.log("[AddInterventionModal] No preselectedBarangay");
-      if (!barangayGeoJsonData)
-        console.log("[AddInterventionModal] barangayGeoJsonData not loaded");
-      if (!isBoundaryDataLoaded)
-        console.log("[AddInterventionModal] Boundary data not loaded");
     }
   }, [isOpen, preselectedBarangay, barangayGeoJsonData, isBoundaryDataLoaded]);
 
@@ -242,21 +206,10 @@ const AddInterventionModal = ({
 
   // Helper function to get pattern data for a barangay
   const getBarangayPatternData = (barangayName) => {
-    console.log("[DEBUG] Getting pattern data for:", barangayName);
-    console.log("[DEBUG] Available barangays:", transformedBarangays);
-
     const barangayData = transformedBarangays.find(
       (b) => b.name === barangayName
     );
     if (barangayData) {
-      console.log("[DEBUG] Found barangay data:", {
-        name: barangayData.name,
-        patternType: barangayData.patternType,
-        issueDetected: barangayData.issueDetected,
-        suggestedAction: barangayData.suggestedAction,
-        rawData: barangayData,
-      });
-
       // Use the existing patternType from transformedBarangays
       let patternType = barangayData.patternType || "none";
       let urgency = null;
@@ -284,18 +237,11 @@ const AddInterventionModal = ({
         }
       }
 
-      console.log("[DEBUG] Final pattern determination:", {
-        patternType,
-        urgency,
-        barangayName,
-      });
-
       return {
         type: patternType,
         urgency: urgency,
       };
     }
-    console.log("[DEBUG] No barangay data found for:", barangayName);
     return {
       type: "none",
       urgency: null,
@@ -311,34 +257,19 @@ const AddInterventionModal = ({
       [name]: value,
     }));
 
-    // If date is changed, auto-update status based on date logic
+    // Auto-update status if current status is not in allowed statuses
     if (name === "date") {
-      const now = new Date();
-      const selectedDate = new Date(value);
-      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-      const selectedDay = new Date(
-        selectedDate.getFullYear(),
-        selectedDate.getMonth(),
-        selectedDate.getDate()
-      );
-
-      let correctStatus = "Scheduled"; // Default for future dates
-
-      if (selectedDay < today) {
-        correctStatus = "Complete";
-      } else if (selectedDay.getTime() === today.getTime()) {
-        correctStatus = "Scheduled"; // Default for today
+      const allowedStatuses = getAllowedStatuses(value);
+      if (!allowedStatuses.includes(formData.status)) {
+        setFormData((prev) => ({
+          ...prev,
+          status: allowedStatuses[0] || "Scheduled",
+        }));
       }
-
-      setFormData((prev) => ({
-        ...prev,
-        status: correctStatus,
-      }));
     }
 
     // If barangay is changed, update the highlighted barangay, pattern data, and pan map
     if (name === "barangay") {
-      console.log("[DEBUG] Setting highlightedBarangay to:", value);
       setHighlightedBarangay(value);
 
       // Clear previous pin data when barangay changes
@@ -365,12 +296,6 @@ const AddInterventionModal = ({
             const center = turf.centerOfMass(selectedFeature);
             if (center && center.geometry && center.geometry.coordinates) {
               const [lng, lat] = center.geometry.coordinates;
-              console.log(
-                "[DEBUG] Panning to barangay:",
-                value,
-                "at coordinates:",
-                { lat, lng }
-              );
               setFocusCommand({
                 type: "barangay",
                 name: value,
@@ -391,11 +316,7 @@ const AddInterventionModal = ({
 
   // Update handlePinChange to update highlighted barangay
   const handlePinChange = (pinData) => {
-    console.log("[DEBUG] Pin data received:", pinData);
-
     if (pinData) {
-      console.log("[DEBUG] Valid pin data:", pinData);
-
       // Update the form data with both location and specific_location
       setFormData((prev) => ({
         ...prev,
@@ -428,7 +349,6 @@ const AddInterventionModal = ({
       setIsLocationValid(true);
       setSubmissionError(null);
     } else {
-      console.log("[DEBUG] Invalid pin data:", pinData);
       setIsLocationValid(false);
       setSubmissionError(
         "Please pin a specific location on the map within the selected barangay."
@@ -438,13 +358,6 @@ const AddInterventionModal = ({
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log("[Modal DEBUG] Form submission attempt:", {
-      hasBarangay: !!formData.barangay,
-      hasSpecificLocation: !!formData.specific_location,
-      isLocationValid,
-      isBoundaryDataLoaded: !!barangayGeoJsonData,
-      formData,
-    });
 
     if (!formData.barangay) {
       setSubmissionError("Please select a barangay");
@@ -482,45 +395,18 @@ const AddInterventionModal = ({
     setIsSubmitting(true);
 
     try {
-      // Determine the correct status based on the date
-      const now = new Date();
-      const selectedDate = new Date(formData.date);
-      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-      const selectedDay = new Date(
-        selectedDate.getFullYear(),
-        selectedDate.getMonth(),
-        selectedDate.getDate()
-      );
-
-      let correctStatus = formData.status;
-
-      // Auto-set status based on date logic
-      if (selectedDay < today) {
-        correctStatus = "Complete";
-      } else if (selectedDay.getTime() === today.getTime()) {
-        // For today, keep the user's selection (Scheduled or Ongoing)
-        correctStatus = formData.status;
-      } else {
-        // For future dates, only allow Scheduled
-        correctStatus = "Scheduled";
-      }
-
       // Format the data before sending to the backend
       const formattedData = {
         ...formData,
         date: new Date(formData.date).toISOString(), // Ensure proper ISO string format
-        status: correctStatus, // Use the correct status based on date logic
+        status: formData.status, // Use the user's selection directly
         specific_location: {
           type: "Point", // Add the required type field
           coordinates: formData.specific_location.coordinates,
         },
       };
 
-      console.log("[Modal DEBUG] Request body:", formattedData);
-
       const response = await createIntervention(formattedData).unwrap();
-      console.log("[Modal DEBUG] Intervention created successfully");
-      console.log("[Modal DEBUG] Response:", response);
 
       // Refetch the interventions data
       if (onRefetch) {
@@ -874,6 +760,9 @@ const AddInterventionModal = ({
                     <label className="label">
                       <span className="label-text text-lg font-semibold">
                         Status
+                      </span>
+                      <span className="label-text-alt text-xs text-gray-500">
+                        (Status options depend on the selected date)
                       </span>
                     </label>
                     <select

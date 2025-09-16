@@ -10,7 +10,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import {
-  useGetBarangaysQuery,
+  useGetAdminBarangaysQuery,
   useGetBarangayWeeklyTrendsQuery,
 } from "../../api/dengueApi";
 import {
@@ -38,28 +38,21 @@ export default function DengueChartCard() {
   const [selectedBarangay, setSelectedBarangay] = useState("bahay toro");
   const [weeks, setWeeks] = useState(6);
 
-  // Fetch barangays
+  // Fetch admin barangays (contains status and recommendations)
   const { data: barangaysData, isLoading: barangaysLoading } =
-    useGetBarangaysQuery();
-  // Get pattern for selected barangay (from barangaysData)
+    useGetAdminBarangaysQuery();
+
+  // Get pattern for selected barangay from admin barangays endpoint
   const selectedBarangayPattern = useMemo(() => {
-    if (!barangaysData || !selectedBarangay) return "none";
-    const barangay = barangaysData.find(
-      (b) => b.name?.toLowerCase() === selectedBarangay.toLowerCase()
-    );
-    // Debug logs
-    console.log(
-      "[Admin DengueChartCard DEBUG] selectedBarangay:",
-      selectedBarangay
-    );
-    console.log("[Admin DengueChartCard DEBUG] found barangay:", barangay);
-    let pattern =
-      barangay?.status_and_recommendation?.pattern_based?.status?.toLowerCase();
-    if (!pattern || pattern === "") pattern = "none";
-    console.log(
-      "[Admin DengueChartCard DEBUG] selectedBarangayPattern:",
-      pattern
-    );
+    if (!selectedBarangay) return "none";
+    let pattern;
+    if (Array.isArray(barangaysData)) {
+      const barangay = barangaysData.find(
+        (b) => b.name?.toLowerCase() === selectedBarangay.toLowerCase()
+      );
+      pattern = barangay?.status_and_recommendation?.pattern_based?.status;
+    }
+    pattern = (pattern || "none").toLowerCase();
     return pattern;
   }, [barangaysData, selectedBarangay]);
 
@@ -95,11 +88,20 @@ export default function DengueChartCard() {
     )} - ${endDate.toLocaleDateString(undefined, options)}`;
   }
 
-  // Transform the API data to match the chart format (new API structure)
+  // Transform the API data to match the chart format (handle both old and new API structures)
   const chartData = useMemo(() => {
-    if (!trendsData?.data?.weekly_counts) return [];
-    const completeWeeks = trendsData.data.weekly_counts.complete_weeks || {};
-    const currentWeek = trendsData.data.weekly_counts.current_week;
+    // New structure (per sample): data = { current_week, complete_weeks }
+    const newCompleteWeeks = trendsData?.data?.complete_weeks;
+    const newCurrentWeek = trendsData?.data?.current_week;
+
+    // Old structure (previously implemented): data = { weekly_counts: { current_week, complete_weeks } }
+    const oldCompleteWeeks = trendsData?.data?.weekly_counts?.complete_weeks;
+    const oldCurrentWeek = trendsData?.data?.weekly_counts?.current_week;
+
+    const completeWeeks = newCompleteWeeks || oldCompleteWeeks || {};
+    const currentWeek = newCurrentWeek || oldCurrentWeek;
+
+    if (!completeWeeks && !currentWeek) return [];
 
     // Transform complete weeks
     const weekEntries = Object.entries(completeWeeks)

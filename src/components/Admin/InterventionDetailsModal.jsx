@@ -599,7 +599,12 @@ const InterventionDetailsModal = ({
                     />
                   </div>
                   <div className="flex flex-col gap-2">
-                    <label className="text-primary text-lg">Status</label>
+                    <div className="flex items-center gap-2">
+                      <label className="text-primary text-lg">Status</label>
+                      <span className="text-sm font-normal text-gray-500">
+                        (Status options depend on the selected date)
+                      </span>
+                    </div>
                     {(() => {
                       const now = new Date();
                       const interventionDate = new Date(formData.date);

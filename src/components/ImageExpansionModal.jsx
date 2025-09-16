@@ -1,12 +1,34 @@
-import React from "react";
+import React, { useEffect, useRef } from "react";
 import { X } from "phosphor-react";
 
 const ImageExpansionModal = ({ isOpen, onClose, image }) => {
-  if (!isOpen || !image) return null;
+  const dialogRef = useRef(null);
+
+  useEffect(() => {
+    const dialogEl = dialogRef.current;
+    if (!dialogEl) return;
+
+    if (isOpen && image) {
+      // Use native modal top-layer so it appears above any other dialog
+      if (!dialogEl.open) {
+        try {
+          dialogEl.showModal();
+        } catch (e) {
+          // Fallback if already open
+        }
+      }
+    } else if (dialogEl.open) {
+      dialogEl.close();
+    }
+
+    return () => {
+      if (dialogEl && dialogEl.open) dialogEl.close();
+    };
+  }, [isOpen, image]);
 
   return (
-    <dialog id="image-expansion-modal" className="modal z-[1000]" open={isOpen}>
-      <div className="modal-box  w-11/12 max-w-6xl h-[90vh] p-2 overflow-hidden">
+    <dialog ref={dialogRef} id="image-expansion-modal" className="modal">
+      <div className="modal-box w-auto max-w-[90vw] max-h-[90vh] p-2 overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between p-4  text-primary">
           <div className="flex items-center gap-4">
@@ -21,19 +43,18 @@ const ImageExpansionModal = ({ isOpen, onClose, image }) => {
         </div>
 
         {/* Image Container */}
-        <div className="relative flex-1 flex items-center justify-center ">
+        <div className="relative flex items-center justify-center">
           {/* Main Image */}
-          <div className="flex items-center justify-center max-w-full max-h-full p-4">
+          <div className="flex items-center justify-center p-4">
             <img
               src={image}
               alt="Expanded view"
-              className="max-w-full max-h-full object-contain rounded-lg shadow-2xl"
-              style={{ maxHeight: "calc(90vh - 120px)" }}
+              className="w-auto h-auto max-w-[calc(90vw-3rem)] max-h-[80vh] object-contain rounded-lg shadow-2xl"
             />
           </div>
         </div>
       </div>
-      <form method="dialog" className="modal-backdrop z-[995]">
+      <form method="dialog" className="modal-backdrop">
         <button onClick={onClose}>close</button>
       </form>
     </dialog>

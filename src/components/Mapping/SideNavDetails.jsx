@@ -22,15 +22,16 @@ function getDistanceMeters(lat1, lng1, lat2, lng2) {
   return R * c;
 }
 
-const SideNavDetails = ({ 
-  report, 
-  nearbyCount, 
-  nearbyReports = [], 
-  radius = 2, 
+const SideNavDetails = ({
+  report,
+  nearbyCount,
+  nearbyReports = [],
+  radius = 2,
   onReportBreedingSite,
   onViewCommunityClick,
   onPreventionTipsClick,
-  onBarangaySelect // Add callback for when barangay is selected
+  onBarangaySelect, // Add callback for when barangay is selected
+  selectedBarangay, // Add prop for the currently selected barangay
 }) => {
   // Get user from Redux store
   const userFromStore = useSelector((state) => state.auth?.user);
@@ -49,9 +50,10 @@ const SideNavDetails = ({
 
   // Fetch all reports (could be filtered by status if needed)
   const { data: allReports } = useGetPostsQuery();
-  
+
   // Fetch all barangays for the dropdown
-  const { data: barangays = [], isLoading: isLoadingBarangays } = useGetBarangaysQuery();
+  const { data: barangays = [], isLoading: isLoadingBarangays } =
+    useGetBarangaysQuery();
 
   // Calculate number of nearby reports (within 2,000 meters, excluding self) - memoize calculation
   const nearbyCountCalculated = useMemo(() => {
@@ -78,7 +80,7 @@ const SideNavDetails = ({
   const mostCommonType = useMemo(() => {
     if (!nearbyReports.length) return "N/A";
     const counts = {};
-    nearbyReports.forEach(r => {
+    nearbyReports.forEach((r) => {
       counts[r.report_type] = (counts[r.report_type] || 0) + 1;
     });
     return Object.entries(counts).sort((a, b) => b[1] - a[1])[0][0];
@@ -87,9 +89,9 @@ const SideNavDetails = ({
   // Compute most recent date - memoize calculation
   const mostRecentDate = useMemo(() => {
     if (!nearbyReports.length) return "N/A";
-    
+
     const maxDate = new Date(
-      Math.max(...nearbyReports.map(r => new Date(r.date_and_time).getTime()))
+      Math.max(...nearbyReports.map((r) => new Date(r.date_and_time).getTime()))
     );
     return (
       maxDate.toLocaleDateString("en-US", {
@@ -108,7 +110,7 @@ const SideNavDetails = ({
 
   // Compute unique barangays and their names - memoize calculation
   const barangayData = useMemo(() => {
-    const barangaySet = new Set(nearbyReports.map(r => r.barangay));
+    const barangaySet = new Set(nearbyReports.map((r) => r.barangay));
     const uniqueBarangays = barangaySet.size;
     const barangayList = Array.from(barangaySet).filter(Boolean);
     return { uniqueBarangays, barangayList };
@@ -131,14 +133,17 @@ const SideNavDetails = ({
   }, [coordinates]);
 
   // Memoize the barangay selection handler
-  const handleBarangayChange = useCallback((e) => {
-    const selectedValue = e.target.value;
-    if (selectedValue && onBarangaySelect) {
-      const barangay = barangays.find(b => b._id === selectedValue);
-      console.log('[DEBUG] Selected barangay:', barangay);
-      onBarangaySelect(barangay);
-    }
-  }, [barangays, onBarangaySelect]);
+  const handleBarangayChange = useCallback(
+    (e) => {
+      const selectedValue = e.target.value;
+      if (selectedValue && onBarangaySelect) {
+        const barangay = barangays.find((b) => b._id === selectedValue);
+        console.log("[DEBUG] Selected barangay:", barangay);
+        onBarangaySelect(barangay);
+      }
+    },
+    [barangays, onBarangaySelect]
+  );
 
   useEffect(() => {
     if (!coordinates) {
@@ -188,19 +193,25 @@ md:w-[35vw]   max-w-[370px] "
     >
       <div className="flex flex-col items-center">
         <LogoNamed theme="dark" iconSize="h-11 w-11" textSize="text-[30px]" />
-        
+
         {/* Barangay Selection */}
         <div className="relative mt-4 mb-4 w-full max-w-sm">
           <select
             className="w-full p-3 border-[1.5px] border-white rounded-full bg-white text-primary text-sm focus:outline-none focus:ring-1 focus:ring-base-200"
-            defaultValue=""
+            value={
+              selectedBarangay
+                ? barangays.find((b) => b.name === selectedBarangay)?._id || ""
+                : ""
+            }
             onChange={handleBarangayChange}
           >
-            <option value="" disabled>Select Barangay</option>
+            <option value="" disabled>
+              Select Barangay
+            </option>
             {isLoadingBarangays ? (
               <option disabled>Loading barangays...</option>
             ) : (
-              barangays.map(b => (
+              barangays.map((b) => (
                 <option key={b._id} value={b._id}>
                   {b.displayName || b.name}
                 </option>
@@ -210,7 +221,9 @@ md:w-[35vw]   max-w-[370px] "
         </div>
         {/* Use Google Maps Street View iframe (not satellite) */}
         {coordinates ? (
-          <div style={{ width: "100%", height: "180px", marginBottom: "0.5rem" }}>
+          <div
+            style={{ width: "100%", height: "180px", marginBottom: "0.5rem" }}
+          >
             <iframe
               width="100%"
               height="180"
@@ -233,9 +246,10 @@ md:w-[35vw]   max-w-[370px] "
           {address}
         </p>
         <p className="text-[16px] font-light mr-4 ml-1 md:text-[12px]">
-          {report?.barangay ? `Barangay ${report.barangay}` : "Barangay not available"}
+          {report?.barangay
+            ? `Barangay ${report.barangay}`
+            : "Barangay not available"}
         </p>
-
       </div>
       <div className="flex flex-col">
         <div className="flex flex-col text-[14px] ml-[-2px] font-light md:text-[13px]">
@@ -251,17 +265,27 @@ md:w-[35vw]   max-w-[370px] "
             tabIndex={0}
             onFocus={() => setShowTooltip(true)}
             onBlur={() => setShowTooltip(false)}
-            style={{ cursor: barangayData.barangayList.length > 0 ? "pointer" : "default" }}
+            style={{
+              cursor:
+                barangayData.barangayList.length > 0 ? "pointer" : "default",
+            }}
           >
             <p>
               🏘️ Barangays Represented Nearby:{" "}
               <span
                 className="underline cursor-pointer"
                 style={{ textDecorationThickness: "2px" }}
-                onClick={() => barangayData.barangayList.length > 0 && setModalMode("barangays")}
+                onClick={() =>
+                  barangayData.barangayList.length > 0 &&
+                  setModalMode("barangays")
+                }
                 tabIndex={0}
-                onKeyDown={e => {
-                  if ((e.key === "Enter" || e.key === " ") && barangayData.barangayList.length > 0) setModalMode("barangays");
+                onKeyDown={(e) => {
+                  if (
+                    (e.key === "Enter" || e.key === " ") &&
+                    barangayData.barangayList.length > 0
+                  )
+                    setModalMode("barangays");
                 }}
                 aria-label="Show barangays represented nearby"
               >
@@ -349,7 +373,9 @@ md:w-[35vw]   max-w-[370px] "
           >
             ✕
           </button>
-          <p className="font-extrabold text-xl mb-3">Barangays Represented Nearby</p>
+          <p className="font-extrabold text-xl mb-3">
+            Barangays Represented Nearby
+          </p>
           {barangayData.barangayList.length > 0 ? (
             <ul className="text-left text-lg text-base">
               {barangayData.barangayList.map((b, i) => (
@@ -369,9 +395,11 @@ md:w-[35vw]   max-w-[370px] "
         <NewPostModal
           ref={newPostModalRef}
           onSubmit={() => setShowNewPostModal(false)}
-          initialCoordinates={report?.specific_location
-            ? `${report.specific_location.coordinates[1]}, ${report.specific_location.coordinates[0]}`
-            : ""}
+          initialCoordinates={
+            report?.specific_location
+              ? `${report.specific_location.coordinates[1]}, ${report.specific_location.coordinates[0]}`
+              : ""
+          }
           initialBarangay={report?.barangay || ""}
         />
       )}

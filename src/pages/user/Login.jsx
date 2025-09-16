@@ -40,10 +40,17 @@ const Login = () => {
       }).unwrap();
       console.log("Login successful:", response);
 
-      const { user, accessToken } = response;
+      const { user, accessToken, refreshToken } = response;
 
       // First update Redux state
-      dispatch(setAuthCredentials({ user, token: accessToken, rememberMe }));
+      dispatch(
+        setAuthCredentials({
+          user,
+          token: accessToken,
+          refreshToken,
+          rememberMe,
+        })
+      );
 
       // Show success message
       toastSuccess(`Welcome, ${user.name}`);

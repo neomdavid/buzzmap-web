@@ -7,37 +7,40 @@ import { Link } from "react-router-dom";
 function SprUsers() {
   // Use the same query as UsersTable for consistency
   const { data: accounts, isLoading, error } = useGetAccountsQuery();
-  
+
   // Add console.log to debug the response
-  console.log('Accounts API Response:', accounts);
-  console.log('Loading state:', isLoading);
-  console.log('Error state:', error);
+  console.log("Accounts API Response:", accounts);
+  console.log("Loading state:", isLoading);
+  console.log("Error state:", error);
 
   // Add statistics states
   const [stats, setStats] = useState({
     totalUsers: 0,
     activeUsers: 0,
     bannedUsers: 0,
-    unverifiedUsers: 0,
-    lastUpdated: new Date()
+    pendingUsers: 0,
+    lastUpdated: new Date(),
   });
 
   // Update stats when accounts data changes - filter for users only and exclude deleted
   useEffect(() => {
     if (accounts) {
       // Filter for users only and exclude deleted accounts (same logic as UsersTable)
-      const userAccounts = accounts.filter(account => {
-        const isUser = account.role === 'user';
-        const isNotDeleted = account.status !== 'deleted';
+      const userAccounts = accounts.filter((account) => {
+        const isUser = account.role === "user";
+        const isNotDeleted = account.status !== "deleted";
         return isUser && isNotDeleted;
       });
 
       setStats({
         totalUsers: userAccounts.length,
-        activeUsers: userAccounts.filter(user => user.status === 'active').length,
-        bannedUsers: userAccounts.filter(user => user.status === 'banned').length,
-        unverifiedUsers: userAccounts.filter(user => user.status === 'unverified').length,
-        lastUpdated: new Date()
+        activeUsers: userAccounts.filter((user) => user.status === "active")
+          .length,
+        bannedUsers: userAccounts.filter((user) => user.status === "banned")
+          .length,
+        pendingUsers: userAccounts.filter((user) => user.status === "pending")
+          .length,
+        lastUpdated: new Date(),
       });
     }
   }, [accounts]);
@@ -67,7 +70,9 @@ function SprUsers() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-500">Active Users</p>
-              <p className="text-2xl font-bold text-success">{stats.activeUsers}</p>
+              <p className="text-2xl font-bold text-success">
+                {stats.activeUsers}
+              </p>
             </div>
             <div className="bg-success/10 p-3 rounded-lg">
               <CheckCircle size={24} className="text-success" />
@@ -79,7 +84,9 @@ function SprUsers() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-500">Banned Users</p>
-              <p className="text-2xl font-bold text-error">{stats.bannedUsers}</p>
+              <p className="text-2xl font-bold text-error">
+                {stats.bannedUsers}
+              </p>
             </div>
             <div className="bg-error/10 p-3 rounded-lg">
               <XCircle size={24} className="text-error" />
@@ -90,8 +97,10 @@ function SprUsers() {
         <div className="bg-white p-6 rounded-xl shadow-sm">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-500">Unverified Users</p>
-              <p className="text-2xl font-bold text-warning">{stats.unverifiedUsers}</p>
+              <p className="text-sm text-gray-500">Pending Users</p>
+              <p className="text-2xl font-bold text-warning">
+                {stats.pendingUsers}
+              </p>
             </div>
             <div className="bg-warning/10 p-3 rounded-lg">
               <Clock size={24} className="text-warning" />
@@ -100,19 +109,20 @@ function SprUsers() {
         </div>
       </div>
 
-     
-
       <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8 gap-4 mt-6">
         <p className="flex justify-center text-5xl font-extrabold mb-12 md:mb-0 text-center md:justify-start md:text-left md:w-[48%]">
           User Management
         </p>
-        <Link to="/superadmin/users/archives" className="btn btn-outline rounded-full">
+        <Link
+          to="/superadmin/users/archives"
+          className="btn btn-outline rounded-full"
+        >
           View Archives
         </Link>
       </div>
 
-       {/* Filters Section */}
-       <div className="bg-white p-4 rounded-xl shadow-sm mb-8">
+      {/* Filters Section */}
+      <div className="bg-white p-4 rounded-xl shadow-sm mb-8">
         <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
           <div className="flex flex-col md:flex-row gap-4 w-full">
             <div className="flex-1">
@@ -125,7 +135,7 @@ function SprUsers() {
               />
             </div>
             <div className="flex gap-4">
-              <select 
+              <select
                 className="select select-bordered w-full max-w-xs hover:cursor-pointer"
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
@@ -133,10 +143,10 @@ function SprUsers() {
                 <option value="">All Status</option>
                 <option value="active">Active</option>
                 <option value="banned">Banned</option>
-                <option value="unverified">Unverified</option>
+                <option value="pending">Pending</option>
               </select>
 
-              <select 
+              <select
                 className="select select-bordered w-full max-w-xs hover:cursor-pointer"
                 value={roleFilter}
                 onChange={(e) => setRoleFilter(e.target.value)}
@@ -149,7 +159,7 @@ function SprUsers() {
           </div>
 
           <div className="flex gap-2">
-            <button 
+            <button
               className="btn btn-ghost"
               onClick={() => {
                 setStatusFilter("");
@@ -164,8 +174,8 @@ function SprUsers() {
       </div>
 
       <div className="bg-white rounded-xl shadow-sm p-4">
-        <UsersTable 
-          statusFilter={statusFilter} 
+        <UsersTable
+          statusFilter={statusFilter}
           roleFilter={roleFilter}
           searchQuery={searchQuery}
         />

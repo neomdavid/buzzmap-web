@@ -56,7 +56,49 @@ const baseQueryWithErrorHandling = async (args, api, extraOptions) => {
         };
       }
 
-      // Preserve the original error message from the backend
+      // Try refresh token flow
+      const state = api.getState();
+      const refreshToken = state.auth?.refreshToken;
+      if (refreshToken) {
+        try {
+          const refreshResponse = await customBaseQuery(
+            {
+              url: "auth/refresh-token",
+              method: "POST",
+              body: { refreshToken },
+            },
+            api,
+            extraOptions
+          );
+
+          if (refreshResponse?.data?.accessToken) {
+            const newAccessToken = refreshResponse.data.accessToken;
+            const newRefreshToken = refreshResponse.data.refreshToken;
+
+            // Update tokens in store and storage
+            const { setAuthCredentials } = await import(
+              "../features/authSlice"
+            );
+            const currentUser = state.auth?.user;
+            api.dispatch(
+              setAuthCredentials({
+                user: currentUser,
+                token: newAccessToken,
+                refreshToken: newRefreshToken || refreshToken,
+                rememberMe: !!localStorage.getItem("user"),
+              })
+            );
+
+            // Retry original request with new token
+            const retryResult = await customBaseQuery(args, api, extraOptions);
+            return retryResult;
+          }
+        } catch (refreshError) {
+          console.error("[AUTH] Refresh token failed:", refreshError);
+        }
+      }
+
+      // If refresh not available or failed, return unauthorized
       return {
         error: {
           status: "UNAUTHORIZED",
@@ -469,6 +511,19 @@ export const dengueApi = createApi({
       },
       providesTags: (result, error, barangay) => [
         { type: "Intervention", id: barangay },
+        { type: "Intervention", id: "LIST" },
+      ],
+    }),
+
+    // Get grouped interventions (ongoing and scheduled) for a barangay by ID
+    getGroupedInterventionsByBarangay: builder.query({
+      query: (barangayId) => `interventions/barangay/${barangayId}/grouped`,
+      transformResponse: (response) => {
+        // Expecting { ongoing: [...], scheduled: [...] }
+        return response || { ongoing: [], scheduled: [] };
+      },
+      providesTags: (result, error, barangayId) => [
+        { type: "Intervention", id: barangayId },
         { type: "Intervention", id: "LIST" },
       ],
     }),
@@ -1515,6 +1570,16 @@ export const dengueApi = createApi({
       },
     }),
 
+    // Grouped breeding site reports (individual + clusters)
+    getGroupedReports: builder.query({
+      query: () => "reports/grouped",
+      providesTags: ["Clusters"],
+      transformResponse: (response) => {
+        console.log("[DEBUG] Grouped reports response:", response);
+        return response;
+      },
+    }),
+
     // Get specific cluster details
     getSpecificCluster: builder.query({
       query: (clusterId) => `clusters/${clusterId}`,
@@ -1723,6 +1788,7 @@ export const {
   // Add this new endpoint
   useGenerateRecommendationMutation,
   useGetRecommendationForInterventionQuery,
+  useGetGroupedInterventionsByBarangayQuery,
 
   // Add this to the exported hooks
   useGetRecentReportsForBarangayMutation,
@@ -1741,4 +1807,5 @@ export const {
   useRemoveReportsFromSubClusterMutation,
   useRemoveReportsFromClusterMutation,
   useResolveReportsMutation,
+  useGetGroupedReportsQuery,
 } = dengueApi;

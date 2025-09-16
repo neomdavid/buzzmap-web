@@ -2,8 +2,8 @@ import React, { useState, useEffect, useRef, forwardRef, useMemo } from "react";
 import { DescriptionWithImages, SecondaryButton } from "../";
 // import profile1 from "../../assets/profile1.png";
 import defaultProfile from "../../assets/default_profile.png";
-import { MapPicker, CustomModalToast } from "../";
-import { showCustomToast, toastError } from "../../utils.jsx";
+import { MapPicker } from "../";
+import { showCustomToast, toastError, toastSuccess } from "../../utils.jsx";
 import {
   useCreatePostMutation,
   useCreatePostWithImageMutation,
@@ -35,7 +35,7 @@ const NewPostModal = forwardRef(
     const [images, setImages] = useState([]); // State for images
     const token = useSelector((state) => state.auth.token);
     const user = useSelector((state) => state.auth.user);
-    const [toast, setToast] = useState(null); // For storing the toast message
+
     const [isAnonymous, setIsAnonymous] = useState(false);
     const [searchBarangay, setSearchBarangay] = useState("");
     const { data: barangays = [] } = useGetBarangaysQuery();
@@ -55,14 +55,6 @@ const NewPostModal = forwardRef(
           b.displayName?.toLowerCase().includes(searchBarangay.toLowerCase())
       );
     }, [barangays, searchBarangay]);
-
-    const showToast = (message, type) => {
-      setToast({ message, type });
-
-      setTimeout(() => {
-        setToast(null); // Hide the toast after 3 seconds
-      }, 3000);
-    };
 
     useEffect(() => {
       // Set current time when component mounts
@@ -104,12 +96,22 @@ const NewPostModal = forwardRef(
         }
       }
 
+      // Validate combined date and time is not in the future
+      if (date && time) {
+        const selectedDateTime = new Date(`${date}T${time}`);
+        const now = new Date();
+        if (selectedDateTime > now) {
+          errors.time = "Time cannot be in the future.";
+          errors.datetime = "Selected date and time cannot be in the future.";
+        }
+      }
+
       setFormErrors(errors);
 
       if (Object.keys(errors).length > 0) {
-        // Show first error in a toast (optional, improve UX)
+        // Show first error via react-toastify
         const firstError = Object.values(errors)[0];
-        showToast(firstError, "error");
+        toastError(firstError);
         return false;
       }
 
@@ -134,7 +136,7 @@ const NewPostModal = forwardRef(
 
       if (!validateForm()) {
         console.warn("❌ Form validation failed");
-        showToast("Please fill all required fields", "error");
+        toastError("Please fill all required fields");
         return;
       }
 
@@ -178,7 +180,7 @@ const NewPostModal = forwardRef(
         const response = await createPostWithImage(formData).unwrap();
 
         console.log("✅ Post uploaded successfully", response);
-        showCustomToast("Post reported to surveillance", "success");
+        toastSuccess("Post reported to surveillance");
 
         // Reset form
         setBarangay("");
@@ -200,7 +202,10 @@ const NewPostModal = forwardRef(
         // If backend error occurs, display the custom toast with error message
         console.error("❌ Failed to create post:", error);
         console.error("Error details:", error.data || error.message);
-        showToast(error.data?.message || "Failed to create post", "error");
+        showCustomToast(
+          error.data?.message || "Failed to create post",
+          "error"
+        );
       }
     };
 
@@ -236,6 +241,9 @@ const NewPostModal = forwardRef(
       setDate(now.toISOString().split("T")[0]);
       setTime(now.toTimeString().slice(0, 5));
     };
+
+    const getTodayString = () => new Date().toISOString().split("T")[0];
+    const getCurrentHHMM = () => new Date().toTimeString().slice(0, 5);
 
     const handleLocationSelect = (coords, barangayName) => {
       console.log("NewPostModal received:", { coords, barangayName });
@@ -276,7 +284,7 @@ const NewPostModal = forwardRef(
       <dialog id="my_modal_4" ref={ref} className="modal text-xl text-primary ">
         <div className="modal-box w-11/12 max-w-5xl max-h-[95vh] p-0">
           {/* Fixed Header */}
-          <div className="sticky top-0 bg-base-100 z-10000 w-full border-b border-gray-200">
+          <div className="sticky top-0 bg-base-100 z-[1000] w-full border-b border-gray-200">
             <div className="flex justify-between items-center px-8 py-4">
               <p className="text-4xl font-bold">Report to Surveillance</p>
               <form method="dialog">
@@ -438,7 +446,7 @@ const NewPostModal = forwardRef(
                       {/* <p className="font-bold text-xl">
                       🕑Date & Time: <span className="text-error">*</span>
                     </p> */}
-                      {formErrors.datetime && (
+                      {false && formErrors.datetime && (
                         <span className="text-error text-sm">
                           {formErrors.datetime}
                         </span>
@@ -458,7 +466,22 @@ const NewPostModal = forwardRef(
                             formErrors.date ? "input-error" : ""
                           }`}
                           value={date}
-                          onChange={(e) => setDate(e.target.value)}
+                          onChange={(e) => {
+                            const selected = e.target.value;
+                            setDate(selected);
+                            // If selecting today and the existing time is in the future, clamp to now and toast
+                            if (
+                              selected === getTodayString() &&
+                              time &&
+                              time > getCurrentHHMM()
+                            ) {
+                              showCustomToast(
+                                "Time cannot be in the future.",
+                                "error"
+                              );
+                              setTime(getCurrentHHMM());
+                            }
+                          }}
                           max={new Date().toISOString().split("T")[0]}
                         />
                         {formErrors.date && (
@@ -478,8 +501,33 @@ const NewPostModal = forwardRef(
                           type="time"
                           className="input input-bordered py-6 w-full text-lg"
                           value={time}
-                          onChange={(e) => setTime(e.target.value)}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            if (
+                              date === getTodayString() &&
+                              val > getCurrentHHMM()
+                            ) {
+                              // Reject future time: clamp back to current time and toast
+                              showCustomToast(
+                                "Time cannot be in the future.",
+                                "error"
+                              );
+                              setTime(getCurrentHHMM());
+                            } else {
+                              setTime(val);
+                            }
+                          }}
+                          max={
+                            date === new Date().toISOString().split("T")[0]
+                              ? new Date().toTimeString().slice(0, 5)
+                              : undefined
+                          }
                         />
+                        {false && formErrors.time && (
+                          <div className="text-error text-sm mt-1">
+                            {formErrors.time}
+                          </div>
+                        )}
                       </div>
                     </div>
 
@@ -554,13 +602,6 @@ const NewPostModal = forwardRef(
             </form>
           </main>
         </div>
-        {toast && (
-          <CustomModalToast
-            message={toast.message}
-            type={toast.type}
-            onClose={() => setToast(null)}
-          />
-        )}
       </dialog>
     );
   }

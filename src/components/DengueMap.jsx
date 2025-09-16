@@ -766,31 +766,21 @@ const DengueMap = ({
               }
             </div>
           </div>
-          <!-- Pattern-Based Alert Card -->
-          ${
-            patternBased.alert &&
-            patternBased.alert !== "None" &&
-            patternBased.status
-              ? `
-            <div class="p-3 rounded-lg border-2 border-primary/30 bg-primary/5">
-              <div>
-                <p class="text-sm font-medium text-gray-600 uppercase">Pattern-Based Alert</p>
-                <p class="text-lg font-semibold">${patternBased.alert}</p>
-              </div>
-            </div>
-          `
-              : ""
-          }
           <!-- Report-Based Alert Card -->
           ${
             reportBased.alert &&
             reportBased.alert !== "None" &&
-            reportBased.count > 0
+            reportBased.count >= 0
               ? `
-            <div class="p-3 rounded-lg border-2 ${reportCardColor}">
+            <div class="p-3 rounded-lg border-2 border-primary/30 bg-primary/5">
               <div>
                 <p class="text-sm font-medium text-gray-600 uppercase">Report-Based Alert</p>
                 <p class="text-lg font-semibold">${reportBased.alert}</p>
+                ${
+                  reportBased.count > 0
+                    ? `<p class="text-sm text-gray-600 mt-1">Count: ${reportBased.count}</p>`
+                    : ""
+                }
               </div>
             </div>
           `

@@ -31,6 +31,7 @@ const ClusterDetailsModal = ({
   canFormSubCluster,
   getRemainingReports,
   refetchSpecificCluster,
+  refetchGroupedReports,
 }) => {
   if (!showClusterDetailsModal || !selectedCluster) return null;
 
@@ -187,6 +188,9 @@ const ClusterDetailsModal = ({
       }
       if (typeof refetchSpecificCluster === "function") {
         refetchSpecificCluster();
+      }
+      if (typeof refetchGroupedReports === "function") {
+        refetchGroupedReports();
       }
     } catch (error) {
       const msg =

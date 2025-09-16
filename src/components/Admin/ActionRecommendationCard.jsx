@@ -17,6 +17,7 @@ import {
 import {
   useGetAllInterventionsQuery,
   useGetRecommendationForInterventionQuery,
+  useGetGroupedInterventionsByBarangayQuery,
 } from "../../api/dengueApi";
 import { CheckCircle as LucideCheckCircle } from "lucide-react";
 
@@ -69,9 +70,17 @@ const ActionRecommendationCard = ({
   className = "",
   hideSharedInfo = false,
   onApply,
+  barangayId,
+  ongoing_interventions = 0,
+  scheduled_interventions = 0,
 }) => {
   // Get all interventions
   const { data: allInterventions } = useGetAllInterventionsQuery();
+  const [showInterventionsModal, setShowInterventionsModal] = useState(false);
+  const { data: groupedInterventions, isLoading: isLoadingGrouped } =
+    useGetGroupedInterventionsByBarangayQuery(barangayId, {
+      skip: !showInterventionsModal || !barangayId,
+    });
 
   // AI recommendation state - only fetch when modal is opened
   const [showAIRecommendations, setShowAIRecommendations] = useState(false);
@@ -316,11 +325,11 @@ const ActionRecommendationCard = ({
   const styles = PATTERN_STYLES[patternType] || PATTERN_STYLES.none;
   const urgencyLevelToDisplay = styles.urgency;
 
-  // Status badge styles
+  // Status badge styles (for list items)
   const statusStyles = {
-    Scheduled: "bg-info/10 text-info border-info/20",
-    Ongoing: "bg-warning/10 text-warning border-warning/20",
-    Complete: "bg-success/10 text-success border-success/20",
+    Scheduled: "text-info",
+    Ongoing: "text-warning",
+    Complete: "text-success",
   };
 
   return (
@@ -356,23 +365,52 @@ const ActionRecommendationCard = ({
               View Recommendations
             </button>
           )}
-          {hasRecentIntervention ? (
-            <div
-              className={`px-3 py-1.5 rounded-full border text-sm flex items-center gap-1.5 ${
-                statusStyles[latestRecentIntervention.status]
-              }`}
+          {ongoing_interventions > 0 || scheduled_interventions > 0 ? (
+            <button
+              onClick={() => setShowInterventionsModal(true)}
+              className="px-3 py-1.5 bg-white border border-primary text-primary rounded-full hover:bg-primary/5 transition-colors text-sm cursor-pointer flex items-center gap-2"
             >
-              <LucideCheckCircle size={16} weight="fill" />
-              {latestRecentIntervention.status}
-            </div>
+              <svg
+                className="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                />
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                />
+              </svg>
+              View Interventions
+            </button>
           ) : (
             onApply &&
-            ["spike", "increase"].includes(patternType) &&
-            showApplyButton && (
+            ["spike", "increase"].includes(patternType) && (
               <button
                 onClick={() => onApply(barangay, pattern_based?.status)}
-                className="px-3 py-1.5 bg-primary text-white rounded-full hover:bg-primary/90 transition-colors text-sm cursor-pointer"
+                className="px-3 py-1.5 bg-primary text-white rounded-full hover:bg-primary/90 transition-colors text-sm cursor-pointer flex items-center gap-2"
               >
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+                  />
+                </svg>
                 Add Intervention
               </button>
             )
@@ -686,6 +724,291 @@ const ActionRecommendationCard = ({
               </button>
             </form>
           </div>
+        </div>
+      </dialog>
+
+      {/* Interventions Modal */}
+      <dialog className="modal" open={showInterventionsModal}>
+        <div className="modal-box bg-gradient-to-br from-white to-gray-50 rounded-3xl shadow-2xl w-11/12 max-h-[90vh] overflow-y-auto max-w-5xl p-0 relative border-0">
+          {/* Header */}
+          <div className="sticky top-0 bg-white text-gray-900 p-10 rounded-t-3xl relative border-b border-gray-200">
+            <button
+              className="btn btn-ghost btn-circle text-gray-600 hover:bg-gray-100 transition-all duration-200 absolute right-4 top-3"
+              onClick={() => setShowInterventionsModal(false)}
+            >
+              <svg
+                className="w-6 h-6"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12"
+                />
+              </svg>
+            </button>
+            <div className="flex flex-col items-center justify-center text-center">
+              <p className="text-3xl  text-primary font-bold">
+                Interventions for <span className="font-bold">{barangay}</span>
+              </p>
+              {pattern_based?.status && (
+                <span
+                  className={`mt-2 inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium border ${getPatternColor(
+                    normalizePatternType(pattern_based.status),
+                    "border"
+                  )} ${getPatternColor(
+                    normalizePatternType(pattern_based.status),
+                    "text"
+                  )}`}
+                >
+                  <span
+                    className={`w-2 h-2 rounded-full ${getPatternColor(
+                      normalizePatternType(pattern_based.status),
+                      "badge"
+                    )}`}
+                  ></span>
+                  {getPatternLabel(pattern_based.status)}
+                </span>
+              )}
+            </div>
+          </div>
+
+          {/* Content */}
+          <div className="p-6">
+            {isLoadingGrouped ? (
+              <div className="flex items-center justify-center py-16">
+                <div className="flex flex-col items-center gap-4">
+                  <div className="loading loading-spinner loading-lg text-primary"></div>
+                  <p className="text-gray-500">Loading interventions...</p>
+                </div>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                {/* Ongoing Interventions */}
+                <div className="space-y-4">
+                  <div className="flex items-center gap-3 mb-6">
+                    <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+                    <p className="text-xl font-bold text-primary">Ongoing</p>
+                    <span className="bg-green-100 text-green-800 text-xs font-medium px-2.5 py-0.5 rounded-full">
+                      {groupedInterventions?.ongoing?.length || 0}
+                    </span>
+                  </div>
+
+                  {groupedInterventions?.ongoing?.length ? (
+                    <div className="space-y-4">
+                      {groupedInterventions.ongoing.map((i) => (
+                        <div
+                          key={i._id}
+                          className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 hover:shadow-md transition-all duration-200 group"
+                        >
+                          <div className="flex items-start justify-between mb-3">
+                            <p className="font-bold text-gray-900 text-xl group-hover:text-primary transition-colors">
+                              {i.interventionType}
+                            </p>
+                            {i.personnel && (
+                              <span className="bg-gray-100 text-gray-800 text-xs font-medium px-3 py-1 rounded-full">
+                                {i.personnel}
+                              </span>
+                            )}
+                          </div>
+
+                          <div className="space-y-3 text-base text-gray-700">
+                            <div className="flex items-center gap-2.5">
+                              <svg
+                                className="w-5 h-5 text-gray-400"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                                />
+                              </svg>
+                              <span>
+                                {new Date(i.date).toLocaleDateString("en-US", {
+                                  weekday: "short",
+                                  year: "numeric",
+                                  month: "short",
+                                  day: "numeric",
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                })}
+                              </span>
+                            </div>
+
+                            {i.address && (
+                              <div className="flex items-start gap-2.5">
+                                <svg
+                                  className="w-5 h-5 text-gray-400 mt-0.5"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+                                  />
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
+                                  />
+                                </svg>
+                                <span className="text-gray-800">
+                                  {i.address}
+                                </span>
+                              </div>
+                            )}
+
+                            {/* personnel shown in top-right badge; remove duplicate row */}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-12 bg-gray-50 rounded-2xl">
+                      <svg
+                        className="w-12 h-12 text-gray-300 mx-auto mb-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                        />
+                      </svg>
+                      <p className="text-gray-500 font-medium">
+                        No ongoing interventions
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Scheduled Interventions */}
+                <div className="space-y-4">
+                  <div className="flex items-center gap-3 mb-6">
+                    <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                    <p className="text-xl font-bold text-primary">Scheduled</p>
+                    <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded-full">
+                      {groupedInterventions?.scheduled?.length || 0}
+                    </span>
+                  </div>
+
+                  {groupedInterventions?.scheduled?.length ? (
+                    <div className="space-y-4">
+                      {groupedInterventions.scheduled.map((i) => (
+                        <div
+                          key={i._id}
+                          className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 hover:shadow-md transition-all duration-200 group"
+                        >
+                          <div className="flex items-start justify-between mb-3">
+                            <p className="font-bold text-gray-900 text-xl group-hover:text-primary transition-colors">
+                              {i.interventionType}
+                            </p>
+                            {i.personnel && (
+                              <span className="bg-gray-100 text-gray-800 text-xs font-medium px-3 py-1 rounded-full">
+                                {i.personnel}
+                              </span>
+                            )}
+                          </div>
+
+                          <div className="space-y-3 text-base text-gray-700">
+                            <div className="flex items-center gap-2.5">
+                              <svg
+                                className="w-5 h-5 text-gray-400"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                                />
+                              </svg>
+                              <span>
+                                {new Date(i.date).toLocaleDateString("en-US", {
+                                  weekday: "short",
+                                  year: "numeric",
+                                  month: "short",
+                                  day: "numeric",
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                })}
+                              </span>
+                            </div>
+
+                            {i.address && (
+                              <div className="flex items-start gap-2.5">
+                                <svg
+                                  className="w-5 h-5 text-gray-400 mt-0.5"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+                                  />
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
+                                  />
+                                </svg>
+                                <span className="text-gray-800">
+                                  {i.address}
+                                </span>
+                              </div>
+                            )}
+
+                            {/* personnel shown in top-right badge; remove duplicate row */}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-12 bg-gray-50 rounded-2xl">
+                      <svg
+                        className="w-12 h-12 text-gray-300 mx-auto mb-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                        />
+                      </svg>
+                      <p className="text-gray-500 font-medium">
+                        No scheduled interventions
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Footer removed per request */}
         </div>
       </dialog>
     </div>
