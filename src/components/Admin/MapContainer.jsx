@@ -12,6 +12,7 @@ const MapContainer = ({
   setSelectedFullReport,
   setShowFullReport,
   clusters = [],
+  baseUrl = "/mapping",
 }) => {
   return (
     <div className="flex h-[50vh] mb-4" ref={mapContainerRef}>
@@ -25,6 +26,7 @@ const MapContainer = ({
         clusters={clusters}
         style={{ height: "100%", width: "100%" }}
         useAdminEndpoint={true}
+        baseUrl={baseUrl}
         onMarkerClick={(item, type) => {
           if (type === "report") {
             setSelectedFullReport(item);
