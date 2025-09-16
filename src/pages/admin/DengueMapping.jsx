@@ -1285,6 +1285,7 @@ const DengueMapping = () => {
           setSelectedFullReport={setSelectedFullReport}
           setShowFullReport={setShowFullReport}
           clusters={rawClusters}
+          baseUrl="/admin/mapping"
         />
 
         {/* Map Controls Overlay - Top Left */}

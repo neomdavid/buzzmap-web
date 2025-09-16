@@ -30,6 +30,7 @@ import {
   CEA,
   Dashboard,
   DengueMapping,
+  AdminMapping,
   Interventions,
   ReportsVerification,
   AllInterventions,
@@ -271,6 +272,18 @@ const AppWithProviders = () => {
           ],
         },
       ],
+    },
+
+    // Admin mapping route (without sidebar layout)
+    {
+      path: "/admin/mapping/:id",
+      element: (
+        <GoogleMapsProvider>
+          <PrivateRoute requiredRole="admin">
+            <AdminMapping />
+          </PrivateRoute>
+        </GoogleMapsProvider>
+      ),
     },
 
     // Superadmin routes
