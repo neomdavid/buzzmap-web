@@ -1,5 +1,5 @@
 import React from "react";
-import { Megaphone, CaretDown } from "phosphor-react";
+import { CaretDown } from "phosphor-react";
 
 const ClusterDropdown = ({
   showClusterDropdown,
@@ -21,10 +21,13 @@ const ClusterDropdown = ({
       <button
         type="button"
         onClick={() => setShowClusterDropdown((s) => !s)}
-        className="flex items-center gap-2 bg-error text-white font-bold border border-error py-2 pl-3 pr-2 text-sm rounded-full shadow hover:brightness-95 active:brightness-90 transition"
+        className={`flex items-center gap-2 font-bold py-2 pl-3 pr-2 text-sm rounded-full shadow hover:brightness-95 active:brightness-90 transition ${
+          pendingClusters.length + partiallyResolvedClusters.length > 0
+            ? "bg-error text-white border border-error"
+            : "bg-white text-primary border border-gray-300"
+        }`}
         disabled={isLoadingClusters}
       >
-        <Megaphone weight="fill" />
         {isLoadingClusters ? (
           <span className="flex items-center gap-2">
             <span className="loading loading-spinner loading-xs"></span>

@@ -1398,6 +1398,53 @@ const DengueMapping = () => {
                           />
                           <span>Others</span>
                         </div>
+                        {/* Cluster-specific legends */}
+                        <div className="mt-2 pt-2 border-t border-gray-200" />
+                        <div className="flex items-center gap-2">
+                          {/* Violet marker chip to indicate cluster member */}
+                          <span
+                            className="inline-block w-3 h-3 rounded-full"
+                            style={{ backgroundColor: "#8B5CF6" }}
+                            aria-hidden
+                          />
+                          <span>Cluster Member Marker</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {/* Orange small dot for pending badge */}
+                          <span className="relative inline-flex items-center">
+                            <span
+                              className="inline-block w-3 h-3 rounded-full bg-white border"
+                              aria-hidden
+                            />
+                            <span
+                              className="inline-block w-2 h-2 rounded-full absolute -top-1 -right-1"
+                              style={{
+                                backgroundColor: "#f59e0b",
+                                border: "1px solid #fff",
+                              }}
+                              aria-hidden
+                            />
+                          </span>
+                          <span>Pending Status Indicator</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {/* Red circle swatch for active cluster circle */}
+                          <span
+                            className="inline-block w-3 h-3 rounded-full bg-white"
+                            style={{ border: "2px solid #dc2626" }}
+                            aria-hidden
+                          />
+                          <span>Cluster Area — Unchecked</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {/* Green circle swatch for resolved cluster circle */}
+                          <span
+                            className="inline-block w-3 h-3 rounded-full bg-white"
+                            style={{ border: "2px solid #10b981" }}
+                            aria-hidden
+                          />
+                          <span>Cluster Area — Resolved</span>
+                        </div>
                       </div>
                     </div>
                   )}
