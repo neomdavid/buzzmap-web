@@ -21,6 +21,7 @@ import trappingIcon from "../../assets/icons/trapping.svg";
 import stagnantIcon from "../../assets/icons/stagnant_water.svg";
 import garbageIcon from "../../assets/icons/garbage.svg";
 import othersIcon from "../../assets/icons/others.svg";
+import allIcon from "../../assets/all.svg";
 import {
   loadGoogleMapsScript,
   createMapInstance,
@@ -44,6 +45,8 @@ const PATTERN_COLORS_DARK = {
 };
 
 const INTERVENTION_TYPE_ICONS = {
+  All: allIcon,
+  all: allIcon,
   Fogging: foggingIcon,
   "Ovicidal-Larvicidal Trapping": trappingIcon,
   "Clean-up Drive": cleanUpIcon,

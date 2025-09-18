@@ -7,6 +7,7 @@ import foggingIcon from "../assets/icons/fogging.svg";
 import trappingIcon from "../assets/icons/trapping.svg";
 import cleanUpIcon from "../assets/icons/cleanup.svg";
 import educationIcon from "../assets/icons/education.svg";
+import allIcon from "../assets/all.svg";
 import * as turf from "@turf/turf";
 import { MapPinLine, Circle } from "phosphor-react";
 import {
@@ -274,6 +275,8 @@ const DengueMap = ({
 
   // Intervention type icon mapping
   const INTERVENTION_TYPE_ICONS = {
+    All: allIcon,
+    all: allIcon,
     Fogging: foggingIcon,
     "Ovicidal-Larvicidal Trapping": trappingIcon,
     "Clean-up Drive": cleanUpIcon,
@@ -1308,6 +1311,10 @@ const DengueMap = ({
                   Intervention Types
                 </p>
                 <div className="space-y-2">
+                  <div className="flex items-center space-x-2">
+                    <img src={allIcon} alt="All" className="w-6 h-6" />
+                    <span className="text-sm">All Interventions</span>
+                  </div>
                   <div className="flex items-center space-x-2">
                     <img src={foggingIcon} alt="Fogging" className="w-6 h-6" />
                     <span className="text-sm">Fogging</span>

@@ -8,6 +8,7 @@ import educationIcon from "../assets/icons/education.svg";
 import stagnantWaterIcon from "../assets/icons/stagnant_water.svg";
 import garbageIcon from "../assets/icons/garbage.svg";
 import othersIcon from "../assets/icons/others.svg";
+import allIcon from "../assets/all.svg";
 
 // Color constants
 export const PATTERN_COLORS = {
@@ -46,6 +47,8 @@ export const INTERVENTION_STATUS_COLORS = {
 };
 
 export const INTERVENTION_TYPE_ICONS = {
+  All: allIcon,
+  all: allIcon,
   Fogging: foggingIcon,
   "Ovicidal-Larvicidal Trapping": trappingIcon,
   "Clean-up Drive": cleanupIcon,

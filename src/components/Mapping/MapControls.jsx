@@ -7,6 +7,7 @@ import trappingIcon from "../../assets/icons/trapping.svg";
 import stagnantIcon from "../../assets/icons/stagnant_water.svg";
 import garbageIcon from "../../assets/icons/garbage.svg";
 import othersIcon from "../../assets/icons/others.svg";
+import allIcon from "../../assets/all.svg";
 
 const MapControls = ({
   showControlPanel,
@@ -251,6 +252,15 @@ const MapControls = ({
                           Intervention Types
                         </p>
                         <div className="flex flex-wrap gap-4">
+                          <div
+                            key="all-intervention"
+                            className="flex items-center space-x-2"
+                          >
+                            <img src={allIcon} alt="All" className="w-6 h-6" />
+                            <span className="text-xs text-primary">
+                              All Interventions
+                            </span>
+                          </div>
                           <div
                             key="fogging-intervention"
                             className="flex items-center space-x-2"
