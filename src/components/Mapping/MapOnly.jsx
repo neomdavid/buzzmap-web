@@ -18,6 +18,7 @@ import cleanUpIcon from "../../assets/icons/cleanup.svg";
 import foggingIcon from "../../assets/icons/fogging.svg";
 import educationIcon from "../../assets/icons/education.svg";
 import trappingIcon from "../../assets/icons/trapping.svg";
+import { getInterventionIcon } from "../../utils/mapOverlays";
 import stagnantIcon from "../../assets/icons/stagnant_water.svg";
 import garbageIcon from "../../assets/icons/garbage.svg";
 import othersIcon from "../../assets/icons/others.svg";
@@ -570,7 +571,14 @@ const MapOnly = forwardRef(
                   <p class=\"text-xl\">
                     <span class=\"font-bold\">Date:</span> ${
                       site.date_and_time
-                        ? new Date(site.date_and_time).toLocaleDateString()
+                        ? new Date(site.date_and_time).toLocaleString("en-US", {
+                            year: "numeric",
+                            month: "long",
+                            day: "numeric",
+                            hour: "numeric",
+                            minute: "2-digit",
+                            hour12: true,
+                          })
                         : ""
                     }
                   </p>
@@ -695,9 +703,9 @@ const MapOnly = forwardRef(
                     intervention
                   );
                 } catch (_) {}
-                const iconUrl =
-                  INTERVENTION_TYPE_ICONS[intervention.interventionType] ||
-                  INTERVENTION_TYPE_ICONS.default;
+                const iconUrl = getInterventionIcon(
+                  intervention.interventionType || intervention.type
+                );
                 const glyphImg = document.createElement("img");
                 glyphImg.src = iconUrl;
                 glyphImg.style.width = "28px";

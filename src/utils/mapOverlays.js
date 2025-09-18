@@ -56,6 +56,31 @@ export const INTERVENTION_TYPE_ICONS = {
   default: foggingIcon,
 };
 
+// Normalized icon resolver to handle label variants and casing
+export function getInterventionIcon(type) {
+  const raw = typeof type === "string" ? type : "";
+  const normalized = raw
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+  switch (normalized) {
+    case "fogging":
+      return foggingIcon;
+    case "ovicidal larvicidal trapping":
+      return trappingIcon;
+    case "clean up drive":
+    case "cleanup drive":
+      return cleanupIcon;
+    case "education campaign":
+      return educationIcon;
+    case "all":
+      return allIcon;
+    default:
+      // Try direct map first (handles exact-cased keys), else default
+      return INTERVENTION_TYPE_ICONS[raw] || INTERVENTION_TYPE_ICONS.default;
+  }
+}
+
 export const BREEDING_SITE_TYPE_ICONS = {
   "Stagnant Water": stagnantWaterIcon,
   "Standing Water": stagnantWaterIcon, // Use same icon as stagnant water

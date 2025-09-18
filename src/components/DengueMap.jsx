@@ -7,6 +7,7 @@ import foggingIcon from "../assets/icons/fogging.svg";
 import trappingIcon from "../assets/icons/trapping.svg";
 import cleanUpIcon from "../assets/icons/cleanup.svg";
 import educationIcon from "../assets/icons/education.svg";
+import { getInterventionIcon } from "../utils/mapOverlays";
 import allIcon from "../assets/all.svg";
 import * as turf from "@turf/turf";
 import { MapPinLine, Circle } from "phosphor-react";
@@ -537,9 +538,9 @@ const DengueMap = ({
       const { AdvancedMarkerElement, PinElement } = window.google.maps.marker;
       activeInterventions.forEach((intervention) => {
         if (intervention.specific_location?.coordinates) {
-          const iconUrl =
-            INTERVENTION_TYPE_ICONS[intervention.interventionType] ||
-            INTERVENTION_TYPE_ICONS.default;
+          const iconUrl = getInterventionIcon(
+            intervention.interventionType || intervention.type
+          );
           const glyphImg = document.createElement("img");
           glyphImg.src = iconUrl;
           glyphImg.style.width = "28px";
@@ -861,7 +862,14 @@ const DengueMap = ({
           <p class="text-xl">
             <span class="font-bold">Date:</span> ${
               site.date_and_time
-                ? new Date(site.date_and_time).toLocaleDateString()
+                ? new Date(site.date_and_time).toLocaleString("en-US", {
+                    year: "numeric",
+                    month: "long",
+                    day: "numeric",
+                    hour: "numeric",
+                    minute: "2-digit",
+                    hour12: true,
+                  })
                 : ""
             }
           </p>

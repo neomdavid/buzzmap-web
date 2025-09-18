@@ -5,6 +5,7 @@ import {
   USER_PATTERN_COLORS_MAP,
   INTERVENTION_STATUS_COLORS,
   INTERVENTION_TYPE_ICONS,
+  getInterventionIcon,
   BREEDING_SITE_TYPE_ICONS,
   normalizeBarangayName,
   QC_CENTER,
@@ -624,7 +625,14 @@ const MapContainer = ({
               <p class="text-xl">
                 <span class="font-bold">Date:</span> ${
                   site.date_and_time
-                    ? new Date(site.date_and_time).toLocaleDateString()
+                    ? new Date(site.date_and_time).toLocaleString("en-US", {
+                        year: "numeric",
+                        month: "long",
+                        day: "numeric",
+                        hour: "numeric",
+                        minute: "2-digit",
+                        hour12: true,
+                      })
                     : ""
                 }
               </p>
@@ -695,9 +703,9 @@ const MapContainer = ({
         console.log("[DEBUG] Creating marker for intervention:", intervention);
 
         try {
-          const iconUrl =
-            INTERVENTION_TYPE_ICONS[intervention.type] ||
-            INTERVENTION_TYPE_ICONS.default;
+          const iconUrl = getInterventionIcon(
+            intervention.type || intervention.interventionType
+          );
           const glyphImg = document.createElement("img");
           glyphImg.src = iconUrl;
           glyphImg.style.width = "28px";
