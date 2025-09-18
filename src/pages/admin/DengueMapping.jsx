@@ -1429,6 +1429,24 @@ const DengueMapping = () => {
                           <span>Pending Status Indicator</span>
                         </div>
                         <div className="flex items-center gap-2">
+                          {/* Green small dot for validated badge */}
+                          <span className="relative inline-flex items-center">
+                            <span
+                              className="inline-block w-3 h-3 rounded-full bg-white border"
+                              aria-hidden
+                            />
+                            <span
+                              className="inline-block w-2 h-2 rounded-full absolute -top-1 -right-1"
+                              style={{
+                                backgroundColor: "#10b981",
+                                border: "1px solid #fff",
+                              }}
+                              aria-hidden
+                            />
+                          </span>
+                          <span>Validated Status Indicator</span>
+                        </div>
+                        <div className="flex items-center gap-2">
                           {/* Red circle swatch for active cluster circle */}
                           <span
                             className="inline-block w-3 h-3 rounded-full bg-white"
@@ -1436,6 +1454,24 @@ const DengueMapping = () => {
                             aria-hidden
                           />
                           <span>Cluster Area — Unchecked</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {/* Red small dot for rejected badge */}
+                          <span className="relative inline-flex items-center">
+                            <span
+                              className="inline-block w-3 h-3 rounded-full bg-white border"
+                              aria-hidden
+                            />
+                            <span
+                              className="inline-block w-2 h-2 rounded-full absolute -top-1 -right-1"
+                              style={{
+                                backgroundColor: "#dc2626",
+                                border: "1px solid #fff",
+                              }}
+                              aria-hidden
+                            />
+                          </span>
+                          <span>Rejected Status Indicator</span>
                         </div>
                         <div className="flex items-center gap-2">
                           {/* Green circle swatch for resolved cluster circle */}

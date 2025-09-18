@@ -4,7 +4,6 @@ import cleaningImg from "../../assets/cleaning.jpg";
 import logoFooter from "../../assets/logo_ligthbg.svg";
 import logoSurveillance from "../../assets/icons/quezon_surveillance.png";
 import landing2 from "../../assets/landing2.jpg";
-
 import {
   GoalCard,
   Heading,
@@ -158,7 +157,14 @@ const Landing = () => {
 
       <section className="flex flex-col lg:flex-row lg:mt-10  justify-center  sm:max-w-[95vw] m-auto px-6 sm:px-6 gap-x-4 ">
         <div className="rounded-xl overflow-hidden h-[400px] lg:h-[550px]  mb-6 lg:mb-0 lg:flex-13 flex items-center justify-center bg-red-100">
-          <MapOnly style={{ height: "100%", width: "100%" }} />
+          <MapOnly
+            style={{ height: "100%", width: "100%" }}
+            useAdminEndpoint={false}
+            baseUrl="/mapping"
+            validatedOnly={true}
+            hideClusterOverlays={true}
+            suppressClusterStyling={true}
+          />
         </div>
 
         <div className="mb-16 flex flex-col flex-10 text-lg  sm:mx-6 items-center text-center lg:items-end lg:text-right">

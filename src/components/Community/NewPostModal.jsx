@@ -86,6 +86,11 @@ const NewPostModal = forwardRef(
       if (!description || description.trim() === "")
         errors.description = "Description is required.";
 
+      // Require at least one image
+      if (!images || images.length === 0) {
+        errors.images = "Please upload at least 1 photo of the breeding site.";
+      }
+
       // Validate that date is not in the future
       if (date) {
         const selectedDate = new Date(date);
@@ -610,6 +615,13 @@ const NewPostModal = forwardRef(
                 description={description}
                 onDescriptionChange={setDescription}
               />
+              {formErrors.images && (
+                <div className="w-full pl-20 mt-1">
+                  <span className="text-error text-sm">
+                    {formErrors.images}
+                  </span>
+                </div>
+              )}
               {formErrors.description && (
                 <div className="w-full pl-20">
                   <span className="text-error text-sm">

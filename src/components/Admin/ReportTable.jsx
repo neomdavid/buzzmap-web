@@ -12,6 +12,7 @@ const statusColors = {
   Verified: "bg-success",
   Pending: "bg-warning",
   Rejected: "bg-error",
+  Expired: "bg-gray-400",
 };
 
 const columnHelper = createColumnHelper();

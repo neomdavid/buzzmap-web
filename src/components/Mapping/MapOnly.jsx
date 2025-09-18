@@ -90,6 +90,10 @@ const MapOnly = forwardRef(
       recentCount = 5, // How many recent markers to show when recentOnly is true
       recentPosts = null, // Optional: provide the same recent posts as table
       baseUrl = "/mapping",
+      // User map controls
+      validatedOnly = false,
+      hideClusterOverlays = false,
+      suppressClusterStyling = false,
     },
     ref
   ) => {
@@ -188,7 +192,10 @@ const MapOnly = forwardRef(
                     : []
                 )
               : [];
-            const merged = [...individuals, ...clusterMembers];
+            let merged = [...individuals, ...clusterMembers];
+            if (validatedOnly) {
+              merged = merged.filter((r) => r?.status === "Validated");
+            }
             if (isMountedRef.current) {
               setBreedingSites(merged);
             }
@@ -198,13 +205,15 @@ const MapOnly = forwardRef(
               : Array.isArray(posts)
               ? posts
               : [];
-            const validatedSites = validPosts.filter(
-              (post) =>
-                (post.status === "Validated" || post.isInCluster === true) &&
+            const validatedSites = validPosts.filter((post) => {
+              const hasCoords =
                 post.specific_location &&
                 Array.isArray(post.specific_location.coordinates) &&
-                post.specific_location.coordinates.length === 2
-            );
+                post.specific_location.coordinates.length === 2;
+              if (!hasCoords) return false;
+              if (validatedOnly) return post.status === "Validated";
+              return post.status === "Validated" || post.isInCluster === true;
+            });
             if (isMountedRef.current) {
               setBreedingSites(validatedSites);
             }
@@ -457,26 +466,34 @@ const MapOnly = forwardRef(
               glyphImg.style.borderRadius = "100%";
               glyphImg.style.padding = "2px";
 
-              // Indicator styling: cluster members use violet regardless of validation
+              // Indicator styling: cluster members use violet unless suppressed
               const isValidated = site.status === "Validated";
               const isClusterMember = site.isInCluster === true;
               const pin = new PinElement({
                 glyph: glyphImg,
-                background: isClusterMember ? "#8B5CF6" : "#FF6347",
-                borderColor: isClusterMember ? "#8B5CF6" : "#FF6347",
+                background:
+                  suppressClusterStyling || !isClusterMember
+                    ? "#FF6347"
+                    : "#8B5CF6",
+                borderColor:
+                  suppressClusterStyling || !isClusterMember
+                    ? "#FF6347"
+                    : "#8B5CF6",
                 scale: 1.5,
               });
 
-              // Wrap the pin in a container to add a small pending dot indicator
+              // Wrap the pin in a container to add a small status dot indicator
               const markerContent = document.createElement("div");
               markerContent.style.position = "relative";
               markerContent.appendChild(pin.element);
 
-              const isPending =
-                typeof site.status === "string" &&
-                site.status.toLowerCase().includes("pending");
+              const statusStr =
+                typeof site.status === "string" ? site.status : "";
+              const isPending = statusStr.toLowerCase().includes("pending");
+              const isRejected = statusStr === "Rejected";
 
-              if (isClusterMember && isPending) {
+              // Add status badge for ALL reports (individual and cluster members) unless validatedOnly
+              if (!validatedOnly && (isPending || isValidated || isRejected)) {
                 const badge = document.createElement("div");
                 badge.style.position = "absolute";
                 badge.style.top = "-2px";
@@ -484,7 +501,11 @@ const MapOnly = forwardRef(
                 badge.style.width = "10px";
                 badge.style.height = "10px";
                 badge.style.display = "block";
-                badge.style.backgroundColor = "#f59e0b"; // orange circle for pending
+                badge.style.backgroundColor = isPending
+                  ? "#f59e0b" // orange for pending
+                  : isRejected
+                  ? "#dc2626" // red for rejected
+                  : "#10b981"; // green for validated
                 badge.style.border = "1px solid #FFFFFF";
                 badge.style.borderRadius = "9999px";
                 badge.style.boxShadow = "0 0 2px rgba(0,0,0,0.3)";
@@ -527,7 +548,11 @@ const MapOnly = forwardRef(
                 title:
                   (site.report_type || "Breeding Site") +
                   (isClusterMember ? " (Cluster)" : "") +
-                  (isClusterMember && isPending ? " (Pending)" : ""),
+                  (isPending
+                    ? " (Pending)"
+                    : isValidated
+                    ? " (Validated)"
+                    : ""),
               });
 
               marker.addListener("click", () => {
@@ -828,7 +853,11 @@ const MapOnly = forwardRef(
               (o) => o.setMap && o.setMap(null)
             );
             clusterOverlaysRef.current = [];
-            if (Array.isArray(clusters) && clusters.length > 0) {
+            if (
+              !hideClusterOverlays &&
+              Array.isArray(clusters) &&
+              clusters.length > 0
+            ) {
               clusters.forEach((c) => {
                 // True cluster members only
                 const memberReports = Array.isArray(c.reports)
@@ -855,7 +884,12 @@ const MapOnly = forwardRef(
                     ? c.isResolved
                     : totalInCluster > 0 &&
                       resolvedInCluster === totalInCluster;
-                const color = isResolvedCluster ? "#10b981" : "#dc2626";
+                // If all member reports are Validated, show green; else red
+                const allValidated =
+                  memberReports.length > 0 &&
+                  memberReports.every((r) => r?.status === "Validated");
+                const color =
+                  isResolvedCluster || allValidated ? "#10b981" : "#dc2626";
 
                 // Compute coords list for members
                 const coords = memberReports

@@ -5,6 +5,7 @@ const LogoNamed = ({
   theme = "light",
   iconSize = "h-9 w-9",
   textSize = "text-[24px]",
+  to = "/home",
 }) => {
   return theme === "light" ? (
     <div
@@ -14,14 +15,14 @@ const LogoNamed = ({
           " polygon(20% 0%, 80% 0%, 100% 0, 100% 51%, 72% 100%, 20% 100%, 0 100%, 0 0)",
       }}
     >
-      <Link to="/home">
+      <Link to={to}>
         <LightBgLogo
           className={` xl:h-13 w-13 mt-[-1px] hover:cursor-pointer ${iconSize}`}
         />
       </Link>
 
       <Link
-        to="/home"
+        to={to}
         className={` ml-[-7.5px] lg:ml-[-1.5px]  flex italic font-extrabold tracking-wider font-title uppercase hover:cursor-pointer text-2xl xl:text-4xl ${textSize}`}
       >
         <h1 className="text-primary text-[25px]">buzz</h1>

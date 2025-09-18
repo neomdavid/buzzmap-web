@@ -50,7 +50,9 @@ const StatusCell = (p) => {
       ? "bg-success"
       : status === "Pending"
       ? "bg-warning"
-      : "bg-error";
+      : status === "Rejected"
+      ? "bg-error"
+      : "bg-gray-400"; // Expired or any other
 
   return (
     <div className="flex items-center justify-center h-full p-1">
