@@ -41,6 +41,7 @@ import foggingIcon from "../../assets/icons/fogging.svg";
 import trappingIcon from "../../assets/icons/trapping.svg";
 import cleanUpIcon from "../../assets/icons/cleanup.svg";
 import educationIcon from "../../assets/icons/education.svg";
+import allIcon from "../../assets/all.svg";
 import {
   IconExclamationCircle,
   IconExclamationMark,
@@ -1454,6 +1455,10 @@ const DengueMapping = () => {
                         Interventions
                       </p>
                       <div className="grid grid-cols-1 gap-1 text-xs">
+                        <div className="flex items-center gap-2">
+                          <img src={allIcon} alt="All" className="w-3 h-3" />
+                          <span>All Interventions</span>
+                        </div>
                         <div className="flex items-center gap-2">
                           <img
                             src={foggingIcon}

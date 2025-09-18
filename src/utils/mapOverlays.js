@@ -8,6 +8,7 @@ import educationIcon from "../assets/icons/education.svg";
 import stagnantWaterIcon from "../assets/icons/stagnant_water.svg";
 import garbageIcon from "../assets/icons/garbage.svg";
 import othersIcon from "../assets/icons/others.svg";
+import allIcon from "../assets/all.svg";
 
 // Color constants
 export const PATTERN_COLORS = {
@@ -46,12 +47,39 @@ export const INTERVENTION_STATUS_COLORS = {
 };
 
 export const INTERVENTION_TYPE_ICONS = {
+  All: allIcon,
+  all: allIcon,
   Fogging: foggingIcon,
   "Ovicidal-Larvicidal Trapping": trappingIcon,
   "Clean-up Drive": cleanupIcon,
   "Education Campaign": educationIcon,
   default: foggingIcon,
 };
+
+// Normalized icon resolver to handle label variants and casing
+export function getInterventionIcon(type) {
+  const raw = typeof type === "string" ? type : "";
+  const normalized = raw
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+  switch (normalized) {
+    case "fogging":
+      return foggingIcon;
+    case "ovicidal larvicidal trapping":
+      return trappingIcon;
+    case "clean up drive":
+    case "cleanup drive":
+      return cleanupIcon;
+    case "education campaign":
+      return educationIcon;
+    case "all":
+      return allIcon;
+    default:
+      // Try direct map first (handles exact-cased keys), else default
+      return INTERVENTION_TYPE_ICONS[raw] || INTERVENTION_TYPE_ICONS.default;
+  }
+}
 
 export const BREEDING_SITE_TYPE_ICONS = {
   "Stagnant Water": stagnantWaterIcon,

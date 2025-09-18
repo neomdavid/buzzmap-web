@@ -7,6 +7,8 @@ import foggingIcon from "../assets/icons/fogging.svg";
 import trappingIcon from "../assets/icons/trapping.svg";
 import cleanUpIcon from "../assets/icons/cleanup.svg";
 import educationIcon from "../assets/icons/education.svg";
+import { getInterventionIcon } from "../utils/mapOverlays";
+import allIcon from "../assets/all.svg";
 import * as turf from "@turf/turf";
 import { MapPinLine, Circle } from "phosphor-react";
 import {
@@ -274,6 +276,8 @@ const DengueMap = ({
 
   // Intervention type icon mapping
   const INTERVENTION_TYPE_ICONS = {
+    All: allIcon,
+    all: allIcon,
     Fogging: foggingIcon,
     "Ovicidal-Larvicidal Trapping": trappingIcon,
     "Clean-up Drive": cleanUpIcon,
@@ -534,9 +538,9 @@ const DengueMap = ({
       const { AdvancedMarkerElement, PinElement } = window.google.maps.marker;
       activeInterventions.forEach((intervention) => {
         if (intervention.specific_location?.coordinates) {
-          const iconUrl =
-            INTERVENTION_TYPE_ICONS[intervention.interventionType] ||
-            INTERVENTION_TYPE_ICONS.default;
+          const iconUrl = getInterventionIcon(
+            intervention.interventionType || intervention.type
+          );
           const glyphImg = document.createElement("img");
           glyphImg.src = iconUrl;
           glyphImg.style.width = "28px";
@@ -858,7 +862,14 @@ const DengueMap = ({
           <p class="text-xl">
             <span class="font-bold">Date:</span> ${
               site.date_and_time
-                ? new Date(site.date_and_time).toLocaleDateString()
+                ? new Date(site.date_and_time).toLocaleString("en-US", {
+                    year: "numeric",
+                    month: "long",
+                    day: "numeric",
+                    hour: "numeric",
+                    minute: "2-digit",
+                    hour12: true,
+                  })
                 : ""
             }
           </p>
@@ -903,39 +914,59 @@ const DengueMap = ({
     if (!selectedIntervention || !infoWindowPosition || !mapInstanceRef.current)
       return;
     const intervention = selectedIntervention;
+    try {
+      console.debug(
+        "[DengueMap] Clicked intervention marker (raw object):",
+        intervention
+      );
+    } catch (_) {}
     const content = document.createElement("div");
+    const dateValue =
+      intervention.date ||
+      intervention.date_and_time ||
+      intervention.createdAt ||
+      intervention.updatedAt ||
+      null;
+    const description = intervention.description || intervention.details || "";
+    const address = intervention.address || intervention.location || "";
     content.innerHTML = `
       <div class="p-3 flex flex-col items-center gap-1 font-normal bg-white rounded-md shadow-md w-64 text-primary w-[50vw]">
         <p class="text-4xl font-extrabold text-primary mb-2">${
-          intervention.interventionType
+          intervention.interventionType || intervention.type || "Intervention"
         }</p>
         <div class="text-lg flex items-center gap-2">
           <span class="font-bold">Status:</span>
           <span class="px-3 py-1 rounded-full text-white font-bold text-sm" style="background-color:#8b5cf6;box-shadow:0 1px 4px rgba(0,0,0,0.08);">${
-            intervention.status
+            intervention.status || ""
           }</span>
         </div>
         <p class="text-lg"><span class="font-bold">Barangay:</span> ${
-          intervention.barangay
+          intervention.barangay || ""
         }</p>
         ${
-          intervention.address
-            ? `<p class="text-lg"><span class="font-bold">Address:</span> ${intervention.address}</p>`
+          address
+            ? `<p class="text-lg"><span class="font-bold">Address:</span> ${address}</p>`
             : ""
         }
-        <p class="text-lg"><span class="font-bold">Date:</span> ${new Date(
-          intervention.date
-        ).toLocaleString("en-US", {
-          year: "numeric",
-          month: "long",
-          day: "numeric",
-          hour: "numeric",
-          minute: "2-digit",
-          hour12: true,
-        })}</p>
-        <p class="text-lg"><span class="font-bold">Personnel:</span> ${
-          intervention.personnel || ""
-        }</p>
+        ${
+          dateValue
+            ? `<p class="text-lg"><span class="font-bold">Date:</span> ${new Date(
+                dateValue
+              ).toLocaleString("en-US", {
+                year: "numeric",
+                month: "long",
+                day: "numeric",
+                hour: "numeric",
+                minute: "2-digit",
+                hour12: true,
+              })}</p>`
+            : ""
+        }
+        ${
+          description
+            ? `<p class="text-lg"><span class="font-bold">Description:</span> ${description}</p>`
+            : ""
+        }
       </div>
     `;
     if (!infoWindowRef.current) {
@@ -1308,6 +1339,10 @@ const DengueMap = ({
                   Intervention Types
                 </p>
                 <div className="space-y-2">
+                  <div className="flex items-center space-x-2">
+                    <img src={allIcon} alt="All" className="w-6 h-6" />
+                    <span className="text-sm">All Interventions</span>
+                  </div>
                   <div className="flex items-center space-x-2">
                     <img src={foggingIcon} alt="Fogging" className="w-6 h-6" />
                     <span className="text-sm">Fogging</span>

@@ -103,27 +103,42 @@ export default function DengueChartCard() {
 
     if (!completeWeeks && !currentWeek) return [];
 
-    // Transform complete weeks
-    const weekEntries = Object.entries(completeWeeks)
-      .map(([week, info]) => ({
-        week: formatDateRange(info.date_range),
-        cases: info.count,
-        dateRange: info.date_range,
-      }))
+    // Transform complete weeks (defensively handle nulls)
+    const weekEntries = Object.entries(completeWeeks || {})
+      .map(([week, info]) => {
+        const safeDateRange =
+          Array.isArray(info?.date_range) && info.date_range.length === 2
+            ? info.date_range
+            : null;
+        const safeCases = Number(info?.count ?? 0);
+        return {
+          week: formatDateRange(safeDateRange),
+          cases: safeCases,
+          dateRange: safeDateRange,
+        };
+      })
+      .filter((entry) => Array.isArray(entry.dateRange))
       .sort((a, b) => {
-        // Sort by the start date of the range
-        const dateA = new Date(a.dateRange[0]);
-        const dateB = new Date(b.dateRange[0]);
+        // Sort by the start date of the range; guard against invalid dates
+        const dateA = a.dateRange ? new Date(a.dateRange[0]) : new Date(0);
+        const dateB = b.dateRange ? new Date(b.dateRange[0]) : new Date(0);
         return dateA - dateB;
       });
 
     // Optionally add current week
     if (currentWeek) {
-      weekEntries.push({
-        week: formatDateRange(currentWeek.date_range),
-        cases: currentWeek.count,
-        dateRange: currentWeek.date_range,
-      });
+      const cwDateRange =
+        Array.isArray(currentWeek?.date_range) &&
+        currentWeek.date_range.length === 2
+          ? currentWeek.date_range
+          : null;
+      if (cwDateRange) {
+        weekEntries.push({
+          week: formatDateRange(cwDateRange),
+          cases: Number(currentWeek?.count ?? 0),
+          dateRange: cwDateRange,
+        });
+      }
     }
 
     return weekEntries;
@@ -153,13 +168,7 @@ export default function DengueChartCard() {
     );
   }
 
-  if (!chartData || chartData.length === 0) {
-    return (
-      <div className="w-full bg-primary p-6 rounded-sm flex items-center justify-center">
-        <p className="text-white">No chart data available</p>
-      </div>
-    );
-  }
+  // Do not early-return on empty data; keep UI usable and show toast instead
 
   return (
     <div className="w-full bg-primary p-6 rounded-sm">
@@ -205,60 +214,69 @@ export default function DengueChartCard() {
           </select>
         </div>
       </div>
-      <ResponsiveContainer width="100%" height={200}>
-        <LineChart
-          data={chartData}
-          margin={{ top: 20, right: 15, left: -25, bottom: 13 }}
-        >
-          <CartesianGrid strokeDasharray="0 0" vertical={false} />
-          <XAxis
-            dataKey="week"
-            height={60}
-            tick={<CustomizedAxisTick />}
-            stroke="#fff"
-          />
-          <YAxis
-            axisLine={false}
-            tickLine={false}
-            stroke="#fff"
-            tick={{ fill: "#fff" }}
-            allowDecimals={false}
-            domain={[0, maxCases]}
-          />
-          <Tooltip
-            contentStyle={{
-              backgroundColor: "#fff",
-              border: "1px solid #e5e7eb",
-              color: "#222",
-            }}
-            labelStyle={{ color: "#222" }}
-            itemStyle={{ color: "#222" }}
-          />
-          <Legend
-            formatter={() => "Number of Cases"}
-            wrapperStyle={{ color: "#fff" }}
-          />
-          <Line
-            type="monotone"
-            dataKey="cases"
-            stroke={lineColor}
-            strokeWidth={3}
-            dot={{
-              r: 5,
-              stroke: lineColor,
-              strokeWidth: 2,
-              fill: lineColor,
-            }}
-            activeDot={{
-              r: 7,
-              stroke: lineColor,
-              strokeWidth: 2,
-              fill: lineColor,
-            }}
-            label={<CustomizedLabel />}
-          />
-        </LineChart>
-      </ResponsiveContainer>
+      {(chartData?.length ?? 0) === 0 ? (
+        <div className="w-full h-[200px] bg-primary/60 rounded-sm flex items-center justify-center">
+          <p className="text-white/80">
+            No chart data available for {selectedBarangay} with the selected
+            week range.
+          </p>
+        </div>
+      ) : (
+        <ResponsiveContainer width="100%" height={200}>
+          <LineChart
+            data={chartData}
+            margin={{ top: 20, right: 15, left: -25, bottom: 13 }}
+          >
+            <CartesianGrid strokeDasharray="0 0" vertical={false} />
+            <XAxis
+              dataKey="week"
+              height={60}
+              tick={<CustomizedAxisTick />}
+              stroke="#fff"
+            />
+            <YAxis
+              axisLine={false}
+              tickLine={false}
+              stroke="#fff"
+              tick={{ fill: "#fff" }}
+              allowDecimals={false}
+              domain={[0, maxCases]}
+            />
+            <Tooltip
+              contentStyle={{
+                backgroundColor: "#fff",
+                border: "1px solid #e5e7eb",
+                color: "#222",
+              }}
+              labelStyle={{ color: "#222" }}
+              itemStyle={{ color: "#222" }}
+            />
+            <Legend
+              formatter={() => "Number of Cases"}
+              wrapperStyle={{ color: "#fff" }}
+            />
+            <Line
+              type="monotone"
+              dataKey="cases"
+              stroke={lineColor}
+              strokeWidth={3}
+              dot={{
+                r: 5,
+                stroke: lineColor,
+                strokeWidth: 2,
+                fill: lineColor,
+              }}
+              activeDot={{
+                r: 7,
+                stroke: lineColor,
+                strokeWidth: 2,
+                fill: lineColor,
+              }}
+              label={<CustomizedLabel />}
+            />
+          </LineChart>
+        </ResponsiveContainer>
+      )}
     </div>
   );
 }
