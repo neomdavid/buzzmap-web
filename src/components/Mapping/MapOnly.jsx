@@ -555,24 +555,25 @@ const MapOnly = forwardRef(
                     : ""),
               });
 
-              marker.addListener("click", () => {
-                // Close existing info window if open
-                if (infoWindow) {
-                  infoWindow.close();
-                }
+              if (!validatedOnly) {
+                marker.addListener("click", () => {
+                  // Close existing info window if open
+                  if (infoWindow) {
+                    infoWindow.close();
+                  }
 
-                // Pan to marker position and zoom in
-                if (mapInstance.current) {
-                  mapInstance.current.panTo({
-                    lat: site.specific_location.coordinates[1],
-                    lng: site.specific_location.coordinates[0],
-                  });
-                  mapInstance.current.setZoom(17);
-                }
+                  // Pan to marker position and zoom in
+                  if (mapInstance.current) {
+                    mapInstance.current.panTo({
+                      lat: site.specific_location.coordinates[1],
+                      lng: site.specific_location.coordinates[0],
+                    });
+                    mapInstance.current.setZoom(17);
+                  }
 
-                // Use a div with Tailwind classes for InfoWindow content
-                const content = document.createElement("div");
-                content.innerHTML = `
+                  // Use a div with Tailwind classes for InfoWindow content
+                  const content = document.createElement("div");
+                  content.innerHTML = `
               <div class=\"bg-white p-4 rounded-lg text-primary text-center max-w-120 w-[50vw]\">
                 <p class=\"font-bold text-4xl font-extrabold mb-4 text-primary\">
                   ${site.report_type || "Breeding Site"}
@@ -629,75 +630,78 @@ const MapOnly = forwardRef(
               </div>
             `;
 
-                try {
-                  console.debug("[MapOnly] InfoWindow open", {
-                    reportId: site._id,
-                    isClusterMember,
-                    status: site.status,
-                    propBaseUrl: baseUrl,
-                    effectiveBaseUrl: effectiveBaseUrl.current,
-                    locationPath:
-                      typeof window !== "undefined"
-                        ? window.location.pathname
-                        : "(no-window)",
-                  });
-                } catch (_) {}
-
-                // Attach explicit button click handler with robust base URL choice
-                try {
-                  const btn = content.querySelector("#bm-view-details-btn");
-                  if (btn) {
-                    btn.addEventListener("click", () => {
-                      try {
-                        const reportId = String(site._id || "");
-                        const path =
-                          window && window.location && window.location.pathname
-                            ? window.location.pathname
-                            : "";
-                        const derived =
-                          path.indexOf("/admin") > -1
-                            ? "/admin/mapping"
-                            : "/mapping";
-                        const finalBase =
-                          effectiveBaseUrl.current &&
-                          typeof effectiveBaseUrl.current === "string" &&
-                          effectiveBaseUrl.current.length > 0
-                            ? effectiveBaseUrl.current
-                            : baseUrl &&
-                              typeof baseUrl === "string" &&
-                              baseUrl.length > 0
-                            ? baseUrl
-                            : derived;
-                        console.debug("[MapOnly] Navigate click (listener)", {
-                          reportId,
-                          path,
-                          derived,
-                          baseProp: baseUrl,
-                          effectiveBase: effectiveBaseUrl.current,
-                          finalBase,
-                        });
-                        window.location.href = `${finalBase}/${reportId}`;
-                      } catch (e) {
-                        console.error(
-                          "[MapOnly] Navigate click error (listener)",
-                          e
-                        );
-                        window.location.href = `/mapping/${site._id}`;
-                      }
+                  try {
+                    console.debug("[MapOnly] InfoWindow open", {
+                      reportId: site._id,
+                      isClusterMember,
+                      status: site.status,
+                      propBaseUrl: baseUrl,
+                      effectiveBaseUrl: effectiveBaseUrl.current,
+                      locationPath:
+                        typeof window !== "undefined"
+                          ? window.location.pathname
+                          : "(no-window)",
                     });
+                  } catch (_) {}
+
+                  // Attach explicit button click handler with robust base URL choice
+                  try {
+                    const btn = content.querySelector("#bm-view-details-btn");
+                    if (btn) {
+                      btn.addEventListener("click", () => {
+                        try {
+                          const reportId = String(site._id || "");
+                          const path =
+                            window &&
+                            window.location &&
+                            window.location.pathname
+                              ? window.location.pathname
+                              : "";
+                          const derived =
+                            path.indexOf("/admin") > -1
+                              ? "/admin/mapping"
+                              : "/mapping";
+                          const finalBase =
+                            effectiveBaseUrl.current &&
+                            typeof effectiveBaseUrl.current === "string" &&
+                            effectiveBaseUrl.current.length > 0
+                              ? effectiveBaseUrl.current
+                              : baseUrl &&
+                                typeof baseUrl === "string" &&
+                                baseUrl.length > 0
+                              ? baseUrl
+                              : derived;
+                          console.debug("[MapOnly] Navigate click (listener)", {
+                            reportId,
+                            path,
+                            derived,
+                            baseProp: baseUrl,
+                            effectiveBase: effectiveBaseUrl.current,
+                            finalBase,
+                          });
+                          window.location.href = `${finalBase}/${reportId}`;
+                        } catch (e) {
+                          console.error(
+                            "[MapOnly] Navigate click error (listener)",
+                            e
+                          );
+                          window.location.href = `/mapping/${site._id}`;
+                        }
+                      });
+                    }
+                  } catch (e) {
+                    console.error("[MapOnly] Failed to bind click listener", e);
                   }
-                } catch (e) {
-                  console.error("[MapOnly] Failed to bind click listener", e);
-                }
 
-                infoWindow.setContent(content);
-                infoWindow.setPosition({
-                  lat: site.specific_location.coordinates[1],
-                  lng: site.specific_location.coordinates[0],
+                  infoWindow.setContent(content);
+                  infoWindow.setPosition({
+                    lat: site.specific_location.coordinates[1],
+                    lng: site.specific_location.coordinates[0],
+                  });
+
+                  infoWindow.open(map, marker);
                 });
-
-                infoWindow.open(map, marker);
-              });
+              }
 
               return marker;
             });

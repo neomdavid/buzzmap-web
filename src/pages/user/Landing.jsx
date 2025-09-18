@@ -156,7 +156,12 @@ const Landing = () => {
       />
 
       <section className="flex flex-col lg:flex-row lg:mt-10  justify-center  sm:max-w-[95vw] m-auto px-6 sm:px-6 gap-x-4 ">
-        <div className="rounded-xl overflow-hidden h-[400px] lg:h-[550px]  mb-6 lg:mb-0 lg:flex-13 flex items-center justify-center bg-red-100">
+        <div
+          className="rounded-xl overflow-hidden h-[400px] lg:h-[550px]  mb-6 lg:mb-0 lg:flex-13 flex items-center justify-center bg-red-100 hover:cursor-pointer"
+          onClick={() => navigate("/mapping")}
+          role="button"
+          aria-label="Open Dengue Map"
+        >
           <MapOnly
             style={{ height: "100%", width: "100%" }}
             useAdminEndpoint={false}
