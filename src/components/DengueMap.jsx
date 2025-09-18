@@ -906,39 +906,59 @@ const DengueMap = ({
     if (!selectedIntervention || !infoWindowPosition || !mapInstanceRef.current)
       return;
     const intervention = selectedIntervention;
+    try {
+      console.debug(
+        "[DengueMap] Clicked intervention marker (raw object):",
+        intervention
+      );
+    } catch (_) {}
     const content = document.createElement("div");
+    const dateValue =
+      intervention.date ||
+      intervention.date_and_time ||
+      intervention.createdAt ||
+      intervention.updatedAt ||
+      null;
+    const description = intervention.description || intervention.details || "";
+    const address = intervention.address || intervention.location || "";
     content.innerHTML = `
       <div class="p-3 flex flex-col items-center gap-1 font-normal bg-white rounded-md shadow-md w-64 text-primary w-[50vw]">
         <p class="text-4xl font-extrabold text-primary mb-2">${
-          intervention.interventionType
+          intervention.interventionType || intervention.type || "Intervention"
         }</p>
         <div class="text-lg flex items-center gap-2">
           <span class="font-bold">Status:</span>
           <span class="px-3 py-1 rounded-full text-white font-bold text-sm" style="background-color:#8b5cf6;box-shadow:0 1px 4px rgba(0,0,0,0.08);">${
-            intervention.status
+            intervention.status || ""
           }</span>
         </div>
         <p class="text-lg"><span class="font-bold">Barangay:</span> ${
-          intervention.barangay
+          intervention.barangay || ""
         }</p>
         ${
-          intervention.address
-            ? `<p class="text-lg"><span class="font-bold">Address:</span> ${intervention.address}</p>`
+          address
+            ? `<p class="text-lg"><span class="font-bold">Address:</span> ${address}</p>`
             : ""
         }
-        <p class="text-lg"><span class="font-bold">Date:</span> ${new Date(
-          intervention.date
-        ).toLocaleString("en-US", {
-          year: "numeric",
-          month: "long",
-          day: "numeric",
-          hour: "numeric",
-          minute: "2-digit",
-          hour12: true,
-        })}</p>
-        <p class="text-lg"><span class="font-bold">Personnel:</span> ${
-          intervention.personnel || ""
-        }</p>
+        ${
+          dateValue
+            ? `<p class="text-lg"><span class="font-bold">Date:</span> ${new Date(
+                dateValue
+              ).toLocaleString("en-US", {
+                year: "numeric",
+                month: "long",
+                day: "numeric",
+                hour: "numeric",
+                minute: "2-digit",
+                hour12: true,
+              })}</p>`
+            : ""
+        }
+        ${
+          description
+            ? `<p class="text-lg"><span class="font-bold">Description:</span> ${description}</p>`
+            : ""
+        }
       </div>
     `;
     if (!infoWindowRef.current) {

@@ -725,6 +725,12 @@ const MapContainer = ({
           });
 
           marker.addListener("click", () => {
+            try {
+              console.debug(
+                "[User/MapContainer] Clicked intervention marker (raw object):",
+                intervention
+              );
+            } catch (_) {}
             // Close barangay info window if open
             if (infoWindowRef.current) {
               infoWindowRef.current.close();
@@ -755,26 +761,46 @@ const MapContainer = ({
 
             // Use a div with Tailwind classes for InfoWindow content
             const content = document.createElement("div");
+            const dateValue =
+              intervention.date_and_time ||
+              intervention.date ||
+              intervention.createdAt ||
+              intervention.updatedAt ||
+              null;
+            const description =
+              intervention.description || intervention.details || "";
             content.innerHTML = `
             <div class="bg-white p-4 rounded-lg text-primary text-center max-w-120 w-[50vw]">
               <p class="font-bold text-4xl font-extrabold mb-4 text-primary">
-                ${intervention.type || "Intervention"}
+                ${
+                  intervention.type ||
+                  intervention.interventionType ||
+                  "Intervention"
+                }
               </p>
               <div class="flex flex-col items-center mt-2 space-y-1 font-normal text-center">
                 <p class="text-lg"><span class="font-bold">Status:</span> ${
                   intervention.status || ""
                 }</p>
-                <p class="text-lg"><span class="font-bold">Date:</span> ${
-                  intervention.date_and_time
-                    ? new Date(intervention.date_and_time).toLocaleDateString()
+                ${
+                  dateValue
+                    ? `<p class="text-lg"><span class="font-bold">Date:</span> ${new Date(
+                        dateValue
+                      ).toLocaleString("en-US", {
+                        year: "numeric",
+                        month: "long",
+                        day: "numeric",
+                        hour: "numeric",
+                        minute: "2-digit",
+                        hour12: true,
+                      })}</p>`
                     : ""
-                }</p>
-                <p class="text-lg"><span class="font-bold">Description:</span> ${
-                  intervention.description || ""
-                }</p>
-                <p class="text-lg"><span class="font-bold">Personnel:</span> ${
-                  intervention.personnel || ""
-                }</p>
+                }
+                ${
+                  description
+                    ? `<p class=\"text-lg\"><span class=\"font-bold\">Description:</span> ${description}</p>`
+                    : ""
+                }
               </div>
             </div>
           `;

@@ -33,11 +33,25 @@ const MapContainer = ({
             setShowFullReport(true);
           } else if (type === "intervention") {
             // Create and show info window for intervention
+            try {
+              console.debug(
+                "[Admin/MapContainer] Clicked intervention marker (raw object):",
+                item
+              );
+            } catch (_) {}
             const content = document.createElement("div");
+            const dateValue =
+              item.date ||
+              item.date_and_time ||
+              item.createdAt ||
+              item.updatedAt ||
+              null;
+            const description = item.description || item.details || "";
+            const address = item.address || item.location || "";
             content.innerHTML = `
               <div class="p-3 flex flex-col items-center gap-1 font-normal bg-white text-center rounded-md shadow-md text-primary">
                 <p class="text-4xl font-extrabold text-primary mb-2">${
-                  item.interventionType || "Intervention"
+                  item.interventionType || item.type || "Intervention"
                 }</p>
                 <div class="text-lg flex items-center gap-2">
                   <span class="font-bold">Status:</span>
@@ -49,25 +63,29 @@ const MapContainer = ({
                   item.barangay || ""
                 }</p>
                 ${
-                  item.address
-                    ? `<p class="text-lg text-center"><span class="font-bold text-center">Address:</span> ${item.address}</p>`
+                  address
+                    ? `<p class=\"text-lg text-center\"><span class=\"font-bold text-center\">Address:</span> ${address}</p>`
                     : ""
                 }
-                <p class="text-lg"><span class="font-bold">Date:</span> ${
-                  item.date
-                    ? new Date(item.date).toLocaleString("en-US", {
+                ${
+                  dateValue
+                    ? `<p class=\"text-lg\"><span class=\"font-bold\">Date:</span> ${new Date(
+                        dateValue
+                      ).toLocaleString("en-US", {
                         year: "numeric",
                         month: "long",
                         day: "numeric",
                         hour: "numeric",
                         minute: "2-digit",
                         hour12: true,
-                      })
+                      })}</p>`
                     : ""
-                }</p>
-                <p class="text-lg"><span class="font-bold">Personnel:</span> ${
-                  item.personnel || ""
-                }</p>
+                }
+                ${
+                  description
+                    ? `<p class=\"text-lg text-center\"><span class=\"font-bold\">Description:</span> ${description}</p>`
+                    : ""
+                }
               </div>
             `;
             if (mapOnlyRef.current) {

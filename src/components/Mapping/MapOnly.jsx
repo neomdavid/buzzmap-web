@@ -688,6 +688,13 @@ const MapOnly = forwardRef(
                 return status === "ongoing" || status === "scheduled";
               })
               .map((intervention) => {
+                // Debug: log the raw intervention data used for the marker/info window
+                try {
+                  console.debug(
+                    "[MapOnly] Rendering intervention marker:",
+                    intervention
+                  );
+                } catch (_) {}
                 const iconUrl =
                   INTERVENTION_TYPE_ICONS[intervention.interventionType] ||
                   INTERVENTION_TYPE_ICONS.default;
@@ -718,6 +725,12 @@ const MapOnly = forwardRef(
                 });
 
                 marker.addListener("click", () => {
+                  try {
+                    console.debug(
+                      "[MapOnly] Clicked intervention marker (raw object):",
+                      intervention
+                    );
+                  } catch (_) {}
                   // Close existing info window if open
                   if (infoWindow) {
                     infoWindow.close();
@@ -734,10 +747,22 @@ const MapOnly = forwardRef(
 
                   // Use a div with Tailwind classes for InfoWindow content
                   const content = document.createElement("div");
+                  const dateValue =
+                    intervention.date ||
+                    intervention.date_and_time ||
+                    intervention.createdAt ||
+                    intervention.updatedAt ||
+                    null;
+                  const description =
+                    intervention.description || intervention.details || "";
+                  const address =
+                    intervention.address || intervention.location || "";
                   content.innerHTML = `
                 <div class="p-3 flex flex-col items-center gap-1 font-normal bg-white text-center rounded-md shadow-md text-primary">
                   <p class="text-4xl font-extrabold text-primary mb-2">${
-                    intervention.interventionType || "Intervention"
+                    intervention.interventionType ||
+                    intervention.type ||
+                    "Intervention"
                   }</p>
                   <div class="text-lg flex items-center gap-2">
                     <span class="font-bold">Status:</span>
@@ -749,25 +774,29 @@ const MapOnly = forwardRef(
                     intervention.barangay || ""
                   }</p>
                   ${
-                    intervention.address
-                      ? `<p class="text-lg text-center"><span class="font-bold text-center">Address:</span> ${intervention.address}</p>`
+                    address
+                      ? `<p class="text-lg text-center"><span class="font-bold text-center">Address:</span> ${address}</p>`
                       : ""
                   }
-                  <p class="text-lg"><span class="font-bold">Date:</span> ${
-                    intervention.date
-                      ? new Date(intervention.date).toLocaleString("en-US", {
+                  ${
+                    dateValue
+                      ? `<p class="text-lg"><span class="font-bold">Date:</span> ${new Date(
+                          dateValue
+                        ).toLocaleString("en-US", {
                           year: "numeric",
                           month: "long",
                           day: "numeric",
                           hour: "numeric",
                           minute: "2-digit",
                           hour12: true,
-                        })
+                        })}</p>`
                       : ""
-                  }</p>
-                  <p class="text-lg"><span class="font-bold">Personnel:</span> ${
-                    intervention.personnel || ""
-                  }</p>
+                  }
+                  ${
+                    description
+                      ? `<p class="text-lg text-center"><span class="font-bold">Description:</span> ${description}</p>`
+                      : ""
+                  }
                 </div>
               `;
 
