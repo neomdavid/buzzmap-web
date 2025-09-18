@@ -243,6 +243,8 @@ const NewPostModal = forwardRef(
     };
 
     const getTodayString = () => new Date().toISOString().split("T")[0];
+    const getYesterdayString = () =>
+      new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().split("T")[0];
     const getCurrentHHMM = () => new Date().toTimeString().slice(0, 5);
 
     const handleLocationSelect = (coords, barangayName) => {
@@ -468,6 +470,31 @@ const NewPostModal = forwardRef(
                           value={date}
                           onChange={(e) => {
                             const selected = e.target.value;
+                            // Allow only today or yesterday
+                            const todayStr = getTodayString();
+                            const yesterdayStr = new Date(
+                              Date.now() - 24 * 60 * 60 * 1000
+                            )
+                              .toISOString()
+                              .split("T")[0];
+                            if (
+                              selected !== todayStr &&
+                              selected !== yesterdayStr
+                            ) {
+                              showCustomToast(
+                                "Please select only today or yesterday.",
+                                "error"
+                              );
+                              // If user picked a future date or older than yesterday, clamp to yesterday if in past, else today
+                              const picked = new Date(selected);
+                              const today = new Date(todayStr);
+                              if (picked > today) {
+                                setDate(todayStr);
+                              } else {
+                                setDate(yesterdayStr);
+                              }
+                              return;
+                            }
                             setDate(selected);
                             // If selecting today and the existing time is in the future, clamp to now and toast
                             if (
@@ -482,7 +509,8 @@ const NewPostModal = forwardRef(
                               setTime(getCurrentHHMM());
                             }
                           }}
-                          max={new Date().toISOString().split("T")[0]}
+                          min={getYesterdayString()}
+                          max={getTodayString()}
                         />
                         {formErrors.date && (
                           <div className="text-error text-sm mt-1">
