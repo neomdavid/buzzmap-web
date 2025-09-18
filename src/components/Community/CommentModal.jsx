@@ -273,9 +273,9 @@ const CommentModal = forwardRef(
                       ) : (
                         <img
                           src={
-                            userFromStore
-                              ? userFromStore.profilePhotoUrl || defaultProfile
-                              : defaultProfile
+                            userProfileMap[post?.user?._id]?.profilePhotoUrl ||
+                            post?.user?.profilePhotoUrl ||
+                            defaultProfile
                           }
                           className="h-12 w-12 rounded-full object-cover"
                           alt="profile"
