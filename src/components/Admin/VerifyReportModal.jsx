@@ -17,6 +17,7 @@ const VerifyReportModal = ({
   username,
   onSuccess,
   onConfirmAction,
+  isAnonymous = false, // Add isAnonymous prop
 }) => {
   const modalRef = useRef(null);
   const streetViewRef = useRef(null);
@@ -181,12 +182,19 @@ const VerifyReportModal = ({
                 <hr className="text-accent/50 mb-4" />
                 <div className="flex justify-between text-lg rounded-lg">
                   <div className="flex flex-col gap-y-1">
-                    <p className="font-semibold">
+                    <div className="font-semibold">
                       <span className="text-gray-500 font-normal mr-1">
                         Username:
                       </span>
-                      {username}
-                    </p>
+                      <div className="flex items-center gap-2 mt-1">
+                        <span>{username}</span>
+                        {isAnonymous && (
+                          <span className="text-sm text-gray-500 italic">
+                            (Posted Anonymously)
+                          </span>
+                        )}
+                      </div>
+                    </div>
                     <p className="font-semibold">
                       <span className="text-gray-500 font-normal mr-1">
                         Barangay:
@@ -293,7 +301,14 @@ const VerifyReportModal = ({
                 <div className="bg-white rounded-2xl  px-6 py-4 flex flex-col gap-2">
                   <div className="flex flex-row gap-4 items-center">
                     <span className="w-28  font-semibold">Username:</span>
-                    <span className=" font-medium">{username}</span>
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium">{username}</span>
+                      {isAnonymous && (
+                        <span className="text-sm text-gray-500 italic">
+                          (Posted Anonymously)
+                        </span>
+                      )}
+                    </div>
                   </div>
                   <div className="flex flex-row gap-4 items-center">
                     <span className="w-28  font-semibold">Barangay:</span>

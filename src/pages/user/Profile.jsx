@@ -252,7 +252,7 @@ function Profile() {
               }`}
             >
               {activeTab === "pending" && (
-                <div className="absolute top-6 right-6 bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm font-medium z-10">
+                <div className="absolute top-6 left-6 bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm font-medium z-10 pointer-events-none">
                   Pending Review
                 </div>
               )}
@@ -304,7 +304,7 @@ function Profile() {
                 comments={report._comments?.length || 0}
                 shares="0"
                 currentUserId={user?._id}
-                readOnly={activeTab === "pending" || activeTab === "rejected"}
+                readOnly={activeTab === "rejected"}
                 onVoteUpdate={(newUpvotes, newDownvotes) => {
                   console.log("[DEBUG] Profile onVoteUpdate called:", {
                     newUpvotes,

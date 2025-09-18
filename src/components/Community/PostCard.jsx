@@ -40,6 +40,7 @@ const PostCard = ({
   basicProfiles = [], // Add basicProfiles prop
   onPostDeleted, // Add callback for when post is deleted
   readOnly = false, // New prop to disable interactions
+  isAnonymous = false, // Add isAnonymous prop
 }) => {
   const userFromStore = useSelector((state) => state.auth?.user);
   const commentModalRef = useRef(null);
@@ -73,6 +74,11 @@ const PostCard = ({
 
   // Get user profile from basicProfiles if available, otherwise use props
   const getUserProfile = () => {
+    // For anonymous posts, always use the passed username and profileImage
+    if (isAnonymous) {
+      return { username, profilePhotoUrl: profileImage || defaultProfile };
+    }
+
     if (basicProfiles.length > 0 && userId) {
       const profile = basicProfiles.find((p) => p._id === userId);
       if (!profile) {

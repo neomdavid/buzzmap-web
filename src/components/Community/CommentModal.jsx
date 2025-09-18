@@ -284,7 +284,7 @@ const CommentModal = forwardRef(
                       <div className="flex flex-col text-lg">
                         <p className="font-bold">
                           {post?.isAnonymous
-                            ? post?.anonymousId
+                            ? post?.displayUser?.username || post?.anonymousId
                             : userProfileMap[post?.user?._id]?.username ||
                               post?.user?.username ||
                               "User"}

@@ -11,7 +11,12 @@ import {
   themeQuartz,
 } from "ag-grid-community";
 import { AgGridReact } from "ag-grid-react";
-import { IconSearch, IconCheck, IconX } from "@tabler/icons-react";
+import {
+  IconSearch,
+  IconCheck,
+  IconX,
+  IconUserCircle,
+} from "@tabler/icons-react";
 import { ReportDetailsModal, VerifyReportModal } from "../"; // Import the modal
 import { useValidatePostMutation } from "../../api/dengueApi";
 
@@ -60,6 +65,22 @@ const StatusCell = (p) => {
         className={`${bgColor} rounded-2xl px-4 py-1 flex items-center justify-center text-white text-sm font-semibold text-center`}
       >
         {status}
+      </span>
+    </div>
+  );
+};
+
+const UsernameCell = (p) => {
+  const username = p.value;
+  const isAnonymous = p.data.isAnonymous;
+
+  return (
+    <div className="flex items-center gap-2 h-full">
+      <span className="text-sm font-medium">
+        {username}
+        {isAnonymous && (
+          <span className="ml-1 text-xs text-gray-500 italic">(Anonymous)</span>
+        )}
       </span>
     </div>
   );
@@ -198,26 +219,39 @@ function ReportTable2({
   }
 
   // Format the rowData to match the structure of the grid
-  let rowData = posts.map((post) => ({
-    id: post._id,
-    username: post.user?.username || "Anonymous", // Assuming username is part of the post
-    barangay: post.barangay, // Separate row for barangay
-    coordinates: post.specific_location?.coordinates || [], // Separate row for coordinates (array)
-    date: new Date(post.date_and_time).toLocaleString("en-US", {
-      weekday: "short", // "Mon"
-      year: "numeric", // "2025"
-      month: "short", // "Apr"
-      day: "numeric", // "27"
-      hour: "2-digit", // "11"
-      minute: "2-digit", // "30"
-      second: "2-digit", // "45"
-      hour12: true, // Show 12-hour format with AM/PM
-    }),
-    dateValue: new Date(post.date_and_time), // Raw date for filtering
-    status: post.status,
-    description: post.description, // Include description
-    images: post.images || [], // Include images, default to empty array if undefined
-  }));
+  let rowData = posts.map((post) => {
+    // Log the post data to see what we're getting
+    console.log("Post data for admin:", {
+      id: post._id,
+      isAnonymous: post.isAnonymous,
+      user: post.user,
+      displayUser: post.displayUser,
+      anonymousId: post.anonymousId,
+      username: post.user?.username,
+    });
+
+    return {
+      id: post._id,
+      username: post.user?.username || "User", // Always show real username for admin
+      isAnonymous: post.isAnonymous || false, // Add isAnonymous flag
+      barangay: post.barangay, // Separate row for barangay
+      coordinates: post.specific_location?.coordinates || [], // Separate row for coordinates (array)
+      date: new Date(post.date_and_time).toLocaleString("en-US", {
+        weekday: "short", // "Mon"
+        year: "numeric", // "2025"
+        month: "short", // "Apr"
+        day: "numeric", // "27"
+        hour: "2-digit", // "11"
+        minute: "2-digit", // "30"
+        second: "2-digit", // "45"
+        hour12: true, // Show 12-hour format with AM/PM
+      }),
+      dateValue: new Date(post.date_and_time), // Raw date for filtering
+      status: post.status,
+      description: post.description, // Include description
+      images: post.images || [], // Include images, default to empty array if undefined
+    };
+  });
 
   // If onlyRecent is true, slice the top 5 recent reports
   if (onlyRecent) {
@@ -315,8 +349,9 @@ function ReportTable2({
       {
         field: "username",
         headerName: "Username",
-        minWidth: 150,
+        minWidth: 200,
         filter: "agTextColumnFilter",
+        cellRenderer: UsernameCell,
       },
       {
         field: "barangay",
@@ -466,6 +501,7 @@ function ReportTable2({
           coordinates={selectedReport.coordinates}
           type={selectedReportType}
           username={selectedReport.username}
+          isAnonymous={selectedReport.isAnonymous}
         />
       )}
       {isModalOpen &&
@@ -488,6 +524,7 @@ function ReportTable2({
             coordinates={selectedReport.coordinates}
             type={selectedReportType}
             username={selectedReport.username}
+            isAnonymous={selectedReport.isAnonymous}
             onConfirmAction={(actionType) =>
               handleConfirmAction(selectedReport, actionType)
             }

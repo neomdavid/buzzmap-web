@@ -675,7 +675,9 @@ const AdminMapping = () => {
                 <RecentReportCard
                   key={r._id}
                   profileImage={getProfileImage(r.user?._id)}
-                  username={r.user?.username || "Unknown"}
+                  username={
+                    r.isAnonymous ? "Anonymous" : r.user?.username || "Unknown"
+                  }
                   timestamp={rawDate ? getRelativeTime(rawDate) : ""}
                   date={formattedDate}
                   time={formattedTime}

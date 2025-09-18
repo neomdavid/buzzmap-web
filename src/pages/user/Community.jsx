@@ -242,10 +242,9 @@ const Community = () => {
               post.isAnonymous ? defaultProfile : userProfile.profilePhotoUrl
             }
             username={
-              post.isAnonymous
-                ? post.anonymousId
-                : userProfile.username || "User"
+              post.isAnonymous ? "Anonymous" : userProfile.username || "User"
             }
+            isAnonymous={post.isAnonymous}
             timestamp={formatDistanceToNow(new Date(post.createdAt), {
               addSuffix: true,
             })}

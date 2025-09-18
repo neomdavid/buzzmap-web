@@ -189,18 +189,29 @@ const ReportsVerification = () => {
         </section>
       </div>
       {selectedReport && (
-        <VerifyReportModal
-          reportId={selectedReport._id}
-          barangay={selectedReport.barangay}
-          description={selectedReport.description}
-          status={selectedReport.status}
-          dateAndTime={selectedReport.date_and_time}
-          images={selectedReport.images}
-          coordinates={selectedReport.specific_location?.coordinates}
-          username={selectedReport.user?.username}
-          onClose={() => setSelectedReport(null)}
-          onSuccess={handleVerificationSuccess}
-        />
+        <>
+          {console.log("Selected report data for admin:", {
+            id: selectedReport._id,
+            isAnonymous: selectedReport.isAnonymous,
+            user: selectedReport.user,
+            displayUser: selectedReport.displayUser,
+            anonymousId: selectedReport.anonymousId,
+            username: selectedReport.user?.username,
+          })}
+          <VerifyReportModal
+            reportId={selectedReport._id}
+            barangay={selectedReport.barangay}
+            description={selectedReport.description}
+            status={selectedReport.status}
+            dateAndTime={selectedReport.date_and_time}
+            images={selectedReport.images}
+            coordinates={selectedReport.specific_location?.coordinates}
+            username={selectedReport.user?.username || "Unknown"}
+            isAnonymous={selectedReport.isAnonymous}
+            onClose={() => setSelectedReport(null)}
+            onSuccess={handleVerificationSuccess}
+          />
+        </>
       )}
     </main>
   );
