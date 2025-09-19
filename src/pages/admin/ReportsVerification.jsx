@@ -51,6 +51,8 @@ import {
   IconClock,
   IconUserCircle,
   IconSearch,
+  IconMapPin,
+  IconCircle,
 } from "@tabler/icons-react";
 
 const ReportsVerification = () => {
@@ -85,6 +87,7 @@ const ReportsVerification = () => {
     ids: [],
     loading: false,
   });
+  const [viewMode, setViewMode] = useState("individual"); // 'individual' | 'clusters'
 
   // AG Grid config for cluster reports modal
   const clusterReportsTheme = useMemo(
@@ -456,7 +459,7 @@ const ReportsVerification = () => {
       </p>
 
       {/* --- SUMMARY CARDS --- */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
         {/* Total Reports */}
         <div className="flex flex-col text-center rounded-2xl shadow bg-base-100 border border-base-200 px-6 py-5 items-center">
           <IconChartBar size={28} className="text-primary mb-1" />
@@ -518,38 +521,67 @@ const ReportsVerification = () => {
       </div>
       {/* --- END SUMMARY CARDS --- */}
 
-      <div className="flex flex-col">
-        <section className="flex flex-col gap-2">
-          <p className="text-base-content text-4xl font-bold mb-2">
-            Breeding Site Reports
-          </p>
-          <div className="h-[75vh]">
-            {isLoadingGrouped ? (
-              <TableSkeleton rows={10} columns={5} />
-            ) : (
-              <ReportTable2
-                posts={individualReports}
-                onSelectReport={setSelectedReport}
-                onSuccess={handleVerificationSuccess}
-                isRefetching={isRefetching}
-              />
-            )}
-          </div>
-        </section>
+      {/* View toggle - segmented control */}
+      <div className="mb-6 flex items-center">
+        <div className="join bg-base-200 rounded-2xl p-1.5">
+          <button
+            className={`join-item btn btn-md rounded-xl gap-2 px-4 ${
+              viewMode === "individual" ? "btn-primary" : "btn-ghost"
+            }`}
+            onClick={() => setViewMode("individual")}
+            aria-pressed={viewMode === "individual"}
+          >
+            <IconMapPin size={18} />
+            <span>Individual</span>
+          </button>
+          <button
+            className={`join-item btn btn-md rounded-xl gap-2 px-4 ${
+              viewMode === "clusters" ? "btn-primary" : "btn-ghost"
+            }`}
+            onClick={() => setViewMode("clusters")}
+            aria-pressed={viewMode === "clusters"}
+          >
+            <IconCircle size={18} />
+            <span>Clusters</span>
+          </button>
+        </div>
       </div>
 
-      {/* Clusters Verification Table */}
-      <div className="flex flex-col mt-10">
-        <section className="flex flex-col gap-2">
-          <p className="text-base-content text-4xl font-bold mb-2">Clusters</p>
-          <ClusterTable
-            clustersList={clustersList}
-            onOpenDetails={(cluster) =>
-              setClusterDetails({ open: true, cluster })
-            }
-          />
-        </section>
-      </div>
+      {viewMode === "individual" ? (
+        <div className="flex flex-col">
+          <section className="flex flex-col gap-2">
+            <p className="text-base-content text-4xl font-bold mb-2">
+              Breeding Site Reports
+            </p>
+            <div className="h-[75vh]">
+              {isLoadingGrouped ? (
+                <TableSkeleton rows={10} columns={5} />
+              ) : (
+                <ReportTable2
+                  posts={individualReports}
+                  onSelectReport={setSelectedReport}
+                  onSuccess={handleVerificationSuccess}
+                  isRefetching={isRefetching}
+                />
+              )}
+            </div>
+          </section>
+        </div>
+      ) : (
+        <div className="flex flex-col">
+          <section className="flex flex-col gap-2">
+            <p className="text-base-content text-4xl font-bold mb-2">
+              Clusters
+            </p>
+            <ClusterTable
+              clustersList={clustersList}
+              onOpenDetails={(cluster) =>
+                setClusterDetails({ open: true, cluster })
+              }
+            />
+          </section>
+        </div>
+      )}
       {clusterDetails.open && (
         <dialog open className="modal z-[1000]">
           <div className="modal-box bg-white rounded-3xl shadow-2xl w-11/12 max-w-6xl p-6 max-h-[90vh] overflow-y-auto">
