@@ -17,17 +17,38 @@ import ClusterTable from "../../components/Admin/ClusterTable";
 
 // AG Grid React cell renderers for clusters table
 const ClusterStatusCell = (params) => {
-  const v = params.data?.validated || 0;
-  const t = params.data?.total || 0;
-  const badgeClass =
-    t > 0 && v === t
-      ? "badge-success"
-      : v > 0
-      ? "badge-warning"
-      : "badge-ghost";
-  return (
-    <span className={`badge ${badgeClass}`}>{`${v} of ${t} validated`}</span>
-  );
+  const validated = params.data?.validated || 0;
+  const rejected = params.data?.rejected || 0;
+  const total = params.data?.total || 0;
+
+  // Debug logging to see what data we're getting
+  console.log("ClusterStatusCell debug:", {
+    clusterId: params.data?.id,
+    validated,
+    rejected,
+    total,
+    rawData: params.data,
+  });
+
+  // Determine the primary status and badge styling
+  let statusText, badgeClass;
+
+  if (total === 0) {
+    statusText = "No reports";
+    badgeClass = "badge-ghost";
+  } else if (validated === total) {
+    statusText = `${validated} of ${total} validated`;
+    badgeClass = "badge-success";
+  } else if (rejected === total) {
+    statusText = `${rejected} of ${total} rejected`;
+    badgeClass = "badge-error";
+  } else {
+    // Mixed status or all pending - always show validated count
+    statusText = `${validated} of ${total} validated`;
+    badgeClass = validated > 0 ? "badge-warning" : "badge-ghost";
+  }
+
+  return <span className={`badge ${badgeClass}`}>{statusText}</span>;
 };
 
 const ClusterActionsCell = (params) => {
@@ -54,8 +75,13 @@ import {
   IconMapPin,
   IconCircle,
 } from "@tabler/icons-react";
+import { toast } from "react-toastify";
+import { useSelector } from "react-redux";
 
 const ReportsVerification = () => {
+  // Get token from Redux state instead of localStorage
+  const token = useSelector((state) => state.auth.token);
+
   const {
     data: posts,
     isLoading,
@@ -213,12 +239,42 @@ const ReportsVerification = () => {
   const deriveClusterCountsTop = (cluster) => {
     const reports = Array.isArray(cluster?.reports) ? cluster.reports : [];
     const total = reports.length;
+
+    // Debug: log all report statuses
+    console.log("deriveClusterCountsTop debug:", {
+      clusterId: cluster?._id || cluster?.id,
+      totalReports: total,
+      reportStatuses: reports.map((r) => ({
+        id: r._id || r.id,
+        status: r?.status || r?.report_status || "undefined",
+        hasStatus: !!(r?.status || r?.report_status),
+      })),
+    });
+
     const validated = reports.filter((r) => {
       const s = r?.status || r?.report_status;
       return s === "Validated";
     }).length;
+    const rejected = reports.filter((r) => {
+      const s = r?.status || r?.report_status;
+      return s === "Rejected";
+    }).length;
+    const pending = reports.filter((r) => {
+      const s = r?.status || r?.report_status;
+      return s === "Pending" || !s;
+    }).length;
     const unprocessed = Math.max(0, total - validated);
-    return { total, validated, unprocessed };
+
+    console.log("Cluster counts result:", {
+      clusterId: cluster?._id || cluster?.id,
+      total,
+      validated,
+      rejected,
+      pending,
+      unprocessed,
+    });
+
+    return { total, validated, rejected, pending, unprocessed };
   };
 
   // Grouped data selections (must be declared before any effects using them)
@@ -254,6 +310,8 @@ const ReportsVerification = () => {
         dateRange: formatDateRangeTop(dateRange.start_date, dateRange.end_date),
         total: counts.total,
         validated: counts.validated,
+        rejected: counts.rejected,
+        pending: counts.pending,
         unprocessed: counts.unprocessed,
       };
     });
@@ -264,7 +322,6 @@ const ReportsVerification = () => {
       sortable: true,
       resizable: true,
       filter: true,
-      suppressMovable: true,
     });
     setClustersColumnDefs([
       { headerName: "Barangay", field: "barangay", flex: 1 },
@@ -409,6 +466,23 @@ const ReportsVerification = () => {
     setIsRefetching(true);
     try {
       await Promise.all([refetch?.(), refetchClusters?.(), refetchGrouped?.()]);
+
+      // If cluster details modal is open, update its data
+      if (clusterDetails.open && clusterDetails.cluster) {
+        const updatedClusters = Array.isArray(groupedReportsData?.clusters)
+          ? groupedReportsData.clusters
+          : clustersList;
+        const currentClusterId =
+          clusterDetails.cluster.parentClusterId ||
+          clusterDetails.cluster._id ||
+          clusterDetails.cluster.id;
+        const updatedCluster = updatedClusters.find(
+          (c) => (c.parentClusterId || c._id || c.id) === currentClusterId
+        );
+        if (updatedCluster) {
+          setClusterDetails((prev) => ({ ...prev, cluster: updatedCluster }));
+        }
+      }
     } finally {
       setIsRefetching(false);
     }
@@ -607,7 +681,6 @@ const ReportsVerification = () => {
                   sortable: true,
                   resizable: true,
                   filter: true,
-                  suppressMovable: true,
                 }}
                 theme={clusterReportsTheme}
                 suppressCellFocus={true}
@@ -626,71 +699,117 @@ const ReportsVerification = () => {
                   (r) => (r.status || r.report_status) !== "Validated"
                 ).length;
                 const validated = Math.max(0, total - remaining);
+                const rejected = reports.filter(
+                  (r) => (r.status || r.report_status) === "Rejected"
+                ).length;
                 const allFinalized = remaining === 0;
+                const allRejected = rejected === total;
+                const allValidated = validated === total;
+                const showBatchActions = !allRejected && !allValidated;
+
+                console.log("Cluster batch actions debug:", {
+                  reports,
+                  total,
+                  remaining,
+                  validated,
+                  rejected,
+                  allFinalized,
+                  allRejected,
+                  allValidated,
+                  showBatchActions,
+                  reportStatuses: reports.map((r) => ({
+                    id: r._id || r.id,
+                    status: r.status || r.report_status,
+                  })),
+                });
+
                 return (
                   <>
-                    {validated === 0 && !allFinalized ? (
-                      <button
-                        className="btn btn-success btn-sm whitespace-nowrap"
-                        disabled={total === 0}
-                        onClick={() =>
-                          setClusterBatchConfirm({
-                            open: true,
-                            mode: "all",
-                            ids: reports
-                              .map((r) => r._id || r.id)
-                              .filter(Boolean),
-                            loading: false,
-                          })
-                        }
-                      >
-                        Validate All ({total})
-                      </button>
-                    ) : !allFinalized ? (
-                      <button
-                        className="btn btn-primary btn-sm whitespace-nowrap"
-                        disabled={remaining === 0}
-                        onClick={() =>
-                          setClusterBatchConfirm({
-                            open: true,
-                            mode: "remaining",
-                            ids: reports
-                              .filter(
-                                (r) =>
-                                  (r.status || r.report_status) !== "Validated"
+                    {showBatchActions && (
+                      <>
+                        {validated === 0 && !allFinalized ? (
+                          <button
+                            className="btn btn-success btn-sm whitespace-nowrap"
+                            disabled={total === 0}
+                            onClick={() => {
+                              const ids = reports
+                                .map((r) => r._id || r.id)
+                                .filter(Boolean);
+                              console.log("Validate All clicked:", {
+                                ids,
+                                total,
+                              });
+                              setClusterBatchConfirm({
+                                open: true,
+                                mode: "all",
+                                ids,
+                                loading: false,
+                              });
+                            }}
+                          >
+                            Validate All ({total})
+                          </button>
+                        ) : !allFinalized ? (
+                          <button
+                            className="btn btn-primary btn-sm whitespace-nowrap"
+                            disabled={remaining === 0}
+                            onClick={() => {
+                              const ids = reports
+                                .filter(
+                                  (r) =>
+                                    (r.status || r.report_status) !==
+                                    "Validated"
+                                )
+                                .map((r) => r._id || r.id)
+                                .filter(Boolean);
+                              console.log("Validate Remaining clicked:", {
+                                ids,
+                                remaining,
+                              });
+                              setClusterBatchConfirm({
+                                open: true,
+                                mode: "remaining",
+                                ids,
+                                loading: false,
+                              });
+                            }}
+                          >
+                            Validate Remaining ({remaining})
+                          </button>
+                        ) : null}
+                        {validated !== total && (
+                          <button
+                            className="btn btn-error btn-sm whitespace-nowrap"
+                            onClick={() => {
+                              const ids = (
+                                Array.isArray(reports) ? reports : []
                               )
-                              .map((r) => r._id || r.id)
-                              .filter(Boolean),
-                            loading: false,
-                          })
-                        }
-                      >
-                        Validate Remaining ({remaining})
-                      </button>
-                    ) : null}
-                    {validated !== total && (
-                      <button
-                        className="btn btn-error btn-sm whitespace-nowrap"
-                        onClick={() =>
-                          setClusterBatchConfirm({
-                            open: true,
-                            mode: "reject-all",
-                            ids: (Array.isArray(reports) ? reports : [])
-                              .filter(
-                                (r) =>
-                                  (r.status || r.report_status) !== "Rejected"
-                              )
-                              .map((r) => r._id || r.id)
-                              .filter(Boolean),
-                            loading: false,
-                          })
-                        }
-                        disabled={(Array.isArray(reports) ? reports : []).every(
-                          (r) => (r.status || r.report_status) === "Rejected"
+                                .filter(
+                                  (r) =>
+                                    (r.status || r.report_status) !== "Rejected"
+                                )
+                                .map((r) => r._id || r.id)
+                                .filter(Boolean);
+                              console.log("Reject All clicked:", { ids });
+                              setClusterBatchConfirm({
+                                open: true,
+                                mode: "reject-all",
+                                ids,
+                                loading: false,
+                              });
+                            }}
+                            disabled={(Array.isArray(reports)
+                              ? reports
+                              : []
+                            ).every(
+                              (r) =>
+                                (r.status || r.report_status) === "Rejected"
+                            )}
+                          >
+                            Reject All
+                          </button>
                         )}
-                      >
-                        Reject All
-                      </button>
+                      </>
                     )}
                   </>
                 );
@@ -756,14 +875,47 @@ const ReportsVerification = () => {
                     : "btn-success"
                 } ${clusterBatchConfirm.loading ? "loading" : ""}`}
                 onClick={async () => {
+                  console.log("Batch confirm clicked:", {
+                    mode: clusterBatchConfirm.mode,
+                    ids: clusterBatchConfirm.ids,
+                    idsLength: clusterBatchConfirm.ids.length,
+                  });
+
                   setClusterBatchConfirm((p) => ({ ...p, loading: true }));
                   try {
-                    const token = localStorage.getItem("token");
+                    console.log("Using token from Redux state:", {
+                      hasToken: !!token,
+                      tokenLength: token?.length,
+                      tokenPreview: token
+                        ? token.substring(0, 20) + "..."
+                        : null,
+                    });
+
+                    if (!token) {
+                      console.error(
+                        "No authentication token found in Redux state"
+                      );
+                      toast.error(
+                        "Authentication required. Please log in again."
+                      );
+                      return;
+                    }
+
                     const desiredStatus =
                       clusterBatchConfirm.mode === "reject-all"
                         ? "Rejected"
                         : "Validated";
-                    await fetch(
+
+                    console.log("Making API call:", {
+                      url: "https://buzzmap-backend.onrender.com/api/v1/reports/bulk-validate",
+                      method: "PATCH",
+                      reportIds: clusterBatchConfirm.ids,
+                      status: desiredStatus,
+                      hasToken: !!token,
+                      tokenLength: token.length,
+                    });
+
+                    const response = await fetch(
                       "https://buzzmap-backend.onrender.com/api/v1/reports/bulk-validate",
                       {
                         method: "PATCH",
@@ -777,7 +929,59 @@ const ReportsVerification = () => {
                         }),
                       }
                     );
+
+                    console.log("API response:", {
+                      status: response.status,
+                      statusText: response.statusText,
+                      ok: response.ok,
+                    });
+
+                    if (!response.ok) {
+                      const errorText = await response.text();
+                      console.error("API error:", errorText);
+
+                      let errorMessage = "Failed to update reports";
+                      if (response.status === 401) {
+                        errorMessage =
+                          "Authentication expired. Please log in again.";
+                      } else if (response.status === 403) {
+                        errorMessage =
+                          "You don't have permission to perform this action.";
+                      } else if (response.status >= 500) {
+                        errorMessage = "Server error. Please try again later.";
+                      }
+
+                      toast.error(errorMessage);
+                      throw new Error(
+                        `API error: ${response.status} ${response.statusText}`
+                      );
+                    }
+
+                    const result = await response.json();
+                    console.log("API success result:", result);
+
+                    // Show success message
+                    const actionText =
+                      clusterBatchConfirm.mode === "reject-all"
+                        ? "rejected"
+                        : "validated";
+                    toast.success(
+                      `Successfully ${actionText} ${
+                        result.results?.updated?.length ||
+                        clusterBatchConfirm.ids.length
+                      } reports.`
+                    );
+
                     await refetchGrouped?.();
+                    console.log("Refetch completed");
+                  } catch (error) {
+                    console.error("Batch action error:", error);
+                    // Don't show toast again if we already showed one above
+                    if (!error.message.includes("API error")) {
+                      toast.error(
+                        "An unexpected error occurred. Please try again."
+                      );
+                    }
                   } finally {
                     setClusterBatchConfirm({
                       open: false,

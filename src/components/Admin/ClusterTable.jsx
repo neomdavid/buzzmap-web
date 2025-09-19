@@ -4,17 +4,29 @@ import { themeQuartz } from "ag-grid-community";
 import { IconSearch } from "@tabler/icons-react";
 
 const ClusterStatusCell = (params) => {
-  const v = params.data?.validated || 0;
-  const t = params.data?.total || 0;
-  const badgeClass =
-    t > 0 && v === t
-      ? "badge-success"
-      : v > 0
-      ? "badge-warning"
-      : "badge-ghost";
-  return (
-    <span className={`badge ${badgeClass}`}>{`${v} of ${t} validated`}</span>
-  );
+  const validated = params.data?.validated || 0;
+  const rejected = params.data?.rejected || 0;
+  const total = params.data?.total || 0;
+
+  // Determine the primary status and badge styling
+  let statusText, badgeClass;
+
+  if (total === 0) {
+    statusText = "No reports";
+    badgeClass = "badge-ghost";
+  } else if (validated === total) {
+    statusText = `${validated} of ${total} validated`;
+    badgeClass = "badge-success";
+  } else if (rejected === total) {
+    statusText = `${rejected} of ${total} rejected`;
+    badgeClass = "badge-error";
+  } else {
+    // Mixed status or all pending - always show validated count
+    statusText = `${validated} of ${total} validated`;
+    badgeClass = validated > 0 ? "badge-warning" : "badge-ghost";
+  }
+
+  return <span className={`badge ${badgeClass}`}>{statusText}</span>;
 };
 
 const ClusterActionsCell = (params) => (
@@ -73,8 +85,16 @@ const deriveClusterCounts = (cluster) => {
     const s = r?.status || r?.report_status;
     return s === "Validated";
   }).length;
+  const rejected = reports.filter((r) => {
+    const s = r?.status || r?.report_status;
+    return s === "Rejected";
+  }).length;
+  const pending = reports.filter((r) => {
+    const s = r?.status || r?.report_status;
+    return s === "Pending" || !s;
+  }).length;
   const unprocessed = Math.max(0, total - validated);
-  return { total, validated, unprocessed };
+  return { total, validated, rejected, pending, unprocessed };
 };
 
 function ClusterTable({ clustersList = [], onOpenDetails }) {
@@ -85,7 +105,6 @@ function ClusterTable({ clustersList = [], onOpenDetails }) {
       sortable: true,
       resizable: true,
       filter: true,
-      suppressMovable: true,
     }),
     []
   );
@@ -132,6 +151,8 @@ function ClusterTable({ clustersList = [], onOpenDetails }) {
         ),
         total: counts.total,
         validated: counts.validated,
+        rejected: counts.rejected,
+        pending: counts.pending,
         unprocessed: counts.unprocessed,
         latestReportAt: latest
           ? latest.toLocaleString("en-US", {
