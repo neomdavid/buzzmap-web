@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import BuzzLineFooter from "../../components/BuzzLineFooter";
 import ArticlesCard from "../../components/ArticlesCard";
@@ -15,6 +15,7 @@ const formatDate = (dateString) => {
 
 const Articles = () => {
   const [current, setCurrent] = useState(0);
+  const carouselRef = useRef(null);
   const navigate = useNavigate();
 
   const { data: adminPosts, isLoading } = useGetAllAdminPostsQuery();
@@ -23,16 +24,33 @@ const Articles = () => {
       (post) => post.category === "tip" && post.status !== "archived"
     ) || [];
 
+  const carouselArticles = useMemo(() => {
+    const sorted = [...articles].sort((a, b) => {
+      const da = new Date(a.publishDate || 0).getTime();
+      const db = new Date(b.publishDate || 0).getTime();
+      return db - da;
+    });
+    return sorted.slice(0, 5);
+  }, [articles]);
+
   useEffect(() => {
     const interval = setInterval(() => {
-      setCurrent((prev) => (prev + 1) % articles.length);
+      setCurrent((prev) => (prev + 1) % (carouselArticles.length || 1));
     }, 5000);
     return () => clearInterval(interval);
-  }, []);
+  }, [carouselArticles.length]);
 
   useEffect(() => {
     const el = document.getElementById(`item${current + 1}`);
-    if (el) el.scrollIntoView({ behavior: "smooth", inline: "start" });
+    const container = carouselRef.current;
+    if (el && container) {
+      try {
+        container.scrollTo({ left: el.offsetLeft, behavior: "smooth" });
+      } catch (_) {
+        // Fallback without smooth
+        container.scrollLeft = el.offsetLeft;
+      }
+    }
   }, [current]);
 
   const handleReadMore = (article) => {
@@ -43,7 +61,10 @@ const Articles = () => {
     <main className="min-h-screen flex flex-col justify-between p-10">
       <div className="flex-1 flex flex-col items-center justify-center w-full mb-16">
         {isLoading ? (
-          <div className="carousel w-full h-[500px] overflow-hidden whitespace-nowrap">
+          <div
+            ref={carouselRef}
+            className="carousel w-full h-[500px] overflow-hidden whitespace-nowrap"
+          >
             {[1, 2, 3].map((i) => (
               <div
                 key={i}
@@ -54,8 +75,11 @@ const Articles = () => {
             ))}
           </div>
         ) : (
-          <div className="carousel w-full h-[500px] overflow-x-auto whitespace-nowrap">
-            {articles.map((article, idx) => (
+          <div
+            ref={carouselRef}
+            className="carousel w-full h-[500px] overflow-x-auto whitespace-nowrap"
+          >
+            {carouselArticles.map((article, idx) => (
               <div
                 key={article._id}
                 id={`item${idx + 1}`}
@@ -94,7 +118,7 @@ const Articles = () => {
           </div>
         )}
         <div className="flex w-full justify-center gap-2 py-2 mt-5 mb-10">
-          {articles.map((_, idx) => (
+          {carouselArticles.map((_, idx) => (
             <button
               key={idx}
               className={`btn btn-md ${current === idx ? "btn-primary" : ""}`}

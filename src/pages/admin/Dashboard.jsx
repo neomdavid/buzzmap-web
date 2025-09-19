@@ -5,6 +5,7 @@ import {
   useGetPostsQuery,
   useGetAllInterventionsQuery,
   useGetAllAlertsQuery,
+  useGetClustersQuery,
 } from "../../api/dengueApi.js"; // Import the intervention query hook
 import { useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
@@ -44,6 +45,13 @@ const Dashboard = () => {
     isError: alertsError,
   } = useGetAllAlertsQuery();
 
+  // Fetch clusters
+  const {
+    data: clustersData,
+    isLoading: clustersLoading,
+    isError: clustersError,
+  } = useGetClustersQuery();
+
   // State for showing analysis loading
   const [showAnalysisModal, setShowAnalysisModal] = useState(false);
 
@@ -66,7 +74,7 @@ const Dashboard = () => {
   });
 
   // Handle loading and error states for both posts and interventions
-  if (postsLoading || interventionsLoading) {
+  if (postsLoading || interventionsLoading || clustersLoading) {
     return (
       <div className="flex items-center justify-center h-screen">
         <div className="text-center">
@@ -76,7 +84,7 @@ const Dashboard = () => {
       </div>
     );
   }
-  if (postsError || interventionsError)
+  if (postsError || interventionsError || clustersError)
     return <div>Error fetching data...</div>;
 
   // Make sure posts and interventions are arrays
@@ -136,6 +144,29 @@ const Dashboard = () => {
         ? alert.messages[0]
         : "No message",
   }));
+
+  // Compute cluster stats
+  const clustersList = Array.isArray(clustersData)
+    ? clustersData
+    : Array.isArray(clustersData?.data)
+    ? clustersData.data
+    : [];
+
+  const totalClusters = clustersList.length;
+  const resolvedClusters = clustersList.reduce((acc, c) => {
+    if (c?.isResolved === true) return acc + 1;
+    const memberReports = Array.isArray(c?.reports) ? c.reports : [];
+    const totalInCluster = memberReports.length;
+    if (totalInCluster === 0) return acc;
+    const resolvedCount =
+      typeof c?.resolvedCount === "number"
+        ? c.resolvedCount
+        : typeof c?.breakdown?.resolved_reports === "number"
+        ? c.breakdown.resolved_reports
+        : memberReports.filter((r) => r?.isResolved === true).length;
+    return acc + (resolvedCount === totalInCluster ? 1 : 0);
+  }, 0);
+  const unresolvedClusters = Math.max(0, totalClusters - resolvedClusters);
 
   // Handler to redirect to /admin/denguemapping when a barangay is clicked
   const handleDashboardMapPolygonClick = () => {
@@ -252,6 +283,31 @@ const Dashboard = () => {
                 label: "Scheduled",
                 value: interventionCounts.scheduled,
                 color: "bg-warning",
+              },
+            ]}
+          />
+        </div>
+
+        {/* ReportCard for Clusters */}
+        <div
+          className="cursor-pointer"
+          onClick={() => navigate("/admin/denguemapping")}
+        >
+          <ReportCard
+            title="Clusters"
+            count={totalClusters}
+            topBg="bg-info/90"
+            type="status"
+            items={[
+              {
+                label: "Resolved",
+                value: resolvedClusters,
+                color: "bg-success",
+              },
+              {
+                label: "Unresolved",
+                value: unresolvedClusters,
+                color: "bg-error",
               },
             ]}
           />

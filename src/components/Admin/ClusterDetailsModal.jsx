@@ -32,6 +32,7 @@ const ClusterDetailsModal = ({
   getRemainingReports,
   refetchSpecificCluster,
   refetchGroupedReports,
+  refetchClusters,
 }) => {
   if (!showClusterDetailsModal || !selectedCluster) return null;
 
@@ -164,6 +165,9 @@ const ClusterDetailsModal = ({
       if (typeof refetchGroupedReports === "function") {
         refetchGroupedReports();
       }
+      if (typeof refetchClusters === "function") {
+        refetchClusters();
+      }
     } catch (error) {
       console.error("[Cluster] Failed to remove report from cluster:", error);
       const msg =
@@ -194,6 +198,9 @@ const ClusterDetailsModal = ({
       }
       if (typeof refetchGroupedReports === "function") {
         refetchGroupedReports();
+      }
+      if (typeof refetchClusters === "function") {
+        refetchClusters();
       }
     } catch (error) {
       const msg =

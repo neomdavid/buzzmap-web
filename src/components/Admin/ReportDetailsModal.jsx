@@ -16,6 +16,7 @@ const ReportDetailsModal = ({
   coordinates,
   type = "view", // Default to "view"
   onConfirmAction,
+  isAnonymous = false, // Add isAnonymous prop
 }) => {
   const modalRef = useRef(null);
   const streetViewRef = useRef(null);
@@ -198,12 +199,19 @@ const ReportDetailsModal = ({
                 User Information:
               </p>
               <hr className="text-accent/50 mb-6" />
-              <p className="font-semibold mb-10">
+              <div className="font-semibold mb-10">
                 <span className="text-gray-500 font-normal mr-1">
                   Username:
                 </span>{" "}
-                {username}
-              </p>
+                <div className="flex items-center gap-2 mt-2">
+                  <span>{username}</span>
+                  {isAnonymous && (
+                    <span className="text-sm text-gray-500 italic">
+                      (Posted Anonymously)
+                    </span>
+                  )}
+                </div>
+              </div>
             </div>
 
             {/* Image Gallery or StreetView */}

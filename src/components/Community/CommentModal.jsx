@@ -273,9 +273,9 @@ const CommentModal = forwardRef(
                       ) : (
                         <img
                           src={
-                            userFromStore
-                              ? userFromStore.profilePhotoUrl || defaultProfile
-                              : defaultProfile
+                            userProfileMap[post?.user?._id]?.profilePhotoUrl ||
+                            post?.user?.profilePhotoUrl ||
+                            defaultProfile
                           }
                           className="h-12 w-12 rounded-full object-cover"
                           alt="profile"
@@ -284,7 +284,7 @@ const CommentModal = forwardRef(
                       <div className="flex flex-col text-lg">
                         <p className="font-bold">
                           {post?.isAnonymous
-                            ? post?.anonymousId
+                            ? post?.displayUser?.username || post?.anonymousId
                             : userProfileMap[post?.user?._id]?.username ||
                               post?.user?.username ||
                               "User"}

@@ -170,6 +170,7 @@ const Login = () => {
         <LogoNamed
           textSize="text-[28px] lg:text-5xl xl:text-5xl 2xl:text-5xl"
           iconSize="h-11 w-11 lg:h-16 lg:w-16 xl:h-16 xl:w-16 2xl:h-16 2xl:w-16"
+          to="/"
         />
       </div>
       <div className="hidden absolute lg:block z-[-1000] text-primary bg-primary w-10 top-0 bottom-0 left-0 xl:w-12.5 2xl:w-13">
