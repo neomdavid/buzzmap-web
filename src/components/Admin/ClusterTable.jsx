@@ -80,16 +80,20 @@ const formatDateRange = (start, end, fallbackReports) => {
 
 const deriveClusterCounts = (cluster) => {
   const reports = Array.isArray(cluster?.reports) ? cluster.reports : [];
-  const total = reports.length;
-  const validated = reports.filter((r) => {
+
+  // Filter to only include resolved reports (isResolved: true)
+  const resolvedReports = reports.filter((r) => r?.isResolved === true);
+  const total = resolvedReports.length;
+
+  const validated = resolvedReports.filter((r) => {
     const s = r?.status || r?.report_status;
     return s === "Validated";
   }).length;
-  const rejected = reports.filter((r) => {
+  const rejected = resolvedReports.filter((r) => {
     const s = r?.status || r?.report_status;
     return s === "Rejected";
   }).length;
-  const pending = reports.filter((r) => {
+  const pending = resolvedReports.filter((r) => {
     const s = r?.status || r?.report_status;
     return s === "Pending" || !s;
   }).length;
@@ -98,36 +102,17 @@ const deriveClusterCounts = (cluster) => {
 };
 
 function ClusterTable({ clustersList = [], onOpenDetails }) {
-  const [rowData, setRowData] = useState([]);
-  const [columnDefs, setColumnDefs] = useState([]);
-  const defaultColDef = useMemo(
-    () => ({
-      sortable: true,
-      resizable: true,
-      filter: true,
-    }),
-    []
-  );
-  const theme = useMemo(
-    () =>
-      themeQuartz.withParams({
-        borderRadius: 10,
-        columnBorder: false,
-        fontFamily: "inherit",
-        headerFontSize: 14,
-        headerFontWeight: 700,
-        headerRowBorder: false,
-        headerVerticalPaddingScale: 1.1,
-        headerTextColor: "var(--color-base-content)",
-        spacing: 11,
-        wrapperBorder: false,
-        wrapperBorderRadius: 0,
-      }),
-    []
-  );
+  // Filter out clusters that don't have any resolved reports (memoized)
+  const filteredClustersList = useMemo(() => {
+    return clustersList.filter((cluster) => {
+      const reports = Array.isArray(cluster?.reports) ? cluster.reports : [];
+      const resolvedReports = reports.filter((r) => r?.isResolved === true);
+      return resolvedReports.length > 0;
+    });
+  }, [clustersList]);
 
-  useEffect(() => {
-    const rows = (clustersList || []).map((c) => {
+  const rowData = useMemo(() => {
+    return (filteredClustersList || []).map((c) => {
       const counts = deriveClusterCounts(c);
       const dateRange = c?.date_range || {};
       const reports = Array.isArray(c?.reports) ? c.reports : [];
@@ -167,9 +152,10 @@ function ClusterTable({ clustersList = [], onOpenDetails }) {
           : "-",
       };
     });
-    setRowData(rows);
+  }, [filteredClustersList]);
 
-    setColumnDefs([
+  const columnDefs = useMemo(
+    () => [
       { headerName: "Barangay", field: "barangay", flex: 1 },
       { headerName: "Date Range", field: "dateRange", flex: 1 },
       { headerName: "Latest Report", field: "latestReportAt", flex: 1 },
@@ -185,8 +171,35 @@ function ClusterTable({ clustersList = [], onOpenDetails }) {
         width: 170,
         cellRenderer: ClusterActionsCell,
       },
-    ]);
-  }, [clustersList]);
+    ],
+    []
+  );
+
+  const defaultColDef = useMemo(
+    () => ({
+      sortable: true,
+      resizable: true,
+      filter: true,
+    }),
+    []
+  );
+  const theme = useMemo(
+    () =>
+      themeQuartz.withParams({
+        borderRadius: 10,
+        columnBorder: false,
+        fontFamily: "inherit",
+        headerFontSize: 14,
+        headerFontWeight: 700,
+        headerRowBorder: false,
+        headerVerticalPaddingScale: 1.1,
+        headerTextColor: "var(--color-base-content)",
+        spacing: 11,
+        wrapperBorder: false,
+        wrapperBorderRadius: 0,
+      }),
+    []
+  );
 
   return (
     <div

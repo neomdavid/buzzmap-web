@@ -21,14 +21,14 @@ const ClusterStatusCell = (params) => {
   const rejected = params.data?.rejected || 0;
   const total = params.data?.total || 0;
 
-  // Debug logging to see what data we're getting
-  console.log("ClusterStatusCell debug:", {
-    clusterId: params.data?.id,
-    validated,
-    rejected,
-    total,
-    rawData: params.data,
-  });
+  // Debug logging to see what data we're getting (commented out to prevent performance issues)
+  // console.log("ClusterStatusCell debug:", {
+  //   clusterId: params.data?.id,
+  //   validated,
+  //   rejected,
+  //   total,
+  //   rawData: params.data,
+  // });
 
   // Determine the primary status and badge styling
   let statusText, badgeClass;
@@ -134,9 +134,11 @@ const ReportsVerification = () => {
     []
   );
 
-  const clusterReports = Array.isArray(clusterDetails?.cluster?.reports)
-    ? clusterDetails.cluster.reports
-    : [];
+  const clusterReports = useMemo(() => {
+    return Array.isArray(clusterDetails?.cluster?.reports)
+      ? clusterDetails.cluster.reports.filter((r) => r?.isResolved === true)
+      : [];
+  }, [clusterDetails?.cluster?.reports]);
 
   const modalReportsRowData = useMemo(() => {
     return clusterReports.map((r, idx) => {
@@ -238,69 +240,76 @@ const ReportsVerification = () => {
 
   const deriveClusterCountsTop = (cluster) => {
     const reports = Array.isArray(cluster?.reports) ? cluster.reports : [];
-    const total = reports.length;
 
-    // Debug: log all report statuses
-    console.log("deriveClusterCountsTop debug:", {
-      clusterId: cluster?._id || cluster?.id,
-      totalReports: total,
-      reportStatuses: reports.map((r) => ({
-        id: r._id || r.id,
-        status: r?.status || r?.report_status || "undefined",
-        hasStatus: !!(r?.status || r?.report_status),
-      })),
-    });
+    // Filter to only include resolved reports (isResolved: true)
+    const resolvedReports = reports.filter((r) => r?.isResolved === true);
+    const total = resolvedReports.length;
 
-    const validated = reports.filter((r) => {
+    // Debug: log all report statuses (commented out to prevent performance issues)
+    // console.log("deriveClusterCountsTop debug:", {
+    //   clusterId: cluster?._id || cluster?.id,
+    //   totalReports: reports.length,
+    //   resolvedReports: total,
+    //   reportStatuses: resolvedReports.map((r) => ({
+    //     id: r._id || r.id,
+    //     status: r?.status || r?.report_status || "undefined",
+    //     isResolved: r?.isResolved,
+    //     hasStatus: !!(r?.status || r?.report_status),
+    //   })),
+    // });
+
+    const validated = resolvedReports.filter((r) => {
       const s = r?.status || r?.report_status;
       return s === "Validated";
     }).length;
-    const rejected = reports.filter((r) => {
+    const rejected = resolvedReports.filter((r) => {
       const s = r?.status || r?.report_status;
       return s === "Rejected";
     }).length;
-    const pending = reports.filter((r) => {
+    const pending = resolvedReports.filter((r) => {
       const s = r?.status || r?.report_status;
       return s === "Pending" || !s;
     }).length;
     const unprocessed = Math.max(0, total - validated);
 
-    console.log("Cluster counts result:", {
-      clusterId: cluster?._id || cluster?.id,
-      total,
-      validated,
-      rejected,
-      pending,
-      unprocessed,
-    });
+    // console.log("Cluster counts result:", {
+    //   clusterId: cluster?._id || cluster?.id,
+    //   total,
+    //   validated,
+    //   rejected,
+    //   pending,
+    //   unprocessed,
+    // });
 
     return { total, validated, rejected, pending, unprocessed };
   };
 
   // Grouped data selections (must be declared before any effects using them)
-  const individualReports = Array.isArray(
-    groupedReportsData?.individual_reports
-  )
-    ? groupedReportsData.individual_reports
-    : [];
+  const individualReports = useMemo(() => {
+    return Array.isArray(groupedReportsData?.individual_reports)
+      ? groupedReportsData.individual_reports
+      : [];
+  }, [groupedReportsData?.individual_reports]);
 
-  const clustersList = Array.isArray(groupedReportsData?.clusters)
-    ? groupedReportsData.clusters
-    : Array.isArray(clustersData)
-    ? clustersData
-    : Array.isArray(clustersData?.data)
-    ? clustersData.data
-    : [];
+  const clustersList = useMemo(() => {
+    const rawClusters = Array.isArray(groupedReportsData?.clusters)
+      ? groupedReportsData.clusters
+      : Array.isArray(clustersData)
+      ? clustersData
+      : Array.isArray(clustersData?.data)
+      ? clustersData.data
+      : [];
 
-  // Clusters AG Grid data and columns (defined as hooks, not inside JSX)
-  // NOTE: depends on clustersList, so must be declared after clustersList. We'll initialize lazily and update via useMemo below where clustersList exists.
-  const [clustersRowData, setClustersRowData] = useState([]);
-  const [clustersColumnDefs, setClustersColumnDefs] = useState([]);
-  const [clustersDefaultColDef, setClustersDefaultColDef] = useState({});
+    return rawClusters.filter((cluster) => {
+      const reports = Array.isArray(cluster?.reports) ? cluster.reports : [];
+      const resolvedReports = reports.filter((r) => r?.isResolved === true);
+      return resolvedReports.length > 0;
+    });
+  }, [groupedReportsData?.clusters, clustersData]);
 
-  useEffect(() => {
-    // Build rowData
-    const rows = (clustersList || []).map((c) => {
+  // Clusters AG Grid data and columns (memoized to prevent infinite re-renders)
+  const clustersRowData = useMemo(() => {
+    return (clustersList || []).map((c) => {
       const counts = deriveClusterCountsTop(c);
       const dateRange = c?.date_range || {};
       return {
@@ -315,15 +324,10 @@ const ReportsVerification = () => {
         unprocessed: counts.unprocessed,
       };
     });
-    setClustersRowData(rows);
+  }, [clustersList]);
 
-    // Build columnDefs & defaultColDef
-    setClustersDefaultColDef({
-      sortable: true,
-      resizable: true,
-      filter: true,
-    });
-    setClustersColumnDefs([
+  const clustersColumnDefs = useMemo(
+    () => [
       { headerName: "Barangay", field: "barangay", flex: 1 },
       { headerName: "Date Range", field: "dateRange", flex: 1 },
       { headerName: "Total", field: "total", width: 110 },
@@ -351,8 +355,18 @@ const ReportsVerification = () => {
         width: 170,
         cellRenderer: ClusterActionsCell,
       },
-    ]);
-  }, [clustersList]);
+    ],
+    []
+  );
+
+  const clustersDefaultColDef = useMemo(
+    () => ({
+      sortable: true,
+      resizable: true,
+      filter: true,
+    }),
+    []
+  );
 
   // Keep cluster details modal in sync after refetches
   useEffect(() => {
