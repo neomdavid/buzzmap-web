@@ -5,8 +5,42 @@ import {
   ReportTable2,
   TableSkeleton,
 } from "../../components";
-import { useGetPostsQuery } from "../../api/dengueApi.js";
-import { useState, useEffect } from "react";
+import {
+  useGetPostsQuery,
+  useGetClustersQuery,
+  useGetGroupedReportsQuery,
+} from "../../api/dengueApi.js";
+import { useState, useEffect, useMemo } from "react";
+import { AgGridReact } from "ag-grid-react";
+import { themeQuartz } from "ag-grid-community";
+import ClusterTable from "../../components/Admin/ClusterTable";
+
+// AG Grid React cell renderers for clusters table
+const ClusterStatusCell = (params) => {
+  const v = params.data?.validated || 0;
+  const t = params.data?.total || 0;
+  const badgeClass =
+    t > 0 && v === t
+      ? "badge-success"
+      : v > 0
+      ? "badge-warning"
+      : "badge-ghost";
+  return (
+    <span className={`badge ${badgeClass}`}>{`${v} of ${t} validated`}</span>
+  );
+};
+
+const ClusterActionsCell = (params) => {
+  return (
+    <button
+      className="btn btn-sm btn-outline whitespace-nowrap flex items-center justify-center gap-1 h-full"
+      onClick={() => params.context?.openClusterDetails?.(params.data?.__raw)}
+    >
+      <IconSearch size={13} stroke={2.5} />
+      <span>view</span>
+    </button>
+  );
+};
 import post1 from "../../assets/post1.jpg";
 import post2 from "../../assets/post2.jpg";
 import VerifyReportModal from "../../components/Admin/VerifyReportModal";
@@ -16,6 +50,7 @@ import {
   IconChecks,
   IconClock,
   IconUserCircle,
+  IconSearch,
 } from "@tabler/icons-react";
 
 const ReportsVerification = () => {
@@ -26,9 +61,319 @@ const ReportsVerification = () => {
     refetch,
     isFetching,
   } = useGetPostsQuery();
+  const {
+    data: clustersData,
+    isLoading: isLoadingClusters,
+    isError: isClustersError,
+    refetch: refetchClusters,
+  } = useGetClustersQuery();
+  const {
+    data: groupedReportsData,
+    isLoading: isLoadingGrouped,
+    refetch: refetchGrouped,
+  } = useGetGroupedReportsQuery();
   const [selectedReport, setSelectedReport] = useState(null);
   const [validatedPosts, setValidatedPosts] = useState([]);
   const [isRefetching, setIsRefetching] = useState(false);
+  const [clusterDetails, setClusterDetails] = useState({
+    open: false,
+    cluster: null,
+  });
+  const [clusterBatchConfirm, setClusterBatchConfirm] = useState({
+    open: false,
+    mode: null, // 'all' | 'remaining'
+    ids: [],
+    loading: false,
+  });
+
+  // AG Grid config for cluster reports modal
+  const clusterReportsTheme = useMemo(
+    () =>
+      themeQuartz.withParams({
+        borderRadius: 10,
+        columnBorder: false,
+        fontFamily: "inherit",
+        headerFontSize: 14,
+        headerFontWeight: 700,
+        headerRowBorder: false,
+        headerVerticalPaddingScale: 1.1,
+        headerTextColor: "var(--color-base-content)",
+        spacing: 11,
+        wrapperBorder: false,
+        wrapperBorderRadius: 0,
+      }),
+    []
+  );
+
+  const clusterReports = Array.isArray(clusterDetails?.cluster?.reports)
+    ? clusterDetails.cluster.reports
+    : [];
+
+  const modalReportsRowData = useMemo(() => {
+    return clusterReports.map((r, idx) => {
+      const status = r.status || r.report_status || "Pending";
+      const date = r.date_and_time || r.date;
+      return {
+        id: r._id || r.id || idx,
+        __raw: r,
+        type: r.report_type || r.type || "-",
+        description: r.description || r.desc || r.content || "-",
+        status,
+        dateFormatted: date
+          ? new Date(date).toLocaleString("en-US", {
+              weekday: "short",
+              year: "numeric",
+              month: "short",
+              day: "numeric",
+              hour: "2-digit",
+              minute: "2-digit",
+              hour12: true,
+            })
+          : "-",
+      };
+    });
+  }, [clusterReports]);
+
+  const StatusBadgeCell = (params) => {
+    const s = params.data?.status;
+    const cls =
+      s === "Validated"
+        ? "badge-success"
+        : s === "Rejected"
+        ? "badge-error"
+        : "badge-warning";
+    return <span className={`badge ${cls}`}>{s}</span>;
+  };
+
+  const ViewDetailsCell = (params) => (
+    <button
+      className="flex items-center justify-center gap-1 text-primary hover:bg-gray-200 p-1 rounded-md hover:cursor-pointer h-full"
+      onClick={() => setSelectedReport(params.data?.__raw)}
+    >
+      <IconSearch size={13} stroke={2.5} />
+      <span className="text-sm">view</span>
+    </button>
+  );
+
+  const modalReportsColDefs = useMemo(
+    () => [
+      { headerName: "Type", field: "type", flex: 1 },
+      { headerName: "Description", field: "description", flex: 2 },
+      {
+        headerName: "Status",
+        field: "status",
+        width: 130,
+        cellRenderer: StatusBadgeCell,
+      },
+      { headerName: "Date", field: "dateFormatted", flex: 1 },
+      {
+        headerName: "Actions",
+        field: "actions",
+        width: 150,
+        cellRenderer: ViewDetailsCell,
+      },
+    ],
+    []
+  );
+
+  // Utilities placed before usage to avoid temporal dead zone
+  const formatDateRangeTop = (start, end) => {
+    if (!start || !end) return "-";
+    const s = new Date(start);
+    const e = new Date(end);
+    if (isNaN(s) || isNaN(e)) return "-";
+    if (s.toDateString() === e.toDateString())
+      return s.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+    if (s.getFullYear() === e.getFullYear() && s.getMonth() === e.getMonth())
+      return `${s.toLocaleDateString("en-US", {
+        month: "short",
+      })} ${s.getDate()} - ${e.getDate()}`;
+    if (s.getFullYear() === e.getFullYear())
+      return `${s.toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+      })} - ${e.toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+      })}`;
+    return `${s.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    })} - ${e.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    })}`;
+  };
+
+  const deriveClusterCountsTop = (cluster) => {
+    const reports = Array.isArray(cluster?.reports) ? cluster.reports : [];
+    const total = reports.length;
+    const validated = reports.filter((r) => {
+      const s = r?.status || r?.report_status;
+      return s === "Validated";
+    }).length;
+    const unprocessed = Math.max(0, total - validated);
+    return { total, validated, unprocessed };
+  };
+
+  // Grouped data selections (must be declared before any effects using them)
+  const individualReports = Array.isArray(
+    groupedReportsData?.individual_reports
+  )
+    ? groupedReportsData.individual_reports
+    : [];
+
+  const clustersList = Array.isArray(groupedReportsData?.clusters)
+    ? groupedReportsData.clusters
+    : Array.isArray(clustersData)
+    ? clustersData
+    : Array.isArray(clustersData?.data)
+    ? clustersData.data
+    : [];
+
+  // Clusters AG Grid data and columns (defined as hooks, not inside JSX)
+  // NOTE: depends on clustersList, so must be declared after clustersList. We'll initialize lazily and update via useMemo below where clustersList exists.
+  const [clustersRowData, setClustersRowData] = useState([]);
+  const [clustersColumnDefs, setClustersColumnDefs] = useState([]);
+  const [clustersDefaultColDef, setClustersDefaultColDef] = useState({});
+
+  useEffect(() => {
+    // Build rowData
+    const rows = (clustersList || []).map((c) => {
+      const counts = deriveClusterCountsTop(c);
+      const dateRange = c?.date_range || {};
+      return {
+        __raw: c,
+        id: c._id || c.id || c.parentClusterId,
+        barangay: c.barangay || "Unknown",
+        dateRange: formatDateRangeTop(dateRange.start_date, dateRange.end_date),
+        total: counts.total,
+        validated: counts.validated,
+        unprocessed: counts.unprocessed,
+      };
+    });
+    setClustersRowData(rows);
+
+    // Build columnDefs & defaultColDef
+    setClustersDefaultColDef({
+      sortable: true,
+      resizable: true,
+      filter: true,
+      suppressMovable: true,
+    });
+    setClustersColumnDefs([
+      { headerName: "Barangay", field: "barangay", flex: 1 },
+      { headerName: "Date Range", field: "dateRange", flex: 1 },
+      { headerName: "Total", field: "total", width: 110 },
+      {
+        headerName: "Validated",
+        field: "validated",
+        width: 140,
+        cellClass: "text-success",
+      },
+      {
+        headerName: "Unprocessed",
+        field: "unprocessed",
+        width: 160,
+        cellClass: "text-gray-500",
+      },
+      {
+        headerName: "Status",
+        field: "status",
+        flex: 1,
+        cellRenderer: ClusterStatusCell,
+      },
+      {
+        headerName: "Actions",
+        field: "actions",
+        width: 170,
+        cellRenderer: ClusterActionsCell,
+      },
+    ]);
+  }, [clustersList]);
+
+  // Keep cluster details modal in sync after refetches
+  useEffect(() => {
+    if (!clusterDetails.open) return;
+    const clusters = clustersList;
+    if (!Array.isArray(clusters)) return;
+    const currentId =
+      clusterDetails.cluster?.parentClusterId ||
+      clusterDetails.cluster?._id ||
+      clusterDetails.cluster?.id;
+    if (!currentId) return;
+    const updated = clusters.find(
+      (c) => (c.parentClusterId || c._id || c.id) === currentId
+    );
+    if (!updated) return;
+
+    // Guard: only update when meaningful fields change to avoid render loops
+    const prevCluster = clusterDetails.cluster || {};
+    const prevReports = Array.isArray(prevCluster.reports)
+      ? prevCluster.reports
+      : [];
+    const updatedReports = Array.isArray(updated.reports)
+      ? updated.reports
+      : [];
+
+    const prevTotal = prevReports.length;
+    const nextTotal = updatedReports.length;
+    const prevValidated = prevReports.filter(
+      (r) => (r.status || r.report_status) === "Validated"
+    ).length;
+    const nextValidated = updatedReports.filter(
+      (r) => (r.status || r.report_status) === "Validated"
+    ).length;
+
+    if (prevTotal === nextTotal && prevValidated === nextValidated) return;
+
+    setClusterDetails((prev) => ({ ...prev, cluster: updated }));
+  }, [clustersList, clusterDetails.open]);
+
+  // (moved up) individualReports and clustersList already defined above
+
+  const formatDateRange = (start, end) => {
+    if (!start || !end) return "-";
+    const s = new Date(start);
+    const e = new Date(end);
+    if (isNaN(s) || isNaN(e)) return "-";
+    if (s.toDateString() === e.toDateString())
+      return s.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+    if (s.getFullYear() === e.getFullYear() && s.getMonth() === e.getMonth())
+      return `${s.toLocaleDateString("en-US", {
+        month: "short",
+      })} ${s.getDate()} - ${e.getDate()}`;
+    if (s.getFullYear() === e.getFullYear())
+      return `${s.toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+      })} - ${e.toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+      })}`;
+    return `${s.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    })} - ${e.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    })}`;
+  };
+
+  const deriveClusterCounts = (cluster) => {
+    const reports = Array.isArray(cluster?.reports) ? cluster.reports : [];
+    const total = reports.length;
+    const validated = reports.filter((r) => {
+      const s = r?.status || r?.report_status;
+      return s === "Validated";
+    }).length;
+    const unprocessed = Math.max(0, total - validated);
+    return { total, validated, unprocessed };
+  };
 
   // Calculate summary stats
   const totalReports = posts?.length || 0;
@@ -60,7 +405,7 @@ const ReportsVerification = () => {
   const handleVerificationSuccess = async () => {
     setIsRefetching(true);
     try {
-      await refetch();
+      await Promise.all([refetch?.(), refetchClusters?.(), refetchGrouped?.()]);
     } finally {
       setIsRefetching(false);
     }
@@ -179,15 +524,245 @@ const ReportsVerification = () => {
             Breeding Site Reports
           </p>
           <div className="h-[75vh]">
-            <ReportTable2
-              posts={posts}
-              onSelectReport={setSelectedReport}
-              onSuccess={handleVerificationSuccess}
-              isRefetching={isRefetching}
-            />
+            {isLoadingGrouped ? (
+              <TableSkeleton rows={10} columns={5} />
+            ) : (
+              <ReportTable2
+                posts={individualReports}
+                onSelectReport={setSelectedReport}
+                onSuccess={handleVerificationSuccess}
+                isRefetching={isRefetching}
+              />
+            )}
           </div>
         </section>
       </div>
+
+      {/* Clusters Verification Table */}
+      <div className="flex flex-col mt-10">
+        <section className="flex flex-col gap-2">
+          <p className="text-base-content text-4xl font-bold mb-2">Clusters</p>
+          <ClusterTable
+            clustersList={clustersList}
+            onOpenDetails={(cluster) =>
+              setClusterDetails({ open: true, cluster })
+            }
+          />
+        </section>
+      </div>
+      {clusterDetails.open && (
+        <dialog open className="modal z-[1000]">
+          <div className="modal-box bg-white rounded-3xl shadow-2xl w-11/12 max-w-6xl p-6 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-4">
+              <p className="text-xl font-bold text-primary">Cluster Reports</p>
+              <button
+                className="btn btn-ghost btn-sm"
+                onClick={() =>
+                  setClusterDetails({ open: false, cluster: null })
+                }
+              >
+                ✕
+              </button>
+            </div>
+            <div
+              className="ag-theme-quartz w-full rounded-2xl"
+              style={{ height: "60vh" }}
+            >
+              <AgGridReact
+                rowData={modalReportsRowData}
+                columnDefs={modalReportsColDefs}
+                defaultColDef={{
+                  sortable: true,
+                  resizable: true,
+                  filter: true,
+                  suppressMovable: true,
+                }}
+                theme={clusterReportsTheme}
+                suppressCellFocus={true}
+                animateRows={true}
+                pagination={true}
+                paginationPageSize={10}
+              />
+            </div>
+            <div className="mt-4 flex justify-end gap-2">
+              {(() => {
+                const reports = Array.isArray(clusterDetails.cluster?.reports)
+                  ? clusterDetails.cluster.reports
+                  : [];
+                const total = reports.length;
+                const remaining = reports.filter(
+                  (r) => (r.status || r.report_status) !== "Validated"
+                ).length;
+                const validated = Math.max(0, total - remaining);
+                const allFinalized = remaining === 0;
+                return (
+                  <>
+                    {validated === 0 && !allFinalized ? (
+                      <button
+                        className="btn btn-success btn-sm whitespace-nowrap"
+                        disabled={total === 0}
+                        onClick={() =>
+                          setClusterBatchConfirm({
+                            open: true,
+                            mode: "all",
+                            ids: reports
+                              .map((r) => r._id || r.id)
+                              .filter(Boolean),
+                            loading: false,
+                          })
+                        }
+                      >
+                        Validate All ({total})
+                      </button>
+                    ) : !allFinalized ? (
+                      <button
+                        className="btn btn-primary btn-sm whitespace-nowrap"
+                        disabled={remaining === 0}
+                        onClick={() =>
+                          setClusterBatchConfirm({
+                            open: true,
+                            mode: "remaining",
+                            ids: reports
+                              .filter(
+                                (r) =>
+                                  (r.status || r.report_status) !== "Validated"
+                              )
+                              .map((r) => r._id || r.id)
+                              .filter(Boolean),
+                            loading: false,
+                          })
+                        }
+                      >
+                        Validate Remaining ({remaining})
+                      </button>
+                    ) : null}
+                    {validated !== total && (
+                      <button
+                        className="btn btn-error btn-sm whitespace-nowrap"
+                        onClick={() =>
+                          setClusterBatchConfirm({
+                            open: true,
+                            mode: "reject-all",
+                            ids: (Array.isArray(reports) ? reports : [])
+                              .filter(
+                                (r) =>
+                                  (r.status || r.report_status) !== "Rejected"
+                              )
+                              .map((r) => r._id || r.id)
+                              .filter(Boolean),
+                            loading: false,
+                          })
+                        }
+                        disabled={(Array.isArray(reports) ? reports : []).every(
+                          (r) => (r.status || r.report_status) === "Rejected"
+                        )}
+                      >
+                        Reject All
+                      </button>
+                    )}
+                  </>
+                );
+              })()}
+            </div>
+          </div>
+          <form method="dialog" className="modal-backdrop">
+            <button
+              onClick={() => setClusterDetails({ open: false, cluster: null })}
+            >
+              close
+            </button>
+          </form>
+        </dialog>
+      )}
+      {clusterBatchConfirm.open && (
+        <dialog open className="modal z-[1100]">
+          <div className="modal-box bg-white rounded-3xl shadow-2xl w-11/12 max-w-md p-6">
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-lg font-bold text-primary">
+                Confirm Validation
+              </p>
+              <button
+                className="btn btn-ghost btn-sm"
+                onClick={() =>
+                  setClusterBatchConfirm({
+                    open: false,
+                    mode: null,
+                    ids: [],
+                    loading: false,
+                  })
+                }
+              >
+                ✕
+              </button>
+            </div>
+            <p className="text-sm text-gray-600 mb-4">
+              {clusterBatchConfirm.mode === "all"
+                ? `Validate all ${clusterBatchConfirm.ids.length} reports in this cluster?`
+                : clusterBatchConfirm.mode === "remaining"
+                ? `Validate remaining ${clusterBatchConfirm.ids.length} reports in this cluster?`
+                : `Reject all ${clusterBatchConfirm.ids.length} reports in this cluster?`}
+            </p>
+            <div className="flex justify-end gap-2">
+              <button
+                className="btn btn-ghost"
+                onClick={() =>
+                  setClusterBatchConfirm({
+                    open: false,
+                    mode: null,
+                    ids: [],
+                    loading: false,
+                  })
+                }
+                disabled={clusterBatchConfirm.loading}
+              >
+                Cancel
+              </button>
+              <button
+                className={`btn ${
+                  clusterBatchConfirm.mode === "reject-all"
+                    ? "btn-error"
+                    : "btn-success"
+                } ${clusterBatchConfirm.loading ? "loading" : ""}`}
+                onClick={async () => {
+                  setClusterBatchConfirm((p) => ({ ...p, loading: true }));
+                  try {
+                    const token = localStorage.getItem("token");
+                    const desiredStatus =
+                      clusterBatchConfirm.mode === "reject-all"
+                        ? "Rejected"
+                        : "Validated";
+                    await fetch(
+                      "https://buzzmap-backend.onrender.com/api/v1/reports/bulk-validate",
+                      {
+                        method: "PATCH",
+                        headers: {
+                          "Content-Type": "application/json",
+                          Authorization: token ? `Bearer ${token}` : "",
+                        },
+                        body: JSON.stringify({
+                          reportIds: clusterBatchConfirm.ids,
+                          status: desiredStatus,
+                        }),
+                      }
+                    );
+                    await refetchGrouped?.();
+                  } finally {
+                    setClusterBatchConfirm({
+                      open: false,
+                      mode: null,
+                      ids: [],
+                      loading: false,
+                    });
+                  }
+                }}
+                disabled={clusterBatchConfirm.loading}
+              >
+                {clusterBatchConfirm.loading ? "Processing..." : "Confirm"}
+              </button>
+            </div>
+          </div>
+        </dialog>
+      )}
       {selectedReport && (
         <>
           {console.log("Selected report data for admin:", {
