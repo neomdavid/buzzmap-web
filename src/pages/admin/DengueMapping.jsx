@@ -152,8 +152,11 @@ const DengueMapping = () => {
   }, []);
 
   // Get clusters from API
-  const { data: clustersData, isLoading: isLoadingClusters } =
-    useGetClustersQuery();
+  const {
+    data: clustersData,
+    isLoading: isLoadingClusters,
+    refetch: refetchClusters,
+  } = useGetClustersQuery();
 
   // New: fetch grouped reports (individual + clusters)
   const { data: groupedReportsData, refetch: refetchGroupedReports } =
@@ -520,6 +523,13 @@ const DengueMapping = () => {
         });
         if (result && !result.error) {
           toast.success(`Successfully resolved ${ids.length} reports.`);
+          try {
+            await Promise.all([
+              refetchClusters?.(),
+              refetchGroupedReports?.(),
+              refetchSpecificCluster?.(),
+            ]);
+          } catch (_) {}
         } else {
           console.error("[Bulk Resolve] Failed:", result?.error || result);
           toast.error("Failed to resolve reports. Please try again.");
@@ -675,6 +685,13 @@ const DengueMapping = () => {
           toast.success(
             `Resolved ${selectedReportIds.length} reports. ${remainingReports.length} reports remain pending.`
           );
+          try {
+            await Promise.all([
+              refetchClusters?.(),
+              refetchGroupedReports?.(),
+              refetchSpecificCluster?.(),
+            ]);
+          } catch (_) {}
         } else {
           console.error(
             `[ERROR] Failed to resolve reports:`,
@@ -714,6 +731,13 @@ const DengueMapping = () => {
           toast.success(
             `Resolved ${eligibleReportIds.length} reports. ${remainingReports.length} reports remain pending.`
           );
+          try {
+            await Promise.all([
+              refetchClusters?.(),
+              refetchGroupedReports?.(),
+              refetchSpecificCluster?.(),
+            ]);
+          } catch (_) {}
         } else {
           console.error(
             `[ERROR] Failed to resolve reports:`,
@@ -1582,6 +1606,7 @@ const DengueMapping = () => {
         onReportRemovedFromSubCluster={handleReportRemovedFromSubCluster}
         refetchSpecificCluster={refetchSpecificCluster}
         refetchGroupedReports={refetchGroupedReports}
+        refetchClusters={refetchClusters}
       />
 
       {/* Loading Skeleton for Cluster Details */}
