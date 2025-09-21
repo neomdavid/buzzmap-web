@@ -74,13 +74,11 @@ BuzzMap is a comprehensive dengue outbreak prevention and intervention system th
 
 ### UI Components
 - **Lucide React** - Icon library
-- **Framer Motion** - Animations
 - **React Toastify** - Notifications
 - **Swiper** - Touch sliders
 - **Phosphor React** - Additional icons
 
 ### Development Tools
-- **ESLint** - Code linting
 - **Prettier** - Code formatting
 - **Vite Plugin Rbeact** - React support
 
