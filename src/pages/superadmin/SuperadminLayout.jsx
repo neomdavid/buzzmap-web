@@ -23,12 +23,12 @@ import { toastSuccess } from "../../utils.jsx";
 
 const SupersuperadminLayout = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-  const [tooltip, setTooltip] = useState({ show: false, text: '', x: 0, y: 0 });
+  const [tooltip, setTooltip] = useState({ show: false, text: "", x: 0, y: 0 });
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const currentRoute = useLocation().pathname;
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  
+
   // Get user from Redux store
   const user = useSelector((state) => state.auth?.user);
 
@@ -46,23 +46,27 @@ const SupersuperadminLayout = () => {
       show: true,
       text,
       x: rect.right + 10, // 10px offset from the icon
-      y: rect.top + (rect.height / 2) // Center vertically
+      y: rect.top + rect.height / 2, // Center vertically
     });
   };
 
   const handleMouseLeave = () => {
-    setTooltip({ show: false, text: '', x: 0, y: 0 });
+    setTooltip({ show: false, text: "", x: 0, y: 0 });
   };
 
   return (
-    <div className="flex h-screen overflow-hidden bg-neutral-content">
+    <div className="flex h-screen overflow-hidden bg-neutral">
       {/* Sidebar */}
       <aside
         className={`fixed shadow-md top-0 left-0 h-full 
         bg-gradient-to-b from-[#255261] to-[#007da6] 
         p-8 flex flex-col justify-between transition-all duration-300 
         ${isSidebarOpen ? "w-80" : "w-0 sm:w-20"}
-        ${isSidebarOpen ? "translate-x-0" : "-translate-x-full sm:-translate-x-[calc(100%-5rem)]"}
+        ${
+          isSidebarOpen
+            ? "translate-x-0"
+            : "-translate-x-full sm:-translate-x-[calc(100%-5rem)]"
+        }
         z-50`}
       >
         <div className="flex flex-col h-[60%] justify-between">
@@ -71,15 +75,15 @@ const SupersuperadminLayout = () => {
               {isSidebarOpen ? (
                 <>
                   <LogoNamed theme="dark" />
-                  <button 
+                  <button
                     onClick={toggleSidebar}
                     className="text-white hover:text-gray-200 transition-colors"
                   >
-                    <X size={24} className="hover:cursor-pointer"/>
+                    <X size={24} className="hover:cursor-pointer" />
                   </button>
                 </>
               ) : (
-                <button 
+                <button
                   onClick={toggleSidebar}
                   className="text-white hover:text-gray-200 transition-colors flex justify-center translate-x-1 sm:block hidden hover:cursor-pointer"
                   onMouseEnter={(e) => handleMouseEnter(e, "Toggle Sidebar")}
@@ -93,9 +97,11 @@ const SupersuperadminLayout = () => {
               <div className="flex flex-col items-center text-white mb-4">
                 <UserCircle size={80} weight="fill" className="mb-2" />
                 <p className="text-white text-sm mb-2">Superadmin</p>
-                <p className="text-3xl font-extrabold mb-2">{user?.name || 'Loading...'}</p>
+                <p className="text-3xl font-extrabold mb-2">
+                  {user?.name || "Loading..."}
+                </p>
                 <p className="text-white text-sm text-center">
-                  {user?.email || 'Loading...'}
+                  {user?.email || "Loading..."}
                 </p>
               </div>
             )}
@@ -170,14 +176,14 @@ const SupersuperadminLayout = () => {
         {/* Logout button - now shows in both states */}
         <div className={`py-3 ${isSidebarOpen ? "px-3" : "px-0"}`}>
           {isSidebarOpen ? (
-            <button 
+            <button
               onClick={() => setShowLogoutModal(true)}
               className="font-bold text-white text-lg hover:text-red-300 transition-all duration-200 hover:cursor-pointer"
             >
               Logout
             </button>
           ) : (
-            <button 
+            <button
               onClick={() => setShowLogoutModal(true)}
               className="flex justify-center text-white hover:text-red-300 transition-all duration-200 translate-x-[-4px] sm:block hidden hover:cursor-pointer"
               onMouseEnter={(e) => handleMouseEnter(e, "Logout")}
@@ -204,7 +210,7 @@ const SupersuperadminLayout = () => {
           style={{
             left: `${tooltip.x}px`,
             top: `${tooltip.y}px`,
-            transform: 'translateY(-50%)'
+            transform: "translateY(-50%)",
           }}
         >
           {tooltip.text}
@@ -214,16 +220,20 @@ const SupersuperadminLayout = () => {
       {/* Logout Confirmation Modal */}
       <dialog id="logout_modal" className="modal" open={showLogoutModal}>
         <div className="modal-box text-primary p-10 rounded-2xl">
-          <p className="font-extrabold text-4xl mb-4 text-error">Confirm Logout</p>
-          <p className="py-4 text-lg text-primary">Are you sure you want to logout?</p>
+          <p className="font-extrabold text-4xl mb-4 text-error">
+            Confirm Logout
+          </p>
+          <p className="py-4 text-lg text-primary">
+            Are you sure you want to logout?
+          </p>
           <div className="modal-action">
-            <button 
+            <button
               className="text-primary border-1 border-primary rounded-md px-4 py-2 hover:cursor-pointer hover:bg-primary/20  transition-all duration-200"
               onClick={() => setShowLogoutModal(false)}
             >
               Cancel
             </button>
-            <button 
+            <button
               className="text-white bg-error rounded-md px-4 py-2 hover:cursor-pointer hover:bg-error/80  transition-all duration-200"
               onClick={() => {
                 setShowLogoutModal(false);
@@ -242,7 +252,7 @@ const SupersuperadminLayout = () => {
       {/* Content */}
       <div className="flex flex-1 flex-col overflow-auto w-full">
         {/* Top navbar */}
-        <div className="bg-transparent w-full px-7 py-6 bg-neutral-content flex justify-between items-center relative z-30">
+        <div className="bg-transparent w-full px-7 py-6 bg-neutral flex justify-between items-center relative z-30">
           <div className="flex items-center gap-4">
             <button
               className="btn btn-square btn-ghost hover:bg-gray-200"
@@ -267,13 +277,11 @@ const SupersuperadminLayout = () => {
         </div>
 
         <section
-          className={`px-6 py-4 bg-neutral-content ${
+          className={`px-6 py-4 bg-neutral ${
             currentRoute === "/superadmin/dashboard"
               ? "md:pt-[75px] md:mt-[-64px]"
               : "md:pt-[18px] md:mt-[-64px]"
-          } md:pl-6 lg:pl-8 text-primary ${
-            !isSidebarOpen ? "sm:ml-20" : ""
-          }`}
+          } md:pl-6 lg:pl-8 text-primary ${!isSidebarOpen ? "sm:ml-20" : ""}`}
         >
           <Outlet />
         </section>

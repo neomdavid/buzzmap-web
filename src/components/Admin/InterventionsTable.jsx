@@ -1,4 +1,10 @@
-import React, { useState, useMemo, useRef, useCallback } from "react";
+import React, {
+  useState,
+  useMemo,
+  useRef,
+  useCallback,
+  useEffect,
+} from "react";
 import {
   AllCommunityModule,
   ModuleRegistry,
@@ -96,7 +102,8 @@ function InterventionsTable({
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   const [selectedIntervention, setSelectedIntervention] = useState(null);
   const [isRefetching, setIsRefetching] = useState(false);
-  const gridRef = useRef(null);
+  const containerRef = useRef(null); // DOM container for AG Grid
+  const gridRef = useRef(null); // AG Grid React ref (component/api)
 
   let rowData = interventions.map((intervention) => ({
     _id: intervention._id,
@@ -230,6 +237,63 @@ function InterventionsTable({
     }
   };
 
+  // Accessibility: ensure required ARIA child roles are present in the AG Grid DOM
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const applyAriaRoles = () => {
+      try {
+        const root = container.querySelector(".ag-root");
+        if (!root) return false;
+        root.setAttribute("role", "grid");
+        const headerViewport = root.querySelector(".ag-header-viewport");
+        if (headerViewport) {
+          headerViewport.setAttribute("role", "rowgroup");
+          const headerRow = root.querySelector(".ag-header-row");
+          if (headerRow) headerRow.setAttribute("role", "row");
+          // Header cells must be columnheader
+          headerViewport
+            .querySelectorAll(".ag-header-cell")
+            .forEach((cell) => cell.setAttribute("role", "columnheader"));
+          // Ensure header container is presentational to avoid nested rowgroup
+          root
+            .querySelectorAll(".ag-header-container")
+            .forEach((el) => el.setAttribute("role", "presentation"));
+        }
+        root
+          .querySelectorAll(".ag-center-cols-container .ag-row")
+          .forEach((row) => row.setAttribute("role", "row"));
+        root
+          .querySelectorAll(".ag-center-cols-container .ag-cell")
+          .forEach((cell) => cell.setAttribute("role", "gridcell"));
+        const rowCount =
+          root.querySelectorAll(".ag-center-cols-container .ag-row").length ||
+          0;
+        const colCount =
+          root.querySelectorAll(".ag-header .ag-header-cell").length || 0;
+        root.setAttribute("aria-rowcount", String(rowCount));
+        root.setAttribute("aria-colcount", String(colCount));
+        return true;
+      } catch {
+        return false;
+      }
+    };
+
+    // Try immediately and on next frame in case grid hasn't mounted
+    const immediate = applyAriaRoles();
+    if (!immediate) {
+      const raf = requestAnimationFrame(() => applyAriaRoles());
+      // Also observe for dynamic header/body render
+      const observer = new MutationObserver(() => applyAriaRoles());
+      observer.observe(container, { childList: true, subtree: true });
+      return () => {
+        cancelAnimationFrame(raf);
+        observer.disconnect();
+      };
+    }
+  }, [rowData, columnDefs]);
+
   return (
     <div className="flex flex-col h-full min-h-0 gap-6">
       {isRefetching && (
@@ -244,7 +308,7 @@ function InterventionsTable({
       )}
       <div
         className="ag-theme-quartz flex-1 min-h-0"
-        ref={gridRef}
+        ref={containerRef}
         style={{ height: "100%", width: "100%", minHeight: 0 }}
       >
         <AgGridReact

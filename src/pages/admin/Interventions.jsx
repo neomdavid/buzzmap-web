@@ -30,7 +30,7 @@ import {
 } from "@tabler/icons-react"; // Replaced IconFileDescription with IconListDetails
 import { Circle, Lightbulb } from "phosphor-react";
 import dayjs from "dayjs"; // Import dayjs
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import AddInterventionModal from "../../components/Admin/AddInterventionModal";
 import {
   PATTERN_TYPES,
@@ -317,6 +317,37 @@ const Interventions = () => {
     recommendationSearchQuery,
     interventions,
   ]);
+
+  // ARIA support for AG Grid in InterventionsTable (must be before any early returns)
+  const tableWrapperRef = useRef(null);
+  useEffect(() => {
+    try {
+      const root = tableWrapperRef.current?.querySelector(".ag-root");
+      if (!root) return;
+      root.setAttribute("role", "grid");
+      const headerViewport = root.querySelector(".ag-header-viewport");
+      if (headerViewport) {
+        headerViewport.setAttribute("role", "rowgroup");
+        const headerRow = root.querySelector(".ag-header-row");
+        if (headerRow) headerRow.setAttribute("role", "row");
+        headerViewport
+          .querySelectorAll(".ag-header-cell")
+          .forEach((cell) => cell.setAttribute("role", "columnheader"));
+      }
+      root
+        .querySelectorAll(".ag-center-cols-container .ag-row")
+        .forEach((row) => row.setAttribute("role", "row"));
+      root
+        .querySelectorAll(".ag-center-cols-container .ag-cell")
+        .forEach((cell) => cell.setAttribute("role", "gridcell"));
+      const rowCount =
+        root.querySelectorAll(".ag-center-cols-container .ag-row").length || 0;
+      const colCount =
+        root.querySelectorAll(".ag-header .ag-header-cell").length || 0;
+      root.setAttribute("aria-rowcount", String(rowCount));
+      root.setAttribute("aria-colcount", String(colCount));
+    } catch {}
+  }, [interventions]);
 
   // Log what is being rendered in ActionRecommendationCard for debugging
   console.log("ActionRecommendationCard data:", filteredRecommendations);
@@ -753,7 +784,7 @@ const Interventions = () => {
             View All Records
           </Link>
         </div>
-        <div className="h-135">
+        <div className="h-135" ref={tableWrapperRef}>
           <InterventionsTable
             interventions={interventions}
             onlyRecent={true}

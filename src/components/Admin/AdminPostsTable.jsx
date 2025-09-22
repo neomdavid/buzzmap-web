@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useRef } from "react";
+import React, { useMemo, useState, useRef, useEffect } from "react";
 import { AgGridReact } from "ag-grid-react";
 import { themeQuartz } from "ag-grid-community";
 import {
@@ -228,6 +228,60 @@ const AdminPostsTable = () => {
     }
   };
 
+  // ARIA: fix AG Grid roles for accessibility
+  const containerRef = useRef(null);
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const applyAriaRoles = () => {
+      try {
+        const root = container.querySelector(".ag-root");
+        if (!root) return false;
+        root.setAttribute("role", "grid");
+        const headerViewport = root.querySelector(".ag-header-viewport");
+        if (headerViewport) {
+          headerViewport.setAttribute("role", "rowgroup");
+          const headerRow = root.querySelector(".ag-header-row");
+          if (headerRow) headerRow.setAttribute("role", "row");
+          headerViewport
+            .querySelectorAll(".ag-header-cell")
+            .forEach((cell) => cell.setAttribute("role", "columnheader"));
+          root
+            .querySelectorAll(".ag-header-container")
+            .forEach((el) => el.setAttribute("role", "presentation"));
+        }
+        root
+          .querySelectorAll(".ag-center-cols-container .ag-row")
+          .forEach((row) => row.setAttribute("role", "row"));
+        root
+          .querySelectorAll(".ag-center-cols-container .ag-cell")
+          .forEach((cell) => cell.setAttribute("role", "gridcell"));
+        const rowCount =
+          root.querySelectorAll(".ag-center-cols-container .ag-row").length ||
+          0;
+        const colCount =
+          root.querySelectorAll(".ag-header .ag-header-cell").length || 0;
+        root.setAttribute("aria-rowcount", String(rowCount));
+        root.setAttribute("aria-colcount", String(colCount));
+        return true;
+      } catch {
+        return false;
+      }
+    };
+
+    const done = applyAriaRoles();
+    if (!done) {
+      const raf = requestAnimationFrame(() => applyAriaRoles());
+      const observer = new MutationObserver(() => applyAriaRoles());
+      observer.observe(container, { childList: true, subtree: true });
+      return () => {
+        cancelAnimationFrame(raf);
+        observer.disconnect();
+      };
+    }
+  }, [rows, columns]);
+
   return (
     <div className="flex flex-col h-[500px]">
       <div className="flex justify-between items-center mb-4">
@@ -251,7 +305,7 @@ const AdminPostsTable = () => {
           No active posts to display.
         </div>
       ) : (
-        <div className="ag-theme-quartz h-[500px] w-full">
+        <div className="ag-theme-quartz h-[500px] w-full" ref={containerRef}>
           <AgGridReact
             rowData={rows}
             columnDefs={columns}
