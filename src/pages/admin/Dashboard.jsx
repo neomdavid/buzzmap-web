@@ -1,12 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { ReportCard, ReportTable2, DengueChartCard } from "../../components";
 import MapOnly from "../../components/Mapping/MapOnly";
-import {
-  useGetPostsQuery,
-  useGetAllInterventionsQuery,
-  useGetAllAlertsQuery,
-  useGetClustersQuery,
-} from "../../api/dengueApi.js"; // Import the intervention query hook
+import { useGetAdminDashboardSummaryQuery } from "../../api/dengueApi.js";
 import { useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import GradientText from "../../../Reactbits/GradientText/GradientText.jsx";
@@ -24,45 +19,27 @@ const Dashboard = () => {
   });
   const navigate = useNavigate();
 
-  // Fetching the posts from the API
+  // Fetch compact dashboard summary
   const {
-    data: posts,
-    isLoading: postsLoading,
-    isError: postsError,
-  } = useGetPostsQuery();
-
-  // Fetching the interventions from the API
-  const {
-    data: interventions,
-    isLoading: interventionsLoading,
-    isError: interventionsError,
-  } = useGetAllInterventionsQuery();
-
-  // Fetching the alerts from the API
-  const {
-    data: alertsData,
-    isLoading: alertsLoading,
-    isError: alertsError,
-  } = useGetAllAlertsQuery();
-
-  // Fetch clusters
-  const {
-    data: clustersData,
-    isLoading: clustersLoading,
-    isError: clustersError,
-  } = useGetClustersQuery();
+    data: summary,
+    isLoading: summaryLoading,
+    isError: summaryError,
+  } = useGetAdminDashboardSummaryQuery({
+    recent_posts_limit: 5,
+    recent_alerts_limit: 3,
+  });
 
   // State for showing analysis loading
   const [showAnalysisModal, setShowAnalysisModal] = useState(false);
 
-  // Show analysis modal when posts are loading for admin users
+  // Show analysis modal when loading for admin users
   useEffect(() => {
-    if (user?.role === "admin" && postsLoading) {
+    if (user?.role === "admin" && summaryLoading) {
       setShowAnalysisModal(true);
     } else {
       setShowAnalysisModal(false);
     }
-  }, [user, postsLoading]);
+  }, [user, summaryLoading]);
 
   // Get current date string in the format: Today is <weekday>, <day> <month> <year>
   const today = new Date();
@@ -73,8 +50,8 @@ const Dashboard = () => {
     day: "numeric",
   });
 
-  // Handle loading and error states for both posts and interventions
-  if (postsLoading || interventionsLoading || clustersLoading) {
+  // Handle loading and error states
+  if (summaryLoading) {
     return (
       <div className="flex items-center justify-center h-screen">
         <div className="text-center">
@@ -84,89 +61,60 @@ const Dashboard = () => {
       </div>
     );
   }
-  if (postsError || interventionsError || clustersError)
-    return <div>Error fetching data...</div>;
+  if (summaryError) return <div>Error fetching data...</div>;
 
-  // Make sure posts and interventions are arrays
-  const safePosts = Array.isArray(posts?.posts)
-    ? posts.posts
-    : Array.isArray(posts)
-    ? posts
+  // Derive values from summary
+  const safePosts = Array.isArray(summary?.reports?.recent)
+    ? summary.reports.recent.map((r) => ({
+        _id: r.id,
+        barangay: r.barangay,
+        report_type: r.report_type,
+        status: r.status,
+        date_and_time: r.date,
+        description: r.description,
+        user: { username: r.username },
+        isAnonymous: r.isAnonymous,
+        specific_location: {
+          coordinates: r?.specific_location?.coordinates || [],
+        },
+      }))
     : [];
-  const safeInterventions = Array.isArray(interventions) ? interventions : [];
 
-  // Recent posts slice used by Recent Reports table (top 5 as-is)
-  const recentPosts = safePosts.slice(0, 5);
+  // Recent posts for map/table
+  const recentPosts = safePosts;
 
-  // Calculate counts for reports
-  const reportCounts = safePosts.reduce(
-    (acc, post) => {
-      if (post.status === "Validated") acc.validated += 1;
-      if (post.status === "Pending") acc.pending += 1;
-      if (post.status === "Rejected") acc.rejected += 1;
-      return acc;
-    },
-    { validated: 0, pending: 0, rejected: 0 }
-  );
+  // Counts from summary
+  const reportCounts = summary?.reports?.by_status || {
+    validated: 0,
+    pending: 0,
+    rejected: 0,
+  };
 
-  // Calculate counts for interventions
-  const interventionCounts = safeInterventions.reduce(
-    (acc, intervention) => {
-      if (intervention.status === "Complete") acc.completed += 1;
-      if (intervention.status === "Scheduled") acc.scheduled += 1;
-      if (intervention.status === "Ongoing") acc.ongoing += 1;
-      return acc;
-    },
-    { completed: 0, scheduled: 0, ongoing: 0 }
-  );
-  const totalInterventions =
-    interventionCounts.completed +
-    interventionCounts.scheduled +
-    interventionCounts.ongoing;
-  console.log(interventionCounts);
+  const interventionCounts = summary?.interventions?.by_status || {
+    completed: 0,
+    scheduled: 0,
+    ongoing: 0,
+  };
+  const totalInterventions = summary?.interventions?.total || 0;
 
-  // Calculate total alerts
-  const totalAlerts = Array.isArray(alertsData?.data)
-    ? alertsData.data.length
-    : 0;
-
-  // Get the most recent 3 alerts (adjust as needed)
-  const recentAlerts = Array.isArray(alertsData?.data)
-    ? alertsData.data.slice(0, 3)
+  const totalAlerts = summary?.alerts?.total || 0;
+  const recentAlerts = Array.isArray(summary?.alerts?.recent)
+    ? summary.alerts.recent
     : [];
 
   const alertItems = recentAlerts.map((alert) => ({
     label: (alert.barangays || [])
-      .map((b) => (typeof b === "string" ? b : b.name))
+      .map((b) => (typeof b === "string" ? b : b?.name))
       .join(", "),
-    value:
-      alert.messages && alert.messages.length > 0
-        ? alert.messages[0]
-        : "No message",
+    value: alert?.message || "No message",
   }));
 
-  // Compute cluster stats
-  const clustersList = Array.isArray(clustersData)
-    ? clustersData
-    : Array.isArray(clustersData?.data)
-    ? clustersData.data
-    : [];
-
-  const totalClusters = clustersList.length;
-  const resolvedClusters = clustersList.reduce((acc, c) => {
-    if (c?.isResolved === true) return acc + 1;
-    const memberReports = Array.isArray(c?.reports) ? c.reports : [];
-    const totalInCluster = memberReports.length;
-    if (totalInCluster === 0) return acc;
-    const resolvedCount =
-      typeof c?.resolvedCount === "number"
-        ? c.resolvedCount
-        : typeof c?.breakdown?.resolved_reports === "number"
-        ? c.breakdown.resolved_reports
-        : memberReports.filter((r) => r?.isResolved === true).length;
-    return acc + (resolvedCount === totalInCluster ? 1 : 0);
-  }, 0);
-  const unresolvedClusters = Math.max(0, totalClusters - resolvedClusters);
+  // Compute cluster stats (fully/partially/not resolved)
+  const fullyResolved = summary?.clusters?.fully_resolved || 0;
+  const partiallyResolved = summary?.clusters?.partially_resolved || 0;
+  const notResolved = summary?.clusters?.not_resolved || 0;
+  const totalClusters =
+    summary?.clusters?.total || fullyResolved + partiallyResolved + notResolved;
 
   // Handler to redirect to /admin/denguemapping when a barangay is clicked
   const handleDashboardMapPolygonClick = () => {
@@ -221,7 +169,7 @@ const Dashboard = () => {
         >
           <ReportCard
             title="Total Reports "
-            count={safePosts.length} // Total reports
+            count={summary?.reports?.total || 0} // Total reports from summary
             topBg="bg-base-content"
             type="status"
             items={[
@@ -300,13 +248,18 @@ const Dashboard = () => {
             type="status"
             items={[
               {
-                label: "Resolved",
-                value: resolvedClusters,
+                label: "Fully Resolved",
+                value: fullyResolved,
                 color: "bg-success",
               },
               {
-                label: "Unresolved",
-                value: unresolvedClusters,
+                label: "Partially Resolved",
+                value: partiallyResolved,
+                color: "bg-warning",
+              },
+              {
+                label: "Not Resolved",
+                value: notResolved,
                 color: "bg-error",
               },
             ]}
