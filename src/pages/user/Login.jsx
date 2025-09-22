@@ -201,6 +201,9 @@ const Login = () => {
             theme="light"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
+            id="login-email"
+            name="email"
+            autoComplete="email"
           />
 
           <CustomFormInput
@@ -210,6 +213,9 @@ const Login = () => {
             isConfirm={true}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
+            id="login-password"
+            name="current-password"
+            autoComplete="current-password"
           />
 
           <div className="mt-[-1px] mb-4 flex  w-full justify-between z-10000000">

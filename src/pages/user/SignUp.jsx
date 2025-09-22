@@ -141,6 +141,9 @@ const SignUp = () => {
               theme="dark"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
+              id="signup-username"
+              name="username"
+              autoComplete="username"
             />
             {/* <CustomFormInput
               label="Last Name"
@@ -154,6 +157,9 @@ const SignUp = () => {
             theme="dark"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
+            id="signup-email"
+            name="email"
+            autoComplete="email"
           />
           <div className="w-full">
             <CustomFormInput
@@ -163,6 +169,9 @@ const SignUp = () => {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               error={password && !isPasswordValid()}
+              id="signup-password"
+              name="new-password"
+              autoComplete="new-password"
             />
             {password && !isPasswordValid() && (
               <div className="text-[#ffaaa4] text-[12px] mt-2 text-left">
@@ -183,6 +192,9 @@ const SignUp = () => {
             onChange={(e) => setConfirmPassword(e.target.value)}
             isConfirm={true}
             error={confirmPassword && password !== confirmPassword}
+            id="signup-confirm-password"
+            name="confirm-password"
+            autoComplete="new-password"
           />
           <div className="mt-6 mb-7 flex justify-center  items-center gap-x-2">
             <input
