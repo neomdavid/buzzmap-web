@@ -54,8 +54,8 @@ const MapContainer = ({
     const validPosts = Array.isArray(posts?.posts)
       ? posts.posts
       : Array.isArray(posts)
-      ? posts
-      : [];
+        ? posts
+        : [];
 
     return validPosts.filter(
       (post) =>
@@ -179,42 +179,40 @@ const MapContainer = ({
           reportStatus === "high"
             ? "border-error bg-error/5"
             : reportStatus === "medium"
-            ? "border-warning bg-warning/5"
-            : reportStatus === "low"
-            ? "border-success bg-success/5"
-            : "border-gray-400 bg-gray-100";
+              ? "border-warning bg-warning/5"
+              : reportStatus === "low"
+                ? "border-success bg-success/5"
+                : "border-gray-400 bg-gray-100";
 
         const patternCardColor =
           patternType === "no_change" ||
-          !patternType ||
-          patternType === "" ||
-          patternType === "none"
+            !patternType ||
+            patternType === "" ||
+            patternType === "none"
             ? USER_PATTERN_COLORS_MAP.no_change
             : USER_PATTERN_COLORS_MAP[patternType] ||
-              USER_PATTERN_COLORS_MAP.default;
+            USER_PATTERN_COLORS_MAP.default;
 
         const content = document.createElement("div");
         content.innerHTML = `
           <div class="bg-white p-4 rounded-lg text-center h-auto">
-            <p class="text-4xl font-[900]" style="color:${patternCardColor}">Barangay ${
-          selectedBarangayFeature.properties.displayName ||
+            <p class="text-4xl font-[900]" style="color:${patternCardColor}">Barangay ${selectedBarangayFeature.properties.displayName ||
           selectedBarangayFeature.properties.name ||
           "Unknown Barangay"
-        }</p>
+          }</p>
             <div class="mt-3 flex flex-col gap-3 text-black">
               <div class="p-3 rounded-lg border-2" style="border-color:${patternCardColor}">
                 <div>
                   <p class="text-sm font-medium text-gray-600 uppercase">Status</p>
                   <p class="text-lg font-semibold">
-                    ${
-                      patternType === "no_change"
-                        ? "No Change"
-                        : patternType === "increase"
-                        ? "Increasing"
-                        : patternType === "decrease"
-                        ? "Decreasing"
-                        : "No Change"
-                    }
+                    ${patternType === "no_change"
+            ? "No Change"
+            : patternType === "increase"
+              ? "Increasing"
+              : patternType === "decrease"
+                ? "Decreasing"
+                : "No Change"
+          }
                   </p>
                 </div>
               </div>
@@ -222,11 +220,10 @@ const MapContainer = ({
                 <div>
                   <p class="text-sm font-medium text-gray-600 uppercase">Breeding Site Reports</p>
                   <p class="text-lg font-semibold">
-                    ${
-                      reportAlert && reportAlert.toLowerCase() !== "none"
-                        ? reportAlert
-                        : "No breeding site reported in this barangay."
-                    }
+                    ${reportAlert && reportAlert.toLowerCase() !== "none"
+            ? reportAlert
+            : "No breeding site reported in this barangay."
+          }
                   </p>
                 </div>
               </div>
@@ -300,8 +297,8 @@ const MapContainer = ({
         geometry.type === "Polygon"
           ? [geometry.coordinates]
           : geometry.type === "MultiPolygon"
-          ? geometry.coordinates
-          : [];
+            ? geometry.coordinates
+            : [];
 
       // Find matching barangay in barangaysList
       let barangayObj = barangaysList?.find((b) =>
@@ -456,34 +453,32 @@ const MapContainer = ({
             reportStatus === "high"
               ? "border-error bg-error/5"
               : reportStatus === "medium"
-              ? "border-warning bg-warning/5"
-              : reportStatus === "low"
-              ? "border-success bg-success/5"
-              : "border-gray-400 bg-gray-100";
+                ? "border-warning bg-warning/5"
+                : reportStatus === "low"
+                  ? "border-success bg-success/5"
+                  : "border-gray-400 bg-gray-100";
 
           // Use a div with Tailwind classes for InfoWindow content
           const content = document.createElement("div");
           content.innerHTML = `
           <div class="bg-white p-4 rounded-lg text-center h-auto">
-            <p class="text-4xl font-[900]" style="color:${patternCardColor}">Barangay ${
-            feature.properties.displayName ||
+            <p class="text-4xl font-[900]" style="color:${patternCardColor}">Barangay ${feature.properties.displayName ||
             feature.properties.name ||
             "Unknown Barangay"
-          }</p>
+            }</p>
             <div class="mt-3 flex flex-col gap-3 text-black">
               <div class="p-3 rounded-lg border-2" style="border-color:${patternCardColor}">
                     <div>
                   <p class="text-sm font-medium text-gray-600 uppercase">Status</p>
                   <p class="text-lg font-semibold">
-                    ${
-                      patternType === "no_change"
-                        ? "No Change"
-                        : patternType === "increase"
-                        ? "Increasing"
-                        : patternType === "decrease"
-                        ? "Decreasing"
-                        : "No Change"
-                    }
+                    ${patternType === "no_change"
+              ? "No Change"
+              : patternType === "increase"
+                ? "Increasing"
+                : patternType === "decrease"
+                  ? "Decreasing"
+                  : "No Change"
+            }
                       </p>
                     </div>
                   </div>
@@ -491,11 +486,10 @@ const MapContainer = ({
                     <div>
                   <p class="text-sm font-medium text-gray-600 uppercase">Breeding Site Reports</p>
                   <p class="text-lg font-semibold">
-                    ${
-                      reportAlert && reportAlert.toLowerCase() !== "none"
-                        ? reportAlert
-                        : "No breeding site reported in this barangay."
-                    }
+                    ${reportAlert && reportAlert.toLowerCase() !== "none"
+              ? reportAlert
+              : "No breeding site reported in this barangay."
+            }
                       </p>
                     </div>
                   </div>
@@ -618,43 +612,38 @@ const MapContainer = ({
                 <span class="font-bold">Barangay:</span> ${site.barangay || ""}
               </p>
               <p class="text-xl">
-                <span class="font-bold">Reported by:</span> ${
-                  site.user?.username || ""
-                }
+                <span class="font-bold">Reported by:</span> ${site.user?.username || ""
+            }
               </p>
               <p class="text-xl">
-                <span class="font-bold">Date:</span> ${
-                  site.date_and_time
-                    ? new Date(site.date_and_time).toLocaleString("en-US", {
-                        year: "numeric",
-                        month: "long",
-                        day: "numeric",
-                        hour: "numeric",
-                        minute: "2-digit",
-                        hour12: true,
-                      })
-                    : ""
-                }
+                <span class="font-bold">Date:</span> ${site.date_and_time
+              ? new Date(site.date_and_time).toLocaleString("en-US", {
+                year: "numeric",
+                month: "long",
+                day: "numeric",
+                hour: "numeric",
+                minute: "2-digit",
+                hour12: true,
+              })
+              : ""
+            }
               </p>
               <p class="text-xl">
-                <span class="font-bold">Description:</span> ${
-                  site.description || ""
-                }
+                <span class="font-bold">Description:</span> ${site.description || ""
+            }
               </p>
-              ${
-                site.images && site.images.length > 0
-                  ? `<div class='mt-2 flex justify-center gap-2'>${site.images
-                      .map(
-                        (img) =>
-                          `<img src='${img}' class='w-35 h-25 object-cover rounded border'/>`
-                      )
-                      .join("")}</div>`
-                  : ""
-              }
+              ${site.images && site.images.length > 0
+              ? `<div class='mt-2 flex justify-center gap-2'>${site.images
+                .map(
+                  (img, idx) =>
+                    `<img src='${img}' alt='Breeding site photo ${idx + 1}' class='w-35 h-25 object-cover rounded border'/>`
+                )
+                .join("")}</div>`
+              : ""
+            }
             </div>
-            <button class="mt-4 px-4 py-2 bg-primary w-[40%] text-white rounded-lg shadow hover:bg-primary/80 hover:cursor-pointer font-bold" onclick="window.location.href='${baseUrl}/${
-            site._id
-          }'">View Details</button>
+            <button class="mt-4 px-4 py-2 bg-primary w-[40%] text-white rounded-lg shadow hover:bg-primary/80 hover:cursor-pointer font-bold" onclick="window.location.href='${baseUrl}/${site._id
+            }'">View Details</button>
           </div>
         `;
           infoWindow.setContent(content);
@@ -738,7 +727,7 @@ const MapContainer = ({
                 "[User/MapContainer] Clicked intervention marker (raw object):",
                 intervention
               );
-            } catch (_) {}
+            } catch (_) { }
             // Close barangay info window if open
             if (infoWindowRef.current) {
               infoWindowRef.current.close();
@@ -780,35 +769,31 @@ const MapContainer = ({
             content.innerHTML = `
             <div class="bg-white p-4 rounded-lg text-primary text-center max-w-120 w-[50vw]">
               <p class="font-bold text-4xl font-extrabold mb-4 text-primary">
-                ${
-                  intervention.type ||
-                  intervention.interventionType ||
-                  "Intervention"
-                }
+                ${intervention.type ||
+              intervention.interventionType ||
+              "Intervention"
+              }
               </p>
               <div class="flex flex-col items-center mt-2 space-y-1 font-normal text-center">
-                <p class="text-lg"><span class="font-bold">Status:</span> ${
-                  intervention.status || ""
-                }</p>
-                ${
+                <p class="text-lg"><span class="font-bold">Status:</span> ${intervention.status || ""
+              }</p>
+                ${dateValue
+                ? `<p class="text-lg"><span class="font-bold">Date:</span> ${new Date(
                   dateValue
-                    ? `<p class="text-lg"><span class="font-bold">Date:</span> ${new Date(
-                        dateValue
-                      ).toLocaleString("en-US", {
-                        year: "numeric",
-                        month: "long",
-                        day: "numeric",
-                        hour: "numeric",
-                        minute: "2-digit",
-                        hour12: true,
-                      })}</p>`
-                    : ""
-                }
-                ${
-                  description
-                    ? `<p class=\"text-lg\"><span class=\"font-bold\">Description:</span> ${description}</p>`
-                    : ""
-                }
+                ).toLocaleString("en-US", {
+                  year: "numeric",
+                  month: "long",
+                  day: "numeric",
+                  hour: "numeric",
+                  minute: "2-digit",
+                  hour12: true,
+                })}</p>`
+                : ""
+              }
+                ${description
+                ? `<p class=\"text-lg\"><span class=\"font-bold\">Description:</span> ${description}</p>`
+                : ""
+              }
               </div>
             </div>
           `;
