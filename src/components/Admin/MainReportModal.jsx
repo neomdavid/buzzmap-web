@@ -5,6 +5,7 @@ const MainReportModal = ({
   showFullReport,
   setShowFullReport,
   selectedFullReport,
+  isFetchingFullReport,
   openStreetViewModal,
   handleShowOnMap,
 }) => {
@@ -28,6 +29,12 @@ const MainReportModal = ({
         <hr className="text-accent/50 mb-6" />
 
         <div className="space-y-2">
+          {isFetchingFullReport && (
+            <div className="flex items-center gap-2 text-gray-600">
+              <span className="loading loading-spinner loading-sm" />
+              <span>Loading full report…</span>
+            </div>
+          )}
           {/* Report Type Badge */}
           <div
             className={`inline-block rounded-full px-4 py-2 text-white ${

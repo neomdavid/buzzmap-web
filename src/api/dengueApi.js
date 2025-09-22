@@ -356,6 +356,13 @@ export const dengueApi = createApi({
           : [{ type: "Post", id: "LIST" }],
     }),
 
+    // Minimal reports list by barangay (optimized GET)
+    getReportsByBarangay: builder.query({
+      query: (barangay) =>
+        `reports/by-barangay?barangay=${encodeURIComponent(barangay)}`,
+      transformResponse: (response) => response,
+    }),
+
     getPostById: builder.query({
       query: (id) => `reports/${id}`,
       providesTags: (result, error, id) => [{ type: "Post", id }],
@@ -1570,6 +1577,35 @@ export const dengueApi = createApi({
       },
     }),
 
+    // New: Lightweight cluster summaries for dropdown/list
+    getClusterSummaries: builder.query({
+      query: ({
+        bbox,
+        barangay,
+        startDate,
+        endDate,
+        minReports,
+        status,
+        limit,
+      } = {}) => {
+        const params = new URLSearchParams();
+        if (bbox) params.append("bbox", bbox);
+        if (barangay) params.append("barangay", barangay);
+        if (startDate) params.append("startDate", startDate);
+        if (endDate) params.append("endDate", endDate);
+        if (minReports) params.append("minReports", String(minReports));
+        if (status) params.append("status", status);
+        if (limit) params.append("limit", String(limit));
+        const qs = params.toString();
+        return `clusters/summary${qs ? `?${qs}` : ""}`;
+      },
+      providesTags: ["Clusters"],
+      transformResponse: (response) => {
+        // Expecting { success, data: [...], metadata }
+        return Array.isArray(response?.data) ? response.data : response;
+      },
+    }),
+
     // Grouped breeding site reports (individual + clusters)
     getGroupedReports: builder.query({
       query: () => "reports/grouped",
@@ -1670,7 +1706,10 @@ export const {
   // Post hooks
   useGetPostsQuery,
   useLazyGetPostsQuery,
+  useGetReportsByBarangayQuery,
+  useLazyGetReportsByBarangayQuery,
   useGetPostByIdQuery,
+  useLazyGetPostByIdQuery,
   useCreatePostMutation,
   useCreatePostWithImageMutation,
   useDeletePostMutation,
@@ -1801,6 +1840,7 @@ export const {
 
   // Clusters hooks
   useGetClustersQuery,
+  useGetClusterSummariesQuery,
   useGetSpecificClusterQuery,
   useCreateSubClusterMutation,
   useAddReportsToSubClusterMutation,

@@ -40,11 +40,11 @@
 
   /* Success - green */
   --color-success: #40e17b;
-  --color-success-content: #163b1a;
+  --color-success-content: #004c1c;
 
   /* Warning - orange */
   --color-warning: #ffc35c;
-  --color-warning-content: #3a2a00;
+  --color-warning-content: #784c00;
 
   /* Error - Red */
   --color-error: #b60000;
