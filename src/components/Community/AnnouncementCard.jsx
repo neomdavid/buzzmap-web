@@ -203,7 +203,7 @@ const AnnouncementCard = ({ announcement }) => {
             upvotesArray={localUpvotes}
             downvotesArray={localDownvotes}
             currentUserId={userFromStore?._id}
-            onCommentClick={() => {}}
+            onCommentClick={() => { }}
             useCustomToast={true}
             onShowToast={showCustomToast}
             isAdminPost={true}
@@ -238,6 +238,7 @@ const AnnouncementCard = ({ announcement }) => {
                   !comment.trim()
                 }
                 className="ml-2 p-2 cursor-pointer text-white hover:text-white/80 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+                aria-label="Send comment"
               >
                 <PaperPlaneRight size={24} weight="fill" />
               </button>
