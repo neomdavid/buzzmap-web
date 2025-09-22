@@ -72,9 +72,9 @@ function calculateDistance(lat1, lon1, lat2, lon2) {
   const a =
     Math.sin(dLat / 2) * Math.sin(dLat / 2) +
     Math.cos(deg2rad(lat1)) *
-      Math.cos(deg2rad(lat2)) *
-      Math.sin(dLon / 2) *
-      Math.sin(dLon / 2);
+    Math.cos(deg2rad(lat2)) *
+    Math.sin(dLon / 2) *
+    Math.sin(dLon / 2);
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   const distance = R * c; // Distance in km
   return distance;
@@ -139,8 +139,8 @@ function drawBarangayPolygons(
       geometry.type === "Polygon"
         ? [geometry.coordinates]
         : geometry.type === "MultiPolygon"
-        ? geometry.coordinates
-        : [];
+          ? geometry.coordinates
+          : [];
 
     coordsArray.forEach((polygonCoords) => {
       const path = polygonCoords[0].map(([lng, lat]) => ({ lat, lng }));
@@ -301,8 +301,7 @@ const SpecificLocation = () => {
         );
       img.onerror = () =>
         console.error(
-          `[ERROR] Failed to preload icon ${index + 1}/${
-            iconsToPreload.length
+          `[ERROR] Failed to preload icon ${index + 1}/${iconsToPreload.length
           }:`,
           iconUrl
         );
@@ -388,9 +387,9 @@ const SpecificLocation = () => {
     const map = new window.google.maps.Map(mapContainer, {
       center: report?.specific_location?.coordinates
         ? {
-            lat: report.specific_location.coordinates[1],
-            lng: report.specific_location.coordinates[0],
-          }
+          lat: report.specific_location.coordinates[1],
+          lng: report.specific_location.coordinates[0],
+        }
         : defaultCenter,
       zoom: 18,
       mapTypeId: "satellite",
@@ -490,6 +489,7 @@ const SpecificLocation = () => {
       );
 
       const glyphImg = document.createElement("img");
+      glyphImg.alt = `${report.report_type || "Breeding Site"} icon`;
 
       // Add success and error handling for missing images
       glyphImg.onload = function () {
@@ -568,30 +568,28 @@ const SpecificLocation = () => {
               <span class="font-bold">Barangay:</span> ${report.barangay}
             </p>
             <p class="text-xl">
-              <span class="font-bold">Reported by:</span> ${
-                report.isAnonymous
-                  ? report.anonymousId
-                  : report.user?.username || "Unknown"
-              }
+              <span class="font-bold">Reported by:</span> ${report.isAnonymous
+          ? report.anonymousId
+          : report.user?.username || "Unknown"
+        }
             </p>
             <p class="text-xl">
               <span class="font-bold">Reported:</span> ${getRelativeTime(
-                report.date_and_time
-              )}
+          report.date_and_time
+        )}
             </p>
             <p class="text-xl">
               <span class="font-bold">Description:</span> ${report.description}
             </p>
-            ${
-              report.images && report.images.length > 0
-                ? `<div class='mt-2 flex justify-center gap-2'>${report.images
-                    .map(
-                      (img) =>
-                        `<img src='${img}' class='w-35 h-25 object-cover rounded border'/>`
-                    )
-                    .join("")}</div>`
-                : ""
-            }
+            ${report.images && report.images.length > 0
+          ? `<div class='mt-2 flex justify-center gap-2'>${report.images
+            .map(
+              (img, idx) =>
+                `<img src='${img}' alt='Breeding site photo ${idx + 1}' class='w-35 h-25 object-cover rounded border'/>`
+            )
+            .join("")}</div>`
+          : ""
+        }
           </div>
         </div>
       `;
@@ -626,6 +624,7 @@ const SpecificLocation = () => {
         );
 
         const glyphImg = document.createElement("img");
+        glyphImg.alt = `${r.report_type || "Breeding Site"} icon`;
 
         // Add success and error handling for missing images
         glyphImg.onload = function () {
@@ -686,28 +685,26 @@ const SpecificLocation = () => {
                 <span class="font-bold">Barangay:</span> ${r.barangay}
               </p>
               <p class="text-xl">
-                <span class="font-bold">Reported by:</span> ${
-                  r.isAnonymous ? r.anonymousId : r.user?.username || "Unknown"
-                }
+                <span class="font-bold">Reported by:</span> ${r.isAnonymous ? r.anonymousId : r.user?.username || "Unknown"
+            }
               </p>
               <p class="text-xl">
                 <span class="font-bold">Reported:</span> ${getRelativeTime(
-                  r.date_and_time
-                )}
+              r.date_and_time
+            )}
               </p>
               <p class="text-xl">
                 <span class="font-bold">Description:</span> ${r.description}
               </p>
-              ${
-                r.images && r.images.length > 0
-                  ? `<div class='mt-2 flex justify-center gap-2'>${r.images
-                      .map(
-                        (img) =>
-                          `<img src='${img}' class='w-35 h-25 object-cover rounded border'/>`
-                      )
-                      .join("")}</div>`
-                  : ""
-              }
+              ${r.images && r.images.length > 0
+              ? `<div class='mt-2 flex justify-center gap-2'>${r.images
+                .map(
+                  (img, idx) =>
+                    `<img src='${img}' alt='Breeding site photo ${idx + 1}' class='w-35 h-25 object-cover rounded border'/>`
+                )
+                .join("")}</div>`
+              : ""
+            }
             </div>
             <button 
               class="mt-4 px-4 py-2 bg-primary w-[40%] text-white rounded-lg shadow hover:bg-primary/80 hover:cursor-pointer font-bold"
@@ -994,17 +991,17 @@ const SpecificLocation = () => {
               const rawDate = r.date_and_time;
               const formattedDate = rawDate
                 ? new Date(rawDate).toLocaleDateString("en-US", {
-                    year: "numeric",
-                    month: "long",
-                    day: "numeric",
-                  })
+                  year: "numeric",
+                  month: "long",
+                  day: "numeric",
+                })
                 : "";
               const formattedTime = rawDate
                 ? new Date(rawDate).toLocaleTimeString("en-US", {
-                    hour: "numeric",
-                    minute: "2-digit",
-                    hour12: true,
-                  })
+                  hour: "numeric",
+                  minute: "2-digit",
+                  hour12: true,
+                })
                 : "";
 
               return (
