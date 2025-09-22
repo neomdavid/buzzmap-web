@@ -154,6 +154,7 @@ const Landing = () => {
           WebkitMaskImage:
             "linear-gradient(to bottom, rgba(0,0,0,0) 0%, rgba(0,0,0,0.8) 30%, rgba(0,0,0,1) 60%)",
         }}
+        alt="People checking dengue map and updates"
       />
 
       <section className="flex flex-col lg:flex-row lg:mt-10  justify-center  sm:max-w-[95vw] m-auto px-6 sm:px-6 gap-x-4 ">
@@ -342,10 +343,11 @@ const Landing = () => {
       <footer className="flex  flex-col gap-y-6 items-center sm:flex-row text-primary sm:items-start justify-between px-6 py-10 sm:py-6 pb-12 mt-[-30px] sm:mt-[-25px] w-full  mr-6">
         <div className="flex flex-col gap-y-8 text-center sm:text-left sm:gap-y-0 w-full  items-center sm:items-start  sm:flex-row gap-x-16">
           <div className="flex flex-col sm:flex-row gap-y-6 sm:gap-y-0  w-full sm:w-auto  gap-x-6 items-center">
-            <img src={logoFooter} className="flex-1 w-42 sm:w-33 h-auto" />
+            <img src={logoFooter} className="flex-1 w-42 sm:w-33 h-auto" alt="BuzzMap logo" />
             <img
               src={logoSurveillance}
               className="flex-1 w-42 sm:w-33  h-auto"
+              alt="Quezon City Epidemiology and Surveillance Division logo"
             />
           </div>
 
