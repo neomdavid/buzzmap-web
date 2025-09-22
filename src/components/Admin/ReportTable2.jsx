@@ -58,11 +58,12 @@ const StatusCell = (p) => {
       : status === "Rejected"
       ? "bg-error"
       : "bg-gray-400"; // Expired or any other
+  const textColor = "text-neutral-content";
 
   return (
     <div className="flex items-center justify-center h-full p-1">
       <span
-        className={`${bgColor} rounded-2xl px-4 py-1 flex items-center justify-center text-white text-sm font-semibold text-center`}
+        className={`${bgColor} rounded-2xl px-4 py-1 flex items-center justify-center ${textColor} text-sm font-semibold text-center`}
       >
         {status}
       </span>
@@ -208,6 +209,7 @@ function ReportTable2({
   const [actionLoading, setActionLoading] = useState({}); // Track loading state for individual actions
 
   const gridRef = useRef(null);
+  const wrapperRef = useRef(null);
 
   // SAFETY CHECK: If posts is not an array, show a message and don't render the grid
   if (!Array.isArray(posts)) {
@@ -442,11 +444,51 @@ function ReportTable2({
     setSelectedReport(null); // Clear the selected report
   };
 
+  // Strengthen ARIA structure for Lighthouse by ensuring required child roles
+  useEffect(() => {
+    try {
+      const root = wrapperRef.current?.querySelector(".ag-root");
+      if (!root) return;
+      // Ensure grid role and counts are present
+      root.setAttribute("role", "grid");
+      root.setAttribute("aria-rowcount", String(rowData.length));
+      root.setAttribute("aria-colcount", String(columnDefs.length));
+
+      // Header roles
+      const headerViewport = root.querySelector(".ag-header-viewport");
+      if (headerViewport) {
+        headerViewport.setAttribute("role", "rowgroup");
+        const headerRow = headerViewport.querySelector(".ag-header-row");
+        if (headerRow) headerRow.setAttribute("role", "row");
+        headerViewport
+          .querySelectorAll(".ag-header-cell")
+          .forEach((cell) => cell.setAttribute("role", "columnheader"));
+      }
+
+      // Mark header containers as presentational to avoid nested rowgroup warnings
+      root
+        .querySelectorAll(".ag-header-container")
+        .forEach((el) => el.setAttribute("role", "presentation"));
+
+      // Body rows and cells
+      root
+        .querySelectorAll(".ag-row")
+        .forEach((row) => row.setAttribute("role", "row"));
+      root
+        .querySelectorAll(".ag-cell")
+        .forEach((cell) => cell.setAttribute("role", "gridcell"));
+    } catch (e) {
+      // noop on failure; AG Grid still remains usable
+    }
+  }, [rowData, columnDefs]);
+
   return (
     <>
       <div
         className="ag-theme-quartz relative"
-        ref={gridRef}
+        ref={wrapperRef}
+        role="region"
+        aria-label="Recent reports grid"
         style={{ height: "100%", width: "100%" }}
       >
         {isRefetching && (
@@ -480,6 +522,9 @@ function ReportTable2({
             actionLoading,
           }}
           // onGridReady={onGridReady} // Add this line
+          ariaLabel="Recent reports"
+          ariaRowCount={rowData.length}
+          ariaColCount={columnDefs.length}
         />
       </div>
 

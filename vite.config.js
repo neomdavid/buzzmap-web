@@ -6,6 +6,12 @@ import path from "path"; // <- add this
 
 export default defineConfig({
   plugins: [react(), tailwindcss(), svgr()],
+  test: {
+    environment: "jsdom",
+    setupFiles: "./src/test/setupTests.js",
+    globals: true,
+    css: true,
+  },
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "src"), // <- add this

@@ -155,9 +155,7 @@ const VerifyReportModal = ({
         className="modal transition-transform duration-300 ease-in-out"
       >
         <div
-          className={`modal-box border-t-10 ${
-            actionType === "reject" ? "border-t-error" : "border-t-success"
-          } bg-white rounded-3xl shadow-2xl w-6/12 max-w-4xl p-6 py-14 relative`}
+          className={`modal-box bg-white rounded-3xl shadow-2xl w-6/12 max-w-4xl p-6 py-14 relative`}
         >
           <button
             className="absolute top-4 right-4 text-2xl font-semibold hover:text-gray-500 transition-colors duration-200 hover:cursor-pointer"
@@ -168,10 +166,8 @@ const VerifyReportModal = ({
 
           {!showConfirmation ? (
             <>
-              <p className="text-center text-3xl font-bold mb-6">
-                <span className="text-primary">
-                  {type === "verify" ? "Verify" : "Reject"} Report
-                </span>
+              <p className="text-center text-3xl font-bold mb-6 text-primary">
+                Report Details
               </p>
 
               <div className="space-y-6">
@@ -180,33 +176,25 @@ const VerifyReportModal = ({
                   Report Details
                 </p>
                 <hr className="text-accent/50 mb-4" />
-                <div className="flex justify-between text-lg rounded-lg">
-                  <div className="flex flex-col gap-y-1">
-                    <div className="font-semibold">
-                      <span className="text-gray-500 font-normal mr-1">
-                        Username:
-                      </span>
-                      <div className="flex items-center gap-2 mt-1">
-                        <span>{username}</span>
-                        {isAnonymous && (
-                          <span className="text-sm text-gray-500 italic">
-                            (Posted Anonymously)
-                          </span>
-                        )}
-                      </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-lg">
+                  <div className="flex flex-col">
+                    <span className="text-gray-500">Username</span>
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold">{username}</span>
+                      {isAnonymous && (
+                        <span className="text-sm text-gray-500 italic">
+                          (Posted Anonymously)
+                        </span>
+                      )}
                     </div>
-                    <p className="font-semibold">
-                      <span className="text-gray-500 font-normal mr-1">
-                        Barangay:
-                      </span>
-                      {barangay}
-                    </p>
                   </div>
-                  <div className="flex flex-col gap-y-1">
-                    <p className="font-semibold">
-                      <span className="text-gray-500 font-normal mr-1">
-                        Date and Time:
-                      </span>
+                  <div className="flex flex-col">
+                    <span className="text-gray-500">Barangay</span>
+                    <span className="font-semibold">{barangay}</span>
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-gray-500">Date and Time</span>
+                    <span className="font-semibold">
                       {new Date(dateAndTime).toLocaleString("en-US", {
                         weekday: "long",
                         year: "numeric",
@@ -216,13 +204,13 @@ const VerifyReportModal = ({
                         minute: "2-digit",
                         hour12: true,
                       })}
-                    </p>
-                    <p className="font-semibold">
-                      <span className="text-gray-500 font-normal mr-1">
-                        Description:
-                      </span>
+                    </span>
+                  </div>
+                  <div className="md:col-span-2 flex flex-col">
+                    <span className="text-gray-500">Description</span>
+                    <span className="font-normal whitespace-pre-line">
                       {description}
-                    </p>
+                    </span>
                   </div>
                 </div>
 
@@ -264,22 +252,24 @@ const VerifyReportModal = ({
                 )}
 
                 {/* Action Buttons */}
-                <div className="text-center space-y-4">
-                  <div className="flex justify-center gap-4">
-                    <button
-                      onClick={() => handleActionClick("verify")}
-                      className="bg-success text-white font-semibold px-7 py-2 rounded-xl hover:cursor-pointer hover:opacity-70 transition-all duration-200"
-                    >
-                      Verify
-                    </button>
-                    <button
-                      onClick={() => handleActionClick("reject")}
-                      className="bg-error text-white font-semibold px-7 py-2 rounded-xl hover:cursor-pointer hover:opacity-70 transition-all duration-200"
-                    >
-                      Reject
-                    </button>
+                {status !== "Validated" && status !== "Rejected" && (
+                  <div className="text-center space-y-4">
+                    <div className="flex justify-center gap-4">
+                      <button
+                        onClick={() => handleActionClick("verify")}
+                        className="bg-success text-white font-semibold px-7 py-2 rounded-xl hover:cursor-pointer hover:opacity-70 transition-all duration-200"
+                      >
+                        Verify
+                      </button>
+                      <button
+                        onClick={() => handleActionClick("reject")}
+                        className="bg-error text-white font-semibold px-7 py-2 rounded-xl hover:cursor-pointer hover:opacity-70 transition-all duration-200"
+                      >
+                        Reject
+                      </button>
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
             </>
           ) : showConfirmation ? (
