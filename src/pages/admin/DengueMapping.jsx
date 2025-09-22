@@ -12,17 +12,18 @@ import {
 import { useState, useMemo, useRef, useEffect } from "react";
 import {
   useGetInterventionsInProgressQuery,
-  useGetPostsQuery,
   useGetAllInterventionsQuery,
   useGetAdminBarangaysQuery,
   useGetRecentReportsForBarangayMutation,
-  useGetClustersQuery,
+  useGetClusterSummariesQuery,
   useGetSpecificClusterQuery,
   useResolveReportsMutation,
   useAddReportsToSubClusterMutation,
   useRemoveReportsFromSubClusterMutation,
   useGetGroupedReportsQuery,
   useValidatePostMutation,
+  useLazyGetReportsByBarangayQuery,
+  useLazyGetPostByIdQuery,
 } from "@/api/dengueApi";
 import ClusterDetailsSkeleton from "@/components/Skeletons/ClusterDetailsSkeleton";
 import * as turf from "@turf/turf";
@@ -89,6 +90,7 @@ const DengueMapping = () => {
   const [selectedMapItem, setSelectedMapItem] = useState(null);
   const [showFullReport, setShowFullReport] = useState(false);
   const [selectedFullReport, setSelectedFullReport] = useState(null);
+  const [isFetchingFullReport, setIsFetchingFullReport] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
   const [csvFile, setCsvFile] = useState(null);
   const [importError, setImportError] = useState("");
@@ -120,7 +122,11 @@ const DengueMapping = () => {
   const streetViewModalRef = useRef(null);
   const mapContainerRef = useRef(null);
   const importModalRef = useRef(null);
-  const { data: posts } = useGetPostsQuery();
+  // Fetch minimal reports list within the selected barangay on demand (optimized GET)
+  const [
+    triggerGetReportsByBarangay,
+    { data: reportsByBarangay, isFetching: isFetchingBarangayPosts },
+  ] = useLazyGetReportsByBarangayQuery();
   const { data: allInterventionsData, isLoading: isLoadingAllInterventions } =
     useGetAllInterventionsQuery();
   const { data: barangaysList, isLoading: isLoadingBarangays } =
@@ -130,6 +136,7 @@ const DengueMapping = () => {
   const [filteredBarangays, setFilteredBarangays] = useState([]);
 
   const [getRecentReports] = useGetRecentReportsForBarangayMutation();
+  const [triggerGetReportById] = useLazyGetPostByIdQuery();
 
   // Cluster mutation hooks
   const [resolveReports] = useResolveReportsMutation();
@@ -151,12 +158,12 @@ const DengueMapping = () => {
     } catch (_) {}
   }, []);
 
-  // Get clusters from API
+  // Get lightweight cluster summaries from API
   const {
-    data: clustersData,
+    data: clusterSummaries,
     isLoading: isLoadingClusters,
     refetch: refetchClusters,
-  } = useGetClustersQuery();
+  } = useGetClusterSummariesQuery();
 
   // New: fetch grouped reports (individual + clusters)
   const { data: groupedReportsData, refetch: refetchGroupedReports } =
@@ -171,96 +178,52 @@ const DengueMapping = () => {
     skip: !selectedCluster,
   });
 
-  // Transform API clusters data to match our component structure
+  // Transform summaries to match our component structure for dropdown
   const transformedClusters = useMemo(() => {
-    const list = Array.isArray(clustersData)
-      ? clustersData
-      : Array.isArray(clustersData?.data)
-      ? clustersData.data
+    const list = Array.isArray(clusterSummaries)
+      ? clusterSummaries
+      : Array.isArray(clusterSummaries?.data)
+      ? clusterSummaries.data
       : [];
     if (list.length === 0) {
       return [];
     }
 
-    const transformed = list.map((cluster, index) => {
-      // Calculate center coordinates from reports
-      const coordinates = cluster.reports.map(
-        (report) => report.specific_location.coordinates
-      );
-      const center =
-        coordinates.length > 0
-          ? {
-              lng:
-                coordinates.reduce((sum, coord) => sum + coord[0], 0) /
-                coordinates.length,
-              lat:
-                coordinates.reduce((sum, coord) => sum + coord[1], 0) /
-                coordinates.length,
-            }
-          : { lng: 121.0437, lat: 14.676 }; // Default to QC center
-
-      // Determine severity based on unprocessed count
-      let severity = "low";
-      if (cluster.unprocessed_count >= 5) severity = "high";
-      else if (cluster.unprocessed_count >= 2) severity = "medium";
-
-      // Transform reports to match our structure
-      const transformedReports = cluster.reports.map((report) => ({
-        id: report._id,
-        type: report.report_type,
-        description: report.description,
-        reportedBy: report.isAnonymous
-          ? "Anonymous"
-          : report.user?.username || "User",
-        date: report.date_and_time,
-        status: report.status,
-        severity:
-          severity === "high"
-            ? "High"
-            : severity === "medium"
-            ? "Medium"
-            : "Low",
-        location: `${report.barangay}`,
-        coordinates: {
-          lat: report.specific_location.coordinates[1],
-          lng: report.specific_location.coordinates[0],
-        },
-        images: report.images || [],
-        verified: report.status === "Validated",
-        resolved: report.isResolved === true || report.status === "Resolved",
-      }));
-
-      const resolvedCount =
-        (typeof cluster?.breakdown?.resolved_reports === "number"
-          ? cluster.breakdown.resolved_reports
-          : undefined) ??
-        transformedReports.filter((r) => r.resolved === true).length;
-      const result = {
-        id: cluster._id,
-        name: `Cluster in ${cluster.barangay}`,
-        center,
-        count: cluster.reports.length,
-        severity,
-        earliestReportAt: cluster.date_range.start_date,
-        latestReportAt: cluster.date_range.end_date,
-        barangays: [cluster.barangay],
-        reports: transformedReports,
-        resolvedCount,
-        unprocessedCount: Math.max(
-          0,
-          (cluster.reports?.length || 0) - resolvedCount
-        ),
-        subClusters: cluster.sub_clusters || [],
-        metadata: cluster.metadata || {},
-      };
-
-      return result;
-    });
+    const transformed = list.map((cluster) => ({
+      id: cluster.id || cluster._id || cluster.clusterId,
+      name: `Cluster in ${cluster.barangay}`,
+      center: cluster.center || { lng: 121.0437, lat: 14.676 },
+      count: cluster.count,
+      severity: cluster.severity || "low",
+      earliestReportAt: cluster?.date_range?.start_date,
+      latestReportAt: cluster?.date_range?.end_date,
+      barangays: [cluster.barangay],
+      // summaries do not include full reports; keep these lightweight
+      reports: [],
+      resolvedCount: cluster.resolvedCount ?? 0,
+      unprocessedCount: Math.max(
+        0,
+        (cluster.count || 0) - (cluster.resolvedCount || 0)
+      ),
+      isResolved: cluster.isResolved,
+      processedCount: cluster.resolvedCount ?? 0,
+      subClusters: [],
+      metadata: {},
+    }));
 
     return transformed;
-  }, [clustersData]);
+  }, [clusterSummaries]);
 
   const getClusterStatus = (cluster) => {
+    if (typeof cluster.isResolved === "string") {
+      if (cluster.isResolved === "fully_resolved") return "fully-resolved";
+      if (cluster.isResolved === "partially_resolved")
+        return "partially-resolved";
+      return "pending"; // not_resolved
+    }
+    if (typeof cluster.isResolved === "boolean") {
+      return cluster.isResolved ? "fully-resolved" : "pending";
+    }
     // Prefer explicit metadata if present
     if (cluster.metadata && cluster.metadata.status) {
       switch (cluster.metadata.status) {
@@ -310,19 +273,36 @@ const DengueMapping = () => {
 
   // Separate clusters by status for better organization
   const pendingClusters = useMemo(() => {
-    return flaggedClusters.filter((c) => getClusterStatus(c) === "pending");
+    return flaggedClusters.filter((c) => {
+      if (typeof c.isResolved === "string") {
+        return c.isResolved === "not_resolved";
+      }
+      if (typeof c.isResolved === "boolean") {
+        return c.isResolved === false;
+      }
+      return getClusterStatus(c) === "pending";
+    });
   }, [flaggedClusters]);
 
   const partiallyResolvedClusters = useMemo(() => {
-    return flaggedClusters.filter(
-      (c) => getClusterStatus(c) === "partially-resolved"
-    );
+    return flaggedClusters.filter((c) => {
+      if (typeof c.isResolved === "string") {
+        return c.isResolved === "partially_resolved";
+      }
+      return getClusterStatus(c) === "partially-resolved";
+    });
   }, [flaggedClusters]);
 
   const fullyResolvedClusters = useMemo(() => {
-    return flaggedClusters.filter(
-      (c) => getClusterStatus(c) === "fully-resolved"
-    );
+    return flaggedClusters.filter((c) => {
+      if (typeof c.isResolved === "string") {
+        return c.isResolved === "fully_resolved";
+      }
+      if (typeof c.isResolved === "boolean") {
+        return c.isResolved === true;
+      }
+      return getClusterStatus(c) === "fully-resolved";
+    });
   }, [flaggedClusters]);
 
   // Prefer new grouped endpoint for map rendering
@@ -353,14 +333,9 @@ const DengueMapping = () => {
         };
       });
     }
-    // Fallback to old clusters data
-    const list = Array.isArray(clustersData)
-      ? clustersData
-      : Array.isArray(clustersData?.data)
-      ? clustersData.data
-      : [];
-    return list;
-  }, [groupedReportsData, clustersData]);
+    // Fallback to empty when no grouped data
+    return [];
+  }, [groupedReportsData]);
 
   const getSeverityColor = (severity) => {
     if (severity === "high") return "#dc2626"; // red-600
@@ -804,109 +779,37 @@ const DengueMapping = () => {
     }
   );
 
-  // Get nearby reports when a barangay is selected
-  const nearbyReports = useMemo(() => {
-    if (!selectedBarangay || !posts) {
-      return [];
+  // Fetch reports within barangay when a barangay is selected
+  useEffect(() => {
+    const name = selectedBarangay?.properties?.name || selectedBarangay?.name;
+    if (!name) return;
+    triggerGetReportsByBarangay(name);
+  }, [selectedBarangay, triggerGetReportsByBarangay]);
+
+  // Map minimal response to UI shape
+  const reportsWithinBarangay = useMemo(() => {
+    const name = selectedBarangay?.properties?.name || selectedBarangay?.name;
+    if (!name || !reportsByBarangay) return [];
+
+    // Expected shape from GET /reports/by-barangay
+    if (
+      reportsByBarangay?.success &&
+      Array.isArray(reportsByBarangay?.reports)
+    ) {
+      return reportsByBarangay.reports.map((r) => ({
+        _id: r.id,
+        id: r.id,
+        date_and_time: r.date,
+        description: r.description,
+        report_type: r.report_type,
+        barangay: reportsByBarangay.barangay || name,
+        specific_location: { coordinates: r.coordinates },
+        status: r.status || "",
+        images: [],
+      }));
     }
-
-    // Create a Set to track unique combinations
-    const uniqueReports = new Set();
-
-    // Handle both possible API response shapes
-    const allPostsArray = Array.isArray(posts?.posts)
-      ? posts.posts
-      : Array.isArray(posts)
-      ? posts
-      : [];
-
-    const filteredPosts = allPostsArray.filter((post) => {
-      // Debug each post's properties
-
-      // Only include validated posts with coordinates
-      if (
-        !post ||
-        post.status !== "Validated" ||
-        !post.specific_location?.coordinates
-      ) {
-        return false;
-      }
-
-      // Create a unique key for this report
-      const uniqueKey = `${post.specific_location.coordinates.join(",")}-${
-        post.description
-      }`;
-
-      // Skip if we've already seen this combination
-      if (uniqueReports.has(uniqueKey)) {
-        return false;
-      }
-
-      // Add to our set of seen combinations
-      uniqueReports.add(uniqueKey);
-
-      // If the barangay has coordinates, calculate distance
-      if (selectedBarangay.geometry?.coordinates) {
-        const center = turf.center(selectedBarangay.geometry);
-        const [barangayLng, barangayLat] = center.geometry.coordinates;
-        const [postLng, postLat] = post.specific_location.coordinates;
-
-        // Calculate distance using Haversine formula
-        const R = 6371; // Earth's radius in km
-        const dLat = ((postLat - barangayLat) * Math.PI) / 180;
-        const dLon = ((postLng - barangayLng) * Math.PI) / 180;
-        const a =
-          Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-          Math.cos((barangayLat * Math.PI) / 180) *
-            Math.cos((postLat * Math.PI) / 180) *
-            Math.sin(dLon / 2) *
-            Math.sin(dLon / 2);
-        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-        const distance = R * c;
-
-        // Return posts within 2km radius
-        return distance <= 2;
-      }
-
-      // If no coordinates, just check if the barangay names match
-      return (
-        post.barangay &&
-        selectedBarangay.properties?.name &&
-        namesAreEquivalent(post.barangay, selectedBarangay.properties.name)
-      );
-    });
-
-    const nearbyReportsWithDistance = filteredPosts
-      .map((post) => {
-        let distance = 0;
-        if (selectedBarangay.geometry?.coordinates) {
-          const center = turf.center(selectedBarangay.geometry);
-          const [barangayLng, barangayLat] = center.geometry.coordinates;
-          const [postLng, postLat] = post.specific_location.coordinates;
-
-          // Calculate distance using Haversine formula
-          const R = 6371; // Earth's radius in km
-          const dLat = ((postLat - barangayLat) * Math.PI) / 180;
-          const dLon = ((postLng - barangayLng) * Math.PI) / 180;
-          const a =
-            Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-            Math.cos((barangayLat * Math.PI) / 180) *
-              Math.cos((postLat * Math.PI) / 180) *
-              Math.sin(dLon / 2) *
-              Math.sin(dLon / 2);
-          const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-          distance = R * c;
-        }
-        return {
-          ...post,
-          distance,
-        };
-      })
-      .sort((a, b) => a.distance - b.distance)
-      .slice(0, 3); // Get top 3 nearest reports
-
-    return nearbyReportsWithDistance;
-  }, [selectedBarangay, posts]);
+    return [];
+  }, [reportsByBarangay, selectedBarangay]);
 
   // Memoized list of active (not completed) interventions
   const activeInterventions = useMemo(() => {
@@ -1166,9 +1069,22 @@ const DengueMapping = () => {
   };
 
   // Add handler for viewing full report
-  const handleViewFullReport = (report) => {
-    setSelectedFullReport(report);
-    setShowFullReport(true);
+  const handleViewFullReport = async (report) => {
+    try {
+      setIsFetchingFullReport(true);
+      setShowFullReport(true);
+      // If we already have images and user fields, use as placeholder then hydrate
+      setSelectedFullReport(report);
+      const rid = report?._id || report?.id;
+      if (!rid) return;
+      const full = await triggerGetReportById(rid).unwrap();
+      const data = full?.data || full; // support either {data} or raw
+      if (data) setSelectedFullReport(data);
+    } catch (e) {
+      console.error("[Full Report] Failed to load full details", e);
+    } finally {
+      setIsFetchingFullReport(false);
+    }
   };
 
   // Helper function to get border color based on pattern
@@ -1195,9 +1111,9 @@ const DengueMapping = () => {
       case "spike":
         return "text-error";
       case "increase":
-        return "text-warning";
+        return "text-warning-content";
       case "decrease":
-        return "text-success";
+        return "text-success-content";
       case "low_level_activity":
         return "text-info";
       case "no_change":
@@ -1207,33 +1123,19 @@ const DengueMapping = () => {
     }
   };
 
-  // Helper function to get background color based on risk level
-  const getRiskLevelBgColor = (riskLevel) => {
-    switch (riskLevel?.toLowerCase()) {
-      case "high":
-        return "bg-error";
-      case "medium":
-        return "bg-warning";
-      case "low":
-        return "bg-success";
-      default:
-        return "bg-gray-400";
-    }
-  };
-
   // Helper function to get background color based on pattern type
   const getPatternBgColor = (patternType) => {
     switch (patternType?.toLowerCase()) {
       case "spike":
-        return "bg-error";
+        return "bg-error/20";
       case "increase":
         return "bg-warning";
       case "decrease":
         return "bg-success";
       case "low_level_activity":
-        return "bg-info";
+        return "bg-info-content";
       case "no_change":
-        return "bg-gray-400";
+        return "bg-gray-200";
       default:
         return "bg-gray-400";
     }
@@ -1362,7 +1264,7 @@ const DengueMapping = () => {
             <div className="flex gap-2">
               <button
                 onClick={() => setShowBreedingSites(!showBreedingSites)}
-                className={`px-3 py-2 rounded-lg transition-colors text-sm ${
+                className={`px-3 py-2 rounded-lg transition-colors text-sm min-h-11 min-w-11 ${
                   showBreedingSites
                     ? "bg-primary text-white"
                     : "bg-white text-primary border border-gray-300 hover:bg-gray-50 shadow-md"
@@ -1374,7 +1276,7 @@ const DengueMapping = () => {
               </button>
               <button
                 onClick={() => setShowInterventions(!showInterventions)}
-                className={`px-3 py-2 rounded-lg transition-colors text-sm ${
+                className={`px-3 py-2 rounded-lg transition-colors text-sm min-h-11 min-w-11 ${
                   showInterventions
                     ? "bg-primary text-white"
                     : "bg-white text-primary border border-gray-300 hover:bg-gray-50 shadow-md"
@@ -1389,16 +1291,20 @@ const DengueMapping = () => {
             {/* Legend */}
             {(showBreedingSites || showInterventions) && (
               <div className="bg-white rounded-lg shadow-md p-3 border border-gray-200 max-w-xs">
-                <h4 className="text-sm font-semibold text-gray-700 mb-2">
+                <p
+                  className="text-md font-bold text-gray-700 mb-2"
+                  role="heading"
+                  aria-level={2}
+                >
                   Map Legend
-                </h4>
+                </p>
                 <div className="space-y-2">
                   {showBreedingSites && (
                     <div>
-                      <p className="text-xs font-medium text-gray-600 mb-1">
+                      <p className="text-sm font-medium text-gray-600 mb-1">
                         Breeding Sites
                       </p>
-                      <div className="grid grid-cols-1 gap-1 text-xs">
+                      <div className="grid grid-cols-1 gap-1 text-sm">
                         <div className="flex items-center gap-2">
                           <img
                             src={stagnantIcon}
@@ -1511,10 +1417,10 @@ const DengueMapping = () => {
                   )}
                   {showInterventions && (
                     <div>
-                      <p className="text-xs font-medium text-gray-600 mb-1">
+                      <p className="text-sm font-medium text-gray-600 mb-1">
                         Interventions
                       </p>
-                      <div className="grid grid-cols-1 gap-1 text-xs">
+                      <div className="grid grid-cols-1 gap-1 text-sm">
                         <div className="flex items-center gap-2">
                           <img src={allIcon} alt="All" className="w-3 h-3" />
                           <span>All Interventions</span>
@@ -1565,7 +1471,8 @@ const DengueMapping = () => {
         selectedBarangay={selectedBarangay}
         getBorderColor={getBorderColor}
         getPatternTextColor={getPatternTextColor}
-        nearbyReports={nearbyReports}
+        reportsWithinBarangay={reportsWithinBarangay}
+        reportsWithinBarangayLoading={isFetchingBarangayPosts}
         activeInterventions={activeInterventions}
         recentDengueCases={recentDengueCases}
         getPatternBgColor={getPatternBgColor}
@@ -1623,6 +1530,7 @@ const DengueMapping = () => {
         showFullReport={showFullReport}
         setShowFullReport={setShowFullReport}
         selectedFullReport={selectedFullReport}
+        isFetchingFullReport={isFetchingFullReport}
         openStreetViewModal={openStreetViewModal}
         handleShowOnMap={handleShowOnMap}
       />
@@ -1760,7 +1668,7 @@ const DengueMapping = () => {
                   <span className="truncate mr-2">
                     {r.type} • {r.description || "No description"}
                   </span>
-                  <span className="text-xs text-gray-500">
+                  <span className="text-sm text-gray-500">
                     {new Date(r.date).toLocaleString()}
                   </span>
                 </li>

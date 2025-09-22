@@ -251,7 +251,7 @@ function ReportTable2({
       dateValue: new Date(post.date_and_time), // Raw date for filtering
       status: post.status,
       description: post.description, // Include description
-      images: post.images || [], // Include images, default to empty array if undefined
+      images: Array.isArray(post.images) ? post.images : [],
     };
   });
 

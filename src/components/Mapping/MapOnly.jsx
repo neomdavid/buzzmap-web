@@ -459,6 +459,7 @@ const MapOnly = forwardRef(
                 BREEDING_SITE_TYPE_ICONS.default;
               const glyphImg = document.createElement("img");
               glyphImg.src = iconUrl;
+              glyphImg.alt = `${site.report_type || "Breeding Site"} icon`;
               glyphImg.style.width = "28px";
               glyphImg.style.height = "28px";
               glyphImg.style.objectFit = "contain";
@@ -615,6 +616,7 @@ const MapOnly = forwardRef(
                             `<img src='${img}' alt='Breeding site photo ${idx + 1}' class='w-35 h-25 object-cover rounded border'/>`
                         )
                         .join("")}</div>`
+
                       : ""
                     }
                 </div>
@@ -730,6 +732,11 @@ const MapOnly = forwardRef(
                 );
                 const glyphImg = document.createElement("img");
                 glyphImg.src = iconUrl;
+                glyphImg.alt = `${
+                  intervention.interventionType ||
+                  intervention.type ||
+                  "Intervention"
+                } icon`;
                 glyphImg.style.width = "28px";
                 glyphImg.style.height = "28px";
                 glyphImg.style.objectFit = "contain";

@@ -5,7 +5,8 @@ const BarangayDetails = ({
   selectedBarangay,
   getBorderColor,
   getPatternTextColor,
-  nearbyReports,
+  reportsWithinBarangay,
+  reportsWithinBarangayLoading,
   activeInterventions,
   recentDengueCases,
   getPatternBgColor,
@@ -51,7 +52,7 @@ const BarangayDetails = ({
               : "Select a Barangay"}
           </p>
           <p
-            className={`text-center font-semibold text-white text-lg uppercase mb-4 px-4 py-1 rounded-full inline-block mx-auto ${getPatternBgColor(
+            className={`text-center font-semibold text-neutral-content text-lg uppercase mb-4 px-4 py-1 rounded-full inline-block mx-auto ${getPatternBgColor(
               selectedBarangay?.properties?.patternType
             )}`}
           >
@@ -326,10 +327,15 @@ const BarangayDetails = ({
         </div>
         <div className="col-span-6 flex flex-col gap-2">
           <p className="text-[30px] text-base-content font-bold">
-            Reports nearby
+            Reports within barangay
           </p>
-          {nearbyReports.length > 0 ? (
-            nearbyReports.map((report, index) => (
+          {reportsWithinBarangayLoading ? (
+            <div className="flex flex-col items-start bg-white rounded-2xl p-4 text-black gap-2">
+              <span className="loading loading-spinner loading-sm"></span>
+              <p className="text-gray-600">Loading reports…</p>
+            </div>
+          ) : reportsWithinBarangay.length > 0 ? (
+            reportsWithinBarangay.map((report, index) => (
               <div
                 key={index}
                 className="flex flex-col items-start bg-white rounded-2xl p-4 text-black gap-2 w-full"
@@ -347,10 +353,13 @@ const BarangayDetails = ({
                     {report.barangay} - {report.report_type}
                   </p>
                 </div>
-                <p>
-                  <span className="font-bold ml-1.5">Distance: </span>
-                  {(report.distance * 1000).toFixed(0)}m away
-                </p>
+                {Array.isArray(report?.specific_location?.coordinates) && (
+                  <p>
+                    <span className="font-bold ml-1.5">Coordinates: </span>
+                    {report.specific_location.coordinates[1].toFixed(6)},{" "}
+                    {report.specific_location.coordinates[0].toFixed(6)}
+                  </p>
+                )}
                 <p>
                   <span className="font-bold ml-1.5">Reported: </span>
                   {new Date(report.date_and_time).toLocaleDateString("en-US", {
@@ -380,7 +389,7 @@ const BarangayDetails = ({
             ))
           ) : (
             <div className="flex flex-col items-start bg-white rounded-2xl p-4 text-black gap-2">
-              <p className="text-gray-500 italic">No nearby reports found</p>
+              <p className="text-gray-500 italic">No reports found</p>
             </div>
           )}
         </div>
