@@ -20,33 +20,48 @@ import {
 import { useState, useMemo } from "react";
 import { ArrowClockwise } from "phosphor-react";
 import { IconReload } from "@tabler/icons-react";
-import { 
-  PATTERN_TYPES, 
-  PATTERN_COLORS, 
-  PATTERN_LABELS, 
-  getPatternColor, 
-  normalizePatternType 
+import {
+  PATTERN_TYPES,
+  PATTERN_COLORS,
+  PATTERN_LABELS,
+  getPatternColor,
+  normalizePatternType,
 } from "../../utils/patternConfig";
 
 const getPatternColorForChart = (patternType) => {
   // Convert pattern type to lowercase for case-insensitive comparison
   const normalizedPattern = normalizePatternType(patternType);
-  return getPatternColor(normalizedPattern, 'stroke');
+  return getPatternColor(normalizedPattern, "stroke");
 };
 
 // Update the pattern levels to use centralized configuration
 const patternLevels = [
-  { label: PATTERN_LABELS[PATTERN_TYPES.SPIKE], color: getPatternColor(PATTERN_TYPES.SPIKE, 'stroke') },
-  { label: PATTERN_LABELS[PATTERN_TYPES.INCREASE], color: getPatternColor(PATTERN_TYPES.INCREASE, 'stroke') },
-  { label: PATTERN_LABELS[PATTERN_TYPES.DECREASE], color: getPatternColor(PATTERN_TYPES.DECREASE, 'stroke') },
-  { label: PATTERN_LABELS[PATTERN_TYPES.LOW_LEVEL_ACTIVITY], color: getPatternColor(PATTERN_TYPES.LOW_LEVEL_ACTIVITY, 'stroke') },
-  { label: PATTERN_LABELS[PATTERN_TYPES.NO_CHANGE], color: getPatternColor(PATTERN_TYPES.NO_CHANGE, 'stroke') },
+  {
+    label: PATTERN_LABELS[PATTERN_TYPES.SPIKE],
+    color: getPatternColor(PATTERN_TYPES.SPIKE, "stroke"),
+  },
+  {
+    label: PATTERN_LABELS[PATTERN_TYPES.INCREASE],
+    color: getPatternColor(PATTERN_TYPES.INCREASE, "stroke"),
+  },
+  {
+    label: PATTERN_LABELS[PATTERN_TYPES.DECREASE],
+    color: getPatternColor(PATTERN_TYPES.DECREASE, "stroke"),
+  },
+  {
+    label: PATTERN_LABELS[PATTERN_TYPES.LOW_LEVEL_ACTIVITY],
+    color: getPatternColor(PATTERN_TYPES.LOW_LEVEL_ACTIVITY, "stroke"),
+  },
+  {
+    label: PATTERN_LABELS[PATTERN_TYPES.NO_CHANGE],
+    color: getPatternColor(PATTERN_TYPES.NO_CHANGE, "stroke"),
+  },
 ];
 
 // Helper function to format pattern type for display
 const formatPatternType = (patternType) => {
   if (!patternType) return "No pattern detected";
-  
+
   const normalizedPattern = normalizePatternType(patternType);
   return PATTERN_LABELS[normalizedPattern] || "No Pattern";
 };
@@ -304,7 +319,12 @@ export default function DengueTrendChart({
           </p>
         </div>
         <div className="flex gap-4">
+          <label htmlFor="dtc-barangay" className="sr-only">
+            Select barangay
+          </label>
           <select
+            id="dtc-barangay"
+            aria-label="Select barangay"
             value={selectedBarangay}
             onChange={(e) => onBarangayChange(e.target.value)}
             className="select select-bordered w-full max-w-xs bg-white/10 text-base-content border-base-content/20 [&>option]:text-black"
@@ -321,7 +341,12 @@ export default function DengueTrendChart({
               <option>No barangays available</option>
             )}
           </select>
+          <label htmlFor="dtc-interval" className="sr-only">
+            Select interval
+          </label>
           <select
+            id="dtc-interval"
+            aria-label="Select interval"
             value={intervalType}
             onChange={(e) => setIntervalType(e.target.value)}
             className="select select-bordered w-full max-w-xs bg-white/10 text-base-content border-base-content/20 [&>option]:text-black"
@@ -329,7 +354,12 @@ export default function DengueTrendChart({
             <option value="weekly">Weekly</option>
             <option value="biweekly">Bi-weekly</option>
           </select>
+          <label htmlFor="dtc-weeks" className="sr-only">
+            Select week range
+          </label>
           <select
+            id="dtc-weeks"
+            aria-label="Select week range"
             value={weeks}
             onChange={(e) => setWeeks(Number(e.target.value))}
             className="select select-bordered w-full max-w-xs bg-white/10 text-base-content border-base-content/20 [&>option]:text-black"

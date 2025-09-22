@@ -185,7 +185,12 @@ export default function DengueChartCard() {
           </p>
         </div>
         <div className="flex gap-4">
+          <label htmlFor="dc-barangay" className="sr-only">
+            Select barangay
+          </label>
           <select
+            id="dc-barangay"
+            aria-label="Select barangay"
             value={selectedBarangay}
             onChange={(e) => setSelectedBarangay(e.target.value)}
             className="select select-bordered w-full max-w-xs bg-white/10 text-white border-white/20 [&>option]:text-black"
@@ -202,7 +207,12 @@ export default function DengueChartCard() {
               <option>No barangays available</option>
             )}
           </select>
+          <label htmlFor="dc-weeks" className="sr-only">
+            Select week range
+          </label>
           <select
+            id="dc-weeks"
+            aria-label="Select week range"
             value={weeks}
             onChange={(e) => setWeeks(Number(e.target.value))}
             className="select select-bordered w-full max-w-xs bg-white/10 text-white border-white/20 [&>option]:text-black"
