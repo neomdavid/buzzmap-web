@@ -509,7 +509,7 @@ export default function DengueTrendChart({
               className="w-4 h-4 rounded-full"
               style={{ backgroundColor: color }}
             />
-            <span className="text-lg text-primary">{label}</span>
+            <span className="text-lg text-neutral-content">{label}</span>
           </div>
         ))}
       </div>

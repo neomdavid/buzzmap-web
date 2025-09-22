@@ -15,11 +15,11 @@
   /* Base colors */
   --color-base-100: #ffffff; /* White */
   --color-base-200: #e0f5ff; /* #DBEBF3 */
-  --color-base-300: #6093af; /* #6093AF */
+  --color-base-300: #d7edf7; /* #6093AF */
 
   /* Base Variants */
   --color-base-content: #3d5d6e; /* Dark text */
-  --color-info: #60a5fa; /* Light hover */
+  --color-info: #0054bb; /* Light hover */
   --color-info-content: #e6f0fa; /* Focused background */
   --color-primary-content: #ffffff; /* White text */
 

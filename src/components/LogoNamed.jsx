@@ -15,14 +15,16 @@ const LogoNamed = ({
           " polygon(20% 0%, 80% 0%, 100% 0, 100% 51%, 72% 100%, 20% 100%, 0 100%, 0 0)",
       }}
     >
-      <Link to={to}>
+      <Link to={to} aria-label="Go to home">
         <LightBgLogo
           className={` xl:h-13 w-13 mt-[-1px] hover:cursor-pointer ${iconSize}`}
         />
+        <span className="sr-only">Home</span>
       </Link>
 
       <Link
         to={to}
+        aria-label="Buzzmap home"
         className={` ml-[-7.5px] lg:ml-[-1.5px]  flex italic font-extrabold tracking-wider font-title uppercase hover:cursor-pointer text-2xl xl:text-4xl ${textSize}`}
       >
         <h1 className="text-primary text-[25px]">buzz</h1>
