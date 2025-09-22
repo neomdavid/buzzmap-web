@@ -119,6 +119,7 @@ const SignUp = () => {
       <img
         src={womanLowHand}
         className="fixed hidden right-[57vw] bottom-[-50px] w-206 lg:block xl:bottom-[-44px] xl:w-250 xl:right-249 2xl:w-260"
+        alt="Illustration of a woman waving"
       />
 
       <section
@@ -189,11 +190,11 @@ const SignUp = () => {
               checked={acceptedTerms}
               disabled={!hasScrolledToBottom}
               onChange={(e) => setAcceptedTerms(e.target.checked)}
-              className={`checkbox checkbox-lg border-white bg-transparent checked:bg-transparent checked:text-white checked:border-white ${
-                !hasScrolledToBottom ? "opacity-50 cursor-not-allowed" : ""
-              }`}
+              className={`checkbox checkbox-lg border-white bg-transparent checked:bg-transparent checked:text-white checked:border-white ${!hasScrolledToBottom ? "opacity-50 cursor-not-allowed" : ""
+                }`}
+              id="acceptTerms"
             />
-            <label className="text-md lg:text-[14px]">
+            <label className="text-md lg:text-[14px]" htmlFor="acceptTerms">
               I agree to the{" "}
               <button
                 type="button"
@@ -366,11 +367,10 @@ const SignUp = () => {
                 document.getElementById("terms_modal").close();
               }}
               disabled={!hasScrolledToBottom}
-              className={`font-semibold py-2 px-4 rounded-md transition-all duration-300 ${
-                hasScrolledToBottom
-                  ? "bg-primary text-white hover:cursor-pointer hover:bg-primary/80"
-                  : "bg-gray-300 text-gray-500 cursor-not-allowed"
-              }`}
+              className={`font-semibold py-2 px-4 rounded-md transition-all duration-300 ${hasScrolledToBottom
+                ? "bg-primary text-white hover:cursor-pointer hover:bg-primary/80"
+                : "bg-gray-300 text-gray-500 cursor-not-allowed"
+                }`}
             >
               {hasScrolledToBottom ? "Accept Terms" : "Read to Accept Terms"}
             </button>
