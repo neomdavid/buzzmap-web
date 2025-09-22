@@ -539,13 +539,13 @@ const Community = () => {
       </article>
 
       <aside
-        className={`bg-base-300 shadow-2xl rounded-sm overflow-y-scroll transition-transform duration-300 ease-in-out 
+        className={`bg-base-200 shadow-2xl rounded-sm overflow-y-scroll transition-transform duration-300 ease-in-out 
         fixed inset-y-0 right-0 w-[90vw] sm:w-[80vw] top-[58px] sm:top-[65px] pb-4 max-w-170 z-10 lg:z-0 lg:sticky lg:top-19 lg:h-[calc(100vh-1.5rem)] 
         lg:w-[40vw] lg:max-w-[450px] lg:shadow-sm ${
           showAside ? "translate-x-0" : "translate-x-full"
         } lg:translate-x-0`}
       >
-        <div className="sticky top-0 bg-base-300  px-6 py-4 flex justify-between items-center z-100 border-b border-gray-300 pt-6 pb-4">
+        <div className="sticky top-0 bg-base-200  px-6 py-4 flex justify-between items-center z-100 border-b border-gray-300 pt-6 pb-4">
           <p className="text-3xl font-bold text-primary">
             Official Announcement
           </p>

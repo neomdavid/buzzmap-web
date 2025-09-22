@@ -296,7 +296,7 @@ const Dashboard = () => {
           <ReportCard
             title="Clusters"
             count={totalClusters}
-            topBg="bg-info"
+            topBg="bg-[#60a5fa]"
             type="status"
             items={[
               {

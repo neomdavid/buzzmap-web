@@ -60,18 +60,18 @@ const AlertCard = ({
           death_priority.count > 0)) && (
         <div className="flex flex-wrap gap-2 mb-2">
           {typeof report_based?.count === "number" && (
-            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white border border-primary text-primary text-xs font-medium">
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white border border-neutral-content text-neutral-content text-xs font-medium">
               <Megaphone size={14} />
               <span className="font-semibold">{report_based.count}</span>
-              <span className="opacity-70">Reports</span>
+              <span className="">Reports</span>
             </div>
           )}
           {typeof death_priority?.count === "number" &&
             death_priority.count > 0 && (
-              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white border border-red-500 text-red-600 text-xs font-medium">
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white border border-error text-error text-xs font-medium">
                 <Skull size={14} />
                 <span className="font-semibold">{death_priority.count}</span>
-                <span className="opacity-70">
+                <span className="">
                   {death_priority.count === 1 ? "Death" : "Deaths"}
                 </span>
               </div>
@@ -112,7 +112,7 @@ const AlertCard = ({
               }));
             }
           }}
-          className={`px-4 py-2 rounded-full text-sm font-semibold  flex gap-2 border border-primary/80  transition-all hover:border-primary hover:border-1.5 duration-300`}
+          className={`px-4 py-2 rounded-full text-sm font-semibold  flex gap-2 border border-primary  transition-all hover:border-primary hover:border-1.5 duration-300`}
         >
           <Sparkle size={16} className="text-primary opacity-60" />
           <GradientText
