@@ -405,32 +405,53 @@ function SprAdmins() {
               />
             </div>
             <div className="flex gap-4">
-              <select
-                className="select select-bordered w-full max-w-xs hover:cursor-pointer"
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-              >
-                <option value="">All Status</option>
-                <option value="active">Active</option>
-                <option value="disabled">Disabled</option>
-                <option value="pending">Pending</option>
-              </select>
+              <div className="form-control">
+                <label
+                  htmlFor="adminStatusFilter"
+                  className="label text-sm text-gray-600"
+                >
+                  Status Filter
+                </label>
+                <select
+                  id="adminStatusFilter"
+                  aria-label="Filter admins by status"
+                  className="select select-bordered w-full max-w-xs hover:cursor-pointer"
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                >
+                  <option value="">All Status</option>
+                  <option value="active">Active</option>
+                  <option value="disabled">Disabled</option>
+                  <option value="pending">Pending</option>
+                </select>
+              </div>
 
-              <select
-                className="select select-bordered w-full max-w-xs hover:cursor-pointer"
-                value={roleFilter}
-                onChange={(e) => setRoleFilter(e.target.value)}
-              >
-                <option value="">All Roles</option>
-                <option value="admin">Admin</option>
-                <option value="superadmin">Super Admin</option>
-              </select>
+              <div className="form-control">
+                <label
+                  htmlFor="adminRoleFilter"
+                  className="label text-sm text-gray-600"
+                >
+                  Role Filter
+                </label>
+                <select
+                  id="adminRoleFilter"
+                  aria-label="Filter admins by role"
+                  className="select select-bordered w-full max-w-xs hover:cursor-pointer"
+                  value={roleFilter}
+                  onChange={(e) => setRoleFilter(e.target.value)}
+                >
+                  <option value="">All Roles</option>
+                  <option value="admin">Admin</option>
+                  <option value="superadmin">Super Admin</option>
+                </select>
+              </div>
             </div>
           </div>
 
           <div className="flex gap-2">
             <button
               className="btn btn-ghost"
+              aria-label="Clear all filters"
               onClick={() => {
                 setStatusFilter("");
                 setRoleFilter("");

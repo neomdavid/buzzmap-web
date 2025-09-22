@@ -41,6 +41,7 @@ const customTheme = themeQuartz.withParams({
 function UsersTable({ statusFilter, roleFilter, searchQuery }) {
   const { data: accounts, isLoading, error, refetch } = useGetAccountsQuery();
   const gridRef = useRef(null);
+  const containerRef = useRef(null);
   const [hasGridFilter, setHasGridFilter] = useState(false);
 
   // Add state for modals and actions
@@ -228,6 +229,7 @@ function UsersTable({ statusFilter, roleFilter, searchQuery }) {
           <button
             onClick={() => handleBanClick(p.data)}
             className="flex items-center gap-1 text-warning hover:bg-gray-200 p-1 rounded-md"
+            aria-label={p.data.status === "banned" ? "Unban user" : "Ban user"}
           >
             <IconBan size={15} stroke={2} />
             <p className="text-sm">
@@ -238,6 +240,7 @@ function UsersTable({ statusFilter, roleFilter, searchQuery }) {
         <button
           onClick={() => handleDeleteClick(p.data)}
           className="flex items-center gap-1 text-error hover:bg-gray-200 p-1 rounded-md"
+          aria-label="Remove user"
         >
           <IconTrash size={15} stroke={2.5} />
           <p className="text-sm">remove</p>
@@ -246,6 +249,7 @@ function UsersTable({ statusFilter, roleFilter, searchQuery }) {
           <button
             onClick={() => handleResendClick(p.data)}
             className="flex items-center gap-1 text-primary hover:bg-gray-200 p-1 rounded-md"
+            aria-label="Resend verification code"
           >
             <IconSend size={15} stroke={2} />
             <p className="text-sm">resend otp</p>
@@ -366,6 +370,57 @@ function UsersTable({ statusFilter, roleFilter, searchQuery }) {
     params.api.sizeColumnsToFit();
   }, []);
 
+  // ARIA roles for AG Grid
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+    const applyAria = () => {
+      try {
+        const root = container.querySelector(".ag-root");
+        if (!root) return false;
+        root.setAttribute("role", "grid");
+        const headerViewport = root.querySelector(".ag-header-viewport");
+        if (headerViewport) {
+          headerViewport.setAttribute("role", "rowgroup");
+          const headerRow = root.querySelector(".ag-header-row");
+          if (headerRow) headerRow.setAttribute("role", "row");
+          headerViewport
+            .querySelectorAll(".ag-header-cell")
+            .forEach((cell) => cell.setAttribute("role", "columnheader"));
+          root
+            .querySelectorAll(".ag-header-container")
+            .forEach((el) => el.setAttribute("role", "presentation"));
+        }
+        root
+          .querySelectorAll(".ag-center-cols-container .ag-row")
+          .forEach((row) => row.setAttribute("role", "row"));
+        root
+          .querySelectorAll(".ag-center-cols-container .ag-cell")
+          .forEach((cell) => cell.setAttribute("role", "gridcell"));
+        const rowCount =
+          root.querySelectorAll(".ag-center-cols-container .ag-row").length ||
+          0;
+        const colCount =
+          root.querySelectorAll(".ag-header .ag-header-cell").length || 0;
+        root.setAttribute("aria-rowcount", String(rowCount));
+        root.setAttribute("aria-colcount", String(colCount));
+        return true;
+      } catch {
+        return false;
+      }
+    };
+    const ok = applyAria();
+    if (!ok) {
+      const raf = requestAnimationFrame(() => applyAria());
+      const observer = new MutationObserver(() => applyAria());
+      observer.observe(container, { childList: true, subtree: true });
+      return () => {
+        cancelAnimationFrame(raf);
+        observer.disconnect();
+      };
+    }
+  }, [accounts]);
+
   // Calculate dynamic height based on number of rows
   const calculateHeight = () => {
     const rowHeight = 60; // Height of each row
@@ -382,7 +437,7 @@ function UsersTable({ statusFilter, roleFilter, searchQuery }) {
     <>
       <div
         className="ag-theme-quartz"
-        ref={gridRef}
+        ref={containerRef}
         style={{
           height: `${calculateHeight()}px`,
           width: "100%",

@@ -78,6 +78,7 @@ const SupersuperadminLayout = () => {
                   <button
                     onClick={toggleSidebar}
                     className="text-white hover:text-gray-200 transition-colors"
+                    aria-label="Collapse sidebar"
                   >
                     <X size={24} className="hover:cursor-pointer" />
                   </button>
@@ -86,6 +87,7 @@ const SupersuperadminLayout = () => {
                 <button
                   onClick={toggleSidebar}
                   className="text-white hover:text-gray-200 transition-colors flex justify-center translate-x-1 sm:block hidden hover:cursor-pointer"
+                  aria-label="Expand sidebar"
                   onMouseEnter={(e) => handleMouseEnter(e, "Toggle Sidebar")}
                   onMouseLeave={handleMouseLeave}
                 >
@@ -186,6 +188,7 @@ const SupersuperadminLayout = () => {
             <button
               onClick={() => setShowLogoutModal(true)}
               className="flex justify-center text-white hover:text-red-300 transition-all duration-200 translate-x-[-4px] sm:block hidden hover:cursor-pointer"
+              aria-label="Open logout dialog"
               onMouseEnter={(e) => handleMouseEnter(e, "Logout")}
               onMouseLeave={handleMouseLeave}
             >
@@ -257,6 +260,7 @@ const SupersuperadminLayout = () => {
             <button
               className="btn btn-square btn-ghost hover:bg-gray-200"
               onClick={toggleSidebar}
+              aria-label="Toggle sidebar"
             >
               <List size={23} />
             </button>
