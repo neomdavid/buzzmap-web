@@ -170,6 +170,20 @@ export const dengueApi = createApi({
     "Clusters",
   ],
   endpoints: (builder) => ({
+    // Admin Dashboard Summary (lightweight aggregate for dashboard)
+    getAdminDashboardSummary: builder.query({
+      query: ({ recent_posts_limit = 5, recent_alerts_limit = 3 } = {}) => {
+        const params = new URLSearchParams();
+        if (recent_posts_limit != null)
+          params.append("recent_posts_limit", String(recent_posts_limit));
+        if (recent_alerts_limit != null)
+          params.append("recent_alerts_limit", String(recent_alerts_limit));
+        const qs = params.toString();
+        return `admin/dashboard/summary${qs ? `?${qs}` : ""}`;
+      },
+      providesTags: ["Post", "Intervention", "Alert", "Clusters"],
+      transformResponse: (response) => response,
+    }),
     // Authentication Endpoints
     register: builder.mutation({
       query: (credentials) => ({
@@ -1848,4 +1862,6 @@ export const {
   useRemoveReportsFromClusterMutation,
   useResolveReportsMutation,
   useGetGroupedReportsQuery,
+  // Admin Dashboard summary hook
+  useGetAdminDashboardSummaryQuery,
 } = dengueApi;
