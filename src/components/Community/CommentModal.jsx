@@ -240,9 +240,8 @@ const CommentModal = forwardRef(
         <div className="modal-box w-11/12 max-w-4xl max-h-[90vh] flex flex-col p-0 cursor-default">
           {toast && (
             <div
-              className={`fixed top-[10%] left-1/2 -translate-x-1/2 px-5 py-2.5 rounded-lg text-white text-[13px] shadow-lg z-[999999] transition-all duration-300 ${
-                toast.type === "error" ? "bg-error" : "bg-info"
-              }`}
+              className={`fixed top-[10%] left-1/2 -translate-x-1/2 px-5 py-2.5 rounded-lg text-white text-[13px] shadow-lg z-[999999] transition-all duration-300 ${toast.type === "error" ? "bg-error" : "bg-info"
+                }`}
             >
               {toast.message}
             </div>
@@ -253,7 +252,7 @@ const CommentModal = forwardRef(
               {post?.isAnonymous ? "Anonymous Post" : "User's Post"}
             </p>
             <form method="dialog" className="flex-1 flex justify-end">
-              <button className="btn btn-sm text-3xl font-bold btn-circle btn-ghost">
+              <button className="btn btn-sm text-3xl font-bold btn-circle btn-ghost" aria-label="Close comments">
                 ✕
               </button>
             </form>
@@ -286,8 +285,8 @@ const CommentModal = forwardRef(
                           {post?.isAnonymous
                             ? post?.displayUser?.username || post?.anonymousId
                             : userProfileMap[post?.user?._id]?.username ||
-                              post?.user?.username ||
-                              "User"}
+                            post?.user?.username ||
+                            "User"}
                         </p>
                         <p>{formatTimestamp(post?.createdAt)}</p>
                       </div>
@@ -334,11 +333,10 @@ const CommentModal = forwardRef(
                           key={src}
                           src={src}
                           alt={`Post ${index + 1}`}
-                          className={`absolute w-full h-full object-contain transition-opacity duration-300 ${
-                            index === currentImageIndex
-                              ? "opacity-100"
-                              : "opacity-0"
-                          }`}
+                          className={`absolute w-full h-full object-contain transition-opacity duration-300 ${index === currentImageIndex
+                            ? "opacity-100"
+                            : "opacity-0"
+                            }`}
                           style={{
                             display:
                               index === currentImageIndex ? "block" : "none",
@@ -352,6 +350,7 @@ const CommentModal = forwardRef(
                           onClick={handlePreviousImage}
                           disabled={isTransitioning}
                           className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/50 text-white p-2 rounded-full hover:bg-black/70 transition-display disabled:opacity-50"
+                          aria-label="Previous image"
                         >
                           <CaretLeft size={24} />
                         </button>
@@ -359,6 +358,7 @@ const CommentModal = forwardRef(
                           onClick={handleNextImage}
                           disabled={isTransitioning}
                           className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/50 text-white p-2 rounded-full hover:bg-black/70 transition-display disabled:opacity-50"
+                          aria-label="Next image"
                         >
                           <CaretRight size={24} />
                         </button>
@@ -366,11 +366,10 @@ const CommentModal = forwardRef(
                           {post.images.map((_, index) => (
                             <div
                               key={index}
-                              className={`w-2 h-2 rounded-full transition-all duration-300 ${
-                                index === currentImageIndex
-                                  ? "bg-white scale-125"
-                                  : "bg-white/50"
-                              }`}
+                              className={`w-2 h-2 rounded-full transition-all duration-300 ${index === currentImageIndex
+                                ? "bg-white scale-125"
+                                : "bg-white/50"
+                                }`}
                             />
                           ))}
                         </div>
@@ -390,7 +389,7 @@ const CommentModal = forwardRef(
                     currentUserId={
                       userFromStore?.role === "user" ? userFromStore?._id : null
                     }
-                    onCommentClick={() => {}}
+                    onCommentClick={() => { }}
                     useCustomToast={true}
                     onShowToast={showToast}
                     onVoteUpdate={onVoteUpdate}
@@ -412,6 +411,7 @@ const CommentModal = forwardRef(
                     <button
                       onClick={handleRefetchComments}
                       className="mt-2 text-primary hover:underline"
+                      aria-label="Retry loading comments"
                     >
                       Retry
                     </button>
@@ -457,6 +457,7 @@ const CommentModal = forwardRef(
                         <button
                           onClick={handleRefetchComments}
                           className="mt-2 text-primary hover:underline"
+                          aria-label="Refresh comments"
                         >
                           Refresh
                         </button>
@@ -500,6 +501,7 @@ const CommentModal = forwardRef(
                         <button
                           type="button"
                           onClick={() => setShowEmojiPicker((v) => !v)}
+                          aria-label="Add emoji"
                         >
                           <Smiley size={20} className="cursor-pointer" />
                         </button>
@@ -524,6 +526,7 @@ const CommentModal = forwardRef(
                         type="submit"
                         disabled={!comment.trim() || isLoading}
                         className="ml-2 cursor-pointer text-gray-400 hover:text-primary disabled:opacity-50"
+                        aria-label="Send comment"
                       >
                         <PaperPlaneRight size={22} />
                       </button>

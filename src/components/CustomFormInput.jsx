@@ -63,13 +63,13 @@ const CustomFormInput = ({
           aria-invalid={error ? "true" : undefined}
           onFocus={() => setIsFocused(true)}
           onBlur={() => setIsFocused(false)}
-          className={`w-full text-xl p-2 outline-none bg-transparent text-base ${isDark ? "text-white placeholder-gray-400" : "text-black"
+          className={`w-full text-xl p-2 pr-14 outline-none bg-transparent text-base ${isDark ? "text-white placeholder-gray-400" : "text-black"
             }`}
         />
         {isPassword && (
           <button
             type="button"
-            className={`absolute right-3 top-1/2 -translate-y-1/2 cursor-pointer transition-colors ${isDark ? "text-white" : "text-gray-500"
+            className={`absolute right-1 top-1/2 -translate-y-1/2 cursor-pointer transition-colors w-12 h-12 flex items-center justify-center rounded-full focus:outline-none focus:ring-2 ${isDark ? "text-white" : "text-gray-500"
               }`}
             onClick={() => setShowPassword((prev) => !prev)}
             aria-label={showPassword ? "Hide password" : "Show password"}
