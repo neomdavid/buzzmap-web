@@ -459,6 +459,7 @@ const MapOnly = forwardRef(
                 BREEDING_SITE_TYPE_ICONS.default;
               const glyphImg = document.createElement("img");
               glyphImg.src = iconUrl;
+              glyphImg.alt = `${site.report_type || "Breeding Site"} icon`;
               glyphImg.style.width = "28px";
               glyphImg.style.height = "28px";
               glyphImg.style.objectFit = "contain";
@@ -618,7 +619,7 @@ const MapOnly = forwardRef(
                       ? `<div class='mt-2 flex justify-center gap-2'>${site.images
                           .map(
                             (img) =>
-                              `<img src='${img}' class='w-35 h-25 object-cover rounded border'/>`
+                              `<img src='${img}' alt='Evidence image' class='w-35 h-25 object-cover rounded border'/>`
                           )
                           .join("")}</div>`
                       : ""
@@ -737,6 +738,11 @@ const MapOnly = forwardRef(
                 );
                 const glyphImg = document.createElement("img");
                 glyphImg.src = iconUrl;
+                glyphImg.alt = `${
+                  intervention.interventionType ||
+                  intervention.type ||
+                  "Intervention"
+                } icon`;
                 glyphImg.style.width = "28px";
                 glyphImg.style.height = "28px";
                 glyphImg.style.objectFit = "contain";
