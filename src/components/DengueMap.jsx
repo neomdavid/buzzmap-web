@@ -490,6 +490,7 @@ const DengueMap = ({
             BREEDING_SITE_TYPE_ICONS.default;
           const glyphImg = document.createElement("img");
           glyphImg.src = iconUrl;
+          glyphImg.alt = `${site.report_type || "Breeding Site"} icon`;
           glyphImg.style.width = "28px";
           glyphImg.style.height = "28px";
           glyphImg.style.objectFit = "contain";
@@ -542,6 +543,7 @@ const DengueMap = ({
           );
           const glyphImg = document.createElement("img");
           glyphImg.src = iconUrl;
+          glyphImg.alt = `${intervention.interventionType || intervention.type || "Intervention"} icon`;
           glyphImg.style.width = "28px";
           glyphImg.style.height = "28px";
           glyphImg.style.objectFit = "contain";
@@ -1235,8 +1237,8 @@ const DengueMap = ({
         <button
           onClick={onToggleBreedingSites}
           className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${showBreedingSites
-              ? "bg-red-100 text-red-700 hover:bg-red-200"
-              : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+            ? "bg-red-100 text-red-700 hover:bg-red-200"
+            : "bg-gray-100 text-gray-600 hover:bg-gray-200"
             }`}
         >
           <MapPinLine size={18} weight="fill" className="text-red-600" />
@@ -1245,8 +1247,8 @@ const DengueMap = ({
         <button
           onClick={onToggleInterventions}
           className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${showInterventions
-              ? "bg-blue-100 text-blue-700 hover:bg-blue-200"
-              : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+            ? "bg-blue-100 text-blue-700 hover:bg-blue-200"
+            : "bg-gray-100 text-gray-600 hover:bg-gray-200"
             }`}
         >
           <MapPinLine size={18} weight="fill" className="text-blue-600" />
