@@ -74,13 +74,13 @@ const BuzzLine = () => {
 
     const filteredNews = Array.isArray(adminPosts?.posts)
       ? adminPosts.posts.filter((post) => {
-          return (
-            post &&
-            post.category &&
-            post.category.toLowerCase() === "news" &&
-            post.status !== "archived"
-          );
-        })
+        return (
+          post &&
+          post.category &&
+          post.category.toLowerCase() === "news" &&
+          post.status !== "archived"
+        );
+      })
       : [];
 
     return filteredNews
@@ -117,7 +117,7 @@ const BuzzLine = () => {
 
       <div className="relative mt-12 w-[112%] rounded-tl-[450px] rounded-tr-[450px] md:rounded-tl-[1000px] md:rounded-tr-[1000px] md:h-300 md:mb-[-450px] md:w-[120%] overflow-hidden">
         {/* Image */}
-        <img className="w-full h-150 object-cover md:h-200" src={sprayingImg} />
+        <img className="w-full h-150 object-cover md:h-200" src={sprayingImg} alt="Illustration of dengue prevention spraying" />
 
         {/* Gradient Overlay */}
         <div className="absolute inset-0 bg-gradient-to-t from-primary via-primary/2 to-transparent  md:mt-[-850px]"></div>

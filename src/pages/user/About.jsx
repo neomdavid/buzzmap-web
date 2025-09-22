@@ -14,6 +14,7 @@ const About = () => {
         <img
           src={womanWithHand}
           className="w-140 absolute left-[-197px] hidden md:block bottom-[23%] lg:w-165 lg:left-[-233px] xl:w-190 xl:left-[-268px] 2xl:w-205 2xl:left-[-289px] 2xl:bottom-[19%]"
+          alt="BuzzMap illustration"
         />
 
         <section className="text-white pl-6 pr-6 py-8  sm:p-12 font-light ">
