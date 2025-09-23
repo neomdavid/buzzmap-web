@@ -22,7 +22,7 @@ const CustomFormInput = ({
   const isDark = theme === "dark";
   const inputId = id || `${(label || "input").toString().toLowerCase().replace(/\s+/g, "-")}`;
   const inputName = name || inputId;
-  const inputType = isPassword && !showPassword ? "password" : type;
+  const inputType = isPassword ? (showPassword ? "text" : "password") : type;
 
   return (
     <div className="w-full text-left relative z-1000000">
