@@ -1,5 +1,9 @@
 import * as React from "react";
-import * as RechartsPrimitive from "recharts";
+import {
+  ResponsiveContainer,
+  Tooltip as RechartsTooltip,
+  Legend as RechartsLegend,
+} from "recharts";
 
 import { cn } from "@/lib/utils";
 
@@ -37,9 +41,7 @@ function ChartContainer({ id, className, children, config, ...props }) {
         {...props}
       >
         <ChartStyle id={chartId} config={config} />
-        <RechartsPrimitive.ResponsiveContainer>
-          {children}
-        </RechartsPrimitive.ResponsiveContainer>
+        <ResponsiveContainer>{children}</ResponsiveContainer>
       </div>
     </ChartContext.Provider>
   );
@@ -81,7 +83,7 @@ ${colorConfig
   );
 };
 
-const ChartTooltip = RechartsPrimitive.Tooltip;
+const ChartTooltip = RechartsTooltip;
 
 function ChartTooltipContent({
   active,
@@ -218,7 +220,7 @@ function ChartTooltipContent({
   );
 }
 
-const ChartLegend = RechartsPrimitive.Legend;
+const ChartLegend = RechartsLegend;
 
 function ChartLegendContent({
   className,

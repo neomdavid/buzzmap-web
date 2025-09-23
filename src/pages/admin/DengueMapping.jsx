@@ -26,7 +26,7 @@ import {
   useLazyGetPostByIdQuery,
 } from "@/api/dengueApi";
 import ClusterDetailsSkeleton from "@/components/Skeletons/ClusterDetailsSkeleton";
-import * as turf from "@turf/turf";
+import center from "@turf/center";
 import {
   ClusterDropdown,
   BarangaySearch,
@@ -962,8 +962,8 @@ const DengueMapping = () => {
       // Pan logic
       if (mapOnlyRef.current && barangay.geometry?.coordinates) {
         try {
-          const center = turf.center(barangay.geometry);
-          const [lng, lat] = center.geometry.coordinates;
+          const centerFeature = center(barangay.geometry);
+          const [lng, lat] = centerFeature.geometry.coordinates;
           if (lat && lng && !isNaN(lat) && !isNaN(lng)) {
             mapOnlyRef.current.panTo({ lat, lng });
             mapOnlyRef.current.setZoom(15);

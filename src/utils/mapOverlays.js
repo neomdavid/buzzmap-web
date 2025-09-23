@@ -1,5 +1,3 @@
-import * as turf from "@turf/turf";
-
 // Import icons properly for Vite to process them
 import foggingIcon from "../assets/icons/fogging.svg";
 import trappingIcon from "../assets/icons/trapping.svg";

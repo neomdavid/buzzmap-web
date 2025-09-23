@@ -10,7 +10,7 @@ import {
 } from "@tabler/icons-react";
 import { useCreateInterventionMutation, dengueApi } from "../../api/dengueApi"; // Import dengueApi
 import InterventionLocationPicker from "./InterventionLocationPicker"; // Import the new component
-import * as turf from "@turf/turf"; // Import turf for calculations
+import center from "@turf/center"; // Import turf for calculations
 import dayjs from "dayjs";
 import { toast } from "react-toastify"; // Import react-toastify
 import {

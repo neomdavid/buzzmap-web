@@ -11,7 +11,6 @@ import {
   useGetPostsQuery,
   useGetGroupedReportsQuery,
 } from "../../api/dengueApi";
-import * as turf from "@turf/turf";
 import LoadingSpinner from "../ui/LoadingSpinner";
 import ErrorMessage from "../ui/ErrorMessage";
 import cleanUpIcon from "../../assets/icons/cleanup.svg";
@@ -136,7 +135,7 @@ const MapOnly = forwardRef(
               ? window.location.pathname
               : "(no-window)",
         });
-      } catch (_) { }
+      } catch (_) {}
     }
     const clusterOverlaysRef = useRef([]);
     const breedingMarkersRef = useRef([]);
@@ -152,7 +151,7 @@ const MapOnly = forwardRef(
           if (markerClusterRef.current) {
             try {
               markerClusterRef.current.setMap(null);
-            } catch (_) { }
+            } catch (_) {}
             markerClusterRef.current = null;
           }
           breedingMarkersRef.current = [];
@@ -182,15 +181,15 @@ const MapOnly = forwardRef(
               : [];
             const clusterMembers = Array.isArray(groupedReports.clusters)
               ? groupedReports.clusters.flatMap((c) =>
-                Array.isArray(c.reports)
-                  ? c.reports.filter(
-                    (r) =>
-                      r?.specific_location &&
-                      Array.isArray(r.specific_location.coordinates) &&
-                      r.specific_location.coordinates.length === 2
-                  )
-                  : []
-              )
+                  Array.isArray(c.reports)
+                    ? c.reports.filter(
+                        (r) =>
+                          r?.specific_location &&
+                          Array.isArray(r.specific_location.coordinates) &&
+                          r.specific_location.coordinates.length === 2
+                      )
+                    : []
+                )
               : [];
             let merged = [...individuals, ...clusterMembers];
             if (validatedOnly) {
@@ -203,8 +202,8 @@ const MapOnly = forwardRef(
             const validPosts = Array.isArray(posts?.posts)
               ? posts.posts
               : Array.isArray(posts)
-                ? posts
-                : [];
+              ? posts
+              : [];
             const validatedSites = validPosts.filter((post) => {
               const hasCoords =
                 post.specific_location &&
@@ -270,7 +269,7 @@ const MapOnly = forwardRef(
           if (markerClusterRef.current) {
             try {
               markerClusterRef.current.setMap(null);
-            } catch (_) { }
+            } catch (_) {}
             markerClusterRef.current = null;
           }
           breedingMarkersRef.current = [];
@@ -322,8 +321,8 @@ const MapOnly = forwardRef(
               geometry.type === "Polygon"
                 ? [geometry.coordinates]
                 : geometry.type === "MultiPolygon"
-                  ? geometry.coordinates
-                  : [];
+                ? geometry.coordinates
+                : [];
 
             let barangayObj = barangaysList?.find(
               (b) =>
@@ -371,7 +370,7 @@ const MapOnly = forwardRef(
             const isSelected =
               selectedBarangay &&
               normalizeBarangayName(feature.properties.name) ===
-              normalizeBarangayName(selectedBarangay.properties?.name);
+                normalizeBarangayName(selectedBarangay.properties?.name);
 
             coordsArray.forEach((polygonCoords) => {
               const path = polygonCoords[0].map(([lng, lat]) => ({ lat, lng }));
@@ -505,8 +504,8 @@ const MapOnly = forwardRef(
                 badge.style.backgroundColor = isPending
                   ? "#f59e0b" // orange for pending
                   : isRejected
-                    ? "#dc2626" // red for rejected
-                    : "#10b981"; // green for validated
+                  ? "#dc2626" // red for rejected
+                  : "#10b981"; // green for validated
                 badge.style.border = "1px solid #FFFFFF";
                 badge.style.borderRadius = "9999px";
                 badge.style.boxShadow = "0 0 2px rgba(0,0,0,0.3)";
@@ -552,8 +551,8 @@ const MapOnly = forwardRef(
                   (isPending
                     ? " (Pending)"
                     : isValidated
-                      ? " (Validated)"
-                      : ""),
+                    ? " (Validated)"
+                    : ""),
               });
 
               if (!validatedOnly) {
@@ -580,48 +579,56 @@ const MapOnly = forwardRef(
                   ${site.report_type || "Breeding Site"}
                 </p>
                 <div class=\"flex flex-col items-center mt-2 space-y-1 font-normal text-center\">
-                  ${isClusterMember
+                  ${
+                    isClusterMember
                       ? '<div class="mb-1"><span class="px-2 py-1 rounded-full text-white text-xs font-bold" style="background-color:#8B5CF6">Cluster Member</span></div>'
                       : ""
-                    }
+                  }
                   <p class=\"text-xl\">
-                    <span class=\"font-bold\">Barangay:</span> ${site.barangay || ""
+                    <span class=\"font-bold\">Barangay:</span> ${
+                      site.barangay || ""
                     }
                   </p>
                   <p class=\"text-xl\">
-                    <span class=\"font-bold\">Reported by:</span> ${site.user?.username || ""
+                    <span class=\"font-bold\">Reported by:</span> ${
+                      site.user?.username || ""
                     }
                   </p>
                   <p class=\"text-xl\">
-                    <span class=\"font-bold\">Date:</span> ${site.date_and_time
-                      ? new Date(site.date_and_time).toLocaleString("en-US", {
-                        year: "numeric",
-                        month: "long",
-                        day: "numeric",
-                        hour: "numeric",
-                        minute: "2-digit",
-                        hour12: true,
-                      })
-                      : ""
+                    <span class=\"font-bold\">Date:</span> ${
+                      site.date_and_time
+                        ? new Date(site.date_and_time).toLocaleString("en-US", {
+                            year: "numeric",
+                            month: "long",
+                            day: "numeric",
+                            hour: "numeric",
+                            minute: "2-digit",
+                            hour12: true,
+                          })
+                        : ""
                     }
                   </p>
                   <p class=\"text-xl\">
-                    <span class=\"font-bold\">Description:</span> ${site.description || ""
+                    <span class=\"font-bold\">Description:</span> ${
+                      site.description || ""
                     }
                   </p>
-                  ${site.images && site.images.length > 0
+                  ${
+                    site.images && site.images.length > 0
                       ? `<div class='mt-2 flex justify-center gap-2'>${site.images
-                        .map(
-                          (img, idx) =>
-                            `<img src='${img}' alt='Breeding site photo ${idx + 1}' class='w-35 h-25 object-cover rounded border'/>`
-                        )
-                        .join("")}</div>`
-
+                          .map(
+                            (img, idx) =>
+                              `<img src='${img}' alt='Breeding site photo ${
+                                idx + 1
+                              }' class='w-35 h-25 object-cover rounded border'/>`
+                          )
+                          .join("")}</div>`
                       : ""
-                    }
+                  }
                 </div>
-                <button data-report-id=\"${site._id
-                    }\" id=\"bm-view-details-btn\" class=\"mt-4 px-4 py-2 bg-primary w-[40%] text-white rounded-lg shadow hover:bg-primary/80 hover:cursor-pointer font-bold\">View Details</button>
+                <button data-report-id=\"${
+                  site._id
+                }\" id=\"bm-view-details-btn\" class=\"mt-4 px-4 py-2 bg-primary w-[40%] text-white rounded-lg shadow hover:bg-primary/80 hover:cursor-pointer font-bold\">View Details</button>
               </div>
             `;
 
@@ -637,7 +644,7 @@ const MapOnly = forwardRef(
                           ? window.location.pathname
                           : "(no-window)",
                     });
-                  } catch (_) { }
+                  } catch (_) {}
 
                   // Attach explicit button click handler with robust base URL choice
                   try {
@@ -648,8 +655,8 @@ const MapOnly = forwardRef(
                           const reportId = String(site._id || "");
                           const path =
                             window &&
-                              window.location &&
-                              window.location.pathname
+                            window.location &&
+                            window.location.pathname
                               ? window.location.pathname
                               : "";
                           const derived =
@@ -658,14 +665,14 @@ const MapOnly = forwardRef(
                               : "/mapping";
                           const finalBase =
                             effectiveBaseUrl.current &&
-                              typeof effectiveBaseUrl.current === "string" &&
-                              effectiveBaseUrl.current.length > 0
+                            typeof effectiveBaseUrl.current === "string" &&
+                            effectiveBaseUrl.current.length > 0
                               ? effectiveBaseUrl.current
                               : baseUrl &&
                                 typeof baseUrl === "string" &&
                                 baseUrl.length > 0
-                                ? baseUrl
-                                : derived;
+                              ? baseUrl
+                              : derived;
                           console.debug("[MapOnly] Navigate click (listener)", {
                             reportId,
                             path,
@@ -726,7 +733,7 @@ const MapOnly = forwardRef(
                     "[MapOnly] Rendering intervention marker:",
                     intervention
                   );
-                } catch (_) { }
+                } catch (_) {}
                 const iconUrl = getInterventionIcon(
                   intervention.interventionType || intervention.type
                 );
@@ -767,7 +774,7 @@ const MapOnly = forwardRef(
                       "[MapOnly] Clicked intervention marker (raw object):",
                       intervention
                     );
-                  } catch (_) { }
+                  } catch (_) {}
                   // Close existing info window if open
                   if (infoWindow) {
                     infoWindow.close();
@@ -796,39 +803,44 @@ const MapOnly = forwardRef(
                     intervention.address || intervention.location || "";
                   content.innerHTML = `
                 <div class="p-3 flex flex-col items-center gap-1 font-normal bg-white text-center rounded-md shadow-md text-primary">
-                  <p class="text-4xl font-extrabold text-primary mb-2">${intervention.interventionType ||
+                  <p class="text-4xl font-extrabold text-primary mb-2">${
+                    intervention.interventionType ||
                     intervention.type ||
                     "Intervention"
-                    }</p>
+                  }</p>
                   <div class="text-lg flex items-center gap-2">
                     <span class="font-bold">Status:</span>
                     <span class="px-3 py-1 rounded-full text-white font-bold text-sm" style="background-color:#FF6347;box-shadow:0 1px 4px rgba(0,0,0,0.08);">
                       ${intervention.status || ""}
                     </span>
                   </div>
-                  <p class="text-lg text-center"><span class="font-bold">Barangay:</span> ${intervention.barangay || ""
-                    }</p>
-                  ${address
+                  <p class="text-lg text-center"><span class="font-bold">Barangay:</span> ${
+                    intervention.barangay || ""
+                  }</p>
+                  ${
+                    address
                       ? `<p class="text-lg text-center"><span class="font-bold text-center">Address:</span> ${address}</p>`
                       : ""
-                    }
-                  ${dateValue
+                  }
+                  ${
+                    dateValue
                       ? `<p class="text-lg"><span class="font-bold">Date:</span> ${new Date(
-                        dateValue
-                      ).toLocaleString("en-US", {
-                        year: "numeric",
-                        month: "long",
-                        day: "numeric",
-                        hour: "numeric",
-                        minute: "2-digit",
-                        hour12: true,
-                      })}</p>`
+                          dateValue
+                        ).toLocaleString("en-US", {
+                          year: "numeric",
+                          month: "long",
+                          day: "numeric",
+                          hour: "numeric",
+                          minute: "2-digit",
+                          hour12: true,
+                        })}</p>`
                       : ""
-                    }
-                  ${description
+                  }
+                  ${
+                    description
                       ? `<p class="text-lg text-center"><span class="font-bold">Description:</span> ${description}</p>`
                       : ""
-                    }
+                  }
                 </div>
               `;
 
@@ -861,11 +873,11 @@ const MapOnly = forwardRef(
                 // True cluster members only
                 const memberReports = Array.isArray(c.reports)
                   ? c.reports.filter(
-                    (r) =>
-                      r?.isInCluster === true &&
-                      r?.exclude_from_clustering !== true &&
-                      (r?.cluster === c._id || r?.cluster === c.id)
-                  )
+                      (r) =>
+                        r?.isInCluster === true &&
+                        r?.exclude_from_clustering !== true &&
+                        (r?.cluster === c._id || r?.cluster === c.id)
+                    )
                   : [];
 
                 const count = memberReports.length;
@@ -877,12 +889,12 @@ const MapOnly = forwardRef(
                   (typeof c?.breakdown?.resolved_reports === "number"
                     ? c.breakdown.resolved_reports
                     : memberReports.filter((r) => r?.isResolved === true)
-                      .length);
+                        .length);
                 const isResolvedCluster =
                   typeof c.isResolved === "boolean"
                     ? c.isResolved
                     : totalInCluster > 0 &&
-                    resolvedInCluster === totalInCluster;
+                      resolvedInCluster === totalInCluster;
                 // If all member reports are Validated, show green; else red
                 const allValidated =
                   memberReports.length > 0 &&
@@ -895,9 +907,9 @@ const MapOnly = forwardRef(
                   .map((r) =>
                     r?.specific_location?.coordinates
                       ? {
-                        lat: r.specific_location.coordinates[1],
-                        lng: r.specific_location.coordinates[0],
-                      }
+                          lat: r.specific_location.coordinates[1],
+                          lng: r.specific_location.coordinates[0],
+                        }
                       : r?.coordinates
                   )
                   .filter(
@@ -1038,7 +1050,7 @@ const MapOnly = forwardRef(
               clusterOverlaysRef.current.forEach(
                 (o) => o.setMap && o.setMap(visibleMap)
               );
-            } catch (_) { }
+            } catch (_) {}
           };
           updateVisibility();
           if (map && map.addListener) {
@@ -1060,7 +1072,7 @@ const MapOnly = forwardRef(
         if (markerClusterRef.current) {
           try {
             markerClusterRef.current.setMap(null);
-          } catch (_) { }
+          } catch (_) {}
           markerClusterRef.current = null;
         }
       };
@@ -1081,7 +1093,7 @@ const MapOnly = forwardRef(
         clusterOverlaysRef.current.forEach(
           (o) => o.setMap && o.setMap(visibleMap)
         );
-      } catch (_) { }
+      } catch (_) {}
     }, [showBreedingSites]);
 
     // Add this effect to initialize the info window
@@ -1095,7 +1107,7 @@ const MapOnly = forwardRef(
     }, []);
 
     // Add debug for selectedBarangay changes
-    useEffect(() => { }, [selectedBarangay]);
+    useEffect(() => {}, [selectedBarangay]);
 
     return (
       <div

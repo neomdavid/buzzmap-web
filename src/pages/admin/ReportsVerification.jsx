@@ -5,11 +5,7 @@ import {
   ReportTable2,
   TableSkeleton,
 } from "../../components";
-import {
-  useGetPostsQuery,
-  useGetClustersQuery,
-  useGetGroupedReportsQuery,
-} from "../../api/dengueApi.js";
+import { useGetGroupedReportsQuery } from "../../api/dengueApi.js";
 import { useState, useEffect, useMemo } from "react";
 import { AgGridReact } from "ag-grid-react";
 import { themeQuartz } from "ag-grid-community";
@@ -83,25 +79,11 @@ const ReportsVerification = () => {
   const token = useSelector((state) => state.auth.token);
 
   const {
-    data: posts,
-    isLoading,
-    isError,
-    refetch,
-    isFetching,
-  } = useGetPostsQuery();
-  const {
-    data: clustersData,
-    isLoading: isLoadingClusters,
-    isError: isClustersError,
-    refetch: refetchClusters,
-  } = useGetClustersQuery();
-  const {
     data: groupedReportsData,
     isLoading: isLoadingGrouped,
     refetch: refetchGrouped,
   } = useGetGroupedReportsQuery();
   const [selectedReport, setSelectedReport] = useState(null);
-  const [validatedPosts, setValidatedPosts] = useState([]);
   const [isRefetching, setIsRefetching] = useState(false);
   const [clusterDetails, setClusterDetails] = useState({
     open: false,
@@ -294,10 +276,6 @@ const ReportsVerification = () => {
   const clustersList = useMemo(() => {
     const rawClusters = Array.isArray(groupedReportsData?.clusters)
       ? groupedReportsData.clusters
-      : Array.isArray(clustersData)
-      ? clustersData
-      : Array.isArray(clustersData?.data)
-      ? clustersData.data
       : [];
 
     return rawClusters.filter((cluster) => {
@@ -305,7 +283,7 @@ const ReportsVerification = () => {
       const resolvedReports = reports.filter((r) => r?.isResolved === true);
       return resolvedReports.length > 0;
     });
-  }, [groupedReportsData?.clusters, clustersData]);
+  }, [groupedReportsData?.clusters]);
 
   // Clusters AG Grid data and columns (memoized to prevent infinite re-renders)
   const clustersRowData = useMemo(() => {
@@ -449,37 +427,34 @@ const ReportsVerification = () => {
     return { total, validated, unprocessed };
   };
 
-  // Calculate summary stats
-  const totalReports = posts?.length || 0;
+  // Calculate summary stats from grouped individual reports only
+  const totalReports = individualReports?.length || 0;
   const totalValidated =
-    posts?.filter((p) => p.status === "Validated").length || 0;
-  const totalPending = posts?.filter((p) => p.status === "Pending").length || 0;
+    individualReports?.filter((p) => p.status === "Validated").length || 0;
+  const totalPending =
+    individualReports?.filter((p) => p.status === "Pending").length || 0;
   const totalRejected =
-    posts?.filter((p) => p.status === "Rejected").length || 0;
+    individualReports?.filter((p) => p.status === "Rejected").length || 0;
   const today = dayjs().format("YYYY-MM-DD");
   const totalToday =
-    posts?.filter((p) => dayjs(p.date_and_time).format("YYYY-MM-DD") === today)
-      .length || 0;
+    individualReports?.filter(
+      (p) => dayjs(p.date_and_time).format("YYYY-MM-DD") === today
+    ).length || 0;
 
   // Most active barangay
-  const barangayCounts = {};
-  posts?.forEach((p) => {
-    if (p.barangay)
-      barangayCounts[p.barangay] = (barangayCounts[p.barangay] || 0) + 1;
-  });
-  const mostActiveBarangay =
-    Object.entries(barangayCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || "N/A";
-
-  useEffect(() => {
-    if (posts) {
-      setValidatedPosts(posts.filter((post) => post.status === "Validated"));
-    }
-  }, [posts]);
+  const mostActiveBarangay = useMemo(() => {
+    const counts = {};
+    (individualReports || []).forEach((p) => {
+      if (p.barangay) counts[p.barangay] = (counts[p.barangay] || 0) + 1;
+    });
+    const top = Object.entries(counts).sort((a, b) => b[1] - a[1])[0]?.[0];
+    return top || "N/A";
+  }, [individualReports]);
 
   const handleVerificationSuccess = async () => {
     setIsRefetching(true);
     try {
-      await Promise.all([refetch?.(), refetchClusters?.(), refetchGrouped?.()]);
+      await refetchGrouped?.();
 
       // If cluster details modal is open, update its data
       if (clusterDetails.open && clusterDetails.cluster) {
@@ -503,7 +478,7 @@ const ReportsVerification = () => {
     setSelectedReport(null);
   };
 
-  if (isLoading) {
+  if (isLoadingGrouped) {
     return (
       <main className="flex flex-col w-full">
         <p className="flex justify-center text-5xl font-extrabold mb-10 text-center md:justify-start md:text-left md:w-[100%] ">
@@ -538,7 +513,7 @@ const ReportsVerification = () => {
     );
   }
 
-  if (isError) return <p>Error loading posts</p>;
+  // No explicit error state available here; optionally render nothing if no data
 
   return (
     <main className="flex flex-col w-full">

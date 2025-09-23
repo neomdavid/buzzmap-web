@@ -58,6 +58,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.21.0",
+    "@lhci/cli": "^0.15.1",
     "@svgr/rollup": "^8.1.0",
     "@testing-library/jest-dom": "^6.8.0",
     "@testing-library/react": "^16.3.0",
@@ -73,6 +74,8 @@
     "jest-axe": "^10.0.0",
     "msw": "^2.11.3",
     "rollup": "^4.37.0",
+    "rollup-plugin-visualizer": "^6.0.3",
+    "source-map-explorer": "^2.5.3",
     "vite": "^6.2.0",
     "vite-plugin-svgr": "^4.3.0",
     "vitest": "^3.2.4",

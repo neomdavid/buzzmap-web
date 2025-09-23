@@ -1,4 +1,5 @@
 import "./App.css";
+import React, { lazy, Suspense } from "react";
 import {
   createBrowserRouter,
   Navigate,
@@ -8,40 +9,27 @@ import {
 } from "react-router-dom";
 import { GoogleMapsProvider } from "./components/GoogleMapsProvider";
 import {
-  About,
-  Community,
   Landing,
   LandingLayout,
-  Mapping,
+  About,
   BuzzLine,
-  SpecificLocation,
+  Updates,
+  Articles,
+  SingleArticle,
   SignUp,
   Login,
   Otp,
-  SingleArticle,
-  Updates,
-  Articles,
   ForgotPassword,
   Profile,
+  Community,
 } from "./pages/user";
-import {
-  AdminLayout,
-  Analytics,
-  CEA,
-  Dashboard,
-  DengueMapping,
-  AdminMapping,
-  Interventions,
-  ReportsVerification,
-  AllInterventions,
-} from "./pages/admin";
+import { AdminLayout, CEA, Dashboard } from "./pages/admin";
 import {
   SuperadminLayout,
   SprDashboard,
   SprUsers,
   SprAdmins,
 } from "./pages/superadmin";
-import { toastError } from "./utils.jsx";
 import ErrorPage from "./pages/ErrorPage";
 import SearchResults from "./pages/user/SearchResults";
 import ActivePosts from "./pages/admin/CEA/ActivePosts";
@@ -49,6 +37,23 @@ import ArchivedAdminPosts from "./pages/admin/CEA/ArchivedAdminPosts";
 import ArchivedUsers from "./pages/superadmin/ArchivedUsers";
 import ArchivedAdmins from "./pages/superadmin/ArchivedAdmins";
 import AuthGuard from "./components/AuthGuard";
+
+// Lazy-load heavy, map/chart routes
+const Mapping = lazy(() => import("./pages/user/Mapping.jsx"));
+const SpecificLocation = lazy(() =>
+  import("./pages/user/SpecificLocation.jsx")
+);
+const DengueMapping = lazy(() => import("./pages/admin/DengueMapping.jsx"));
+const AdminMapping = lazy(() => import("./pages/admin/AdminMapping.jsx"));
+const Analytics = lazy(() => import("./pages/admin/Analytics.jsx"));
+const Interventions = lazy(() => import("./pages/admin/Interventions.jsx"));
+const ReportsVerification = lazy(() =>
+  import("./pages/admin/ReportsVerification.jsx")
+);
+const AllInterventions = lazy(() =>
+  import("./pages/admin/AllInterventions.jsx")
+);
+import { toastError } from "./utils.jsx";
 
 // Helper functions
 const getUserData = () => {
@@ -190,8 +195,22 @@ const AppWithProviders = () => {
       children: [
         { index: true, element: <Navigate to="/home" replace /> },
         { path: "/home", element: <Landing /> },
-        { path: "/mapping", element: <Mapping /> },
-        { path: "/mapping/:id", element: <SpecificLocation /> },
+        {
+          path: "/mapping",
+          element: (
+            <Suspense fallback={<div style={{ minHeight: 120 }} />}>
+              <Mapping />
+            </Suspense>
+          ),
+        },
+        {
+          path: "/mapping/:id",
+          element: (
+            <Suspense fallback={<div style={{ minHeight: 120 }} />}>
+              <SpecificLocation />
+            </Suspense>
+          ),
+        },
         { path: "/community", element: <Community /> },
         { path: "/buzzline", element: <BuzzLine /> },
         { path: "/buzzline/updates", element: <Updates /> },
@@ -255,14 +274,46 @@ const AppWithProviders = () => {
       children: [
         { index: true, element: <Navigate to="/admin/dashboard" replace /> },
         { path: "/admin/dashboard", element: <Dashboard /> },
-        { path: "/admin/analytics", element: <Analytics /> },
+        {
+          path: "/admin/analytics",
+          element: (
+            <Suspense fallback={<div style={{ minHeight: 120 }} />}>
+              <Analytics />
+            </Suspense>
+          ),
+        },
         {
           path: "/admin/reportsverification",
-          element: <ReportsVerification />,
+          element: (
+            <Suspense fallback={<div style={{ minHeight: 120 }} />}>
+              <ReportsVerification />
+            </Suspense>
+          ),
         },
-        { path: "/admin/denguemapping", element: <DengueMapping /> },
-        { path: "/admin/interventions", element: <Interventions /> },
-        { path: "/admin/interventions/all", element: <AllInterventions /> },
+        {
+          path: "/admin/denguemapping",
+          element: (
+            <Suspense fallback={<div style={{ minHeight: 120 }} />}>
+              <DengueMapping />
+            </Suspense>
+          ),
+        },
+        {
+          path: "/admin/interventions",
+          element: (
+            <Suspense fallback={<div style={{ minHeight: 120 }} />}>
+              <Interventions />
+            </Suspense>
+          ),
+        },
+        {
+          path: "/admin/interventions/all",
+          element: (
+            <Suspense fallback={<div style={{ minHeight: 120 }} />}>
+              <AllInterventions />
+            </Suspense>
+          ),
+        },
         {
           path: "/admin/cea",
           element: <CEA />,
@@ -280,7 +331,9 @@ const AppWithProviders = () => {
       element: (
         <GoogleMapsProvider>
           <PrivateRoute requiredRole="admin">
-            <AdminMapping />
+            <Suspense fallback={<div style={{ minHeight: 120 }} />}>
+              <AdminMapping />
+            </Suspense>
           </PrivateRoute>
         </GoogleMapsProvider>
       ),

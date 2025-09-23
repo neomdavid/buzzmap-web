@@ -1,5 +1,8 @@
 import React, { useState, useEffect, useRef } from "react";
-import { useValidatePostMutation } from "../../api/dengueApi.js";
+import {
+  useValidatePostMutation,
+  useGetPostByIdQuery,
+} from "../../api/dengueApi.js";
 import { toast } from "react-toastify";
 import { useGoogleMaps } from "../GoogleMapsProvider";
 import ImageExpansionModal from "../ImageExpansionModal";
@@ -29,6 +32,11 @@ const VerifyReportModal = ({
     type === "verify" || type === "reject" ? type : null
   );
   const [validatePost, { isLoading }] = useValidatePostMutation();
+  // Fetch fresh report details by ID when modal opens; fall back to passed props
+  const { data: fetchedReport, isFetching: isFetchingReport } =
+    useGetPostByIdQuery(reportId, {
+      skip: !reportId,
+    });
   // Store the previous status for undo
   const [undoTimeout, setUndoTimeout] = useState(null);
   const [isUndoing, setIsUndoing] = useState(false);
@@ -125,6 +133,26 @@ const VerifyReportModal = ({
     if (typeof onClose === "function") onClose();
   };
 
+  // Resolve report fields preferring fetched data
+  const resolvedReport = fetchedReport || {};
+  const resolvedUsername = resolvedReport?.user?.username ?? username;
+  const resolvedBarangay = resolvedReport?.barangay ?? barangay;
+  const resolvedDescription = resolvedReport?.description ?? description;
+  const resolvedStatus = resolvedReport?.status ?? status;
+  const resolvedDateTime = resolvedReport?.date_and_time ?? dateAndTime;
+  const resolvedImages = Array.isArray(resolvedReport?.images)
+    ? resolvedReport.images
+    : images;
+  const resolvedIsAnonymous =
+    typeof resolvedReport?.isAnonymous === "boolean"
+      ? resolvedReport.isAnonymous
+      : isAnonymous;
+  const resolvedCoordinates = Array.isArray(
+    resolvedReport?.specific_location?.coordinates
+  )
+    ? resolvedReport.specific_location.coordinates
+    : coordinates;
+
   // Show loading state if Google Maps is not loaded yet
   if (!isGoogleMapsLoaded) {
     return (
@@ -180,8 +208,8 @@ const VerifyReportModal = ({
                   <div className="flex flex-col">
                     <span className="text-gray-500">Username</span>
                     <div className="flex items-center gap-2">
-                      <span className="font-semibold">{username}</span>
-                      {isAnonymous && (
+                      <span className="font-semibold">{resolvedUsername}</span>
+                      {resolvedIsAnonymous && (
                         <span className="text-sm text-gray-500 italic">
                           (Posted Anonymously)
                         </span>
@@ -190,12 +218,12 @@ const VerifyReportModal = ({
                   </div>
                   <div className="flex flex-col">
                     <span className="text-gray-500">Barangay</span>
-                    <span className="font-semibold">{barangay}</span>
+                    <span className="font-semibold">{resolvedBarangay}</span>
                   </div>
                   <div className="flex flex-col">
                     <span className="text-gray-500">Date and Time</span>
                     <span className="font-semibold">
-                      {new Date(dateAndTime).toLocaleString("en-US", {
+                      {new Date(resolvedDateTime).toLocaleString("en-US", {
                         weekday: "long",
                         year: "numeric",
                         month: "long",
@@ -209,13 +237,13 @@ const VerifyReportModal = ({
                   <div className="md:col-span-2 flex flex-col">
                     <span className="text-gray-500">Description</span>
                     <span className="font-normal whitespace-pre-line">
-                      {description}
+                      {resolvedDescription}
                     </span>
                   </div>
                 </div>
 
                 {/* Image Gallery */}
-                {images?.length > 0 && (
+                {resolvedImages?.length > 0 && (
                   <div>
                     <div>
                       <p className="text-left text-2xl font-bold mb-6">
@@ -224,7 +252,7 @@ const VerifyReportModal = ({
                       <hr className="text-accent/50 mb-4" />
                     </div>
                     <div className="grid grid-cols-2 gap-4 w-full">
-                      {images.map((image, index) => (
+                      {resolvedImages.map((image, index) => (
                         <div
                           key={index}
                           className="rounded-md overflow-hidden shadow-lg h-55"
@@ -244,7 +272,7 @@ const VerifyReportModal = ({
 
                 <p className="text-left text-2xl font-bold">Reported Area</p>
                 <hr className="text-accent/50 mb-4" />
-                {coordinates?.length === 2 && (
+                {resolvedCoordinates?.length === 2 && (
                   <div
                     className="w-full h-64 mt-4 shadow-sm overflow-hidden rounded-2xl"
                     ref={streetViewRef}
@@ -252,24 +280,25 @@ const VerifyReportModal = ({
                 )}
 
                 {/* Action Buttons */}
-                {status !== "Validated" && status !== "Rejected" && (
-                  <div className="text-center space-y-4">
-                    <div className="flex justify-center gap-4">
-                      <button
-                        onClick={() => handleActionClick("verify")}
-                        className="bg-success text-white font-semibold px-7 py-2 rounded-xl hover:cursor-pointer hover:opacity-70 transition-all duration-200"
-                      >
-                        Verify
-                      </button>
-                      <button
-                        onClick={() => handleActionClick("reject")}
-                        className="bg-error text-white font-semibold px-7 py-2 rounded-xl hover:cursor-pointer hover:opacity-70 transition-all duration-200"
-                      >
-                        Reject
-                      </button>
+                {resolvedStatus !== "Validated" &&
+                  resolvedStatus !== "Rejected" && (
+                    <div className="text-center space-y-4">
+                      <div className="flex justify-center gap-4">
+                        <button
+                          onClick={() => handleActionClick("verify")}
+                          className="bg-success text-white font-semibold px-7 py-2 rounded-xl hover:cursor-pointer hover:opacity-70 transition-all duration-200"
+                        >
+                          Verify
+                        </button>
+                        <button
+                          onClick={() => handleActionClick("reject")}
+                          className="bg-error text-white font-semibold px-7 py-2 rounded-xl hover:cursor-pointer hover:opacity-70 transition-all duration-200"
+                        >
+                          Reject
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )}
               </div>
             </>
           ) : showConfirmation ? (
@@ -292,8 +321,8 @@ const VerifyReportModal = ({
                   <div className="flex flex-row gap-4 items-center">
                     <span className="w-28  font-semibold">Username:</span>
                     <div className="flex items-center gap-2">
-                      <span className="font-medium">{username}</span>
-                      {isAnonymous && (
+                      <span className="font-medium">{resolvedUsername}</span>
+                      {resolvedIsAnonymous && (
                         <span className="text-sm text-gray-500 italic">
                           (Posted Anonymously)
                         </span>
@@ -302,14 +331,14 @@ const VerifyReportModal = ({
                   </div>
                   <div className="flex flex-row gap-4 items-center">
                     <span className="w-28  font-semibold">Barangay:</span>
-                    <span className=" font-medium">{barangay}</span>
+                    <span className=" font-medium">{resolvedBarangay}</span>
                   </div>
                   <div className="flex flex-row gap-4 items-start">
                     <span className="w-28  font-semibold mt-1">
                       Description:
                     </span>
                     <span className=" font-normal whitespace-pre-line">
-                      {description}
+                      {resolvedDescription}
                     </span>
                   </div>
                 </div>

@@ -9,7 +9,7 @@ import cleanUpIcon from "../assets/icons/cleanup.svg";
 import educationIcon from "../assets/icons/education.svg";
 import { getInterventionIcon } from "../utils/mapOverlays";
 import allIcon from "../assets/all.svg";
-import * as turf from "@turf/turf";
+import center from "@turf/center";
 import { MapPinLine, Circle } from "phosphor-react";
 import {
   loadGoogleMapsScript,
@@ -101,12 +101,12 @@ const DengueMap = ({
   activeInterventions = [],
   isLoadingInterventions = false,
   barangaysList = [],
-  onBarangaySelect = () => { },
+  onBarangaySelect = () => {},
   onInfoWindowClose = null,
   showBreedingSites = true,
   showInterventions = false,
-  onToggleBreedingSites = () => { },
-  onToggleInterventions = () => { },
+  onToggleBreedingSites = () => {},
+  onToggleInterventions = () => {},
 }) => {
   const mapRef = useRef(null);
   const mapInstanceRef = useRef(null);
@@ -127,24 +127,26 @@ const DengueMap = ({
 
   // Load GeoJSON for barangay boundaries
   useEffect(() => {
-    fetch("/quezon_barangays_boundaries.geojson")
-      .then((res) => res.json())
-      .then((data) => {
-        if (data && data.features) {
-          setGeojsonBarangays(data.features);
-        } else {
-          setGeojsonBarangays([]);
-        }
-      })
-      .catch(() => setGeojsonBarangays([]));
+    import("../utils/geojsonLoader").then(({ getBarangaysGeoJSON }) => {
+      getBarangaysGeoJSON()
+        .then((data) => {
+          if (data && data.features) {
+            setGeojsonBarangays(data.features);
+          } else {
+            setGeojsonBarangays([]);
+          }
+        })
+        .catch(() => setGeojsonBarangays([]));
+    });
   }, []);
 
   // Load Google Maps script if not already loaded
   useEffect(() => {
     if (!window.google) {
       const script = document.createElement("script");
-      script.src = `https://maps.googleapis.com/maps/api/js?key=${import.meta.env.VITE_GOOGLE_MAPS_API_KEY
-        }&libraries=places,marker`;
+      script.src = `https://maps.googleapis.com/maps/api/js?key=${
+        import.meta.env.VITE_GOOGLE_MAPS_API_KEY
+      }&libraries=places,marker`;
       script.async = true;
       script.defer = true;
       script.onload = () => {
@@ -246,8 +248,8 @@ const DengueMap = ({
       const postsArray = Array.isArray(posts.posts)
         ? posts.posts
         : Array.isArray(posts)
-          ? posts
-          : [];
+        ? posts
+        : [];
       const breedingSitesFromPosts = postsArray.filter((post) => {
         const isValid =
           post.status === "Validated" &&
@@ -543,7 +545,9 @@ const DengueMap = ({
           );
           const glyphImg = document.createElement("img");
           glyphImg.src = iconUrl;
-          glyphImg.alt = `${intervention.interventionType || intervention.type || "Intervention"} icon`;
+          glyphImg.alt = `${
+            intervention.interventionType || intervention.type || "Intervention"
+          } icon`;
           glyphImg.style.width = "28px";
           glyphImg.style.height = "28px";
           glyphImg.style.objectFit = "contain";
@@ -722,73 +726,81 @@ const DengueMap = ({
     const content = document.createElement("div");
     content.innerHTML = `
       <div class="bg-white p-4 rounded-lg text-center h-auto w-[50vw] max-w-[500px] min-w-[320px] break-words overflow-x-auto">
-        <p class="text-4xl font-[900]" style="color: ${PATTERN_COLORS[patternType]?.fill || PATTERN_COLORS.default.fill
-      }">
+        <p class="text-4xl font-[900]" style="color: ${
+          PATTERN_COLORS[patternType]?.fill || PATTERN_COLORS.default.fill
+        }">
           Barangay ${props.displayName || props.name}
         </p>
         <div class="mt-3 flex flex-col gap-3 text-black">
           <!-- Pattern Card -->
-          <div class="p-3 rounded-lg border-2 ${patternType === "spike"
-        ? "border-error bg-error/5"
-        : patternType === "increase"
-          ? "border-warning bg-warning/5"
-          : patternType === "decrease"
-            ? "border-success bg-success/5"
-            : patternType === "low_level_activity"
+          <div class="p-3 rounded-lg border-2 ${
+            patternType === "spike"
+              ? "border-error bg-error/5"
+              : patternType === "increase"
+              ? "border-warning bg-warning/5"
+              : patternType === "decrease"
+              ? "border-success bg-success/5"
+              : patternType === "low_level_activity"
               ? "border-info bg-info/5"
               : "border-gray-400 bg-gray-100"
-      }">
+          }">
             <div>
               <p class="text-sm font-medium text-gray-600 uppercase">Pattern</p>
               <div class="flex justify-center mt-1">
-                <span class="px-3 py-1 rounded-full font-semibold text-md" style="background-color: ${PATTERN_COLORS[patternType]?.fill ||
-      PATTERN_COLORS.default.fill
-      }; color: white;">
-                  ${patternType === "none"
-        ? "No pattern detected"
-        : patternType === "low_level_activity"
-          ? "Low Level Activity"
-          : patternType
-            .split("_")
-            .map(
-              (word) =>
-                word.charAt(0).toUpperCase() + word.slice(1)
-            )
-            .join(" ")
-      }
+                <span class="px-3 py-1 rounded-full font-semibold text-md" style="background-color: ${
+                  PATTERN_COLORS[patternType]?.fill ||
+                  PATTERN_COLORS.default.fill
+                }; color: white;">
+                  ${
+                    patternType === "none"
+                      ? "No pattern detected"
+                      : patternType === "low_level_activity"
+                      ? "Low Level Activity"
+                      : patternType
+                          .split("_")
+                          .map(
+                            (word) =>
+                              word.charAt(0).toUpperCase() + word.slice(1)
+                          )
+                          .join(" ")
+                  }
                 </span>
               </div>
-              ${patternBased.alert
-        ? `
+              ${
+                patternBased.alert
+                  ? `
                 <p class="text-base text-gray-700 mt-2">${patternBased.alert}</p>
               `
-        : ""
-      }
+                  : ""
+              }
             </div>
           </div>
           <!-- Report-Based Alert Card -->
-          ${reportBased.alert &&
-        reportBased.alert !== "None" &&
-        reportBased.count >= 0
-        ? `
+          ${
+            reportBased.alert &&
+            reportBased.alert !== "None" &&
+            reportBased.count >= 0
+              ? `
             <div class="p-3 rounded-lg border-2 border-primary/30 bg-primary/5">
               <div>
                 <p class="text-sm font-medium text-gray-600 uppercase">Report-Based Alert</p>
                 <p class="text-lg font-semibold">${reportBased.alert}</p>
-                ${reportBased.count > 0
-          ? `<p class="text-sm text-gray-600 mt-1">Count: ${reportBased.count}</p>`
-          : ""
-        }
+                ${
+                  reportBased.count > 0
+                    ? `<p class="text-sm text-gray-600 mt-1">Count: ${reportBased.count}</p>`
+                    : ""
+                }
               </div>
             </div>
           `
-        : ""
-      }
+              : ""
+          }
           <!-- Death Priority Alert Card -->
-          ${deathPriority.alert &&
-        deathPriority.alert !== "None" &&
-        deathPriority.count > 0
-        ? `
+          ${
+            deathPriority.alert &&
+            deathPriority.alert !== "None" &&
+            deathPriority.count > 0
+              ? `
             <div class="p-3 rounded-lg border-2 border-primary/30 bg-primary/5">
               <div>
                 <p class="text-sm font-medium text-gray-600 uppercase">Death Priority Alert</p>
@@ -796,19 +808,20 @@ const DengueMap = ({
               </div>
             </div>
           `
-        : ""
-      }
+              : ""
+          }
           <!-- Last Analyzed Card -->
           <div class="p-3 rounded-lg border-2 border-primary/20 bg-primary/5">
             <div class="flex flex-col items-center">
               <p class="text-sm font-medium text-gray-600">Last Analyzed</p>
               <p class="text-lg font-semibold">
-                ${lastAnalysisTime
-        ? isNaN(new Date(lastAnalysisTime).getTime())
-          ? "Invalid date"
-          : new Date(lastAnalysisTime).toLocaleString()
-        : "No recent analysis"
-      }
+                ${
+                  lastAnalysisTime
+                    ? isNaN(new Date(lastAnalysisTime).getTime())
+                      ? "Invalid date"
+                      : new Date(lastAnalysisTime).toLocaleString()
+                    : "No recent analysis"
+                }
               </p>
             </div>
           </div>
@@ -847,38 +860,45 @@ const DengueMap = ({
             <span class="font-bold">Barangay:</span> ${site.barangay || ""}
           </p>
           <p class="text-xl">
-            <span class="font-bold">Reported by:</span> ${site.user?.username || ""
-      }
+            <span class="font-bold">Reported by:</span> ${
+              site.user?.username || ""
+            }
           </p>
           <p class="text-xl">
-            <span class="font-bold">Date:</span> ${site.date_and_time
-        ? new Date(site.date_and_time).toLocaleString("en-US", {
-          year: "numeric",
-          month: "long",
-          day: "numeric",
-          hour: "numeric",
-          minute: "2-digit",
-          hour12: true,
-        })
-        : ""
-      }
+            <span class="font-bold">Date:</span> ${
+              site.date_and_time
+                ? new Date(site.date_and_time).toLocaleString("en-US", {
+                    year: "numeric",
+                    month: "long",
+                    day: "numeric",
+                    hour: "numeric",
+                    minute: "2-digit",
+                    hour12: true,
+                  })
+                : ""
+            }
           </p>
           <p class="text-xl">
-            <span class="font-bold">Description:</span> ${site.description || ""
-      }
+            <span class="font-bold">Description:</span> ${
+              site.description || ""
+            }
           </p>
-          ${site.images && site.images.length > 0
-        ? `<div class='mt-2 flex justify-center gap-2'>${site.images
-          .map(
-            (img, idx) =>
-              `<img src='${img}' alt='Breeding site photo ${idx + 1}' class='w-35 h-25 object-cover rounded border'/>`
-          )
-          .join("")}</div>`
-        : ""
-      }
+          ${
+            site.images && site.images.length > 0
+              ? `<div class='mt-2 flex justify-center gap-2'>${site.images
+                  .map(
+                    (img, idx) =>
+                      `<img src='${img}' alt='Breeding site photo ${
+                        idx + 1
+                      }' class='w-35 h-25 object-cover rounded border'/>`
+                  )
+                  .join("")}</div>`
+              : ""
+          }
         </div>
-        <button class="mt-4 px-4 py-2 bg-primary w-[40%] text-white rounded-lg shadow hover:bg-primary/80 hover:cursor-pointer font-bold" onclick="window.location.href='/mapping/${site._id
-      }'">View Details</button>
+        <button class="mt-4 px-4 py-2 bg-primary w-[40%] text-white rounded-lg shadow hover:bg-primary/80 hover:cursor-pointer font-bold" onclick="window.location.href='/mapping/${
+          site._id
+        }'">View Details</button>
       </div>
     `;
     if (!infoWindowRef.current) {
@@ -906,7 +926,7 @@ const DengueMap = ({
         "[DengueMap] Clicked intervention marker (raw object):",
         intervention
       );
-    } catch (_) { }
+    } catch (_) {}
     const content = document.createElement("div");
     const dateValue =
       intervention.date ||
@@ -918,36 +938,42 @@ const DengueMap = ({
     const address = intervention.address || intervention.location || "";
     content.innerHTML = `
       <div class="p-3 flex flex-col items-center gap-1 font-normal bg-white rounded-md shadow-md w-64 text-primary w-[50vw]">
-        <p class="text-4xl font-extrabold text-primary mb-2">${intervention.interventionType || intervention.type || "Intervention"
-      }</p>
+        <p class="text-4xl font-extrabold text-primary mb-2">${
+          intervention.interventionType || intervention.type || "Intervention"
+        }</p>
         <div class="text-lg flex items-center gap-2">
           <span class="font-bold">Status:</span>
-          <span class="px-3 py-1 rounded-full text-white font-bold text-sm" style="background-color:#8b5cf6;box-shadow:0 1px 4px rgba(0,0,0,0.08);">${intervention.status || ""
-      }</span>
+          <span class="px-3 py-1 rounded-full text-white font-bold text-sm" style="background-color:#8b5cf6;box-shadow:0 1px 4px rgba(0,0,0,0.08);">${
+            intervention.status || ""
+          }</span>
         </div>
-        <p class="text-lg"><span class="font-bold">Barangay:</span> ${intervention.barangay || ""
-      }</p>
-        ${address
-        ? `<p class="text-lg"><span class="font-bold">Address:</span> ${address}</p>`
-        : ""
-      }
-        ${dateValue
-        ? `<p class="text-lg"><span class="font-bold">Date:</span> ${new Date(
+        <p class="text-lg"><span class="font-bold">Barangay:</span> ${
+          intervention.barangay || ""
+        }</p>
+        ${
+          address
+            ? `<p class="text-lg"><span class="font-bold">Address:</span> ${address}</p>`
+            : ""
+        }
+        ${
           dateValue
-        ).toLocaleString("en-US", {
-          year: "numeric",
-          month: "long",
-          day: "numeric",
-          hour: "numeric",
-          minute: "2-digit",
-          hour12: true,
-        })}</p>`
-        : ""
-      }
-        ${description
-        ? `<p class="text-lg"><span class="font-bold">Description:</span> ${description}</p>`
-        : ""
-      }
+            ? `<p class="text-lg"><span class="font-bold">Date:</span> ${new Date(
+                dateValue
+              ).toLocaleString("en-US", {
+                year: "numeric",
+                month: "long",
+                day: "numeric",
+                hour: "numeric",
+                minute: "2-digit",
+                hour12: true,
+              })}</p>`
+            : ""
+        }
+        ${
+          description
+            ? `<p class="text-lg"><span class="font-bold">Description:</span> ${description}</p>`
+            : ""
+        }
       </div>
     `;
     if (!infoWindowRef.current) {
@@ -968,8 +994,8 @@ const DengueMap = ({
   // Update the polygon click handler to include pattern data
   const handlePolygonClick = (feature) => {
     if (!mapInstanceRef.current) return;
-    const center = turf.center(feature.geometry);
-    const { coordinates } = center.geometry;
+    const centerFeature = center(feature.geometry);
+    const { coordinates } = centerFeature.geometry;
     const [lng, lat] = coordinates;
     if (lat && lng && !isNaN(lat) && !isNaN(lng)) {
       mapInstanceRef.current.panTo({ lat, lng });
@@ -1173,8 +1199,8 @@ const DengueMap = ({
       setSelectedBarangayFeature(enhancedFeature);
 
       // Center the map on the selected barangay
-      const center = turf.center(matchingFeature.geometry);
-      const { coordinates } = center.geometry;
+      const centerFeature = center(matchingFeature.geometry);
+      const { coordinates } = centerFeature.geometry;
       const [lng, lat] = coordinates;
       if (lat && lng && !isNaN(lat) && !isNaN(lng)) {
         mapInstanceRef.current.panTo({ lat, lng });
@@ -1236,20 +1262,22 @@ const DengueMap = ({
       <div className="absolute top-4 left-4 z-20 flex gap-2">
         <button
           onClick={onToggleBreedingSites}
-          className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${showBreedingSites
-            ? "bg-red-100 text-red-700 hover:bg-red-200"
-            : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-            }`}
+          className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+            showBreedingSites
+              ? "bg-red-100 text-red-700 hover:bg-red-200"
+              : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+          }`}
         >
           <MapPinLine size={18} weight="fill" className="text-red-600" />
           {showBreedingSites ? "Hide Breeding Sites" : "Show Breeding Sites"}
         </button>
         <button
           onClick={onToggleInterventions}
-          className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${showInterventions
-            ? "bg-blue-100 text-blue-700 hover:bg-blue-200"
-            : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-            }`}
+          className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+            showInterventions
+              ? "bg-blue-100 text-blue-700 hover:bg-blue-200"
+              : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+          }`}
         >
           <MapPinLine size={18} weight="fill" className="text-blue-600" />
           {showInterventions ? "Hide Interventions" : "Show Interventions"}

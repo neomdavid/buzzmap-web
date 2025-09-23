@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import * as turf from "@turf/turf";
+import center from "@turf/center";
 import { useGetBarangaysQuery } from "../../api/dengueApi";
 import {
   getPatternColor,

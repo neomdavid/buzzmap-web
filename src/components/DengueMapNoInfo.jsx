@@ -5,7 +5,7 @@ import React, {
   useEffect,
 } from "react";
 import DengueMap from "./DengueMap";
-import * as turf from "@turf/turf";
+import center from "@turf/center";
 
 const DengueMapNoInfo = forwardRef((props, ref) => {
   const [selectedBarangay, setSelectedBarangay] = useState(null);

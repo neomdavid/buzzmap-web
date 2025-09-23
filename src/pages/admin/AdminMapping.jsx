@@ -34,7 +34,7 @@ import standingIcon from "../../assets/icons/standing_water.svg?url";
 import garbageIcon from "../../assets/icons/garbage.svg?url";
 import othersIcon from "../../assets/icons/others.svg?url";
 import defaultProfile from "../../assets/default_profile.png";
-import * as turf from "@turf/turf";
+import center from "@turf/center";
 
 const containerStyle = {
   width: "100%",

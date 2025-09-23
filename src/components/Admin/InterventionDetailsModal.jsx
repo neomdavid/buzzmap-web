@@ -6,7 +6,7 @@ import {
 } from "../../api/dengueApi"; // Import the RTK Query hook for updating the intervention data
 import { toastSuccess, toastError, formatDateForInput } from "../../utils.jsx";
 import InterventionLocationPicker from "./InterventionLocationPicker";
-import * as turf from "@turf/turf";
+import center from "@turf/center";
 
 // Helper to compute correct status based on date/time
 function computeStatusFromDate(dateString) {
