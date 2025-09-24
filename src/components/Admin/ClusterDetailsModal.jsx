@@ -701,7 +701,7 @@ const ClusterDetailsModal = ({
                                   // Old format: {lat, lng}
                                   mapOnlyRef.current.panTo(reportCoordinates);
                                 }
-                                mapOnlyRef.current.setZoom(18);
+                                mapOnlyRef.current.setZoom(32);
 
                                 // Highlight the specific report marker
                                 if (highlightReportMarker) {

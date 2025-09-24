@@ -8,7 +8,6 @@ import React, {
 import { useParams, useNavigate } from "react-router-dom";
 import {
   useGetPostByIdQuery,
-  useGetPostsQuery,
   useGetBasicProfilesQuery,
   useGetBarangaysQuery,
 } from "../../api/dengueApi";
@@ -207,6 +206,8 @@ const AdminMapping = () => {
   const infoWindowRef = useRef(null);
   const overlayRef = useRef(null);
   const clustererRef = useRef(null);
+  const clusterCirclesRef = useRef([]);
+  const clusterLabelsRef = useRef([]);
 
   // State for barangay boundary data
   const [barangayGeoJsonData, setBarangayGeoJsonData] = useState(null);
@@ -228,8 +229,23 @@ const AdminMapping = () => {
   // Use the fetched report
   const report = fetchedReport?.data || fetchedReport;
 
-  // Get all reports
-  const { data: allReports = [] } = useGetPostsQuery();
+  // Grouped reports (individual + clusters)
+  const [groupedReportsData, setGroupedReportsData] = useState(null);
+  useEffect(() => {
+    async function fetchGrouped() {
+      try {
+        const res = await fetch(
+          "https://buzzmap-backend.onrender.com/api/v1/reports/grouped"
+        );
+        const json = await res.json();
+        setGroupedReportsData(json || null);
+      } catch (e) {
+        console.error("[AdminMapping] Failed to fetch grouped reports", e);
+        setGroupedReportsData(null);
+      }
+    }
+    fetchGrouped();
+  }, []);
 
   // When switching to a different report, default-highlight its barangay
   useEffect(() => {
@@ -240,47 +256,16 @@ const AdminMapping = () => {
     }
   }, [report?._id]);
 
-  // Calculate nearby reports using frontend distance calculation
-  const nearbyReports = useMemo(() => {
-    if (report?.specific_location?.coordinates && allReports?.length > 0) {
-      const [currentLng, currentLat] = report.specific_location.coordinates;
-      const radiusKm = 1; // 1 km radius
-
-      const nearby = allReports.filter((r) => {
-        // Skip the current report
-        if (r._id === report._id) return false;
-
-        // Skip reports without coordinates
-        if (!r.specific_location?.coordinates) return false;
-
-        const [rLng, rLat] = r.specific_location.coordinates;
-        const distance = calculateDistance(currentLat, currentLng, rLat, rLng);
-
-        return distance <= radiusKm;
-      });
-
-      return nearby;
-    } else {
-      return [];
-    }
-  }, [
-    report?._id,
-    report?.specific_location?.coordinates?.[0],
-    report?.specific_location?.coordinates?.[1],
-    allReports,
-  ]);
-
-  // Use nearby reports (calculated on frontend) and filter by validation status
-  const filteredReports = useMemo(() => {
-    return Array.isArray(nearbyReports)
-      ? nearbyReports.filter((r) => r.status === "Validated")
-      : [];
-  }, [nearbyReports]);
-
-  // Filter out the current report from recent reports and only show validated posts
+  // Recent reports sourced from grouped endpoint (individual + clusters flattened), validated only and excluding current
   const recentReports = useMemo(() => {
-    return report ? filteredReports.filter((r) => r._id !== report._id) : [];
-  }, [filteredReports, report?._id]);
+    const individuals = groupedReportsData?.individual_reports || [];
+    const clusterMembers = (groupedReportsData?.clusters || [])
+      .flatMap((c) => c?.reports || [])
+      .filter(Boolean);
+    const all = [...individuals, ...clusterMembers];
+    const filtered = all.filter((r) => r?.status === "Validated");
+    return report ? filtered.filter((r) => r._id !== report._id) : filtered;
+  }, [groupedReportsData, report?._id]);
 
   // Get basic profiles
   const { data: basicProfiles = [] } = useGetBasicProfilesQuery();
@@ -354,13 +339,17 @@ const AdminMapping = () => {
           overlayRef.current.setMap(null);
           overlayRef.current = null;
         }
+        clusterCirclesRef.current.forEach((c) => c.setMap(null));
+        clusterCirclesRef.current = [];
+        clusterLabelsRef.current.forEach((l) => l.setMap && l.setMap(null));
+        clusterLabelsRef.current = [];
       } catch (_) {}
     };
   }, [isLoaded, report]);
 
-  // Add markers, polylines
+  // Add markers
   useEffect(() => {
-    if (!mapRef.current || !window.google || !allReports.length) return;
+    if (!mapRef.current || !window.google) return;
     const { AdvancedMarkerElement, PinElement } = window.google.maps.marker;
     markersRef.current.forEach((m) => m.setMap(null));
     markersRef.current = [];
@@ -370,6 +359,7 @@ const AdminMapping = () => {
 
     if (report?.specific_location?.coordinates) {
       const [lng, lat] = report.specific_location.coordinates;
+      const mainColor = report?.isInCluster ? "#8B5CF6" : "#FF6347"; // violet if clustered
       const iconUrl =
         BREEDING_SITE_TYPE_ICONS[report.report_type] ||
         BREEDING_SITE_TYPE_ICONS.default;
@@ -383,8 +373,8 @@ const AdminMapping = () => {
       glyphImg.style.padding = "2px";
       const pin = new PinElement({
         glyph: glyphImg,
-        background: "#FF6347",
-        borderColor: "#FF6347",
+        background: mainColor,
+        borderColor: mainColor,
         scale: 1.5,
       });
       const container = document.createElement("div");
@@ -403,7 +393,30 @@ const AdminMapping = () => {
       label.style.whiteSpace = "nowrap";
       label.textContent = "Selected Report";
       container.appendChild(label);
-      container.appendChild(pin.element);
+      // Wrap the pin to add a status indicator like in DengueMapping
+      const wrapper = document.createElement("div");
+      wrapper.style.position = "relative";
+      wrapper.style.display = "inline-block";
+      wrapper.appendChild(pin.element);
+      const status = (report?.status || "").toLowerCase();
+      let dotColor = null;
+      if (status.includes("pending")) dotColor = "#f59e0b"; // amber
+      else if (status.includes("validated") || status.includes("resolved"))
+        dotColor = "#10b981"; // green
+      else if (status.includes("rejected")) dotColor = "#dc2626"; // red
+      if (dotColor) {
+        const dot = document.createElement("span");
+        dot.style.position = "absolute";
+        dot.style.right = "1px";
+        dot.style.top = "1px";
+        dot.style.width = "8px";
+        dot.style.height = "8px";
+        dot.style.borderRadius = "9999px";
+        dot.style.background = dotColor;
+        dot.style.border = "1px solid #fff";
+        wrapper.appendChild(dot);
+      }
+      container.appendChild(wrapper);
       const mainMarker = new AdvancedMarkerElement({
         map: mapRef.current,
         position: { lat, lng },
@@ -413,85 +426,18 @@ const AdminMapping = () => {
       markersRef.current.push(mainMarker);
     }
 
-    const allValidatedReports = allReports.filter(
-      (r) => r.status === "Validated" && r._id !== report._id
-    );
-    const markers = allValidatedReports
-      .map((r) => {
-        if (!r.specific_location?.coordinates) return null;
-        const [lng, lat] = r.specific_location.coordinates;
-        const iconUrl =
-          BREEDING_SITE_TYPE_ICONS[r.report_type] ||
-          BREEDING_SITE_TYPE_ICONS.default;
-        const glyphImg = document.createElement("img");
-        glyphImg.src = iconUrl;
-        glyphImg.style.width = "28px";
-        glyphImg.style.height = "28px";
-        glyphImg.style.objectFit = "contain";
-        glyphImg.style.backgroundColor = "#FFFFFF";
-        glyphImg.style.borderRadius = "100%";
-        glyphImg.style.padding = "2px";
-        const pin = new PinElement({
-          glyph: glyphImg,
-          background: "#FF6347",
-          borderColor: "#FF6347",
-          scale: 1.5,
-        });
-        const marker = new AdvancedMarkerElement({
-          map: mapRef.current,
-          position: { lat, lng },
-          content: pin.element,
-          title: `${r.report_type} - ${r.status}`,
-        });
-        marker.addListener("gmp-click", () => {
-          const content = document.createElement("div");
-          content.innerHTML = `
-            <div class="bg-white p-4 rounded-lg text-primary text-center max-w-120 w-[50vw]">
-              <p class="font-bold text-4xl font-extrabold mb-4 text-primary">${
-                r.report_type
-              }</p>
-              <div class="flex flex-col items-center mt-2 space-y-1 font-normal text-center">
-                <p class="text-xl"><span class="font-bold">Barangay:</span> ${
-                  r.barangay
-                }</p>
-                <p class="text-xl"><span class="font-bold">Reported by:</span> ${
-                  r.isAnonymous ? r.anonymousId : r.user?.username || "Unknown"
-                }</p>
-                <p class="text-xl"><span class="font-bold">Reported:</span> ${getRelativeTime(
-                  r.date_and_time
-                )}</p>
-                <p class="text-xl"><span class="font-bold">Description:</span> ${
-                  r.description
-                }</p>
-              </div>
-              <button class="mt-4 px-4 py-2 bg-primary w-[40%] text-white rounded-lg shadow hover:bg-primary/80 hover:cursor-pointer font-bold" id="view-details-${
-                r._id
-              }">View Details</button>
-            </div>`;
-          infoWindowRef.current.setContent(content);
-          infoWindowRef.current.open(mapRef.current, marker);
-          setTimeout(() => {
-            const button = document.getElementById(`view-details-${r._id}`);
-            if (button) {
-              button.addEventListener("click", () =>
-                navigate(`/admin/mapping/${r._id}`)
-              );
-            }
-          }, 0);
-        });
-        return marker;
-      })
-      .filter(Boolean);
-    if (clustererRef.current) {
-      clustererRef.current.addMarkers(markers);
-    } else {
-      markers.forEach((m) => markersRef.current.push(m));
-    }
-
     if (report?.specific_location?.coordinates) {
       // Do not draw connecting lines to nearby reports
     }
-  }, [allReports, filteredReports, report]);
+  }, [report]);
+
+  // Skip cluster circles/labels: only selected report should show
+  useEffect(() => {
+    clusterCirclesRef.current.forEach((c) => c.setMap(null));
+    clusterCirclesRef.current = [];
+    clusterLabelsRef.current.forEach((l) => l.setMap && l.setMap(null));
+    clusterLabelsRef.current = [];
+  }, []);
 
   // Draw polygons on highlight
   useEffect(() => {
@@ -752,57 +698,13 @@ const AdminMapping = () => {
       </nav>
       <AdminSideNavDetails
         report={report}
-        nearbyCount={filteredReports.length}
-        nearbyReports={filteredReports}
+        nearbyCount={recentReports.length}
+        nearbyReports={recentReports}
         radius={1}
         onBarangaySelect={handleBarangaySelect}
         selectedBarangay={selectedBarangayId || highlightedBarangay}
       />
-      <article className="absolute z-100000 flex flex-col text-primary right-[10px] bottom-0 md:max-w-[60vw] lg:max-w-[62vw] xl:max-w-[69vw] 2xl:max-w-[72vw]">
-        <p className="text-[20px] text-white shadow-sm font-semibold text-left mb-2 w-full">
-          Nearby Reports
-        </p>
-        <section className="flex gap-x-2 text-[13px] overflow-x-scroll scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-100">
-          {isLoading ? (
-            <div className="text-gray-500 p-4">Loading reports...</div>
-          ) : recentReports.length === 0 ? (
-            <div className="text-gray-500 p-4">No nearby reports found.</div>
-          ) : (
-            recentReports.map((r) => {
-              const rawDate = r.date_and_time;
-              const formattedDate = rawDate
-                ? new Date(rawDate).toLocaleDateString("en-US", {
-                    year: "numeric",
-                    month: "long",
-                    day: "numeric",
-                  })
-                : "";
-              const formattedTime = rawDate
-                ? new Date(rawDate).toLocaleTimeString("en-US", {
-                    hour: "numeric",
-                    minute: "2-digit",
-                    hour12: true,
-                  })
-                : "";
-              return (
-                <RecentReportCard
-                  key={r._id}
-                  profileImage={getProfileImage(r.user?._id)}
-                  username={
-                    r.isAnonymous ? "Anonymous" : r.user?.username || "Unknown"
-                  }
-                  timestamp={rawDate ? getRelativeTime(rawDate) : ""}
-                  date={formattedDate}
-                  time={formattedTime}
-                  reportType={r.report_type}
-                  description={r.description}
-                  onViewClick={() => navigate(`/admin/mapping/${r._id}`)}
-                />
-              );
-            })
-          )}
-        </section>
-      </article>
+      {/* Only selected report is displayed; nearby and legend hidden */}
     </main>
   );
 };

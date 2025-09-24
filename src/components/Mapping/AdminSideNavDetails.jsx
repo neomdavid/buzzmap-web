@@ -1,6 +1,6 @@
 import { LogoNamed } from "../";
 import UPBuilding from "../../assets/UPbuilding.jpg";
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useRef } from "react";
 import { useGetPostsQuery, useGetBarangaysQuery } from "../../api/dengueApi";
 import { CaretDown } from "phosphor-react";
 import ImageExpansionModal from "../ImageExpansionModal";
@@ -102,6 +102,7 @@ const AdminSideNavDetails = ({
   const [showImages, setShowImages] = useState(true);
   const [expandedImage, setExpandedImage] = useState(null);
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
+  const streetViewRef = useRef(null);
 
   // Accept either a name or an id for selectedBarangay; prefer id if it matches _id
   const resolvedSelectedId = useMemo(() => {
@@ -134,6 +135,35 @@ const AdminSideNavDetails = ({
     if (s.includes("confirmed")) return "bg-rose-500/90 border-rose-300/50";
     return "bg-white/20 border-white/40";
   };
+
+  useEffect(() => {
+    // Initialize Street View without compass when coordinates are available
+    try {
+      if (
+        streetViewRef.current &&
+        window.google &&
+        coordinates?.lat &&
+        coordinates?.lng
+      ) {
+        new window.google.maps.StreetViewPanorama(streetViewRef.current, {
+          position: { lat: coordinates.lat, lng: coordinates.lng },
+          pov: { heading: 165, pitch: 0 },
+          zoom: 1,
+          addressControl: false,
+          fullscreenControl: true,
+          motionTracking: false,
+          motionTrackingControl: false,
+          linksControl: true,
+          panControl: false, // remove compass
+          zoomControl: true,
+          enableCloseButton: false,
+          showRoadLabels: false,
+          // Keep default UI so fullscreen remains available
+          disableDefaultUI: false,
+        });
+      }
+    } catch (_) {}
+  }, [coordinates?.lat, coordinates?.lng, showStreetView]);
 
   return (
     <aside className="flex flex-col justify-start items-center text-center py-4 z-[1000] fixed left-0 top-0 h-[100vh] bg-transparent w-[24vw] px-4 md:w-[30vw] max-w-[340px] text-primary space-y-3 overflow-hidden">
@@ -230,15 +260,14 @@ const AdminSideNavDetails = ({
                 {showStreetView && (
                   <div id="street-view-body">
                     {coordinates ? (
-                      <iframe
-                        width="100%"
-                        height="180"
-                        style={{ border: 0, borderRadius: "12px" }}
-                        loading="lazy"
-                        allowFullScreen
-                        referrerPolicy="no-referrer-when-downgrade"
-                        src={`https://www.google.com/maps?q=&layer=c&cbll=${coordinates.lat},${coordinates.lng}&cbp=11,0,0,0,0&z=18&output=svembed`}
-                        title="Street View"
+                      <div
+                        ref={streetViewRef}
+                        style={{
+                          width: "100%",
+                          height: 180,
+                          borderRadius: 12,
+                          overflow: "hidden",
+                        }}
                       />
                     ) : (
                       <img
@@ -282,6 +311,13 @@ const AdminSideNavDetails = ({
                     >
                       {report?.status || "—"}
                     </span>
+                  </div>
+                  <div className="col-span-2 mt-1">
+                    {report?.isInCluster && (
+                      <div className="text-xs font-semibold text-white bg-purple-500/70 border border-white/40 rounded-md px-2 py-1 inline-block">
+                        This report is in a cluster
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -373,20 +409,7 @@ const AdminSideNavDetails = ({
                 </div>
               )}
 
-              {/* Nearby bar */}
-              <div>
-                <p className="text-base font-semibold text-white mb-2">
-                  Nearby Reports ({nearbyCount})
-                </p>
-                <div className="w-full h-1.5 rounded bg-white/10 overflow-hidden">
-                  <div
-                    className="h-full bg-primary/80"
-                    style={{
-                      width: `${Math.min(100, (nearbyCount / 10) * 100)}%`,
-                    }}
-                  />
-                </div>
-              </div>
+              {/* Nearby Reports section removed */}
             </div>
           )}
         </div>

@@ -392,7 +392,13 @@ const DengueMapping = () => {
   const zoomToCluster = (cluster) => {
     if (mapOnlyRef.current) {
       mapOnlyRef.current.panTo(cluster.center);
-      mapOnlyRef.current.setZoom(16);
+      mapOnlyRef.current.setZoom(21);
+      if (mapContainerRef.current) {
+        mapContainerRef.current.scrollIntoView({
+          behavior: "smooth",
+          block: "center",
+        });
+      }
     }
     setShowClusterDropdown(false);
   };
