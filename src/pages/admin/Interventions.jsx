@@ -381,6 +381,16 @@ const Interventions = () => {
     cardStartIndex + cardsPerPage
   );
 
+  // Count barangays per pattern for tab badges
+  const patternCountsByTab = React.useMemo(() => {
+    const counts = {};
+    (filteredRecommendations || []).forEach((item) => {
+      const key = normalizePatternType(item.patternType);
+      counts[key] = (counts[key] || 0) + 1;
+    });
+    return counts;
+  }, [filteredRecommendations]);
+
   // Responsive cardsPerPage
   useEffect(() => {
     function handleResize() {
@@ -473,6 +483,7 @@ const Interventions = () => {
     label: patternMeta[p]?.label || "Unknown Pattern",
     color: patternMeta[p]?.color || "text-gray-500",
     border: patternMeta[p]?.border || "border-gray-300",
+    count: patternCountsByTab[p] || 0,
   }));
   // Tabs to show initially and when expanded
   const initialTabs = tabOptions.slice(0, 2);
@@ -593,47 +604,47 @@ const Interventions = () => {
                 }`}
                 onClick={() => setActiveTab(tab.value)}
               >
-                {tab.label}
+                <span className="flex items-center gap-2">
+                  <span className="whitespace-nowrap">{tab.label}</span>
+                  <span className="inline-flex items-center justify-center text-xs font-bold text-white bg-gray-500 rounded-full min-w-5 h-5 px-2">
+                    {tab.count}
+                  </span>
+                </span>
               </button>
             ))}
-            <div className="flex items-center">
-              <div
-                className={`flex flex-row items-center overflow-hidden transition-all pb-2 duration-300 ease-in-out ${
-                  showAllTabs ? "max-w-2xl ml-2" : "max-w-0"
-                }`}
-                style={{ gap: "1rem" }}
-              >
-                {extraTabs.map((tab) => (
-                  <button
-                    key={tab.value}
-                    className={`px-6 py-2 rounded-full font-semibold border-2 transition-colors shadow-sm duration-200 hover:cursor-pointer ${
-                      activeTab === tab.value
-                        ? `${tab.color} ${tab.border} bg-white`
-                        : "text-gray-500 border-transparent bg-gray-100 hover:bg-gray-200"
-                    }`}
-                    onClick={() => setActiveTab(tab.value)}
-                    style={{ transition: "all 0.3s cubic-bezier(0.4,0,0.2,1)" }}
-                  >
-                    {tab.label}
-                  </button>
-                ))}
-              </div>
-              {extraTabs.length > 0 && (
+            {extraTabs.length > 0 && (
+              <div className="relative">
                 <button
-                  className="px-2 py-2 rounded-full border-2 border-gray-300 bg-gray-100 hover:bg-white hover:cursor-pointer flex items-center justify-center ml-2 transition-all duration-300 ease-in-out"
+                  className="px-4 py-2 rounded-full font-semibold border-2 border-gray-300 bg-gray-100 text-gray-700 hover:bg-white hover:cursor-pointer shadow-sm"
                   onClick={() => setShowAllTabs((v) => !v)}
-                  title={
-                    showAllTabs ? "Hide extra patterns" : "Show more patterns"
-                  }
                 >
-                  {showAllTabs ? (
-                    <IconChevronLeft size={20} />
-                  ) : (
-                    <IconChevronRight size={20} />
-                  )}
+                  More
                 </button>
-              )}
-            </div>
+                {showAllTabs && (
+                  <div className="absolute right-0 mt-2 w-64 bg-white border border-gray-200 rounded-xl shadow-lg z-50">
+                    <div className="py-2 max-h-80 overflow-auto">
+                      {extraTabs.map((tab) => (
+                        <button
+                          key={tab.value}
+                          className={`w-full text-left px-4 py-2 flex items-center justify-between hover:bg-gray-50 ${
+                            activeTab === tab.value ? "bg-gray-50" : ""
+                          }`}
+                          onClick={() => {
+                            setActiveTab(tab.value);
+                            setShowAllTabs(false);
+                          }}
+                        >
+                          <span className="whitespace-nowrap">{tab.label}</span>
+                          <span className="inline-flex items-center justify-center text-xs font-bold text-white bg-gray-500 rounded-full min-w-5 h-5 px-2">
+                            {tab.count}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
           <div className=" rounded-xl shadow p-4">
             {cards.length > 0 ? (

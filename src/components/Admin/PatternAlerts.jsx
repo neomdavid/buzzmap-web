@@ -149,8 +149,11 @@ export default function PatternAlerts({
 
   if (isLoading) {
     return (
-      <div className="flex justify-center items-center h-64">
-        <div className="loading loading-spinner loading-lg text-primary"></div>
+      <div className="space-y-4">
+        <div className="skeleton h-10 w-full rounded-xl" />
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div key={i} className="skeleton h-20 w-full rounded-xl" />
+        ))}
       </div>
     );
   }
