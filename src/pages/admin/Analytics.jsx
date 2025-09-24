@@ -35,6 +35,7 @@ import {
 import DengueMap from "../../components/DengueMap";
 import {
   PATTERN_TABS,
+  PATTERN_TAB_VALUES,
   getPatternColor,
   getPatternLabel,
   normalizePatternType,
@@ -94,6 +95,42 @@ const Analytics = () => {
   const { data: posts, isLoading: isLoadingPosts } = useGetPostsQuery();
   const { data: barangaysList, isLoading: isLoadingBarangays } =
     useGetAdminBarangaysQuery();
+
+  // Count barangays for the currently selected pattern tab
+  const selectedTabCount = useMemo(() => {
+    const items = patternResultsData?.data || [];
+    switch (selectedTab) {
+      case PATTERN_TAB_VALUES.SELECTED:
+        if (!mapSelectedBarangay) return 0;
+        return items.filter(
+          (item) =>
+            item.name.toLowerCase() === mapSelectedBarangay.toLowerCase()
+        ).length;
+      case PATTERN_TAB_VALUES.ALL:
+        return items.length;
+      case PATTERN_TAB_VALUES.SPIKES:
+        return items.filter((i) => normalizePatternType(i.pattern) === "spike")
+          .length;
+      case PATTERN_TAB_VALUES.INCREASE:
+        return items.filter(
+          (i) => normalizePatternType(i.pattern) === "increase"
+        ).length;
+      case PATTERN_TAB_VALUES.DECREASE:
+        return items.filter(
+          (i) => normalizePatternType(i.pattern) === "decrease"
+        ).length;
+      case PATTERN_TAB_VALUES.LOW_LEVEL_ACTIVITY:
+        return items.filter(
+          (i) => normalizePatternType(i.pattern) === "low_level_activity"
+        ).length;
+      case PATTERN_TAB_VALUES.NO_CHANGE:
+        return items.filter(
+          (i) => normalizePatternType(i.pattern) === "no_change"
+        ).length;
+      default:
+        return items.length;
+    }
+  }, [patternResultsData, selectedTab, mapSelectedBarangay]);
 
   // Get the barangay with spike pattern and highest death cases
   const spikeRecommendationDetails = useMemo(() => {
@@ -627,6 +664,9 @@ const Analytics = () => {
                   {tab.label}
                 </button>
               ))}
+            </div>
+            <div className="text-sm text-gray-600 -mt-2 mb-2">
+              {selectedTabCount} barangay{selectedTabCount === 1 ? "" : "s"}
             </div>
             <div className="flex flex-col gap-y-5 h-95 xl:h-120 2xl:h-125 mt-[-10px] py-3 overflow-y-scroll">
               <PatternAlerts

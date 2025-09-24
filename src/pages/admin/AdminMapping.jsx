@@ -56,7 +56,7 @@ const PATTERN_COLORS = {
   gradual_rise: "#FB8C00", // darker orange (warning)
   decline: "#388E3C", // darker green (success)
   stability: "#0288D1", // darker blue (info)
-  none: "#BDBDBD", // darker gray (default for no pattern)
+  none: "#10B981", // emerald-500 green for no pattern (QC base overlay)
   default: "#4a5568", // darker gray (fallback)
 };
 
@@ -140,7 +140,8 @@ function drawBarangayPolygons(
     ).toLowerCase();
 
     if (!patternType || patternType === "") patternType = "none";
-    const patternColor = PATTERN_COLORS[patternType] || PATTERN_COLORS.default;
+    // Force all barangays to use the QC emerald overlay color
+    const patternColor = PATTERN_COLORS.none;
 
     // Handle both Polygon and MultiPolygon geometries
     const coordsArray =
@@ -155,11 +156,11 @@ function drawBarangayPolygons(
 
       const polygon = new window.google.maps.Polygon({
         paths: path,
-        strokeColor: isHighlighted ? "#c9c9c9" : patternColor,
+        strokeColor: isHighlighted ? "#10B981" : patternColor,
         strokeOpacity: isHighlighted ? 1.0 : 0.8,
         strokeWeight: isHighlighted ? 4 : 2,
-        fillOpacity: isHighlighted ? 0 : 0.4,
-        fillColor: patternColor,
+        fillOpacity: isHighlighted ? 0.18 : 0.4,
+        fillColor: isHighlighted ? "#10B981" : patternColor,
         map,
         zIndex: isHighlighted ? 10 : 1,
         clickable: false,
@@ -204,11 +205,13 @@ const AdminMapping = () => {
   const markersRef = useRef([]);
   const polylinesRef = useRef([]);
   const infoWindowRef = useRef(null);
+  const overlayRef = useRef(null);
   const clustererRef = useRef(null);
 
   // State for barangay boundary data
   const [barangayGeoJsonData, setBarangayGeoJsonData] = useState(null);
   const [highlightedBarangay, setHighlightedBarangay] = useState(null);
+  const [selectedBarangayId, setSelectedBarangayId] = useState("");
   const barangayPolygonsRef = useRef([]);
 
   // Get admin user from Redux store
@@ -346,6 +349,12 @@ const AdminMapping = () => {
       barangayPolygonsRef.current.forEach((p) => p.setMap(null));
       barangayPolygonsRef.current = [];
       if (clustererRef.current) clustererRef.current.clearMarkers();
+      try {
+        if (overlayRef.current) {
+          overlayRef.current.setMap(null);
+          overlayRef.current = null;
+        }
+      } catch (_) {}
     };
   }, [isLoaded, report]);
 
@@ -480,22 +489,7 @@ const AdminMapping = () => {
     }
 
     if (report?.specific_location?.coordinates) {
-      const [mainLng, mainLat] = report.specific_location.coordinates;
-      filteredReports.forEach((r) => {
-        if (!r.specific_location?.coordinates) return;
-        const [lng, lat] = r.specific_location.coordinates;
-        const polyline = new window.google.maps.Polyline({
-          path: [
-            { lat: mainLat, lng: mainLng },
-            { lat, lng },
-          ],
-          strokeColor: "#F59E42",
-          strokeOpacity: 0.8,
-          strokeWeight: 2,
-          map: mapRef.current,
-        });
-        polylinesRef.current.push(polyline);
-      });
+      // Do not draw connecting lines to nearby reports
     }
   }, [allReports, filteredReports, report]);
 
@@ -522,18 +516,137 @@ const AdminMapping = () => {
     (barangay) => {
       if (mapRef.current && barangay && barangayGeoJsonData) {
         const barangayName = barangay.displayName || barangay.name;
+        // Update highlighted barangay immediately so UI reflects selection
+        if (barangayName) {
+          setHighlightedBarangay(barangayName);
+        }
+        // Persist selected id so dropdown remains on chosen option
+        if (barangay._id) {
+          setSelectedBarangayId(barangay._id);
+        }
+
+        // Find matching feature using normalized comparison to tolerate punctuation/case variants
+        const norm = (s) => normalizeBarangayName(s || "");
         const selectedFeature = barangayGeoJsonData.features.find(
-          (f) => f.properties.name === barangayName
+          (f) => norm(f.properties.name) === norm(barangayName)
         );
         if (selectedFeature && selectedFeature.geometry) {
           try {
-            const center = turf.centerOfMass(selectedFeature);
-            const [lng, lat] = center.geometry.coordinates || [];
-            if (lat && lng) {
-              const centerLatLng = new window.google.maps.LatLng(lat, lng);
-              mapRef.current.panTo(centerLatLng);
-              mapRef.current.setZoom(15);
-              setHighlightedBarangay(barangayName);
+            const { type, coordinates } = selectedFeature.geometry;
+            const bounds = new window.google.maps.LatLngBounds();
+            const addCoordsToBounds = (coords) => {
+              // coords is [lng, lat]
+              if (Array.isArray(coords) && coords.length === 2) {
+                bounds.extend(
+                  new window.google.maps.LatLng(coords[1], coords[0])
+                );
+              }
+            };
+            if (type === "Polygon") {
+              // coordinates: [ [ [lng,lat], ... ] ]
+              coordinates[0].forEach(addCoordsToBounds);
+            } else if (type === "MultiPolygon") {
+              // coordinates: [ [ [ [lng,lat], ... ] ], ... ]
+              coordinates.forEach((poly) => {
+                if (Array.isArray(poly) && poly[0]) {
+                  poly[0].forEach(addCoordsToBounds);
+                }
+              });
+            }
+            if (!bounds.isEmpty()) {
+              mapRef.current.fitBounds(bounds, 60);
+              try {
+                let centerLatLng = null;
+                try {
+                  const centroid = center(selectedFeature);
+                  const [cLng, cLat] = centroid?.geometry?.coordinates || [];
+                  if (typeof cLat === "number" && typeof cLng === "number") {
+                    centerLatLng = new window.google.maps.LatLng(cLat, cLng);
+                  }
+                } catch (_) {}
+                if (!centerLatLng) {
+                  centerLatLng = bounds.getCenter();
+                }
+                // Remove previous overlay
+                if (overlayRef.current) {
+                  overlayRef.current.setMap(null);
+                  overlayRef.current = null;
+                }
+                // Create custom overlay
+                class NameOverlay extends window.google.maps.OverlayView {
+                  constructor(position, labelHtml) {
+                    super();
+                    this.position = position;
+                    this.container = document.createElement("div");
+                    this.container.style.position = "absolute";
+                    this.container.style.pointerEvents = "auto";
+                    this.container.innerHTML = labelHtml;
+                  }
+                  onAdd() {
+                    const panes = this.getPanes();
+                    panes.floatPane.appendChild(this.container);
+                    const closeBtn =
+                      this.container.querySelector(".overlay-close-btn");
+                    if (closeBtn) {
+                      closeBtn.addEventListener("click", () => {
+                        try {
+                          this.setMap(null);
+                          if (overlayRef.current === this)
+                            overlayRef.current = null;
+                        } catch (_) {}
+                      });
+                    }
+                  }
+                  draw() {
+                    const projection = this.getProjection();
+                    if (!projection) return;
+                    const point = projection.fromLatLngToDivPixel(
+                      this.position
+                    );
+                    if (!point) return;
+                    const { offsetWidth, offsetHeight } = this.container;
+                    this.container.style.left = `${Math.round(
+                      point.x - offsetWidth / 2
+                    )}px`;
+                    this.container.style.top = `${Math.round(
+                      point.y - offsetHeight - 16
+                    )}px`;
+                  }
+                  onRemove() {
+                    if (this.container && this.container.parentNode) {
+                      this.container.parentNode.removeChild(this.container);
+                    }
+                    this.container = null;
+                  }
+                }
+                const labelHtml = `
+                  <div style="
+                    padding:12px 18px;
+                    border-radius:8px;
+                    background: #245261;
+                    color:#fff;
+                    font-weight:900;
+                    font-size:20px;
+                    letter-spacing:0.3px;
+                    border:1px solid rgba(255,255,255,0.3);
+                    box-shadow: 0 12px 36px rgba(0,0,0,0.3);
+                    backdrop-filter: blur(8px) saturate(115%);
+                    white-space: nowrap;
+                    position: relative;
+                  ">
+                    ${barangayName}
+                    <button class="overlay-close-btn" style="
+                      position:absolute;right:6px;top:7px;
+                      width:12px;height:12px;display:flex;align-items:center;justify-content:center;
+                      border-radius:9999px;border:0.8px solid rgba(255,255,255,0.45);
+                      background: rgba(255,255,255,0.12);color:#fff;cursor:pointer;
+                      font-size:12px;line-height:10px;
+                    " aria-label="Close">✕</button>
+                  </div>`;
+                const overlay = new NameOverlay(centerLatLng, labelHtml);
+                overlay.setMap(mapRef.current);
+                overlayRef.current = overlay;
+              } catch {}
             }
           } catch {}
         }
@@ -643,7 +756,7 @@ const AdminMapping = () => {
         nearbyReports={filteredReports}
         radius={1}
         onBarangaySelect={handleBarangaySelect}
-        selectedBarangay={highlightedBarangay}
+        selectedBarangay={selectedBarangayId || highlightedBarangay}
       />
       <article className="absolute z-100000 flex flex-col text-primary right-[10px] bottom-0 md:max-w-[60vw] lg:max-w-[62vw] xl:max-w-[69vw] 2xl:max-w-[72vw]">
         <p className="text-[20px] text-white shadow-sm font-semibold text-left mb-2 w-full">
