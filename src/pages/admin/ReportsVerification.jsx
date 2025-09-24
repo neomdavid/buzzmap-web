@@ -37,7 +37,7 @@ const ClusterStatusCell = (params) => {
     badgeClass = "badge-success";
   } else if (rejected === total) {
     statusText = `${rejected} of ${total} rejected`;
-    badgeClass = "badge-error";
+    badgeClass = "badge-error text-white";
   } else {
     // Mixed status or all pending - always show validated count
     statusText = `${validated} of ${total} validated`;
@@ -153,7 +153,7 @@ const ReportsVerification = () => {
       s === "Validated"
         ? "badge-success"
         : s === "Rejected"
-        ? "badge-error"
+        ? "badge-error text-white"
         : "badge-warning";
     return <span className={`badge ${cls}`}>{s}</span>;
   };
