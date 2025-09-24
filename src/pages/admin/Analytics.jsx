@@ -685,8 +685,9 @@ const Analytics = () => {
           </p>
           <div className="rounded-xl shadow-sm h-140 overflow-hidden min-h-250 relative bg-gray-100">
             {isLoadingBarangays ? (
-              <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
-                <span className="loading loading-spinner loading-lg text-primary"></span>
+              <div className="absolute inset-0 p-6">
+                <div className="skeleton h-8 w-64 mb-3 rounded-xl" />
+                <div className="skeleton h-full w-full rounded-xl" />
               </div>
             ) : !barangaysList ? (
               <div className="absolute inset-0 flex items-center justify-center bg-gray-100 text-error">

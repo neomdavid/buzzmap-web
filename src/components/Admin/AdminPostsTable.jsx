@@ -294,11 +294,9 @@ const AdminPostsTable = () => {
         </Link>
       </div>
       {isLoading ? (
-        <div className="flex items-center justify-center h-[400px]">
-          <div className="text-center">
-            <span className="loading loading-spinner loading-lg text-primary"></span>
-            <p className="mt-4 text-lg text-gray-600">Loading posts...</p>
-          </div>
+        <div className="h-[500px]">
+          <div className="skeleton h-8 w-56 mb-4 rounded-xl" />
+          <div className="skeleton h-[440px] w-full rounded-2xl" />
         </div>
       ) : rows.length === 0 ? (
         <div className="h-[500px] flex items-center justify-center text-gray-500">

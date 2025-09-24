@@ -53,12 +53,22 @@ const Dashboard = () => {
   // Handle loading and error states
   if (summaryLoading) {
     return (
-      <div className="flex items-center justify-center h-screen">
-        <div className="text-center">
-          <span className="loading loading-spinner loading-lg text-primary"></span>
-          <p className="mt-4 text-lg text-gray-600">Loading dashboard...</p>
+      <main className="flex flex-col w-full p-6">
+        <div className="skeleton h-28 w-full mb-6 rounded-2xl" />
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-12">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="skeleton h-36 w-full rounded-2xl" />
+          ))}
         </div>
-      </div>
+        <div className="mb-10">
+          <div className="skeleton h-8 w-56 mb-4 rounded-xl" />
+          <div className="skeleton h-96 w-full rounded-2xl" />
+        </div>
+        <div className="flex mt-4 gap-4 flex-col xl:flex-row">
+          <div className="skeleton h-86 w-full rounded-lg" />
+          <div className="skeleton h-86 w-full rounded-lg" />
+        </div>
+      </main>
     );
   }
   if (summaryError) return <div>Error fetching data...</div>;
@@ -140,15 +150,11 @@ const Dashboard = () => {
       {showAnalysisModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-8 max-w-md w-full mx-4">
-            <div className="text-center">
-              <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-primary mx-auto mb-4"></div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                Analyzing Reports...
-              </h3>
-              <p className="text-gray-600">
-                Processing crowdsourced data for insights. This may take a
-                moment.
-              </p>
+            <div className="space-y-3">
+              <div className="skeleton h-8 w-3/4 mx-auto rounded-xl" />
+              <div className="skeleton h-4 w-full rounded-xl" />
+              <div className="skeleton h-4 w-5/6 rounded-xl" />
+              <div className="skeleton h-4 w-4/6 rounded-xl" />
             </div>
           </div>
         </div>
