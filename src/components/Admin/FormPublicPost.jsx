@@ -8,6 +8,8 @@ import { useSelector } from "react-redux"; // To get the token
 import { toast } from "react-toastify";
 
 const FormPublicPost = ({ onSuccess }) => {
+  const MAX_TITLE_CHARS = 120;
+  const MAX_CONTENT_CHARS = 2000;
   const [postType, setPostType] = useState("news");
   const [postTitle, setPostTitle] = useState("");
   const [postContent, setPostContent] = useState("");
@@ -51,6 +53,23 @@ const FormPublicPost = ({ onSuccess }) => {
     e.preventDefault();
     setImageError("");
     setSubmitError("");
+    // Trim and validate text limits
+    const trimmedTitle = postTitle.trim();
+    const trimmedContent = postContent.trim();
+    if (!trimmedTitle || !trimmedContent) {
+      setSubmitError("Title and content cannot be empty.");
+      return;
+    }
+    if (trimmedTitle.length > MAX_TITLE_CHARS) {
+      setSubmitError(`Title must be at most ${MAX_TITLE_CHARS} characters.`);
+      return;
+    }
+    if (trimmedContent.length > MAX_CONTENT_CHARS) {
+      setSubmitError(
+        `Content must be at most ${MAX_CONTENT_CHARS} characters.`
+      );
+      return;
+    }
     // Re-validate images before confirming
     const MAX_FILE_MB = 2; // per file limit
     const MAX_TOTAL_MB = 8; // total limit
@@ -79,8 +98,8 @@ const FormPublicPost = ({ onSuccess }) => {
     setIsSubmitting(true);
     try {
       const formData = new FormData();
-      formData.append("title", postTitle);
-      formData.append("content", postContent);
+      formData.append("title", postTitle.trim());
+      formData.append("content", postContent.trim());
       formData.append("publishDate", `${postDate}T${postTime}:00Z`);
       formData.append("category", postType);
       images.forEach((img) => formData.append("images", img));
@@ -233,8 +252,12 @@ const FormPublicPost = ({ onSuccess }) => {
               onChange={(e) => setPostTitle(e.target.value)}
               placeholder="Enter post title..."
               className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary outline-none"
+              maxLength={MAX_TITLE_CHARS}
               required
             />
+            <div className="text-xs text-gray-500 text-right">
+              {postTitle.trim().length}/{MAX_TITLE_CHARS}
+            </div>
           </div>
 
           <div className="flex flex-col gap-2">
@@ -246,8 +269,12 @@ const FormPublicPost = ({ onSuccess }) => {
               onChange={(e) => setPostContent(e.target.value)}
               placeholder="Write your post content here..."
               className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary outline-none min-h-[120px]"
+              maxLength={MAX_CONTENT_CHARS}
               required
             />
+            <div className="text-xs text-gray-500 text-right">
+              {postContent.trim().length}/{MAX_CONTENT_CHARS}
+            </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

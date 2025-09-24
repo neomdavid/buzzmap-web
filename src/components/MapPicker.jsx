@@ -5,10 +5,7 @@ import React, {
   forwardRef,
   useImperativeHandle,
 } from "react";
-import point from "@turf/point";
-import bbox from "@turf/bbox";
-import polygon from "@turf/polygon";
-import booleanPointInPolygon from "@turf/boolean-point-in-polygon";
+import { point, bbox, polygon, booleanPointInPolygon } from "@turf/turf";
 
 const QC_CENTER = { lat: 14.676, lng: 121.0437 };
 const QC_BOUNDS = {
