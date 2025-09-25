@@ -291,7 +291,7 @@ const AppWithProviders = () => {
           ),
         },
         {
-          path: "/admin/denguemapping",
+          path: "/admin/mapping",
           element: (
             <Suspense fallback={<div style={{ minHeight: 120 }} />}>
               <DengueMapping />

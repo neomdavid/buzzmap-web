@@ -126,9 +126,9 @@ const Dashboard = () => {
   const totalClusters =
     summary?.clusters?.total || fullyResolved + partiallyResolved + notResolved;
 
-  // Handler to redirect to /admin/denguemapping when a barangay is clicked
+  // Handler to redirect to /admin/mapping when a barangay is clicked
   const handleDashboardMapPolygonClick = () => {
-    navigate("/admin/denguemapping");
+    navigate("/admin/mapping");
   };
 
   // Add null check for user
@@ -245,7 +245,7 @@ const Dashboard = () => {
         {/* ReportCard for Clusters */}
         <div
           className="cursor-pointer"
-          onClick={() => navigate("/admin/denguemapping")}
+          onClick={() => navigate("/admin/mapping")}
         >
           <ReportCard
             title="Clusters"

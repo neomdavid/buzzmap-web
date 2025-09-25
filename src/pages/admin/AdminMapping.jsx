@@ -660,7 +660,7 @@ const AdminMapping = () => {
           <span className="hidden md:inline">Analytics</span>
         </button>
         <button
-          onClick={() => navigate("/admin/denguemapping")}
+          onClick={() => navigate("/admin/mapping")}
           className="flex items-center cursor-pointer gap-1.5 px-3 py-2 rounded-xl hover:bg-white/10 transition"
           title="Mapping"
         >

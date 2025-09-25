@@ -18,7 +18,7 @@ export const PATTERN_COLORS = {
 
 // Pattern colors for user map
 export const USER_PATTERN_COLORS_MAP = {
-  increase: "#e53e3e", // red (error) - for increasing cases
+  increase: "#dd6b20", // orange - for increasing cases
   decrease: "#38a169", // green (success) - for decreasing cases
   no_change: "#718096", // gray - for stable/no change/none status
   default: "#718096", // gray (fallback)

@@ -1218,7 +1218,7 @@ const DengueMapping = () => {
   return (
     <main className="flex flex-col w-full">
       <p className="flex justify-center text-5xl font-extrabold mb-12 text-center md:justify-start md:text-left md:w-[78%]">
-        Dengue Mapping
+        Mapping
       </p>
 
       <div className="relative mb-4 flex justify-between items-center">
