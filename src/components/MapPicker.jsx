@@ -5,7 +5,13 @@ import React, {
   forwardRef,
   useImperativeHandle,
 } from "react";
-import { point, bbox, polygon, booleanPointInPolygon } from "@turf/turf";
+import {
+  point,
+  bbox,
+  polygon,
+  booleanPointInPolygon,
+  union as turfUnion,
+} from "@turf/turf";
 
 const QC_CENTER = { lat: 14.676, lng: 121.0437 };
 const QC_BOUNDS = {
@@ -18,6 +24,44 @@ const QC_BOUNDS = {
 const HIGHLIGHT_COLOR = "#2563eb"; // blue for highlight
 const HIGHLIGHT_STROKE = "#111827"; // dark for border
 
+// Neutral, low-saturation map styles to avoid yellow tint
+const MAP_STYLES = [
+  // Base canvas
+  { elementType: "geometry", stylers: [{ color: "#ffffff" }] },
+  { elementType: "labels.icon", stylers: [{ visibility: "off" }] },
+  { elementType: "labels.text.fill", stylers: [{ color: "#1f2937" }] },
+  { elementType: "labels.text.stroke", stylers: [{ color: "#ffffff" }] },
+
+  // Water and natural areas to very light cool white
+  {
+    featureType: "water",
+    elementType: "geometry",
+    stylers: [{ color: "#eef2f7" }],
+  },
+  {
+    featureType: "landscape.natural",
+    elementType: "geometry",
+    stylers: [{ color: "#fafafa" }],
+  },
+
+  // Roads to light gray
+  {
+    featureType: "road",
+    elementType: "geometry",
+    stylers: [{ color: "#f3f4f6" }],
+  },
+  {
+    featureType: "road",
+    elementType: "labels.icon",
+    stylers: [{ visibility: "off" }],
+  },
+
+  // Remove clutter
+  { featureType: "poi", stylers: [{ visibility: "off" }] },
+  { featureType: "transit", stylers: [{ visibility: "off" }] },
+  { featureType: "landscape.man_made", stylers: [{ visibility: "off" }] },
+];
+
 // Utility to load Google Maps JS API ONCE
 let googleMapsScriptLoadingPromise = null;
 function loadGoogleMapsScript(apiKey) {
@@ -28,29 +72,28 @@ function loadGoogleMapsScript(apiKey) {
     return googleMapsScriptLoadingPromise;
   }
   googleMapsScriptLoadingPromise = new Promise((resolve, reject) => {
-    if (document.getElementById("google-maps-script")) {
-      const check = () => {
-        if (window.google && window.google.maps && window.google.maps.Map) {
-          resolve();
-        } else {
-          setTimeout(check, 50);
-        }
-      };
-      check();
-      return;
-    }
     const script = document.createElement("script");
-    script.id = "google-maps-script";
     script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}`;
-    script.onload = () => resolve();
-    script.onerror = (err) => reject(err);
-    document.body.appendChild(script);
+    script.async = true;
+    script.defer = true;
+    script.onload = resolve;
+    script.onerror = reject;
+    document.head.appendChild(script);
   });
   return googleMapsScriptLoadingPromise;
 }
 
 const MapPicker = forwardRef(
-  ({ onLocationSelect, defaultCoordinates, selectedBarangay }, ref) => {
+  (
+    {
+      onLocationSelect,
+      defaultCoordinates,
+      selectedBarangay,
+      showOutsideQcOverlay = false,
+      showBarangayLabels = false,
+    },
+    ref
+  ) => {
     const mapRef = useRef(null);
     const mapInstance = useRef(null);
     const markerRef = useRef(null);
@@ -58,28 +101,57 @@ const MapPicker = forwardRef(
     const [barangayData, setBarangayData] = useState(null);
     const [isDataLoaded, setIsDataLoaded] = useState(false);
     const [mapReady, setMapReady] = useState(false);
-    const [toast, setToast] = useState(null);
+    const [highlightedBarangay, setHighlightedBarangay] = useState(null);
     const [markerPosition, setMarkerPosition] = useState(null);
-    const [highlightedBarangay, setHighlightedBarangay] = useState(null); // Only for search highlight
+    const [toast, setToast] = useState(null);
+    const [apiKey, setApiKey] = useState(
+      import.meta.env.VITE_GOOGLE_MAPS_API_KEY
+    );
+    const [qcUnionHoles, setQcUnionHoles] = useState([]);
 
-    const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
-
-    // Load barangay boundaries (memoized)
     useEffect(() => {
-      import("../utils/geojsonLoader").then(({ getBarangaysGeoJSON }) => {
-        getBarangaysGeoJSON()
-          .then((data) => {
-            setBarangayData(data);
-            setIsDataLoaded(true);
-          })
-          .catch(() => {
-            setToast({
-              type: "error",
-              message: "Failed to load barangay boundaries",
-            });
-          });
-      });
+      // Load barangay geojson (public/)
+      fetch("/quezon_barangays_boundaries.geojson")
+        .then((r) => r.json())
+        .then((gj) => {
+          setBarangayData(gj);
+          setIsDataLoaded(true);
+        });
     }, []);
+
+    // Compute a single union polygon for QC to use as a hole for the outside overlay
+    useEffect(() => {
+      if (!barangayData) return;
+      try {
+        let merged = null;
+        for (const f of barangayData.features) {
+          const feat = {
+            type: "Feature",
+            properties: {},
+            geometry: f.geometry,
+          };
+          merged = merged ? turfUnion(merged, feat) : feat;
+        }
+        const holes = [];
+        if (merged && merged.geometry) {
+          if (merged.geometry.type === "Polygon") {
+            const outer = merged.geometry.coordinates[0];
+            const path = outer.map(([lng, lat]) => ({ lat, lng }));
+            holes.push([...path].reverse());
+          } else if (merged.geometry.type === "MultiPolygon") {
+            for (const poly of merged.geometry.coordinates) {
+              const outer = poly[0];
+              const path = outer.map(([lng, lat]) => ({ lat, lng }));
+              holes.push([...path].reverse());
+            }
+          }
+        }
+        setQcUnionHoles(holes);
+      } catch (e) {
+        console.warn("QC union failed; will fall back to per-feature holes", e);
+        setQcUnionHoles([]);
+      }
+    }, [barangayData]);
 
     // Helper: find barangay by point
     function findBarangay(coords, geojson) {
@@ -152,7 +224,7 @@ const MapPicker = forwardRef(
       return null;
     }
 
-    // Draw polygons and marker
+    // Draw polygons, labels and marker
     function drawMapFeatures(
       map,
       barangayData,
@@ -165,6 +237,48 @@ const MapPicker = forwardRef(
       });
       overlaysRef.current.forEach((o) => o.setMap(null));
       overlaysRef.current = [];
+
+      // Outside-of-QC mask using fixed outer rectangle with holes per barangay (Flutter approach)
+      if (showOutsideQcOverlay) {
+        const holes = [];
+        if (barangayData && barangayData.features) {
+          barangayData.features.forEach((feature) => {
+            const geometry = feature.geometry;
+            if (geometry.type === "Polygon") {
+              const outer = geometry.coordinates[0];
+              const path = outer.map(([lng, lat]) => ({ lat, lng }));
+              holes.push(path);
+            } else if (geometry.type === "MultiPolygon") {
+              geometry.coordinates.forEach((poly) => {
+                const outer = poly[0];
+                const path = outer.map(([lng, lat]) => ({ lat, lng }));
+                holes.push(path);
+              });
+            }
+          });
+        }
+
+        // Outer rectangle (expanded bounds around QC)
+        const outerBounds = [
+          { lat: 16.0, lng: 119.0 }, // top-left
+          { lat: 16.0, lng: 122.5 }, // top-right
+          { lat: 13.5, lng: 122.5 }, // bottom-right
+          { lat: 13.5, lng: 119.0 }, // bottom-left
+        ];
+
+        const outsideOverlay = new window.google.maps.Polygon({
+          paths: [outerBounds, ...holes],
+          strokeOpacity: 0,
+          fillColor: "#ef4444",
+          fillOpacity: 0.2,
+          map,
+          zIndex: 0,
+          clickable: false,
+        });
+        overlaysRef.current.push(outsideOverlay);
+      }
+
+      // Polygons
       barangayData.features.forEach((feature) => {
         const geometry = feature.geometry;
         const coordsArray =
@@ -179,21 +293,63 @@ const MapPicker = forwardRef(
           const isHighlighted =
             highlightedBarangayName &&
             feature.properties.name === highlightedBarangayName;
-          const polygon = new window.google.maps.Polygon({
+          const polygonOverlay = new window.google.maps.Polygon({
             paths: path,
             strokeColor: isHighlighted ? HIGHLIGHT_STROKE : "#333",
-            strokeOpacity: isHighlighted ? 1 : 0.7,
-            strokeWeight: isHighlighted ? 3 : 1,
-            fillOpacity: isHighlighted ? 0.1 : 0.1, // Always fill with base color
-            fillColor: isHighlighted ? HIGHLIGHT_COLOR : "#3182ce", // Highlighted or base color
+            strokeOpacity: isHighlighted ? 1 : 0,
+            strokeWeight: isHighlighted ? 3 : 0,
+            // Keep QC clear unless highlighted
+            fillOpacity: isHighlighted ? 0.1 : 0,
+            fillColor: isHighlighted ? HIGHLIGHT_COLOR : "#3182ce",
             map,
             zIndex: isHighlighted ? 10 : 1,
             clickable: false,
           });
-          overlaysRef.current.push(polygon);
+          overlaysRef.current.push(polygonOverlay);
         });
       });
-      // Draw marker
+
+      // Labels (centroid markers) at higher zoom levels
+      if (showBarangayLabels && map.getZoom() >= 14) {
+        barangayData.features.forEach((feature) => {
+          // Compute centroid from outer ring of first polygon
+          let outer = null;
+          if (feature.geometry.type === "Polygon") {
+            outer = feature.geometry.coordinates[0];
+          } else if (feature.geometry.type === "MultiPolygon") {
+            outer = feature.geometry.coordinates[0][0];
+          }
+          if (!outer) return;
+          const centroid = outer.reduce(
+            (acc, [lng, lat], idx, arr) => {
+              // simple average centroid (sufficient for small polygons)
+              return {
+                lat: acc.lat + lat / arr.length,
+                lng: acc.lng + lng / arr.length,
+              };
+            },
+            { lat: 0, lng: 0 }
+          );
+          const labelMarker = new window.google.maps.Marker({
+            position: centroid,
+            map,
+            icon: {
+              path: window.google.maps.SymbolPath.CIRCLE,
+              scale: 0,
+            },
+            label: {
+              text: feature.properties.name || "",
+              color: "#111827",
+              fontSize: "12px",
+              fontWeight: "600",
+            },
+            zIndex: 20,
+          });
+          overlaysRef.current.push(labelMarker);
+        });
+      }
+
+      // Marker
       if (markerPos) {
         console.log("[MapPicker DEBUG] Placing marker at:", markerPos);
         if (markerRef.current) markerRef.current.setMap(null);
@@ -202,6 +358,7 @@ const MapPicker = forwardRef(
           map,
           title: "Selected Location",
         });
+        overlaysRef.current.push(markerRef.current);
         console.log("[MapPicker DEBUG] Marker created:", markerRef.current);
       } else {
         if (markerRef.current) markerRef.current.setMap(null);
@@ -244,8 +401,21 @@ const MapPicker = forwardRef(
             mapTypeControl: false,
             streetViewControl: false,
             fullscreenControl: false,
+            styles: MAP_STYLES,
           });
           setMapReady(true);
+
+          // Redraw labels on zoom changes
+          mapInstance.current.addListener("zoom_changed", () => {
+            if (barangayData) {
+              drawMapFeatures(
+                mapInstance.current,
+                barangayData,
+                highlightedBarangay,
+                markerPosition
+              );
+            }
+          });
         }
         const map = mapInstance.current;
         drawMapFeatures(map, barangayData, highlightedBarangay, markerPosition);
