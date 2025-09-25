@@ -65,6 +65,30 @@ export default function DengueChartCard() {
     number_of_weeks: weeks,
   });
 
+  // Friendly handling for not-found/404
+  const barangayNotFound = useMemo(() => {
+    const apiFlag =
+      trendsData &&
+      trendsData.success === false &&
+      (trendsData.error === "Barangay not found in dataset" ||
+        (typeof trendsData.error === "string" &&
+          trendsData.error.toLowerCase().includes("barangay not found")));
+    const errData = error && error.data ? error.data : {};
+    const errMsg = (
+      (errData.error || errData.message || error?.error || "") + ""
+    ).toLowerCase();
+    return Boolean(apiFlag || errMsg.includes("barangay not found"));
+  }, [trendsData, error]);
+
+  const httpNotFound = useMemo(() => {
+    const statuses = [
+      error?.status,
+      error?.originalStatus,
+      error?.data?.status,
+    ];
+    return statuses?.some?.((s) => s === 404) || false;
+  }, [error]);
+
   // Get color based on pattern using centralized configuration
   const lineColor = getPatternColor(selectedBarangayPattern, "stroke");
 
@@ -144,15 +168,13 @@ export default function DengueChartCard() {
     return weekEntries;
   }, [trendsData]);
 
-  const chartLabels = chartData.map((d) => d.week);
-  const chartCases = chartData.map((d) => d.cases);
+  const chartCases = chartData.map((d) => d.cases ?? 0);
+  const hasAnyData = chartData.length > 0 && chartCases.some((c) => c > 0);
 
   // Find the max cases for the current chartData (for consistent Y axis)
-  const maxCases = chartCases.length > 0 ? Math.max(5, ...chartCases) : 10;
+  const maxCases = hasAnyData ? Math.max(5, ...chartCases) : 10;
 
-  console.log("Transformed Chart Data:", chartData);
-
-  if (isLoading) {
+  if (isLoading || barangaysLoading) {
     return (
       <div className="w-full bg-primary p-6 rounded-sm flex items-center justify-center">
         <span className="loading loading-spinner loading-lg text-white"></span>
@@ -160,18 +182,11 @@ export default function DengueChartCard() {
     );
   }
 
-  if (error) {
-    return (
-      <div className="w-full bg-primary p-6 rounded-sm flex items-center justify-center">
-        <p className="text-white">Error loading chart data</p>
-      </div>
-    );
-  }
-
-  // Do not early-return on empty data; keep UI usable and show toast instead
+  // Do not early-return on error; show empty container with message
+  const showNoData = barangayNotFound || httpNotFound || !hasAnyData;
 
   return (
-    <div className="w-full bg-primary p-6 rounded-sm">
+    <div className="w-full bg-primary p-6 rounded-sm relative">
       <div className="flex justify-between items-center mb-4">
         <div>
           <p className="text-2xl text-center font-semibold text-white">
@@ -224,11 +239,11 @@ export default function DengueChartCard() {
           </select>
         </div>
       </div>
-      {(chartData?.length ?? 0) === 0 ? (
+
+      {showNoData ? (
         <div className="w-full h-[200px] bg-primary/60 rounded-sm flex items-center justify-center">
-          <p className="text-white/80">
-            No chart data available for {selectedBarangay} with the selected
-            week range.
+          <p className="text-white/80 text-sm">
+            There has been no recorded dengue cases for {selectedBarangay}.
           </p>
         </div>
       ) : (
@@ -270,12 +285,7 @@ export default function DengueChartCard() {
               dataKey="cases"
               stroke={lineColor}
               strokeWidth={3}
-              dot={{
-                r: 5,
-                stroke: lineColor,
-                strokeWidth: 2,
-                fill: lineColor,
-              }}
+              dot={{ r: 5, stroke: lineColor, strokeWidth: 2, fill: lineColor }}
               activeDot={{
                 r: 7,
                 stroke: lineColor,
