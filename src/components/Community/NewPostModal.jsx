@@ -91,6 +91,17 @@ const NewPostModal = forwardRef(
         errors.images = "Please upload at least 1 photo of the breeding site.";
       }
 
+      // Validate allowed file types
+      if (images && images.length > 0) {
+        const invalid = images.some(
+          (img) =>
+            img && img.type && !["image/jpeg", "image/png"].includes(img.type)
+        );
+        if (invalid) {
+          errors.images = "Only JPG and PNG files are allowed.";
+        }
+      }
+
       // Validate that date is not in the future
       if (date) {
         const selectedDate = new Date(date);
@@ -615,6 +626,9 @@ const NewPostModal = forwardRef(
                 description={description}
                 onDescriptionChange={setDescription}
               />
+              <div className="w-full pl-20 text-sm text-gray-500 mt-1">
+                Only JPG and PNG files are allowed.
+              </div>
               {formErrors.images && (
                 <div className="w-full pl-20 mt-1">
                   <span className="text-error text-sm">

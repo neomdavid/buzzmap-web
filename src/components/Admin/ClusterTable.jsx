@@ -139,6 +139,7 @@ function ClusterTable({ clustersList = [], onOpenDetails }) {
         rejected: counts.rejected,
         pending: counts.pending,
         unprocessed: counts.unprocessed,
+        latestReportAtValue: latest,
         latestReportAt: latest
           ? latest.toLocaleString("en-US", {
               weekday: "short",
@@ -158,7 +159,14 @@ function ClusterTable({ clustersList = [], onOpenDetails }) {
     () => [
       { headerName: "Barangay", field: "barangay", flex: 1 },
       { headerName: "Date Range", field: "dateRange", flex: 1 },
-      { headerName: "Latest Report", field: "latestReportAt", flex: 1 },
+      {
+        headerName: "Latest Report",
+        field: "latestReportAt",
+        flex: 1,
+        filter: "agDateColumnFilter",
+        valueGetter: (p) => p.data.latestReportAtValue,
+        valueFormatter: (p) => p.data.latestReportAt,
+      },
       {
         headerName: "Status",
         field: "status",
@@ -170,6 +178,9 @@ function ClusterTable({ clustersList = [], onOpenDetails }) {
         field: "actions",
         width: 170,
         cellRenderer: ClusterActionsCell,
+        filter: false,
+        sortable: false,
+        suppressMenu: true,
       },
     ],
     []
@@ -215,6 +226,7 @@ function ClusterTable({ clustersList = [], onOpenDetails }) {
         animateRows={true}
         pagination={true}
         paginationPageSize={10}
+        paginationPageSizeSelector={[10, 20, 50]}
         context={{ openClusterDetails: onOpenDetails }}
       />
     </div>
