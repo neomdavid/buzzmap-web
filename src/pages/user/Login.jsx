@@ -242,6 +242,7 @@ const Login = () => {
           <div className="flex flex-col h-full"></div>
 
           <button
+            type="submit"
             disabled={isLoading || !email.trim() || !password.trim()}
             className={`bg-primary  font-extrabold shadow-[2px_6px_3px_rgba(0,0,0,0.20)] font-bold text-white w-xs py-3 px-4 rounded-2xl hover:cursor-pointer hover:bg-base-200/60 transition-all duration-300 ${
               (isLoading || !email.trim() || !password.trim()) &&
