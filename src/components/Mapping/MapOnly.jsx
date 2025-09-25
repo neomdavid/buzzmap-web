@@ -93,6 +93,7 @@ const MapOnly = forwardRef(
       validatedOnly = false,
       hideClusterOverlays = false,
       suppressClusterStyling = false,
+      disableSiteInfoWindows = false, // NEW: prevent site info windows
     },
     ref
   ) => {
@@ -555,7 +556,7 @@ const MapOnly = forwardRef(
                     : ""),
               });
 
-              if (!validatedOnly) {
+              if (!validatedOnly && !disableSiteInfoWindows) {
                 marker.addListener("click", () => {
                   // Close existing info window if open
                   if (infoWindow) {
