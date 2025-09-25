@@ -30,13 +30,15 @@ const ClusterStatusCell = (params) => {
 };
 
 const ClusterActionsCell = (params) => (
-  <button
-    className="flex items-center gap-1 text-primary hover:bg-gray-200 p-1 rounded-md hover:cursor-pointer"
-    onClick={() => params.context?.openClusterDetails?.(params.data?.__raw)}
-  >
-    <IconSearch size={13} stroke={2.5} />
-    <span className="text-sm">view</span>
-  </button>
+  <div className="h-full w-full flex items-center justify-center">
+    <button
+      className=" whitespace-nowrap flex items-center justify-center gap-1 h-7 min-h-0 px-1 text-primary hover:cursor-pointer hover:bg-gray-200 rounded-md"
+      onClick={() => params.context?.openClusterDetails?.(params.data?.__raw)}
+    >
+      <IconSearch size={13} stroke={2.5} />
+      <span className="text-sm">view</span>
+    </button>
+  </div>
 );
 
 const formatDateRange = (start, end, fallbackReports) => {
@@ -171,6 +173,8 @@ function ClusterTable({ clustersList = [], onOpenDetails }) {
         headerName: "Status",
         field: "status",
         flex: 1,
+        headerClass: "flex items-center justify-center",
+        cellClass: "flex items-center justify-center",
         cellRenderer: ClusterStatusCell,
       },
       {

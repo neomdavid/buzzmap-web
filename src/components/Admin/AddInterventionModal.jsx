@@ -10,7 +10,7 @@ import {
 } from "@tabler/icons-react";
 import { useCreateInterventionMutation, dengueApi } from "../../api/dengueApi"; // Import dengueApi
 import InterventionLocationPicker from "./InterventionLocationPicker"; // Import the new component
-import center from "@turf/center"; // Import turf for calculations
+import centerOfMass from "@turf/center-of-mass"; // Import correct turf fn
 import dayjs from "dayjs";
 import { toast } from "react-toastify"; // Import react-toastify
 import {
@@ -175,7 +175,7 @@ const AddInterventionModal = ({
       );
       if (selectedFeature && selectedFeature.geometry) {
         try {
-          const center = turf.centerOfMass(selectedFeature);
+          const center = centerOfMass(selectedFeature);
           if (center && center.geometry && center.geometry.coordinates) {
             const [lng, lat] = center.geometry.coordinates;
             setFocusCommand({
@@ -293,7 +293,7 @@ const AddInterventionModal = ({
         );
         if (selectedFeature && selectedFeature.geometry) {
           try {
-            const center = turf.centerOfMass(selectedFeature);
+            const center = centerOfMass(selectedFeature);
             if (center && center.geometry && center.geometry.coordinates) {
               const [lng, lat] = center.geometry.coordinates;
               setFocusCommand({
@@ -446,7 +446,7 @@ const AddInterventionModal = ({
           );
           if (selectedFeature && selectedFeature.geometry) {
             try {
-              const center = turf.centerOfMass(selectedFeature);
+              const center = centerOfMass(selectedFeature);
               if (center && center.geometry && center.geometry.coordinates) {
                 const [lng, lat] = center.geometry.coordinates;
                 setFocusCommand({

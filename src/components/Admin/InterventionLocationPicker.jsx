@@ -1,5 +1,9 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import center from "@turf/center";
+import {
+  point as turfPoint,
+  booleanPointInPolygon,
+  polygon as turfPolygon,
+} from "@turf/turf";
 import { useGetBarangaysQuery } from "../../api/dengueApi";
 import {
   getPatternColor,
@@ -124,7 +128,7 @@ const InterventionLocationPicker = ({
           error: "Boundary data not loaded",
         };
       }
-      const point = turf.point([latLng.lng, latLng.lat]);
+      const point = turfPoint([latLng.lng, latLng.lat]);
       let foundBarangayName = null;
       let isWithinAnyBarangay = false;
       for (const feature of qcBoundaryFeatures) {
@@ -163,7 +167,7 @@ const InterventionLocationPicker = ({
 
               // Now try to validate the (possibly fixed) polygon
               try {
-                isInside = turf.booleanPointInPolygon(point, validFeature);
+                isInside = booleanPointInPolygon(point, validFeature);
                 if (validFeature !== feature) {
                   console.log(
                     "Successfully used fixed polygon for",
@@ -224,8 +228,8 @@ const InterventionLocationPicker = ({
               for (const polygonCoords of validMultiPolygonFeature.geometry
                 .coordinates) {
                 try {
-                  const polygonFeature = turf.polygon(polygonCoords);
-                  if (turf.booleanPointInPolygon(point, polygonFeature)) {
+                  const polygonFeature = turfPolygon(polygonCoords);
+                  if (booleanPointInPolygon(point, polygonFeature)) {
                     isInside = true;
                     break;
                   }
