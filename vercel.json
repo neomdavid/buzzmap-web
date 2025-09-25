@@ -1,5 +1,19 @@
 {
-  "rewrites": [{ "source": "/(.*)", "destination": "/" }],
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/" }
+  ],
+  "redirects": [
+    {
+      "source": "/latest/meta-data/(.*)",
+      "destination": "/404",
+      "permanent": false
+    },
+    {
+      "source": "/latest/(.*)",
+      "destination": "/404", 
+      "permanent": false
+    }
+  ],
   "headers": [
     {
       "source": "/(.*)",
@@ -176,7 +190,6 @@
     },
     {
       "source": "/latest/meta-data/(.*)",
-      "statusCode": 403,
       "headers": [
         {
           "key": "Content-Type",
@@ -194,7 +207,6 @@
     },
     {
       "source": "/latest/(.*)",
-      "statusCode": 403,
       "headers": [
         {
           "key": "Content-Type",
