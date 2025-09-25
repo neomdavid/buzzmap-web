@@ -38,22 +38,9 @@ import ArchivedUsers from "./pages/superadmin/ArchivedUsers";
 import ArchivedAdmins from "./pages/superadmin/ArchivedAdmins";
 import AuthGuard from "./components/AuthGuard";
 
-// Lazy-load heavy, map/chart routes
-const Mapping = lazy(() => import("./pages/user/Mapping.jsx"));
-const SpecificLocation = lazy(() =>
-  import("./pages/user/SpecificLocation.jsx")
-);
-const DengueMapping = lazy(() => import("./pages/admin/DengueMapping.jsx"));
-const AdminMapping = lazy(() => import("./pages/admin/AdminMapping.jsx"));
-const Analytics = lazy(() => import("./pages/admin/Analytics.jsx"));
-const Interventions = lazy(() => import("./pages/admin/Interventions.jsx"));
-const ReportsVerification = lazy(() =>
-  import("./pages/admin/ReportsVerification.jsx")
-);
-const AllInterventions = lazy(() =>
-  import("./pages/admin/AllInterventions.jsx")
-);
+// Lazy-load heavy, map/chart routes - now handled by LazyComponent
 import { toastError } from "./utils.jsx";
+import LazyComponent from "./components/LazyComponent";
 
 // Helper functions
 const getUserData = () => {
@@ -198,17 +185,27 @@ const AppWithProviders = () => {
         {
           path: "/mapping",
           element: (
-            <Suspense fallback={<div style={{ minHeight: 120 }} />}>
-              <Mapping />
-            </Suspense>
+            <LazyComponent
+              importFunc={() => import("./pages/user/Mapping.jsx")}
+              fallback={
+                <div className="flex items-center justify-center min-h-screen">
+                  <div className="loading loading-spinner loading-lg"></div>
+                </div>
+              }
+            />
           ),
         },
         {
           path: "/mapping/:id",
           element: (
-            <Suspense fallback={<div style={{ minHeight: 120 }} />}>
-              <SpecificLocation />
-            </Suspense>
+            <LazyComponent
+              importFunc={() => import("./pages/user/SpecificLocation.jsx")}
+              fallback={
+                <div className="flex items-center justify-center min-h-screen">
+                  <div className="loading loading-spinner loading-lg"></div>
+                </div>
+              }
+            />
           ),
         },
         { path: "/community", element: <Community /> },
@@ -277,41 +274,66 @@ const AppWithProviders = () => {
         {
           path: "/admin/analytics",
           element: (
-            <Suspense fallback={<div style={{ minHeight: 120 }} />}>
-              <Analytics />
-            </Suspense>
+            <LazyComponent
+              importFunc={() => import("./pages/admin/Analytics.jsx")}
+              fallback={
+                <div className="flex items-center justify-center min-h-screen">
+                  <div className="loading loading-spinner loading-lg"></div>
+                </div>
+              }
+            />
           ),
         },
         {
           path: "/admin/reportsverification",
           element: (
-            <Suspense fallback={<div style={{ minHeight: 120 }} />}>
-              <ReportsVerification />
-            </Suspense>
+            <LazyComponent
+              importFunc={() => import("./pages/admin/ReportsVerification.jsx")}
+              fallback={
+                <div className="flex items-center justify-center min-h-screen">
+                  <div className="loading loading-spinner loading-lg"></div>
+                </div>
+              }
+            />
           ),
         },
         {
           path: "/admin/mapping",
           element: (
-            <Suspense fallback={<div style={{ minHeight: 120 }} />}>
-              <DengueMapping />
-            </Suspense>
+            <LazyComponent
+              importFunc={() => import("./pages/admin/DengueMapping.jsx")}
+              fallback={
+                <div className="flex items-center justify-center min-h-screen">
+                  <div className="loading loading-spinner loading-lg"></div>
+                </div>
+              }
+            />
           ),
         },
         {
           path: "/admin/interventions",
           element: (
-            <Suspense fallback={<div style={{ minHeight: 120 }} />}>
-              <Interventions />
-            </Suspense>
+            <LazyComponent
+              importFunc={() => import("./pages/admin/Interventions.jsx")}
+              fallback={
+                <div className="flex items-center justify-center min-h-screen">
+                  <div className="loading loading-spinner loading-lg"></div>
+                </div>
+              }
+            />
           ),
         },
         {
           path: "/admin/interventions/all",
           element: (
-            <Suspense fallback={<div style={{ minHeight: 120 }} />}>
-              <AllInterventions />
-            </Suspense>
+            <LazyComponent
+              importFunc={() => import("./pages/admin/AllInterventions.jsx")}
+              fallback={
+                <div className="flex items-center justify-center min-h-screen">
+                  <div className="loading loading-spinner loading-lg"></div>
+                </div>
+              }
+            />
           ),
         },
         {
@@ -331,9 +353,14 @@ const AppWithProviders = () => {
       element: (
         <GoogleMapsProvider>
           <PrivateRoute requiredRole="admin">
-            <Suspense fallback={<div style={{ minHeight: 120 }} />}>
-              <AdminMapping />
-            </Suspense>
+            <LazyComponent
+              importFunc={() => import("./pages/admin/AdminMapping.jsx")}
+              fallback={
+                <div className="flex items-center justify-center min-h-screen">
+                  <div className="loading loading-spinner loading-lg"></div>
+                </div>
+              }
+            />
           </PrivateRoute>
         </GoogleMapsProvider>
       ),

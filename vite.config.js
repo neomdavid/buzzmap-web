@@ -32,11 +32,33 @@ export default defineConfig({
     rollupOptions: {
       output: {
         // Manually defining chunks to improve chunking
-        manualChunks: {
-          // Example of chunking specific libraries
-          react: ["react", "react-dom"],
-          ui: ["@headlessui/react", "phosphor-react", "daisyui"],
-          // You can add more as needed, depending on large dependencies
+        manualChunks: (id) => {
+          // Create separate chunks for admin pages
+          if (id.includes("ReportsVerification")) {
+            return "reports-verification";
+          }
+          if (id.includes("DengueMapping")) {
+            return "dengue-mapping";
+          }
+          if (id.includes("Analytics")) {
+            return "analytics";
+          }
+          if (id.includes("Interventions")) {
+            return "interventions";
+          }
+          // Chunk vendor libraries
+          if (id.includes("node_modules")) {
+            if (id.includes("react") || id.includes("react-dom")) {
+              return "react-vendor";
+            }
+            if (id.includes("ag-grid") || id.includes("ag-grid-react")) {
+              return "ag-grid";
+            }
+            if (id.includes("@tabler/icons") || id.includes("phosphor-react")) {
+              return "icons";
+            }
+            return "vendor";
+          }
         },
         // Ensure assets are properly handled
         assetFileNames: (assetInfo) => {
@@ -47,7 +69,10 @@ export default defineConfig({
           }
           return `assets/[name]-[hash][extname]`;
         },
+        chunkFileNames: "assets/[name]-[hash].js",
       },
     },
+    // Increase chunk size warning limit
+    chunkSizeWarningLimit: 1000,
   },
 });
