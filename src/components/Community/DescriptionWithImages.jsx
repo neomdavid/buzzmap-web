@@ -9,16 +9,10 @@ const DescriptionWithImages = ({
 }) => {
   const [fileError, setFileError] = useState("");
 
-  // Define accepted image file types
-  const acceptedImageTypes = [
-    "image/jpeg",
-    "image/jpg",
-    "image/png",
-    "image/gif",
-    "image/webp",
-    "image/bmp",
-    "image/svg+xml",
-  ];
+  // Define accepted image file types (JPG, PNG only)
+  const acceptedImageTypes = ["image/jpeg", "image/jpg", "image/png"];
+
+  const DESCRIPTION_MAX = 500;
 
   const validateFileType = (file) => {
     return acceptedImageTypes.includes(file.type);
@@ -38,7 +32,7 @@ const DescriptionWithImages = ({
 
     if (invalidFiles.length > 0) {
       const invalidFileNames = invalidFiles.map((file) => file.name).join(", ");
-      const errorMessage = `The following files are not supported: ${invalidFileNames}. Please upload only image files (JPEG, PNG, GIF, WebP, BMP, SVG).`;
+      const errorMessage = `The following files are not supported: ${invalidFileNames}. Only JPG and PNG files are allowed.`;
       setFileError(errorMessage);
       toastWarn(errorMessage);
       return;
@@ -53,6 +47,17 @@ const DescriptionWithImages = ({
     onImageChange(updatedImages);
   };
 
+  const handleDescriptionChange = (e) => {
+    const value = e.target.value;
+    if (value.length <= DESCRIPTION_MAX) {
+      onDescriptionChange(value);
+    } else {
+      // Hard-cap input and warn once per overflow action
+      onDescriptionChange(value.slice(0, DESCRIPTION_MAX));
+      toastWarn(`Description is limited to ${DESCRIPTION_MAX} characters.`);
+    }
+  };
+
   return (
     <div className="flex flex-col p-2 gap-2 ml-16">
       <div className="flex justify-between items-center">
@@ -65,7 +70,7 @@ const DescriptionWithImages = ({
           📷 Add Images
           <input
             type="file"
-            accept="image/jpeg,image/jpg,image/png,image/gif,image/webp,image/bmp,image/svg+xml"
+            accept="image/jpeg,image/png"
             multiple
             className="hidden"
             onChange={handleImageChange}
@@ -79,14 +84,16 @@ const DescriptionWithImages = ({
         rows={4}
         placeholder="What did you see? Is there anything you'd like to share?"
         value={description}
-        onChange={(e) => onDescriptionChange(e.target.value)}
+        onChange={handleDescriptionChange}
+        maxLength={DESCRIPTION_MAX}
       ></textarea>
+      <div className="text-xs text-gray-500 self-end mt-[-6px]">
+        {description?.length || 0}/{DESCRIPTION_MAX}
+      </div>
 
       {/* File type information and error display */}
       <div className="text-sm text-gray-600">
-        <p>
-          Accepted file types: JPEG, PNG, GIF, WebP, BMP, SVG (Max 4 images)
-        </p>
+        <p>Accepted file types: JPG, PNG (Max 4 images)</p>
       </div>
 
       {/* Error message display */}

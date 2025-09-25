@@ -405,6 +405,7 @@ const NewPostModal = forwardRef(
                           onLocationSelect={handleLocationSelect}
                           bounds={QC_BOUNDS}
                           defaultCity="Quezon City"
+                          showOutsideQcOverlay={true}
                           defaultCoordinates={coordinates}
                           selectedBarangay={barangay}
                         />
@@ -626,9 +627,6 @@ const NewPostModal = forwardRef(
                 description={description}
                 onDescriptionChange={setDescription}
               />
-              <div className="w-full pl-20 text-sm text-gray-500 mt-1">
-                Only JPG and PNG files are allowed.
-              </div>
               {formErrors.images && (
                 <div className="w-full pl-20 mt-1">
                   <span className="text-error text-sm">
