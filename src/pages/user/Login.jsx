@@ -93,8 +93,8 @@ const Login = () => {
       if (err?.status === "ACCOUNT_DISABLED") {
         toastError(
           disabledMessageString ||
-          err?.data?.message ||
-          "Your account has been disabled. Please contact an administrator."
+            err?.data?.message ||
+            "Your account has been disabled. Please contact an administrator."
         );
         return;
       }
@@ -170,7 +170,7 @@ const Login = () => {
         <LogoNamed
           textSize="text-[28px] lg:text-5xl xl:text-5xl 2xl:text-5xl"
           iconSize="h-11 w-11 lg:h-16 lg:w-16 xl:h-16 xl:w-16 2xl:h-16 2xl:w-16"
-          to="/"
+          to="/home"
         />
       </div>
       <div className="hidden absolute lg:block z-[-1000] text-primary bg-primary w-10 top-0 bottom-0 left-0 xl:w-12.5 2xl:w-13">
@@ -227,7 +227,9 @@ const Login = () => {
                 onChange={(e) => setRememberMe(e.target.checked)}
                 id="rememberMe"
               />
-              <label className="text-md lg:text-[14px]" htmlFor="rememberMe">Remember Me</label>
+              <label className="text-md lg:text-[14px]" htmlFor="rememberMe">
+                Remember Me
+              </label>
             </div>
             <button
               type="button"
@@ -241,9 +243,10 @@ const Login = () => {
 
           <button
             disabled={isLoading || !email.trim() || !password.trim()}
-            className={`bg-primary  font-extrabold shadow-[2px_6px_3px_rgba(0,0,0,0.20)] font-bold text-white w-xs py-3 px-4 rounded-2xl hover:cursor-pointer hover:bg-base-200/60 transition-all duration-300 ${(isLoading || !email.trim() || !password.trim()) &&
+            className={`bg-primary  font-extrabold shadow-[2px_6px_3px_rgba(0,0,0,0.20)] font-bold text-white w-xs py-3 px-4 rounded-2xl hover:cursor-pointer hover:bg-base-200/60 transition-all duration-300 ${
+              (isLoading || !email.trim() || !password.trim()) &&
               "bg-gray-100 disabled opacity-50 cursor-not-allowed"
-              }`}
+            }`}
           >
             {isLoading ? "Logging in..." : "Login"}
           </button>
@@ -252,9 +255,9 @@ const Login = () => {
               {typeof error?.data === "string"
                 ? error?.data
                 : error?.data?.message ||
-                (error?.status === 500
-                  ? "Network error. Please check your connection and try again."
-                  : error?.status === "ACCOUNT_DISABLED"
+                  (error?.status === 500
+                    ? "Network error. Please check your connection and try again."
+                    : error?.status === "ACCOUNT_DISABLED"
                     ? "Your account has been disabled. Please contact an administrator."
                     : "Login failed. Please check your credentials.")}
             </p>

@@ -110,10 +110,11 @@ const SignUp = () => {
 
   return (
     <main className="flex justify-center items-center relative h-[100vh] overflow-scroll">
-      <div className=" hidden sm:absolute left-14 top-10">
+      <div className=" absolute left-14 top-10">
         <LogoNamed
           textSize="text-[28px] lg:text-5xl xl:text-5xl 2xl:text-5xl"
           iconSize="h-11 w-11 lg:h-16 lg:w-16 xl:h-16 xl:w-16 2xl:h-16 2xl:w-16"
+          to="/home"
         />
       </div>
       <img
@@ -202,8 +203,9 @@ const SignUp = () => {
               checked={acceptedTerms}
               disabled={!hasScrolledToBottom}
               onChange={(e) => setAcceptedTerms(e.target.checked)}
-              className={`checkbox checkbox-lg border-white bg-transparent checked:bg-transparent checked:text-white checked:border-white ${!hasScrolledToBottom ? "opacity-50 cursor-not-allowed" : ""
-                }`}
+              className={`checkbox checkbox-lg border-white bg-transparent checked:bg-transparent checked:text-white checked:border-white ${
+                !hasScrolledToBottom ? "opacity-50 cursor-not-allowed" : ""
+              }`}
               id="acceptTerms"
             />
             <label className="text-md lg:text-[14px]" htmlFor="acceptTerms">
@@ -379,10 +381,11 @@ const SignUp = () => {
                 document.getElementById("terms_modal").close();
               }}
               disabled={!hasScrolledToBottom}
-              className={`font-semibold py-2 px-4 rounded-md transition-all duration-300 ${hasScrolledToBottom
-                ? "bg-primary text-white hover:cursor-pointer hover:bg-primary/80"
-                : "bg-gray-300 text-gray-500 cursor-not-allowed"
-                }`}
+              className={`font-semibold py-2 px-4 rounded-md transition-all duration-300 ${
+                hasScrolledToBottom
+                  ? "bg-primary text-white hover:cursor-pointer hover:bg-primary/80"
+                  : "bg-gray-300 text-gray-500 cursor-not-allowed"
+              }`}
             >
               {hasScrolledToBottom ? "Accept Terms" : "Read to Accept Terms"}
             </button>
