@@ -392,3 +392,20 @@ export const getPatternBgClass = (patternType) => {
   };
   return bgClasses[patternType] || bgClasses.default;
 };
+
+// Utility function to get level color class
+export const getLevelColorClass = (color) => {
+  const colorMap = {
+    '#e53e3e': 'level-color-1',
+    '#f59e0b': 'level-color-2', 
+    '#10b981': 'level-color-3',
+    '#3b82f6': 'level-color-4',
+    '#8B5CF6': 'level-color-5',
+    '#6b7280': 'level-color-6',
+    '#ef4444': 'level-color-7',
+    '#f97316': 'level-color-8',
+    '#22c55e': 'level-color-9',
+    '#06b6d4': 'level-color-10'
+  };
+  return colorMap[color] || 'level-color-6'; // default to gray
+};

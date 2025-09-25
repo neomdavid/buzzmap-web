@@ -38,22 +38,24 @@ import ArchivedUsers from "./pages/superadmin/ArchivedUsers";
 import ArchivedAdmins from "./pages/superadmin/ArchivedAdmins";
 import AuthGuard from "./components/AuthGuard";
 
-// Lazy-load heavy, map/chart routes
-const Mapping = lazy(() => import("./pages/user/Mapping.jsx"));
-const SpecificLocation = lazy(() =>
+// Lazy-load heavy, map/chart routes with retry logic
+const Mapping = lazy(createRetryLazy(() => import("./pages/user/Mapping.jsx")));
+const SpecificLocation = lazy(createRetryLazy(() =>
   import("./pages/user/SpecificLocation.jsx")
-);
-const DengueMapping = lazy(() => import("./pages/admin/DengueMapping.jsx"));
-const AdminMapping = lazy(() => import("./pages/admin/AdminMapping.jsx"));
-const Analytics = lazy(() => import("./pages/admin/Analytics.jsx"));
-const Interventions = lazy(() => import("./pages/admin/Interventions.jsx"));
-const ReportsVerification = lazy(() =>
+));
+const DengueMapping = lazy(createRetryLazy(() => import("./pages/admin/DengueMapping.jsx")));
+const AdminMapping = lazy(createRetryLazy(() => import("./pages/admin/AdminMapping.jsx")));
+const Analytics = lazy(createRetryLazy(() => import("./pages/admin/Analytics.jsx")));
+const Interventions = lazy(createRetryLazy(() => import("./pages/admin/Interventions.jsx")));
+const ReportsVerification = lazy(createRetryLazy(() =>
   import("./pages/admin/ReportsVerification.jsx")
-);
-const AllInterventions = lazy(() =>
+));
+const AllInterventions = lazy(createRetryLazy(() =>
   import("./pages/admin/AllInterventions.jsx")
-);
+));
 import { toastError } from "./utils.jsx";
+import { createRetryLazy } from "./utils/retryImport.jsx";
+import ImportErrorBoundary from "./components/ImportErrorBoundary";
 
 // Helper functions
 const getUserData = () => {
@@ -277,9 +279,11 @@ const AppWithProviders = () => {
         {
           path: "/admin/analytics",
           element: (
-            <Suspense fallback={<div className="loading-fallback" />}>
-              <Analytics />
-            </Suspense>
+            <ImportErrorBoundary>
+              <Suspense fallback={<div className="loading-fallback" />}>
+                <Analytics />
+              </Suspense>
+            </ImportErrorBoundary>
           ),
         },
         {
@@ -293,17 +297,21 @@ const AppWithProviders = () => {
         {
           path: "/admin/mapping",
           element: (
-            <Suspense fallback={<div className="loading-fallback" />}>
-              <DengueMapping />
-            </Suspense>
+            <ImportErrorBoundary>
+              <Suspense fallback={<div className="loading-fallback" />}>
+                <DengueMapping />
+              </Suspense>
+            </ImportErrorBoundary>
           ),
         },
         {
           path: "/admin/interventions",
           element: (
-            <Suspense fallback={<div className="loading-fallback" />}>
-              <Interventions />
-            </Suspense>
+            <ImportErrorBoundary>
+              <Suspense fallback={<div className="loading-fallback" />}>
+                <Interventions />
+              </Suspense>
+            </ImportErrorBoundary>
           ),
         },
         {

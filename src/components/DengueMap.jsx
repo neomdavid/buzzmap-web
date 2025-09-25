@@ -8,7 +8,7 @@ import trappingIcon from "../assets/icons/trapping.svg";
 import cleanUpIcon from "../assets/icons/cleanup.svg";
 import educationIcon from "../assets/icons/education.svg";
 import { getInterventionIcon } from "../utils/mapOverlays";
-import { getPatternClass, getPatternBorderClass, getPatternBgClass } from "../utils";
+import { getPatternClass, getPatternBorderClass, getPatternBgClass, getLevelColorClass } from "../utils";
 import allIcon from "../assets/all.svg";
 import center from "@turf/center";
 import { MapPinLine, Circle } from "phosphor-react";
@@ -1285,8 +1285,7 @@ const DengueMap = ({
                     className="flex items-center space-x-2"
                   >
                     <div
-                      className="w-4 h-4 rounded border border-gray-300"
-                      style={{ backgroundColor: level.color }}
+                      className={`w-4 h-4 rounded border border-gray-300 ${getLevelColorClass(level.color)}`}
                     />
                     <span className="text-sm">{level.label}</span>
                   </div>

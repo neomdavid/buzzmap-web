@@ -247,3 +247,15 @@ dialog::backdrop,
   top: 0;
   left: 0;
 }
+
+/* Dynamic color classes for level indicators */
+.level-color-1 { background-color: #e53e3e; }
+.level-color-2 { background-color: #f59e0b; }
+.level-color-3 { background-color: #10b981; }
+.level-color-4 { background-color: #3b82f6; }
+.level-color-5 { background-color: #8B5CF6; }
+.level-color-6 { background-color: #6b7280; }
+.level-color-7 { background-color: #ef4444; }
+.level-color-8 { background-color: #f97316; }
+.level-color-9 { background-color: #22c55e; }
+.level-color-10 { background-color: #06b6d4; }

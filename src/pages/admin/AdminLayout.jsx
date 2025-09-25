@@ -10,7 +10,7 @@ import {
   UsersThree,
   Megaphone,
 } from "phosphor-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   NavLink,
   Link,
@@ -18,6 +18,7 @@ import {
   useLocation,
   useNavigate,
 } from "react-router-dom";
+import { preloadCriticalModules, preloadAdminModules } from "../../utils/preloadModules";
 import { LogoNamed } from "../../components";
 import { useSelector, useDispatch } from "react-redux";
 import { logout } from "../../features/authSlice.js";
@@ -36,6 +37,12 @@ const AdminLayout = () => {
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
   const userFromStore = useSelector((state) => state.auth?.user);
   const user = userFromStore || { name: "Admin" };
+
+  // Preload critical modules when admin layout loads
+  useEffect(() => {
+    preloadCriticalModules();
+    preloadAdminModules();
+  }, []);
 
   return (
     <div className="flex h-screen overflow-hidden">
