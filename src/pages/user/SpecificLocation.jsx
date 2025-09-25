@@ -28,13 +28,7 @@ import othersIcon from "../../assets/icons/others.svg?url";
 import defaultProfile from "../../assets/default_profile.png";
 import centerOfMass from "@turf/center-of-mass"; // Import turf fn for center calculations
 
-const containerStyle = {
-  width: "100%",
-  height: "100vh",
-  position: "absolute",
-  top: 0,
-  left: 0,
-};
+// Removed containerStyle - using CSS classes instead
 
 // Default center (Manila coordinates)
 const defaultCenter = {
@@ -957,7 +951,7 @@ const SpecificLocation = () => {
             )}
           </div>
         )} */}
-        <div id="map" style={containerStyle} className="h-[100vh]"></div>
+        <div id="map" className="map-container-absolute"></div>
       </div>
       <SideNavDetails
         report={report}

@@ -18,3 +18,232 @@ dialog::backdrop,
 .modal::backdrop {
   z-index: 2147483646 !important;
 }
+
+/* CSP-safe CSS classes to replace inline styles */
+.bg-profile-bg {
+  background-image: url('./assets/profile_bg.png');
+}
+
+.status-badge-intervention {
+  background-color: #FF6347;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+}
+
+.status-badge-cluster {
+  background-color: #8B5CF6;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+}
+
+.map-container-full {
+  height: 100%;
+  width: 100%;
+}
+
+.map-container-60vh {
+  height: 60vh;
+}
+
+.map-container-68vh {
+  height: 68vh;
+  overflow: hidden;
+}
+
+.progress-bar {
+  width: 100%;
+  height: 4px;
+  background-color: #e5e7eb;
+  border-radius: 2px;
+}
+
+.progress-fill {
+  height: 100%;
+  background-color: #3b82f6;
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
+
+.chart-container {
+  height: 300px;
+  width: 100%;
+}
+
+.table-container {
+  height: 100%;
+  width: 100%;
+  min-height: 0;
+}
+
+.article-image {
+  width: 100%;
+  height: 180px;
+  margin-bottom: 0.5rem;
+  border: 0;
+  border-radius: 16px;
+}
+
+.landing-bg {
+  background-image: url('./assets/landing3.jpg');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+.landing-bg-2 {
+  background-image: url('./assets/landing2.jpg');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+/* Dynamic color classes for pattern cards */
+.pattern-spike {
+  color: #e53e3e;
+  background-color: #e53e3e;
+}
+
+.pattern-increase {
+  color: #f59e0b;
+  background-color: #f59e0b;
+}
+
+.pattern-decrease {
+  color: #10b981;
+  background-color: #10b981;
+}
+
+.pattern-low-level {
+  color: #3b82f6;
+  background-color: #3b82f6;
+}
+
+.pattern-default {
+  color: #6b7280;
+  background-color: #6b7280;
+}
+
+.border-pattern-spike {
+  border-color: #e53e3e;
+}
+
+.border-pattern-increase {
+  border-color: #f59e0b;
+}
+
+.border-pattern-decrease {
+  border-color: #10b981;
+}
+
+.border-pattern-low-level {
+  border-color: #3b82f6;
+}
+
+.border-pattern-default {
+  border-color: #6b7280;
+}
+
+.bg-pattern-spike {
+  background-color: #fef2f2;
+}
+
+.bg-pattern-increase {
+  background-color: #fffbeb;
+}
+
+.bg-pattern-decrease {
+  background-color: #f0fdf4;
+}
+
+.bg-pattern-low-level {
+  background-color: #eff6ff;
+}
+
+.bg-pattern-default {
+  background-color: #f9fafb;
+}
+
+/* Color indicators */
+.color-indicator-red {
+  background-color: #e53e3e;
+}
+
+.color-indicator-green {
+  background-color: #38a169;
+}
+
+.color-indicator-gray {
+  background-color: #718096;
+}
+
+/* Loading spinner */
+.loading-spinner {
+  animation: spin 1s linear infinite;
+  border: 2px solid transparent;
+  border-top: 2px solid currentColor;
+  border-radius: 50%;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Loading fallback */
+.loading-fallback {
+  min-height: 120px;
+}
+
+/* Mask images for landing page */
+.landing-mask {
+  mask-image: linear-gradient(to bottom, rgba(0,0,0,0) 20%, rgba(0,0,0,0.8) 50%, rgba(0,0,0,1) 60%);
+  -webkit-mask-image: linear-gradient(to bottom, rgba(0,0,0,0) 0%, rgba(0,0,0,0.8) 30%, rgba(0,0,0,1) 60%);
+}
+
+/* Clip path for landing article */
+.landing-clip {
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 0 75%);
+}
+
+/* Additional utility classes for common inline styles */
+.height-100vh {
+  height: 100vh;
+}
+
+.width-100 {
+  width: 100%;
+}
+
+.aspect-ratio-4-3 {
+  aspect-ratio: 4/3;
+}
+
+.z-max {
+  z-index: 9999999999;
+}
+
+.text-decoration-thick {
+  text-decoration-thickness: 2px;
+}
+
+.margin-bottom-negative {
+  margin-bottom: -2px;
+}
+
+/* Dynamic background colors for charts */
+.bg-chart-red { background-color: #e53e3e; }
+.bg-chart-green { background-color: #38a169; }
+.bg-chart-gray { background-color: #718096; }
+.bg-chart-purple { background-color: #8B5CF6; }
+.bg-chart-orange { background-color: #FF6347; }
+.bg-chart-blue { background-color: #3b82f6; }
+.bg-chart-yellow { background-color: #f59e0b; }
+.bg-chart-teal { background-color: #10b981; }
+
+/* Map container styles */
+.map-container-absolute {
+  width: 100%;
+  height: 100vh;
+  position: absolute;
+  top: 0;
+  left: 0;
+}

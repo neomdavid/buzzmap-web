@@ -24,7 +24,7 @@ const MapContainer = ({
         onBarangaySelect={handleBarangaySelect}
         interventions={showInterventions ? activeInterventions : []}
         clusters={clusters}
-        style={{ height: "100%", width: "100%" }}
+        className="map-container-full"
         useAdminEndpoint={true}
         baseUrl={baseUrl}
         onMarkerClick={(item, type) => {
@@ -55,7 +55,7 @@ const MapContainer = ({
                 }</p>
                 <div class="text-lg flex items-center gap-2">
                   <span class="font-bold">Status:</span>
-                  <span class="px-3 py-1 rounded-full text-white font-bold text-sm" style="background-color:#FF6347;box-shadow:0 1px 4px rgba(0,0,0,0.08);">
+                  <span class="px-3 py-1 rounded-full text-white font-bold text-sm status-badge-intervention">
                     ${item.status || ""}
                   </span>
                 </div>

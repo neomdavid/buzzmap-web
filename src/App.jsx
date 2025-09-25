@@ -198,7 +198,7 @@ const AppWithProviders = () => {
         {
           path: "/mapping",
           element: (
-            <Suspense fallback={<div style={{ minHeight: 120 }} />}>
+            <Suspense fallback={<div className="loading-fallback" />}>
               <Mapping />
             </Suspense>
           ),
@@ -206,7 +206,7 @@ const AppWithProviders = () => {
         {
           path: "/mapping/:id",
           element: (
-            <Suspense fallback={<div style={{ minHeight: 120 }} />}>
+            <Suspense fallback={<div className="loading-fallback" />}>
               <SpecificLocation />
             </Suspense>
           ),
@@ -277,7 +277,7 @@ const AppWithProviders = () => {
         {
           path: "/admin/analytics",
           element: (
-            <Suspense fallback={<div style={{ minHeight: 120 }} />}>
+            <Suspense fallback={<div className="loading-fallback" />}>
               <Analytics />
             </Suspense>
           ),
@@ -285,7 +285,7 @@ const AppWithProviders = () => {
         {
           path: "/admin/reportsverification",
           element: (
-            <Suspense fallback={<div style={{ minHeight: 120 }} />}>
+            <Suspense fallback={<div className="loading-fallback" />}>
               <ReportsVerification />
             </Suspense>
           ),
@@ -293,7 +293,7 @@ const AppWithProviders = () => {
         {
           path: "/admin/mapping",
           element: (
-            <Suspense fallback={<div style={{ minHeight: 120 }} />}>
+            <Suspense fallback={<div className="loading-fallback" />}>
               <DengueMapping />
             </Suspense>
           ),
@@ -301,7 +301,7 @@ const AppWithProviders = () => {
         {
           path: "/admin/interventions",
           element: (
-            <Suspense fallback={<div style={{ minHeight: 120 }} />}>
+            <Suspense fallback={<div className="loading-fallback" />}>
               <Interventions />
             </Suspense>
           ),
@@ -309,7 +309,7 @@ const AppWithProviders = () => {
         {
           path: "/admin/interventions/all",
           element: (
-            <Suspense fallback={<div style={{ minHeight: 120 }} />}>
+            <Suspense fallback={<div className="loading-fallback" />}>
               <AllInterventions />
             </Suspense>
           ),
@@ -331,7 +331,7 @@ const AppWithProviders = () => {
       element: (
         <GoogleMapsProvider>
           <PrivateRoute requiredRole="admin">
-            <Suspense fallback={<div style={{ minHeight: 120 }} />}>
+            <Suspense fallback={<div className="loading-fallback" />}>
               <AdminMapping />
             </Suspense>
           </PrivateRoute>

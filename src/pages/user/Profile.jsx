@@ -384,8 +384,7 @@ function Profile() {
   return (
     <main className="text-primary flex justify-center gap-20 relative p-10 pt-20 sm:pt-20">
       <div
-        className="absolute top-0 left-0 w-full h-100 bg-cover bg-center bg-no-repeat"
-        style={{ backgroundImage: `url(${profile_bg})` }}
+        className="absolute top-0 left-0 w-full h-100 bg-cover bg-center bg-no-repeat bg-profile-bg"
       ></div>
       <section className="flex flex-col w-[90vw] lg:w-[30vw] max-w-xl shadow-lg gap-2 p-6 py-14 items-center rounded-t-2xl bg-white rounded-t-[35px] relative z-10 sticky top-24 h-fit max-h-[calc(100vh-6rem)] lg:overflow-y-auto lg:scrollbar-thin lg:scrollbar-thumb-primary sm:scrollbar-track-transparent pr-2">
         <div className="relative mb-4 ">

@@ -8,6 +8,7 @@ import trappingIcon from "../assets/icons/trapping.svg";
 import cleanUpIcon from "../assets/icons/cleanup.svg";
 import educationIcon from "../assets/icons/education.svg";
 import { getInterventionIcon } from "../utils/mapOverlays";
+import { getPatternClass, getPatternBorderClass, getPatternBgClass } from "../utils";
 import allIcon from "../assets/all.svg";
 import center from "@turf/center";
 import { MapPinLine, Circle } from "phosphor-react";
@@ -726,31 +727,16 @@ const DengueMap = ({
     const content = document.createElement("div");
     content.innerHTML = `
       <div class="bg-white p-4 rounded-lg text-center h-auto w-[50vw] max-w-[500px] min-w-[320px] break-words overflow-x-auto">
-        <p class="text-4xl font-[900]" style="color: ${
-          PATTERN_COLORS[patternType]?.fill || PATTERN_COLORS.default.fill
-        }">
+        <p class="text-4xl font-[900] ${getPatternClass(patternType)}">
           Barangay ${props.displayName || props.name}
         </p>
         <div class="mt-3 flex flex-col gap-3 text-black">
           <!-- Pattern Card -->
-          <div class="p-3 rounded-lg border-2 ${
-            patternType === "spike"
-              ? "border-error bg-error/5"
-              : patternType === "increase"
-              ? "border-warning bg-warning/5"
-              : patternType === "decrease"
-              ? "border-success bg-success/5"
-              : patternType === "low_level_activity"
-              ? "border-info bg-info/5"
-              : "border-gray-400 bg-gray-100"
-          }">
+          <div class="p-3 rounded-lg border-2 ${getPatternBorderClass(patternType)} ${getPatternBgClass(patternType)}">
             <div>
               <p class="text-sm font-medium text-gray-600 uppercase">Pattern</p>
               <div class="flex justify-center mt-1">
-                <span class="px-3 py-1 rounded-full font-semibold text-md" style="background-color: ${
-                  PATTERN_COLORS[patternType]?.fill ||
-                  PATTERN_COLORS.default.fill
-                }; color: white;">
+                <span class="px-3 py-1 rounded-full font-semibold text-md text-white ${getPatternClass(patternType)}">
                   ${
                     patternType === "none"
                       ? "No pattern detected"

@@ -356,3 +356,39 @@ export const getBarangayNames = (barangayData) => {
   );
   return barangayNames;
 };
+
+// Utility function to get pattern CSS class based on pattern type
+export const getPatternClass = (patternType) => {
+  const patternClasses = {
+    spike: 'pattern-spike',
+    increase: 'pattern-increase', 
+    decrease: 'pattern-decrease',
+    low_level_activity: 'pattern-low-level',
+    default: 'pattern-default'
+  };
+  return patternClasses[patternType] || patternClasses.default;
+};
+
+// Utility function to get pattern border class
+export const getPatternBorderClass = (patternType) => {
+  const borderClasses = {
+    spike: 'border-pattern-spike',
+    increase: 'border-pattern-increase',
+    decrease: 'border-pattern-decrease', 
+    low_level_activity: 'border-pattern-low-level',
+    default: 'border-pattern-default'
+  };
+  return borderClasses[patternType] || borderClasses.default;
+};
+
+// Utility function to get pattern background class
+export const getPatternBgClass = (patternType) => {
+  const bgClasses = {
+    spike: 'bg-pattern-spike',
+    increase: 'bg-pattern-increase',
+    decrease: 'bg-pattern-decrease',
+    low_level_activity: 'bg-pattern-low-level', 
+    default: 'bg-pattern-default'
+  };
+  return bgClasses[patternType] || bgClasses.default;
+};
