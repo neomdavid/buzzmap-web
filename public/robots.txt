@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://buzzmap-client.vercel.app/sitemap.xml

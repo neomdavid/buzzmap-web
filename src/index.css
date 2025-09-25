@@ -21,17 +21,17 @@ dialog::backdrop,
 
 /* CSP-safe CSS classes to replace inline styles */
 .bg-profile-bg {
-  background-image: url('./assets/profile_bg.png');
+  background-image: url("./assets/profile_bg.png");
 }
 
 .status-badge-intervention {
-  background-color: #FF6347;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+  background-color: #ff6347;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
 }
 
 .status-badge-cluster {
-  background-color: #8B5CF6;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+  background-color: #8b5cf6;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
 }
 
 .map-container-full {
@@ -82,14 +82,14 @@ dialog::backdrop,
 }
 
 .landing-bg {
-  background-image: url('./assets/landing3.jpg');
+  background-image: url("./assets/landing3.jpg");
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
 }
 
 .landing-bg-2 {
-  background-image: url('./assets/landing2.jpg');
+  background-image: url("./assets/landing2.jpg");
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
@@ -195,8 +195,18 @@ dialog::backdrop,
 
 /* Mask images for landing page */
 .landing-mask {
-  mask-image: linear-gradient(to bottom, rgba(0,0,0,0) 20%, rgba(0,0,0,0.8) 50%, rgba(0,0,0,1) 60%);
-  -webkit-mask-image: linear-gradient(to bottom, rgba(0,0,0,0) 0%, rgba(0,0,0,0.8) 30%, rgba(0,0,0,1) 60%);
+  mask-image: linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0) 20%,
+    rgba(0, 0, 0, 0.8) 50%,
+    rgba(0, 0, 0, 1) 60%
+  );
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0) 0%,
+    rgba(0, 0, 0, 0.8) 30%,
+    rgba(0, 0, 0, 1) 60%
+  );
 }
 
 /* Clip path for landing article */
@@ -230,14 +240,30 @@ dialog::backdrop,
 }
 
 /* Dynamic background colors for charts */
-.bg-chart-red { background-color: #e53e3e; }
-.bg-chart-green { background-color: #38a169; }
-.bg-chart-gray { background-color: #718096; }
-.bg-chart-purple { background-color: #8B5CF6; }
-.bg-chart-orange { background-color: #FF6347; }
-.bg-chart-blue { background-color: #3b82f6; }
-.bg-chart-yellow { background-color: #f59e0b; }
-.bg-chart-teal { background-color: #10b981; }
+.bg-chart-red {
+  background-color: #e53e3e;
+}
+.bg-chart-green {
+  background-color: #38a169;
+}
+.bg-chart-gray {
+  background-color: #718096;
+}
+.bg-chart-purple {
+  background-color: #8b5cf6;
+}
+.bg-chart-orange {
+  background-color: #ff6347;
+}
+.bg-chart-blue {
+  background-color: #3b82f6;
+}
+.bg-chart-yellow {
+  background-color: #f59e0b;
+}
+.bg-chart-teal {
+  background-color: #10b981;
+}
 
 /* Map container styles */
 .map-container-absolute {
@@ -249,13 +275,33 @@ dialog::backdrop,
 }
 
 /* Dynamic color classes for level indicators */
-.level-color-1 { background-color: #e53e3e; }
-.level-color-2 { background-color: #f59e0b; }
-.level-color-3 { background-color: #10b981; }
-.level-color-4 { background-color: #3b82f6; }
-.level-color-5 { background-color: #8B5CF6; }
-.level-color-6 { background-color: #6b7280; }
-.level-color-7 { background-color: #ef4444; }
-.level-color-8 { background-color: #f97316; }
-.level-color-9 { background-color: #22c55e; }
-.level-color-10 { background-color: #06b6d4; }
+.level-color-1 {
+  background-color: #e53e3e;
+}
+.level-color-2 {
+  background-color: #f59e0b;
+}
+.level-color-3 {
+  background-color: #10b981;
+}
+.level-color-4 {
+  background-color: #3b82f6;
+}
+.level-color-5 {
+  background-color: #8b5cf6;
+}
+.level-color-6 {
+  background-color: #6b7280;
+}
+.level-color-7 {
+  background-color: #ef4444;
+}
+.level-color-8 {
+  background-color: #f97316;
+}
+.level-color-9 {
+  background-color: #22c55e;
+}
+.level-color-10 {
+  background-color: #06b6d4;
+}
