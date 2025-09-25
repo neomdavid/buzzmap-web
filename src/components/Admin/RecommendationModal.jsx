@@ -28,6 +28,7 @@ import {
 const RecommendationModal = ({
   barangayName,
   pattern_based,
+  report_based,
   pattern_data,
   death_priority,
   aiRecommendations,
@@ -235,7 +236,7 @@ const RecommendationModal = ({
             {/* Reports Badge - white background */}
             <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white border border-primary text-primary text-sm  font-medium">
               <Megaphone size={14} />
-              {pattern_data?.reports || 0} Reports
+              {report_based?.count || 0} Reports
             </div>
 
             {/* Deaths/Fatality Badge - white background */}

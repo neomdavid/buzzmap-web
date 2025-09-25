@@ -232,6 +232,9 @@ export default function PatternAlerts({
                 pattern_based={
                   barangayData?.status_and_recommendation?.pattern_based
                 }
+                report_based={
+                  barangayData?.status_and_recommendation?.report_based
+                }
                 pattern_data={{
                   pattern: item.pattern,
                   alert: item.alert,
