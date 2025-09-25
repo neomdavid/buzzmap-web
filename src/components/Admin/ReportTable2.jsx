@@ -201,6 +201,8 @@ function ReportTable2({
   onlyRecent = false,
   onSuccess,
   isRefetching = false,
+  paginationPageSize = 20,
+  paginationPageSizeOptions = [10, 20, 50, 100],
 }) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedReport, setSelectedReport] = useState(null);
@@ -510,8 +512,8 @@ function ReportTable2({
           suppressMovableColumns={true}
           suppressDragLeaveHidesColumns={true}
           pagination={isActionable && !onlyRecent} // Only show pagination when not showing only recent
-          paginationPageSize={20}
-          paginationPageSizeSelector={[10, 20, 50, 100]}
+          paginationPageSize={paginationPageSize}
+          paginationPageSizeSelector={paginationPageSizeOptions}
           onGridSizeChanged={onGridSizeChanged}
           onFirstDataRendered={onFirstDataRendered}
           context={{

@@ -178,12 +178,27 @@ const ReportsVerification = () => {
         width: 130,
         cellRenderer: StatusBadgeCell,
       },
-      { headerName: "Date", field: "dateFormatted", flex: 1 },
+      {
+        headerName: "Date",
+        field: "dateFormatted",
+        flex: 1,
+        filter: "agDateColumnFilter",
+        valueGetter: (p) => {
+          // Provide actual Date object for filter comparisons
+          const raw = p.data?.__raw;
+          const d = raw?.date_and_time || raw?.date;
+          return d ? new Date(d) : null;
+        },
+        valueFormatter: (p) => p.data?.dateFormatted || "-",
+      },
       {
         headerName: "Actions",
         field: "actions",
         width: 150,
         cellRenderer: ViewDetailsCell,
+        filter: false,
+        sortable: false,
+        suppressMenu: true,
       },
     ],
     []
@@ -625,6 +640,8 @@ const ReportsVerification = () => {
                   onSelectReport={setSelectedReport}
                   onSuccess={handleVerificationSuccess}
                   isRefetching={isRefetching}
+                  paginationPageSize={10}
+                  paginationPageSizeOptions={[10, 20, 50, 100]}
                 />
               )}
             </div>

@@ -57,6 +57,7 @@ const MapPicker = forwardRef(
     const overlaysRef = useRef([]);
     const [barangayData, setBarangayData] = useState(null);
     const [isDataLoaded, setIsDataLoaded] = useState(false);
+    const [mapReady, setMapReady] = useState(false);
     const [toast, setToast] = useState(null);
     const [markerPosition, setMarkerPosition] = useState(null);
     const [highlightedBarangay, setHighlightedBarangay] = useState(null); // Only for search highlight
@@ -82,23 +83,46 @@ const MapPicker = forwardRef(
 
     // Helper: find barangay by point
     function findBarangay(coords, geojson) {
-      if (!geojson) return null;
+      console.log("[MapPicker DEBUG] findBarangay called with:", {
+        coords,
+        geojson: !!geojson,
+      });
+      if (!geojson) {
+        console.log("[MapPicker DEBUG] No geojson data");
+        return null;
+      }
       const pt = point([coords.lng, coords.lat]);
+      console.log("[MapPicker DEBUG] Created point:", pt);
       let firstFeature = geojson.features[0];
       if (firstFeature) {
-        let bbox = bbox(firstFeature);
-        console.log("[MapPicker DEBUG] First polygon bbox:", bbox, "Click:", [
-          coords.lng,
-          coords.lat,
-        ]);
+        let featureBbox = bbox(firstFeature);
+        console.log(
+          "[MapPicker DEBUG] First polygon bbox:",
+          featureBbox,
+          "Click:",
+          [coords.lng, coords.lat]
+        );
       }
-      for (let feature of geojson.features) {
+      console.log(
+        "[MapPicker DEBUG] Checking",
+        geojson.features.length,
+        "features"
+      );
+      for (let i = 0; i < geojson.features.length; i++) {
+        let feature = geojson.features[i];
         let polys = [];
         if (feature.geometry.type === "Polygon") {
           polys = [feature.geometry.coordinates];
         } else if (feature.geometry.type === "MultiPolygon") {
           polys = feature.geometry.coordinates;
         }
+        console.log(
+          "[MapPicker DEBUG] Feature",
+          i,
+          "has",
+          polys.length,
+          "polygons"
+        );
         for (let polyCoords of polys) {
           let ring = [...polyCoords[0]];
           if (
@@ -108,11 +132,23 @@ const MapPicker = forwardRef(
             ring.push(ring[0]);
           }
           const poly = polygon([ring]);
-          if (booleanPointInPolygon(pt, poly)) {
+          const isInside = booleanPointInPolygon(pt, poly);
+          console.log(
+            "[MapPicker DEBUG] Feature",
+            i,
+            "polygon check:",
+            isInside
+          );
+          if (isInside) {
+            console.log(
+              "[MapPicker DEBUG] Found matching barangay:",
+              feature.properties.name
+            );
             return feature.properties.name;
           }
         }
       }
+      console.log("[MapPicker DEBUG] No matching barangay found");
       return null;
     }
 
@@ -166,6 +202,7 @@ const MapPicker = forwardRef(
           map,
           title: "Selected Location",
         });
+        console.log("[MapPicker DEBUG] Marker created:", markerRef.current);
       } else {
         if (markerRef.current) markerRef.current.setMap(null);
       }
@@ -208,81 +245,137 @@ const MapPicker = forwardRef(
             streetViewControl: false,
             fullscreenControl: false,
           });
+          setMapReady(true);
         }
         const map = mapInstance.current;
         drawMapFeatures(map, barangayData, highlightedBarangay, markerPosition);
-        // Click handler
-        map.addListener("click", (e) => {
-          const coords = { lat: e.latLng.lat(), lng: e.latLng.lng() };
-          console.log("[MapPicker DEBUG] Map clicked at:", coords);
-          // Check if point is within QC bounds
-          const isInQC =
-            coords.lat >= QC_BOUNDS.south &&
-            coords.lat <= QC_BOUNDS.north &&
-            coords.lng >= QC_BOUNDS.west &&
-            coords.lng <= QC_BOUNDS.east;
-          if (!isInQC) {
-            setToast({
-              type: "error",
-              message: "Please click a location within Quezon City",
-            });
-            console.log("[MapPicker DEBUG] Click outside QC bounds");
-            return;
-          }
-          // Find which barangay contains this point
-          const barangayName = findBarangay(coords, barangayData);
-          console.log("[MapPicker DEBUG] Found barangay:", barangayName);
-          if (barangayName) {
-            setMarkerPosition(coords);
-            setHighlightedBarangay(null); // Do not highlight on pin
-            if (onLocationSelect) {
-              console.log(
-                "[MapPicker DEBUG] Calling onLocationSelect:",
-                coords,
-                barangayName
-              );
-              onLocationSelect(
-                `${coords.lat.toFixed(6)}, ${coords.lng.toFixed(6)}`,
-                barangayName
-              );
-            }
-            setToast({
-              type: "success",
-              message: `Location set in ${barangayName}`,
-            });
-            drawMapFeatures(map, barangayData, null, coords); // No highlight
-          } else {
-            setToast({
-              type: "error",
-              message: "Selected location is not within any barangay boundary",
-            });
-            console.log("[MapPicker DEBUG] No barangay found for click");
-          }
-        });
-        // If defaultCoordinates is provided, set marker
-        if (defaultCoordinates) {
-          const [lat, lng] = defaultCoordinates
-            .split(",")
-            .map((c) => parseFloat(c.trim()));
-          if (!isNaN(lat) && !isNaN(lng)) {
-            setMarkerPosition({ lat, lng });
-            map.setCenter({ lat, lng });
-            map.setZoom(17);
-            drawMapFeatures(map, barangayData, null, { lat, lng }); // No highlight
-          }
-        }
       });
-      // Cleanup overlays on unmount or data change
+    }, [isDataLoaded, apiKey, barangayData]);
+
+    // Setup click handler separately
+    useEffect(() => {
+      if (!mapReady || !mapInstance.current || !barangayData) return;
+
+      const map = mapInstance.current;
+
+      // Remove existing click listener if any
+      if (map.clickListener) {
+        window.google.maps.event.removeListener(map.clickListener);
+      }
+
+      // Add click handler
+      map.clickListener = map.addListener("click", (e) => {
+        const coords = { lat: e.latLng.lat(), lng: e.latLng.lng() };
+        console.log("[MapPicker DEBUG] Map clicked at:", coords);
+        // Check if point is within QC bounds
+        const isInQC =
+          coords.lat >= QC_BOUNDS.south &&
+          coords.lat <= QC_BOUNDS.north &&
+          coords.lng >= QC_BOUNDS.west &&
+          coords.lng <= QC_BOUNDS.east;
+        console.log("[MapPicker DEBUG] QC bounds check:", {
+          coords,
+          bounds: QC_BOUNDS,
+          isInQC,
+        });
+        if (!isInQC) {
+          setToast({
+            type: "error",
+            message: "Please click a location within Quezon City",
+          });
+          console.log("[MapPicker DEBUG] Click outside QC bounds");
+          return;
+        }
+        // Find which barangay contains this point
+        const barangayName = findBarangay(coords, barangayData);
+        console.log("[MapPicker DEBUG] Found barangay:", barangayName);
+        if (!barangayName) {
+          setToast({
+            type: "error",
+            message: "Selected location is not within any barangay boundary",
+          });
+          console.log("[MapPicker DEBUG] No barangay found for click");
+          return;
+        }
+
+        console.log("[MapPicker DEBUG] Setting marker position to:", coords);
+        setMarkerPosition(coords);
+        setHighlightedBarangay(null);
+        if (onLocationSelect) {
+          console.log(
+            "[MapPicker DEBUG] Calling onLocationSelect:",
+            coords,
+            barangayName
+          );
+          onLocationSelect(
+            `${coords.lat.toFixed(6)}, ${coords.lng.toFixed(6)}`,
+            barangayName
+          );
+        }
+        setToast({
+          type: "success",
+          message: `Location set in ${barangayName}`,
+        });
+        console.log(
+          "[MapPicker DEBUG] Calling drawMapFeatures with marker position:",
+          coords
+        );
+        setTimeout(() => {
+          drawMapFeatures(map, barangayData, null, coords);
+        }, 0);
+      });
+
+      // Cleanup this listener on dependency change
+      return () => {
+        if (map.clickListener) {
+          window.google.maps.event.removeListener(map.clickListener);
+          map.clickListener = null;
+        }
+      };
+    }, [mapReady, barangayData]);
+
+    // Handle defaultCoordinates separately
+    useEffect(() => {
+      if (!mapReady || !mapInstance.current || !defaultCoordinates) return;
+
+      const map = mapInstance.current;
+      const [lat, lng] = defaultCoordinates
+        .split(",")
+        .map((c) => parseFloat(c.trim()));
+      if (!isNaN(lat) && !isNaN(lng)) {
+        setMarkerPosition({ lat, lng });
+        map.setCenter({ lat, lng });
+        map.setZoom(17);
+        drawMapFeatures(map, barangayData, null, { lat, lng }); // No highlight
+      }
+    }, [mapReady, defaultCoordinates, barangayData]);
+
+    // Cleanup overlays on unmount
+    useEffect(() => {
       return () => {
         overlaysRef.current.forEach((o) => o.setMap(null));
         overlaysRef.current = [];
         if (markerRef.current) markerRef.current.setMap(null);
       };
-    }, [isDataLoaded, apiKey, defaultCoordinates, barangayData]);
+    }, []);
 
     // Redraw polygons/marker when highlightedBarangay or markerPosition changes
     useEffect(() => {
-      if (!isDataLoaded || !mapInstance.current || !barangayData) return;
+      console.log(
+        "[MapPicker DEBUG] useEffect triggered - markerPosition:",
+        markerPosition,
+        "highlightedBarangay:",
+        highlightedBarangay
+      );
+      if (!isDataLoaded || !mapInstance.current || !barangayData) {
+        console.log("[MapPicker DEBUG] useEffect - missing dependencies:", {
+          isDataLoaded,
+          mapInstance: !!mapInstance.current,
+          barangayData: !!barangayData,
+        });
+        return;
+      }
+      console.log("[MapPicker DEBUG] Calling drawMapFeatures from useEffect");
       drawMapFeatures(
         mapInstance.current,
         barangayData,
