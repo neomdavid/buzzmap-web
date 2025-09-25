@@ -312,6 +312,7 @@ const Dashboard = () => {
               recentOnly={true}
               recentCount={5}
               recentPosts={recentPosts}
+              disableSiteInfoWindows={true}
             />
           </div>
           {/* <div className="flex flex-col ">

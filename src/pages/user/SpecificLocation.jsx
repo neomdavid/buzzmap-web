@@ -151,7 +151,7 @@ function drawBarangayPolygons(
         strokeOpacity: isHighlighted ? 1.0 : 0.8,
         strokeWeight: isHighlighted ? 4 : 2,
         fillOpacity: isHighlighted ? 0 : 0.4,
-        fillColor: patternColor,
+        fillColor: "#22c55e", // set fill to green
         map,
         zIndex: isHighlighted ? 10 : 1,
         clickable: false,
@@ -749,28 +749,7 @@ const SpecificLocation = () => {
       markers.forEach((marker) => markersRef.current.push(marker));
     }
 
-    // Add polylines from main report to each nearby report only (not all reports)
-    if (report?.specific_location?.coordinates) {
-      const [mainLng, mainLat] = report.specific_location.coordinates;
-      filteredReports.forEach((r) => {
-        if (!r.specific_location?.coordinates) return;
-
-        const [lng, lat] = r.specific_location.coordinates;
-        const polyline = new window.google.maps.Polyline({
-          path: [
-            { lat: mainLat, lng: mainLng },
-            { lat, lng },
-          ],
-          strokeColor: "#F59E42",
-          strokeOpacity: 0.8,
-          strokeWeight: 2,
-          strokeDashArray: [8, 8],
-          map: mapRef.current,
-        });
-
-        polylinesRef.current.push(polyline);
-      });
-    }
+    // Do not draw connecting lines between the main report and nearby reports
   }, [allReports, filteredReports, report]);
 
   // Effect to draw/redraw barangay polygons when highlighted barangay changes
