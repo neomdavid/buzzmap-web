@@ -105,6 +105,33 @@ export default function DengueTrendChart({
     { skip: skipTrends }
   );
 
+  // Detect the specific not-found condition coming from the API
+  const barangayNotFound = useMemo(() => {
+    const apiFlag =
+      trendsData &&
+      trendsData.success === false &&
+      (trendsData.error === "Barangay not found in dataset" ||
+        (typeof trendsData.error === "string" &&
+          trendsData.error.toLowerCase().includes("barangay not found")));
+    const errData = error && error.data ? error.data : {};
+    const errMsg =
+      (errData.error || errData.message || error?.error || "") + "";
+    const errFlag = errMsg.toLowerCase().includes("barangay not found");
+    return Boolean(apiFlag || errFlag);
+  }, [trendsData, error]);
+
+  // Treat HTTP 404 as a not-found dataset state as well
+  const httpNotFound = useMemo(() => {
+    const statuses = [
+      error?.status,
+      error?.originalStatus,
+      error?.data?.status,
+    ];
+    return statuses.includes && statuses.includes(404)
+      ? true
+      : statuses.some?.((s) => s === 404);
+  }, [error]);
+
   // Transform the API data to match the chart format
   const chartData = useMemo(() => {
     try {
@@ -230,6 +257,14 @@ export default function DengueTrendChart({
     return ticks;
   }, [maxCases]);
 
+  // Extra diagnostics for visibility
+  if (error) {
+    console.log("[DengueTrendChart] Raw error object:", error);
+  }
+  if (trendsData !== undefined) {
+    console.log("[DengueTrendChart] Raw trendsData:", trendsData);
+  }
+
   if (isLoading || barangaysLoading) {
     return (
       <div className="flex flex-col p-5 gap-4 items-center justify-center h-[400px]">
@@ -238,73 +273,16 @@ export default function DengueTrendChart({
     );
   }
 
-  if (error) {
-    console.error("[DEBUG] Chart error:", error);
-    return (
-      <div className="flex flex-col p-5 gap-4 items-center  h-full justify-center text-center">
-        {isFetching ? (
-          <span className="loading loading-spinner loading-lg text-primary" />
-        ) : refreshNum <= 1 ? (
-          <>
-            <p className="text-gray-700 text-lg">
-              Hmmm... we couldn't load the chart data.
-              <br />
-              Try refreshing it below.
-            </p>
-            <button
-              onClick={() => {
-                refetch();
-                console.log(refreshNum);
-                setRefreshNum((currentNum) => currentNum + 1);
-              }}
-              disabled={isFetching}
-              className="btn text-primary px-4 py-2 rounded  transition"
-            >
-              {isFetching ? (
-                "Refreshing..."
-              ) : (
-                <div className="flex justify-between gap-1  items-center">
-                  <p>Refresh Chart</p>
-                  <IconReload size={12} />
-                </div>
-              )}
-            </button>
-          </>
-        ) : (
-          <p className="text-red-500 text-lg">
-            Something went wrong with the chart.
-            <br />
-            Please try again later.
-          </p>
-        )}
-      </div>
-    );
-  }
-
-  if (!selectedBarangay) {
-    return (
-      <div className="flex flex-col p-5 gap-4">
-        <p className="text-warning">Please select a barangay to view trends.</p>
-      </div>
-    );
-  }
-
-  if (!chartData || chartData.length === 0) {
-    return (
-      <div className="flex flex-col p-5 gap-4">
-        <p className="text-warning">
-          No data available for the selected period
-        </p>
-      </div>
-    );
-  }
+  // Always render header & selectors
+  const showNoData =
+    barangayNotFound || httpNotFound || !chartData || chartData.length === 0;
 
   return (
     <div className="flex flex-col p-5 gap-4">
       <div className="flex justify-between items-center">
         <div>
           <p className="text-base-content text-xl font-semibold mb-1">
-            Dengue Cases Trend - {selectedBarangay}
+            Dengue Cases Trend - {selectedBarangay || "—"}
           </p>
           <p className="text-base-content text-sm">
             Pattern:{" "}
@@ -332,9 +310,9 @@ export default function DengueTrendChart({
             {barangaysLoading ? (
               <option>Loading barangays...</option>
             ) : barangaysData ? (
-              barangaysData.map((barangay) => (
-                <option key={barangay._id} value={barangay.name}>
-                  {barangay.name}
+              barangaysData.map((b) => (
+                <option key={b._id} value={b.name}>
+                  {b.name}
                 </option>
               ))
             ) : (
@@ -371,138 +349,72 @@ export default function DengueTrendChart({
           </select>
         </div>
       </div>
-      <ChartContainer className="h-full w-full flex flex-col gap-2">
-        <ResponsiveContainer width="100%" height={400}>
-          <LineChart
-            data={chartData}
-            margin={{ left: -38, top: 10, right: 4, bottom: 5 }}
-          >
-            <CartesianGrid strokeDasharray="3 3" vertical={false} />
-            <XAxis
-              dataKey="week"
-              tick={{ fontSize: 11, fontFamily: "Inter", fill: "#000000" }}
-            />
-            <YAxis
-              tick={{ fontSize: 11, fontFamily: "Inter", fill: "#000000" }}
-            />
-            <Tooltip />
-            <Legend
-              formatter={(value) => "Number of Cases"}
-              wrapperStyle={{
-                color: "#000000",
-                fontSize: "14px",
-                marginLeft: "45px",
-                marginBottom: "-2px",
-              }}
-              align="left"
-            />
-            <ReferenceLine
-              x={referenceLinePosition}
-              stroke="#9ca3af"
-              strokeDasharray="5 5"
-              strokeWidth={1}
-              segment={[
-                { x: referenceLinePosition, y: 0 },
-                { x: chartData[chartData.length - 1]?.week, y: 0 },
-              ]}
-              label={({ viewBox }) => {
-                const { x, y } = viewBox;
-                return (
-                  <g transform={`translate(${x},${y + 100})`}>
-                    <rect
-                      x={-60}
-                      y={-10}
-                      width={120}
-                      height={20}
-                      fill="oklch(0.98 0.0035 219.53)"
-                      rx={4}
-                    />
-                    <text
-                      x={0}
-                      y={2}
-                      textAnchor="middle"
-                      dominantBaseline="middle"
-                      fill="#9ca3af"
-                      fontSize={11}
-                      fontWeight={500}
-                    >
-                      Assessment Period
-                    </text>
-                  </g>
-                );
-              }}
-            />
-            <Tooltip
-              content={({ active, payload }) => {
-                if (active && payload && payload.length > 0) {
-                  const dataPoint = payload[0].payload;
-                  if (
-                    dataPoint.week === chartData[chartData.length - 4]?.week
-                  ) {
-                    return (
-                      <div className="bg-white p-2 border border-gray-200 rounded shadow-sm">
-                        <p className="text-sm text-gray-700">
-                          Start of {selectedBarangayPattern || "pattern"}
-                        </p>
-                      </div>
-                    );
-                  }
-                }
-                return null;
-              }}
-            />
-            <Line
-              type="monotone"
-              dataKey="cases"
-              stroke={getPatternColorForChart(selectedBarangayPattern)}
-              strokeWidth={3}
-              dot={{
-                r: 5,
-                strokeWidth: 2,
-                fill: getPatternColorForChart(selectedBarangayPattern),
-                stroke: getPatternColorForChart(selectedBarangayPattern),
-              }}
-              activeDot={{
-                r: 7,
-                strokeWidth: 2,
-                fill: getPatternColorForChart(selectedBarangayPattern),
-                stroke: getPatternColorForChart(selectedBarangayPattern),
-              }}
-              label={({ x, y, value }) => (
-                <text
-                  x={x}
-                  y={y}
-                  dy={-10}
-                  fill="#444444"
-                  textAnchor="middle"
-                  fontSize={10}
-                  fontFamily="Inter"
-                  fontWeight="500"
-                >
-                  {value}
-                </text>
+
+      <ChartContainer className="h-full w-full flex flex-col gap-2 relative">
+        {showNoData ? (
+          <div className="w-full h-[400px] rounded border border-gray-200 bg-white flex items-center justify-center">
+            <p className="text-gray-700 text-sm">
+              There has been no recorded dengue cases for{" "}
+              {selectedBarangay || "this barangay"}.
+            </p>
+          </div>
+        ) : (
+          <ResponsiveContainer width="100%" height={400}>
+            <LineChart
+              data={chartData}
+              margin={{ left: -38, top: 10, right: 4, bottom: 5 }}
+            >
+              <CartesianGrid strokeDasharray="3 3" vertical={false} />
+              <XAxis
+                dataKey="week"
+                tick={{ fontSize: 11, fontFamily: "Inter", fill: "#000000" }}
+              />
+              <YAxis
+                tick={{ fontSize: 11, fontFamily: "Inter", fill: "#000000" }}
+              />
+              <Tooltip />
+              <Legend
+                formatter={() => "Number of Cases"}
+                wrapperStyle={{
+                  color: "#000000",
+                  fontSize: "14px",
+                  marginLeft: "45px",
+                  marginBottom: "-2px",
+                }}
+                align="left"
+              />
+              {referenceLinePosition && (
+                <ReferenceLine
+                  x={referenceLinePosition}
+                  stroke="#9ca3af"
+                  strokeDasharray="5 5"
+                  strokeWidth={1}
+                />
               )}
-            />
-            {selectedBarangay && patternData && (
-              <ReferenceLine
-                x={patternData.start_date}
-                stroke={getPatternColorForChart(patternData.pattern)}
-                strokeWidth={2}
-                label={{
-                  value: formatPatternType(patternData.pattern),
-                  position: "insideTopRight",
-                  fill: getPatternColorForChart(patternData.pattern),
-                  fontSize: 12,
-                  fontWeight: "bold",
+              <Line
+                type="monotone"
+                dataKey="cases"
+                stroke={getPatternColorForChart(selectedBarangayPattern)}
+                strokeWidth={3}
+                dot={{
+                  r: 5,
+                  strokeWidth: 2,
+                  fill: getPatternColorForChart(selectedBarangayPattern),
+                  stroke: getPatternColorForChart(selectedBarangayPattern),
+                }}
+                activeDot={{
+                  r: 7,
+                  strokeWidth: 2,
+                  fill: getPatternColorForChart(selectedBarangayPattern),
+                  stroke: getPatternColorForChart(selectedBarangayPattern),
                 }}
               />
-            )}
-          </LineChart>
-        </ResponsiveContainer>
+            </LineChart>
+          </ResponsiveContainer>
+        )}
       </ChartContainer>
 
-      {/* Custom Legend - Moved outside the chart container */}
-      <div className="flex  flex-wrap  justify-start gap-3 ml-3 ">
+      <div className="flex flex-wrap justify-start gap-3 ml-3 ">
         {patternLevels.map(({ label, color }) => (
           <div key={label} className="flex items-center gap-2">
             <div
