@@ -369,6 +369,7 @@ function ReportTable2({
         headerName: "Date & Time",
         minWidth: 120,
         filter: "agDateColumnFilter",
+        sort: "desc",
         valueGetter: (params) => {
           return params.data.dateValue;
         },
