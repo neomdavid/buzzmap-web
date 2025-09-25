@@ -24,44 +24,6 @@ const QC_BOUNDS = {
 const HIGHLIGHT_COLOR = "#2563eb"; // blue for highlight
 const HIGHLIGHT_STROKE = "#111827"; // dark for border
 
-// Neutral, low-saturation map styles to avoid yellow tint
-const MAP_STYLES = [
-  // Base canvas
-  { elementType: "geometry", stylers: [{ color: "#ffffff" }] },
-  { elementType: "labels.icon", stylers: [{ visibility: "off" }] },
-  { elementType: "labels.text.fill", stylers: [{ color: "#1f2937" }] },
-  { elementType: "labels.text.stroke", stylers: [{ color: "#ffffff" }] },
-
-  // Water and natural areas to very light cool white
-  {
-    featureType: "water",
-    elementType: "geometry",
-    stylers: [{ color: "#eef2f7" }],
-  },
-  {
-    featureType: "landscape.natural",
-    elementType: "geometry",
-    stylers: [{ color: "#fafafa" }],
-  },
-
-  // Roads to light gray
-  {
-    featureType: "road",
-    elementType: "geometry",
-    stylers: [{ color: "#f3f4f6" }],
-  },
-  {
-    featureType: "road",
-    elementType: "labels.icon",
-    stylers: [{ visibility: "off" }],
-  },
-
-  // Remove clutter
-  { featureType: "poi", stylers: [{ visibility: "off" }] },
-  { featureType: "transit", stylers: [{ visibility: "off" }] },
-  { featureType: "landscape.man_made", stylers: [{ visibility: "off" }] },
-];
-
 // Utility to load Google Maps JS API ONCE
 let googleMapsScriptLoadingPromise = null;
 function loadGoogleMapsScript(apiKey) {
@@ -97,7 +59,9 @@ const MapPicker = forwardRef(
     const mapRef = useRef(null);
     const mapInstance = useRef(null);
     const markerRef = useRef(null);
+    const markerPositionRef = useRef(null);
     const overlaysRef = useRef([]);
+    const highlightedBarangayRef = useRef(null);
     const [barangayData, setBarangayData] = useState(null);
     const [isDataLoaded, setIsDataLoaded] = useState(false);
     const [mapReady, setMapReady] = useState(false);
@@ -351,15 +315,13 @@ const MapPicker = forwardRef(
 
       // Marker
       if (markerPos) {
-        console.log("[MapPicker DEBUG] Placing marker at:", markerPos);
         if (markerRef.current) markerRef.current.setMap(null);
         markerRef.current = new window.google.maps.Marker({
           position: markerPos,
           map,
           title: "Selected Location",
         });
-        overlaysRef.current.push(markerRef.current);
-        console.log("[MapPicker DEBUG] Marker created:", markerRef.current);
+        // Keep marker independent of overlays so redraws (zoom/pan) don't clear it
       } else {
         if (markerRef.current) markerRef.current.setMap(null);
       }
@@ -386,6 +348,7 @@ const MapPicker = forwardRef(
         mapInstance.current.fitBounds(bounds);
         mapInstance.current.setZoom(16);
         setHighlightedBarangay(barangayName);
+        highlightedBarangayRef.current = barangayName;
       },
     }));
 
@@ -401,7 +364,6 @@ const MapPicker = forwardRef(
             mapTypeControl: false,
             streetViewControl: false,
             fullscreenControl: false,
-            styles: MAP_STYLES,
           });
           setMapReady(true);
 
@@ -411,8 +373,8 @@ const MapPicker = forwardRef(
               drawMapFeatures(
                 mapInstance.current,
                 barangayData,
-                highlightedBarangay,
-                markerPosition
+                highlightedBarangayRef.current,
+                markerPositionRef.current
               );
             }
           });
@@ -470,6 +432,7 @@ const MapPicker = forwardRef(
 
         console.log("[MapPicker DEBUG] Setting marker position to:", coords);
         setMarkerPosition(coords);
+        markerPositionRef.current = coords;
         setHighlightedBarangay(null);
         if (onLocationSelect) {
           console.log(
@@ -514,6 +477,7 @@ const MapPicker = forwardRef(
         .map((c) => parseFloat(c.trim()));
       if (!isNaN(lat) && !isNaN(lng)) {
         setMarkerPosition({ lat, lng });
+        markerPositionRef.current = { lat, lng };
         map.setCenter({ lat, lng });
         map.setZoom(17);
         drawMapFeatures(map, barangayData, null, { lat, lng }); // No highlight
