@@ -326,8 +326,11 @@ const BarangayDetails = ({
           </div>
         </div>
         <div className="col-span-6 flex flex-col gap-2">
-          <p className="text-[30px] text-base-content font-bold">
+          <p className="text-[30px] text-base-content font-bold flex items-center">
             Reports within barangay
+            <span className="ml-3 inline-flex items-center justify-center rounded-full bg-primary text-white text-sm font-semibold px-3 py-0.5">
+              {reportsWithinBarangay?.length || 0}
+            </span>
           </p>
           {reportsWithinBarangayLoading ? (
             <div className="flex flex-col items-start bg-white rounded-2xl p-4 text-black gap-2">
@@ -335,58 +338,63 @@ const BarangayDetails = ({
               <p className="text-gray-600">Loading reports…</p>
             </div>
           ) : reportsWithinBarangay.length > 0 ? (
-            reportsWithinBarangay.map((report, index) => (
-              <div
-                key={index}
-                className="flex flex-col items-start bg-white rounded-2xl p-4 text-black gap-2 w-full"
-              >
-                <div className="flex items-center gap-2 mb-1">
-                  <img
-                    src={
-                      BREEDING_SITE_TYPE_ICONS[report.report_type] ||
-                      BREEDING_SITE_TYPE_ICONS.default
-                    }
-                    alt={report.report_type}
-                    className="w-8 h-8"
-                  />
-                  <p className="font-semibold text-lg">
-                    {report.barangay} - {report.report_type}
-                  </p>
-                </div>
-                {Array.isArray(report?.specific_location?.coordinates) && (
+            <div className="space-y-2 max-h-[60vh] overflow-y-auto pr-1">
+              {reportsWithinBarangay.map((report, index) => (
+                <div
+                  key={index}
+                  className="flex flex-col items-start bg-white rounded-2xl p-4 text-black gap-2 w-full"
+                >
+                  <div className="flex items-center gap-2 mb-1">
+                    <img
+                      src={
+                        BREEDING_SITE_TYPE_ICONS[report.report_type] ||
+                        BREEDING_SITE_TYPE_ICONS.default
+                      }
+                      alt={report.report_type}
+                      className="w-8 h-8"
+                    />
+                    <p className="font-semibold text-lg">
+                      {report.barangay} - {report.report_type}
+                    </p>
+                  </div>
+                  {Array.isArray(report?.specific_location?.coordinates) && (
+                    <p>
+                      <span className="font-bold ml-1.5">Coordinates: </span>
+                      {report.specific_location.coordinates[1].toFixed(6)},{" "}
+                      {report.specific_location.coordinates[0].toFixed(6)}
+                    </p>
+                  )}
                   <p>
-                    <span className="font-bold ml-1.5">Coordinates: </span>
-                    {report.specific_location.coordinates[1].toFixed(6)},{" "}
-                    {report.specific_location.coordinates[0].toFixed(6)}
+                    <span className="font-bold ml-1.5">Reported: </span>
+                    {new Date(report.date_and_time).toLocaleDateString(
+                      "en-US",
+                      {
+                        month: "long",
+                        day: "numeric",
+                      }
+                    )}
                   </p>
-                )}
-                <p>
-                  <span className="font-bold ml-1.5">Reported: </span>
-                  {new Date(report.date_and_time).toLocaleDateString("en-US", {
-                    month: "long",
-                    day: "numeric",
-                  })}
-                </p>
-                <p>
-                  <span className="font-bold ml-1.5">Description: </span>
-                  {report.description}
-                </p>
-                <div className="flex justify-end w-full gap-2">
-                  <button
-                    onClick={() => handleViewFullReport(report)}
-                    className="bg-white text-primary border-1 rounded-full  px-4 py-1 text-[11px] hover:cursor-pointer hover:bg-primary/30 transition-all duration-200"
-                  >
-                    View Full Report
-                  </button>
-                  <button
-                    onClick={() => handleShowOnMap(report, "report")}
-                    className="bg-primary rounded-full text-white px-4 py-1 text-[11px] hover:bg-primary/80 hover:scale-105 transition-all duration-200 active:scale-95 cursor-pointer"
-                  >
-                    Show on Map
-                  </button>
+                  <p>
+                    <span className="font-bold ml-1.5">Description: </span>
+                    {report.description}
+                  </p>
+                  <div className="flex justify-end w-full gap-2">
+                    <button
+                      onClick={() => handleViewFullReport(report)}
+                      className="bg-white text-primary border-1 rounded-full  px-4 py-1 text-[11px] hover:cursor-pointer hover:bg-primary/30 transition-all duration-200"
+                    >
+                      View Full Report
+                    </button>
+                    <button
+                      onClick={() => handleShowOnMap(report, "report")}
+                      className="bg-primary rounded-full text-white px-4 py-1 text-[11px] hover:bg-primary/80 hover:scale-105 transition-all duration-200 active:scale-95 cursor-pointer"
+                    >
+                      Show on Map
+                    </button>
+                  </div>
                 </div>
-              </div>
-            ))
+              ))}
+            </div>
           ) : (
             <div className="flex flex-col items-start bg-white rounded-2xl p-4 text-black gap-2">
               <p className="text-gray-500 italic">No reports found</p>

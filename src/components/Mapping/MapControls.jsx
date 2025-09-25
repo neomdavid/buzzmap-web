@@ -350,7 +350,7 @@ const MapControls = ({
             e.target === e.currentTarget && setShowBreedingInfo(false)
           }
         >
-          <div className="modal-box bg-white rounded-2xl shadow-2xl w-11/12 max-w-md p-8 relative text-primary">
+          <div className="modal-box bg-white rounded-2xl shadow-2xl w-11/12 max-w-xl p-8 relative text-primary">
             <button
               className="absolute top-3 right-4 text-xl hover:text-gray-600 hover:cursor-pointer"
               onClick={() => setShowBreedingInfo(false)}
@@ -358,10 +358,10 @@ const MapControls = ({
             >
               ✕
             </button>
-            <p className="text-xl font-extrabold mb-4 tracking-wide">
+            <p className="text-2xl font-extrabold mb-6 tracking-wide">
               Report Type Meanings
             </p>
-            <div className="flex flex-col gap-4 text-sm leading-snug">
+            <div className="flex flex-col gap-6 text-md leading-snug">
               <div className="flex items-start gap-3">
                 <img
                   src={stagnantIcon}
