@@ -31,35 +31,7 @@ export default defineConfig({
   build: {
     rollupOptions: {
       output: {
-        // Manually defining chunks to improve chunking
-        manualChunks: (id) => {
-          // Create separate chunks for admin pages
-          if (id.includes("ReportsVerification")) {
-            return "reports-verification";
-          }
-          if (id.includes("DengueMapping")) {
-            return "dengue-mapping";
-          }
-          if (id.includes("Analytics")) {
-            return "analytics";
-          }
-          if (id.includes("Interventions")) {
-            return "interventions";
-          }
-          // Chunk vendor libraries
-          if (id.includes("node_modules")) {
-            if (id.includes("react") || id.includes("react-dom")) {
-              return "react-vendor";
-            }
-            if (id.includes("ag-grid") || id.includes("ag-grid-react")) {
-              return "ag-grid";
-            }
-            if (id.includes("@tabler/icons") || id.includes("phosphor-react")) {
-              return "icons";
-            }
-            return "vendor";
-          }
-        },
+        // Use Vite default chunking to avoid React being undefined in prod
         // Ensure assets are properly handled
         assetFileNames: (assetInfo) => {
           const info = assetInfo.name.split(".");
