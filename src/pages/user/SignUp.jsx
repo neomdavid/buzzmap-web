@@ -201,14 +201,29 @@ const SignUp = () => {
             <input
               type="checkbox"
               checked={acceptedTerms}
-              disabled={!hasScrolledToBottom}
-              onChange={(e) => setAcceptedTerms(e.target.checked)}
-              className={`checkbox checkbox-lg border-white bg-transparent checked:bg-transparent checked:text-white checked:border-white ${
-                !hasScrolledToBottom ? "opacity-50 cursor-not-allowed" : ""
-              }`}
+              onChange={(e) => {
+                if (acceptedTerms) {
+                  // If unchecking, just uncheck
+                  setAcceptedTerms(false);
+                } else {
+                  // If checking, show the modal first
+                  setHasScrolledToBottom(false); // Reset scroll state when opening
+                  const modal = document.getElementById("terms_modal");
+                  modal.showModal();
+
+                  // Give time for modal to render before checking scroll
+                  setTimeout(() => {
+                    checkScrollability();
+                  }, 100); // 100ms should be enough
+                }
+              }}
+              className="checkbox checkbox-lg border-white bg-transparent checked:bg-transparent checked:text-white checked:border-white hover:cursor-pointer"
               id="acceptTerms"
             />
-            <label className="text-md lg:text-[14px]" htmlFor="acceptTerms">
+            <label
+              className="text-md lg:text-[14px] hover:cursor-pointer"
+              htmlFor="acceptTerms"
+            >
               I agree to the{" "}
               <button
                 type="button"
