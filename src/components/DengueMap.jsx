@@ -11,12 +11,7 @@ import { getInterventionIcon } from "../utils/mapOverlays";
 import allIcon from "../assets/all.svg";
 import center from "@turf/center";
 import { MapPinLine, Circle } from "phosphor-react";
-import {
-  loadGoogleMapsScript,
-  createMapInstance,
-  cleanupMapInstance,
-  isValidMapInstance,
-} from "../utils/googleMapsLoader";
+import { useGoogleMaps } from "./GoogleMapsProvider";
 import { ADMIN_PATTERN_COLORS_MAP } from "../utils/mapOverlays";
 
 // Color utilities for map patterns - use admin pattern colors
@@ -121,6 +116,7 @@ const DengueMap = ({
   const [breedingSites, setBreedingSites] = useState([]);
   const [selectedBreedingSite, setSelectedBreedingSite] = useState(null);
   const [selectedIntervention, setSelectedIntervention] = useState(null);
+  const [error, setError] = useState(null);
 
   const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
   const mapId = import.meta.env.VITE_GOOGLE_MAPS_MAP_ID;
@@ -140,61 +136,15 @@ const DengueMap = ({
     });
   }, []);
 
-  // Load Google Maps script if not already loaded
+  // Use GoogleMapsProvider for consistent loading
+  const { isLoaded } = useGoogleMaps();
+
+  // Initialize map when Google Maps is loaded
   useEffect(() => {
-    if (!window.google) {
-      const script = document.createElement("script");
-      script.src = `https://maps.googleapis.com/maps/api/js?key=${
-        import.meta.env.VITE_GOOGLE_MAPS_API_KEY
-      }&libraries=places,marker`;
-      script.async = true;
-      script.defer = true;
-      script.onload = () => {
-        console.log("[DengueMap DEBUG] Google Maps script loaded");
-        if (!mapInstanceRef.current && mapRef.current) {
-          mapInstanceRef.current = new window.google.maps.Map(mapRef.current, {
-            center: QC_CENTER,
-            zoom: 12,
-            mapId: import.meta.env.VITE_GOOGLE_MAPS_MAP_ID,
-            styles: [
-              {
-                featureType: "administrative",
-                elementType: "geometry",
-                stylers: [{ visibility: "on" }],
-              },
-              {
-                featureType: "administrative.land_parcel",
-                stylers: [{ visibility: "off" }],
-              },
-              {
-                featureType: "administrative.neighborhood",
-                stylers: [{ visibility: "off" }],
-              },
-              {
-                featureType: "poi",
-                elementType: "labels.text",
-                stylers: [{ visibility: "off" }],
-              },
-              { featureType: "poi.business", stylers: [{ visibility: "off" }] },
-              {
-                featureType: "poi.park",
-                elementType: "labels.text",
-                stylers: [{ visibility: "off" }],
-              },
-              {
-                featureType: "road",
-                elementType: "labels.icon",
-                stylers: [{ visibility: "off" }],
-              },
-            ],
-            mapTypeControl: false,
-          });
-          setMapLoaded(true);
-        }
-      };
-      document.head.appendChild(script);
-    } else {
-      if (!mapInstanceRef.current && mapRef.current) {
+    if (!isLoaded || !window.google?.maps?.Map) return;
+
+    if (!mapInstanceRef.current && mapRef.current) {
+      try {
         mapInstanceRef.current = new window.google.maps.Map(mapRef.current, {
           center: QC_CENTER,
           zoom: 12,
@@ -233,14 +183,18 @@ const DengueMap = ({
           mapTypeControl: false,
         });
         setMapLoaded(true);
+      } catch (error) {
+        console.error("[DengueMap] Error initializing map:", error);
+        setError("Failed to initialize map");
       }
     }
+
     return () => {
       if (mapInstanceRef.current) {
         mapInstanceRef.current = null;
       }
     };
-  }, []);
+  }, [isLoaded]);
 
   // Initialize breeding sites from posts
   useEffect(() => {
@@ -1255,6 +1209,27 @@ const DengueMap = ({
     { label: "Low Level Activity", color: "#3182ce" },
     { label: "No Change", color: "#718096" },
   ];
+
+  // Show error state if map failed to load
+  if (error) {
+    return (
+      <div className="flex items-center justify-center h-full bg-gray-100 text-red-600">
+        <div className="text-center">
+          <p className="text-lg font-semibold">Map Error</p>
+          <p className="text-sm">{error}</p>
+          <button
+            onClick={() => {
+              setError(null);
+              setMapLoaded(false);
+            }}
+            className="mt-2 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="relative w-full h-full">
