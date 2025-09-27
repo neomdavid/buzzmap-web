@@ -1,5 +1,11 @@
-import React from "react";
-import { MapPinLine, CheckCircle, Circle, Clock } from "phosphor-react";
+import React, { useState, useMemo } from "react";
+import {
+  MapPinLine,
+  CheckCircle,
+  Circle,
+  Clock,
+  MagnifyingGlass,
+} from "phosphor-react";
 
 const BarangayDetails = ({
   selectedBarangay,
@@ -16,6 +22,30 @@ const BarangayDetails = ({
   handleShowOnMap,
   BREEDING_SITE_TYPE_ICONS,
 }) => {
+  // Search functionality
+  const [searchQuery, setSearchQuery] = useState("");
+
+  // Filter reports based on search query
+  const filteredReports = useMemo(() => {
+    if (!searchQuery.trim()) return reportsWithinBarangay || [];
+
+    const query = searchQuery.toLowerCase();
+    return (reportsWithinBarangay || []).filter((report) => {
+      return (
+        report.description?.toLowerCase().includes(query) ||
+        report.report_type?.toLowerCase().includes(query) ||
+        report.barangay?.toLowerCase().includes(query) ||
+        new Date(report.date_and_time)
+          .toLocaleDateString("en-US", {
+            month: "long",
+            day: "numeric",
+            year: "numeric",
+          })
+          .toLowerCase()
+          .includes(query)
+      );
+    });
+  }, [reportsWithinBarangay, searchQuery]);
   // Don't render anything if no barangay is selected
   if (!selectedBarangay) {
     return (
@@ -326,20 +356,44 @@ const BarangayDetails = ({
           </div>
         </div>
         <div className="col-span-6 flex flex-col gap-2">
-          <p className="text-[30px] text-base-content font-bold flex items-center">
-            Reports within barangay
-            <span className="ml-3 inline-flex items-center justify-center rounded-full bg-primary text-white text-sm font-semibold px-3 py-0.5">
-              {reportsWithinBarangay?.length || 0}
-            </span>
-          </p>
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-[30px] text-base-content font-bold flex items-center">
+              Reports within barangay
+              <span className="ml-3 inline-flex items-center justify-center rounded-full bg-primary text-white text-sm font-semibold px-3 py-0.5">
+                {filteredReports?.length || 0}
+              </span>
+            </p>
+          </div>
+
+          {/* Search Input */}
+          <div className="relative mb-4">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <MagnifyingGlass className="h-5 w-5 text-gray-400" />
+            </div>
+            <input
+              type="text"
+              placeholder="Search reports by description, type, or date..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-colors"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery("")}
+                className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
+              >
+                <span className="text-lg">×</span>
+              </button>
+            )}
+          </div>
           {reportsWithinBarangayLoading ? (
             <div className="flex flex-col items-start bg-white rounded-2xl p-4 text-black gap-2">
               <span className="loading loading-spinner loading-sm"></span>
               <p className="text-gray-600">Loading reports…</p>
             </div>
-          ) : reportsWithinBarangay.length > 0 ? (
+          ) : filteredReports.length > 0 ? (
             <div className="space-y-2 max-h-[60vh] overflow-y-auto pr-1">
-              {reportsWithinBarangay.map((report, index) => (
+              {filteredReports.map((report, index) => (
                 <div
                   key={index}
                   className="flex flex-col items-start bg-white rounded-2xl p-4 text-black gap-2 w-full"
@@ -397,7 +451,19 @@ const BarangayDetails = ({
             </div>
           ) : (
             <div className="flex flex-col items-start bg-white rounded-2xl p-4 text-black gap-2">
-              <p className="text-gray-500 italic">No reports found</p>
+              <p className="text-gray-500 italic">
+                {searchQuery
+                  ? `No reports found matching "${searchQuery}"`
+                  : "No reports found"}
+              </p>
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery("")}
+                  className="text-primary hover:text-primary/80 text-sm underline"
+                >
+                  Clear search
+                </button>
+              )}
             </div>
           )}
         </div>
