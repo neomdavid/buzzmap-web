@@ -169,8 +169,8 @@ const MapControls = ({
                     <div
                       className="w-4 h-4 rounded border-2"
                       style={{
-                        backgroundColor: "#e53e3e",
-                        borderColor: "#e53e3e",
+                        backgroundColor: "#ea580c",
+                        borderColor: "#ea580c",
                       }}
                     ></div>
                     <span className="text-xs text-primary">
