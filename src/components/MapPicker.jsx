@@ -12,6 +12,7 @@ import {
   booleanPointInPolygon,
   union as turfUnion,
 } from "@turf/turf";
+import { useGoogleMaps as useGoogleMapsContext } from "./GoogleMapsProvider";
 
 const QC_CENTER = { lat: 14.676, lng: 121.0437 };
 const QC_BOUNDS = {
@@ -65,6 +66,9 @@ const MapPicker = forwardRef(
     const [barangayData, setBarangayData] = useState(null);
     const [isDataLoaded, setIsDataLoaded] = useState(false);
     const [mapReady, setMapReady] = useState(false);
+
+    // Use Google Maps context to ensure proper loading
+    const { isLoaded: isGoogleMapsLoaded } = useGoogleMapsContext();
     const [highlightedBarangay, setHighlightedBarangay] = useState(null);
     const [markerPosition, setMarkerPosition] = useState(null);
     const [toast, setToast] = useState(null);
@@ -85,7 +89,11 @@ const MapPicker = forwardRef(
 
     // Compute a single union polygon for QC to use as a hole for the outside overlay
     useEffect(() => {
-      if (!barangayData) return;
+      if (!barangayData || barangayData.features.length < 2) {
+        console.log("Not enough features for union operation, skipping...");
+        setQcUnionHoles([]);
+        return;
+      }
       try {
         let merged = null;
         for (const f of barangayData.features) {
@@ -354,35 +362,33 @@ const MapPicker = forwardRef(
 
     // Load Google Maps and initialize
     useEffect(() => {
-      if (!isDataLoaded) return;
-      loadGoogleMapsScript(apiKey).then(() => {
-        if (!mapRef.current) return;
-        if (!mapInstance.current) {
-          mapInstance.current = new window.google.maps.Map(mapRef.current, {
-            center: QC_CENTER,
-            zoom: 13,
-            mapTypeControl: false,
-            streetViewControl: false,
-            fullscreenControl: false,
-          });
-          setMapReady(true);
+      if (!isDataLoaded || !isGoogleMapsLoaded) return;
+      if (!mapRef.current) return;
+      if (!mapInstance.current) {
+        mapInstance.current = new window.google.maps.Map(mapRef.current, {
+          center: QC_CENTER,
+          zoom: 13,
+          mapTypeControl: false,
+          streetViewControl: false,
+          fullscreenControl: false,
+        });
+        setMapReady(true);
 
-          // Redraw labels on zoom changes
-          mapInstance.current.addListener("zoom_changed", () => {
-            if (barangayData) {
-              drawMapFeatures(
-                mapInstance.current,
-                barangayData,
-                highlightedBarangayRef.current,
-                markerPositionRef.current
-              );
-            }
-          });
-        }
-        const map = mapInstance.current;
-        drawMapFeatures(map, barangayData, highlightedBarangay, markerPosition);
-      });
-    }, [isDataLoaded, apiKey, barangayData]);
+        // Redraw labels on zoom changes
+        mapInstance.current.addListener("zoom_changed", () => {
+          if (barangayData) {
+            drawMapFeatures(
+              mapInstance.current,
+              barangayData,
+              highlightedBarangayRef.current,
+              markerPositionRef.current
+            );
+          }
+        });
+      }
+      const map = mapInstance.current;
+      drawMapFeatures(map, barangayData, highlightedBarangay, markerPosition);
+    }, [isDataLoaded, isGoogleMapsLoaded, apiKey, barangayData]);
 
     // Setup click handler separately
     useEffect(() => {
@@ -516,7 +522,13 @@ const MapPicker = forwardRef(
         highlightedBarangay,
         markerPosition
       );
-    }, [highlightedBarangay, markerPosition, isDataLoaded, barangayData]);
+    }, [
+      highlightedBarangay,
+      markerPosition,
+      isDataLoaded,
+      isGoogleMapsLoaded,
+      barangayData,
+    ]);
 
     // Toast timeout
     useEffect(() => {

@@ -28,6 +28,7 @@ import {
   cleanupMapInstance,
   isValidMapInstance,
 } from "../../utils/googleMapsLoader";
+import { useGoogleMaps as useGoogleMapsContext } from "../GoogleMapsProvider";
 import { ADMIN_PATTERN_COLORS_MAP } from "../../utils/mapOverlays";
 
 // Use admin pattern colors from mapOverlays
@@ -116,6 +117,9 @@ const MapOnly = forwardRef(
     const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
     const mapId = import.meta.env.VITE_GOOGLE_MAPS_MAP_ID;
     const [infoWindow, setInfoWindow] = useState(null);
+
+    // Use Google Maps context to ensure proper loading
+    const { isLoaded: isGoogleMapsLoaded } = useGoogleMapsContext();
     const effectiveBaseUrl = useRef(null);
     if (effectiveBaseUrl.current === null) {
       if (baseUrl && typeof baseUrl === "string" && baseUrl.length > 0) {
@@ -243,17 +247,23 @@ const MapOnly = forwardRef(
           }
         },
         showInfoWindow: (content, position) => {
-          if (!infoWindowRef.current) {
+          if (
+            !infoWindowRef.current &&
+            isGoogleMapsLoaded &&
+            window.google?.maps?.InfoWindow
+          ) {
             infoWindowRef.current = new window.google.maps.InfoWindow({
               maxWidth: 500,
             });
           }
-          infoWindowRef.current.setContent(content);
-          infoWindowRef.current.setPosition(position);
-          infoWindowRef.current.open(mapInstance.current);
+          if (infoWindowRef.current) {
+            infoWindowRef.current.setContent(content);
+            infoWindowRef.current.setPosition(position);
+            infoWindowRef.current.open(mapInstance.current);
+          }
         },
       }),
-      []
+      [isGoogleMapsLoaded]
     );
 
     useEffect(() => {
@@ -1099,16 +1109,38 @@ const MapOnly = forwardRef(
 
     // Add this effect to initialize the info window
     useEffect(() => {
-      if (window.google && window.google.maps) {
+      if (isGoogleMapsLoaded && window.google?.maps?.InfoWindow) {
         const newInfoWindow = new window.google.maps.InfoWindow({
           maxWidth: 500,
         });
         setInfoWindow(newInfoWindow);
       }
-    }, []);
+    }, [isGoogleMapsLoaded]);
 
     // Add debug for selectedBarangay changes
     useEffect(() => {}, [selectedBarangay]);
+
+    // Show loading spinner if Google Maps is not loaded
+    if (!isGoogleMapsLoaded) {
+      return (
+        <div
+          className={className}
+          style={{
+            position: "relative",
+            width: "100%",
+            height: "100%",
+            minHeight: 300,
+            ...style,
+          }}
+        >
+          <LoadingSpinner
+            size={32}
+            className="h-full"
+            message="Loading map..."
+          />
+        </div>
+      );
+    }
 
     return (
       <div

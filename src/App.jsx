@@ -173,11 +173,7 @@ const AppWithProviders = () => {
     // Public routes
     {
       path: "/",
-      element: (
-        <GoogleMapsProvider>
-          <LandingLayout />
-        </GoogleMapsProvider>
-      ),
+      element: <LandingLayout />,
       errorElement: <ErrorPage />,
       children: [
         { index: true, element: <Navigate to="/home" replace /> },
@@ -262,11 +258,9 @@ const AppWithProviders = () => {
     {
       path: "/admin",
       element: (
-        <GoogleMapsProvider>
-          <PrivateRoute requiredRole="admin">
-            <AdminLayout />
-          </PrivateRoute>
-        </GoogleMapsProvider>
+        <PrivateRoute requiredRole="admin">
+          <AdminLayout />
+        </PrivateRoute>
       ),
       children: [
         { index: true, element: <Navigate to="/admin/dashboard" replace /> },
@@ -351,18 +345,16 @@ const AppWithProviders = () => {
     {
       path: "/admin/mapping/:id",
       element: (
-        <GoogleMapsProvider>
-          <PrivateRoute requiredRole="admin">
-            <LazyComponent
-              importFunc={() => import("./pages/admin/AdminMapping.jsx")}
-              fallback={
-                <div className="flex items-center justify-center min-h-screen">
-                  <div className="loading loading-spinner loading-lg"></div>
-                </div>
-              }
-            />
-          </PrivateRoute>
-        </GoogleMapsProvider>
+        <PrivateRoute requiredRole="admin">
+          <LazyComponent
+            importFunc={() => import("./pages/admin/AdminMapping.jsx")}
+            fallback={
+              <div className="flex items-center justify-center min-h-screen">
+                <div className="loading loading-spinner loading-lg"></div>
+              </div>
+            }
+          />
+        </PrivateRoute>
       ),
     },
 
@@ -397,7 +389,11 @@ const AppWithProviders = () => {
 };
 
 function App() {
-  return <AppWithProviders />;
+  return (
+    <GoogleMapsProvider>
+      <AppWithProviders />
+    </GoogleMapsProvider>
+  );
 }
 
 export default App;

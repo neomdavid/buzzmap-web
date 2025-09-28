@@ -34,6 +34,7 @@ const MapContainer = ({
   const infoWindowRef = useRef(null);
   const markerClusterRef = useRef(null);
   const isMountedRef = useRef(true);
+  const isInitializingRef = useRef(false);
 
   const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
   const mapId = import.meta.env.VITE_GOOGLE_MAPS_MAP_ID;
@@ -67,7 +68,7 @@ const MapContainer = ({
   }, [posts]);
 
   const { interventions } = useInterventions(allInterventionsData);
-  const { mapInstance, mapReady, createMap, isValidMap } = useGoogleMaps(
+  const { mapInstance, mapReady, createMap, isValidMap, error } = useGoogleMaps(
     apiKey,
     mapId,
     mapRef
@@ -80,10 +81,23 @@ const MapContainer = ({
     };
   }, []);
 
+  // Debug: Track when mapRef is set
+  useEffect(() => {
+    console.log("[MapContainer] mapRef changed:", mapRef.current);
+    if (mapRef.current) {
+      console.log("[MapContainer] mapRef is now set, element:", mapRef.current);
+      console.log(
+        "[MapContainer] element in DOM:",
+        document.contains(mapRef.current)
+      );
+    }
+  }, [mapRef.current]);
+
   // Initialize map when data is ready
   useEffect(() => {
     if (!isMountedRef.current) return;
     if (!barangayData) return;
+    if (isInitializingRef.current) return; // Prevent multiple initializations
 
     if (mapInstance && isValidMap()) {
       console.log("Map already initialized, skipping...");
@@ -91,8 +105,54 @@ const MapContainer = ({
     }
 
     console.log("Starting map initialization...");
-    createMap();
-  }, [barangayData, createMap, mapInstance, isValidMap]);
+    isInitializingRef.current = true;
+
+    // Wait for Google Maps to be fully loaded before creating map
+    const waitForGoogleMaps = () => {
+      return new Promise((resolve) => {
+        const checkReady = () => {
+          if (window.google?.maps?.Map && window.google?.maps?.marker) {
+            console.log("[MapContainer] Google Maps fully loaded");
+            resolve();
+          } else {
+            setTimeout(checkReady, 100);
+          }
+        };
+        checkReady();
+      });
+    };
+
+    // Additional delay to ensure DOM is fully rendered
+    const waitForDOM = () => {
+      return new Promise((resolve) => {
+        setTimeout(() => {
+          console.log("[MapContainer] DOM should be ready now");
+          console.log("[MapContainer] mapRef.current:", mapRef.current);
+          console.log(
+            "[MapContainer] document.contains:",
+            mapRef.current ? document.contains(mapRef.current) : "ref is null"
+          );
+          resolve();
+        }, 500); // Give extra time for DOM rendering
+      });
+    };
+
+    const initializeMap = async () => {
+      try {
+        await waitForGoogleMaps();
+        await waitForDOM(); // Wait for DOM to be ready
+        if (isMountedRef.current) {
+          createMap();
+          isInitializingRef.current = false; // Reset initialization flag
+        }
+      } catch (error) {
+        console.error("[MapContainer] Error waiting for Google Maps:", error);
+        isInitializingRef.current = false; // Reset on error
+      }
+    };
+
+    initializeMap();
+  }, [barangayData]); // Remove createMap, mapInstance, isValidMap from dependencies
 
   // Show info window when barangay is selected from dropdown
   useEffect(() => {
@@ -267,6 +327,12 @@ const MapContainer = ({
   // Update map content when data changes
   useEffect(() => {
     if (!mapInstance || !isValidMap() || !barangayData) {
+      return;
+    }
+
+    // Ensure map container is properly mounted
+    if (!mapRef.current || !document.contains(mapRef.current)) {
+      console.log("Map container not ready, skipping update...");
       return;
     }
 
@@ -542,7 +608,7 @@ const MapContainer = ({
     if (
       showBreedingSites &&
       breedingSites.length > 0 &&
-      window.google.maps.marker
+      window.google?.maps?.marker
     ) {
       const { AdvancedMarkerElement, PinElement } = window.google.maps.marker;
       breedingMarkers = breedingSites.map((site) => {
@@ -566,6 +632,14 @@ const MapContainer = ({
           borderColor: "#FF6347",
           scale: 1.5,
         });
+
+        // Ensure map instance is valid before creating marker
+        if (!map || !isValidMap()) {
+          console.warn(
+            "[MapContainer] Invalid map instance, skipping marker creation"
+          );
+          return null;
+        }
 
         const marker = new AdvancedMarkerElement({
           map,
@@ -705,6 +779,14 @@ const MapContainer = ({
         console.log("[DEBUG] Creating marker for intervention:", intervention);
 
         try {
+          // Ensure map instance is valid before creating marker
+          if (!map || !isValidMap()) {
+            console.warn(
+              "[MapContainer] Invalid map instance, skipping intervention marker creation"
+            );
+            return;
+          }
+
           const iconUrl = getInterventionIcon(
             intervention.type || intervention.interventionType
           );
@@ -860,28 +942,37 @@ const MapContainer = ({
     isValidMap,
   ]);
 
-  // Show loading spinner if map isn't ready
-  if (loading) {
+  // Show error if map failed to initialize
+  if (error) {
     return (
-      <LoadingSpinner
-        size={32}
+      <ErrorMessage
+        message="Failed to load map. Please refresh the page."
         className="h-screen"
-        message="Loading map data..."
       />
     );
   }
 
   return (
-    <div
-      ref={mapRef}
-      id="map"
-      className="w-full h-full"
-      style={{
-        width: "100%",
-        height: "100%",
-        position: "relative",
-      }}
-    />
+    <div className="relative w-full h-full">
+      {/* Always render the map container so ref can be attached */}
+      <div
+        ref={mapRef}
+        id="map"
+        className="w-full h-full"
+        style={{
+          width: "100%",
+          height: "100%",
+          position: "relative",
+        }}
+      />
+
+      {/* Show loading spinner as overlay when map isn't ready */}
+      {loading || !mapReady ? (
+        <div className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-90 z-10">
+          <LoadingSpinner size={32} message="Loading map data..." />
+        </div>
+      ) : null}
+    </div>
   );
 };
 
