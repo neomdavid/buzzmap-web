@@ -27,8 +27,8 @@ export const PATTERN_COLORS = {
     badge: "bg-warning",
     text: "text-warning",
     background: "bg-warning/10",
-    stroke: "#40e17b",
-    fill: "#40e17b",
+    stroke: "#f59e0b",
+    fill: "#f59e0b",
   },
   [PATTERN_TYPES.DECREASE]: {
     border: "border-success",
