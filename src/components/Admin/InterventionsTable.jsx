@@ -105,7 +105,9 @@ function InterventionsTable({
   const containerRef = useRef(null); // DOM container for AG Grid
   const gridRef = useRef(null); // AG Grid React ref (component/api)
 
-  let rowData = interventions.map((intervention) => ({
+  // Ensure interventions is always an array to prevent errors
+  const interventionsArray = interventions || [];
+  let rowData = interventionsArray.map((intervention) => ({
     _id: intervention._id,
     barangay: intervention.barangay,
     address: intervention.address,

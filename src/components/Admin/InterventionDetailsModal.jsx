@@ -177,7 +177,6 @@ const InterventionDetailsModal = ({
   // Handle change location button
   const handleChangeLocation = () => {
     setShowLocationPicker(true);
-    setIsLocationValid(false);
 
     // If there is an existing specific location, focus map and place pin there first
     if (
@@ -187,8 +186,19 @@ const InterventionDetailsModal = ({
     ) {
       const [lng, lat] = formData.specific_location.coordinates;
       setFocusCommand({ type: "pin", lat, lng, zoom: 18 });
+
+      // Re-validate the existing location since we're showing the location picker
+      // This ensures the existing pin is properly validated and the save button appears
+      const existingPinData = {
+        coordinates: formData.specific_location.coordinates,
+        formattedAddress: formData.address,
+      };
+      handlePinChange(existingPinData);
       return;
     }
+
+    // Only set location as invalid if there's no existing location
+    setIsLocationValid(false);
 
     // Otherwise, focus map on current barangay
     if (intervention.barangay && barangayData) {
