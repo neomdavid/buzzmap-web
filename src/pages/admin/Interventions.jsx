@@ -796,38 +796,11 @@ const Interventions = () => {
           </Link>
         </div>
         <div className="h-135" ref={tableWrapperRef}>
-          {interventions && interventions.length > 0 ? (
-            <InterventionsTable
-              interventions={interventions}
-              onlyRecent={true}
-              refetchInterventions={refetchInterventions}
-            />
-          ) : (
-            <div className="flex flex-col items-center justify-center h-full bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
-              <div className="text-center">
-                <svg
-                  className="mx-auto h-12 w-12 text-gray-400"
-                  stroke="currentColor"
-                  fill="none"
-                  viewBox="0 0 48 48"
-                  aria-hidden="true"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M9 12h6m6 0h6m-6 6v6m0 6v6m-3-3h6"
-                  />
-                </svg>
-                <h3 className="mt-2 text-sm font-semibold text-gray-900">
-                  No recent interventions
-                </h3>
-                <p className="mt-1 text-sm text-gray-500">
-                  No intervention records have been created yet.
-                </p>
-              </div>
-            </div>
-          )}
+          <InterventionsTable
+            interventions={interventions}
+            onlyRecent={true}
+            refetchInterventions={refetchInterventions}
+          />
         </div>
       </section>
 

@@ -308,37 +308,67 @@ function InterventionsTable({
           </div>
         </div>
       )}
-      <div
-        className="ag-theme-quartz flex-1 min-h-0"
-        ref={containerRef}
-        style={{ height: "100%", width: "100%", minHeight: 0 }}
-      >
-        <AgGridReact
-          ref={gridRef}
-          rowData={rowData}
-          columnDefs={columnDefs}
-          defaultColDef={defaultColDef}
-          theme={theme}
-          pagination={isActionable && !onlyRecent} // Only show pagination when not showing only recent
-          paginationPageSize={10}
-          paginationPageSizeSelector={[10, 20, 50, 100]}
-          // onGridSizeChanged={onGridSizeChanged}
-          onFirstDataRendered={onFirstDataRendered}
-          context={{ openDetailsModal }}
-          // onGridReady={onGridReady}
-        />
-      </div>
-      <div className="flex w-full justify-center">
-        {isActionable && (
-          <button
-            onClick={openAddModal}
-            className="flex gap-1 bg-primary items-center rounded-2xl py-3 px-6 text-lg text-white font-semibold hover:cursor-pointer hover:bg-primary/90 transition-all duration-200 "
+
+      {/* Show empty state with Add button when no interventions */}
+      {rowData.length === 0 ? (
+        <div className="flex flex-col items-center justify-center flex-1 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300 p-8">
+          <div className="text-center">
+            <p className="mt-2 mb-2 text-2xl font-semibold text-gray-900">
+              No interventions found
+            </p>
+            <p className="mt-1 text-sm text-gray-500">
+              {onlyRecent
+                ? "No recent intervention records have been created yet."
+                : "No intervention records have been created yet."}
+            </p>
+            {isActionable && (
+              <div className="mt-6 flex justify-center">
+                <button
+                  onClick={openAddModal}
+                  className="flex gap-1 bg-primary items-center rounded-2xl py-3 px-6 text-lg text-white font-semibold hover:cursor-pointer hover:bg-primary/90 transition-all duration-200"
+                >
+                  <IconPlus size={17} />
+                  Add New Intervention
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      ) : (
+        <>
+          <div
+            className="ag-theme-quartz flex-1 min-h-0"
+            ref={containerRef}
+            style={{ height: "100%", width: "100%", minHeight: 0 }}
           >
-            <IconPlus size={17} />
-            Add New Intervention
-          </button>
-        )}
-      </div>
+            <AgGridReact
+              ref={gridRef}
+              rowData={rowData}
+              columnDefs={columnDefs}
+              defaultColDef={defaultColDef}
+              theme={theme}
+              pagination={isActionable && !onlyRecent} // Only show pagination when not showing only recent
+              paginationPageSize={10}
+              paginationPageSizeSelector={[10, 20, 50, 100]}
+              // onGridSizeChanged={onGridSizeChanged}
+              onFirstDataRendered={onFirstDataRendered}
+              context={{ openDetailsModal }}
+              // onGridReady={onGridReady}
+            />
+          </div>
+          <div className="flex w-full justify-center">
+            {isActionable && (
+              <button
+                onClick={openAddModal}
+                className="flex gap-1 bg-primary items-center rounded-2xl py-3 px-6 text-lg text-white font-semibold hover:cursor-pointer hover:bg-primary/90 transition-all duration-200 "
+              >
+                <IconPlus size={17} />
+                Add New Intervention
+              </button>
+            )}
+          </div>
+        </>
+      )}
 
       {/* Intervention Details Modal */}
       {isDetailsModalOpen && selectedIntervention && (
