@@ -18,7 +18,7 @@ const About = () => {
 
         <section className="text-white pl-6 pr-6 py-8  sm:p-12 font-light ">
           {/* QCESD Partnership Card - At the top */}
-          <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/30 w-full sm:w-[80%] mx-auto">
+          <div className="bg-white/10 rounded-2xl p-6 shadow-lg border border-white/30 w-full sm:w-[80%] mx-auto">
             <div className="flex justify-center  md:items-center gap-4 mb-6">
               <img
                 src={quezonSurveillance}

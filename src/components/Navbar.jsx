@@ -27,8 +27,9 @@ const Navbar = () => {
 
   const renderLinks = (isDrawer = false) => (
     <div
-      className={`flex ${isDrawer ? "flex-col gap-y-4" : "gap-x-6"
-        } items-center`}
+      className={`flex ${
+        isDrawer ? "flex-col gap-y-4" : "gap-x-6"
+      } items-center`}
     >
       {navLinks.map((link) => (
         <NavLink
@@ -36,14 +37,15 @@ const Navbar = () => {
           to={link.to}
           onClick={() => setIsOpen(false)}
           className={({ isActive }) =>
-            `${isActive
-              ? currentRoute.startsWith("/mapping") ||
-                /^\/buzzline\/\w+/.test(currentRoute)
-                ? "text-secondary"
-                : "text-accent"
-              : currentRoute.startsWith("/mapping") ||
-                /^\/buzzline\/\w+/.test(currentRoute) ||
-                currentRoute === "/profile"
+            `${
+              isActive
+                ? currentRoute.startsWith("/mapping") ||
+                  /^\/buzzline\/\w+/.test(currentRoute)
+                  ? "text-secondary"
+                  : "text-accent"
+                : currentRoute.startsWith("/mapping") ||
+                  /^\/buzzline\/\w+/.test(currentRoute) ||
+                  currentRoute === "/profile"
                 ? "text-white"
                 : "text-primary"
             } font-semibold text-lg`
@@ -71,8 +73,9 @@ const Navbar = () => {
           className="w-10 h-10 rounded-full object-cover border-2 border-white"
         />
         <span
-          className={`text-lg font-semibold ${darkMode ? "text-white" : "text-primary"
-            }`}
+          className={`text-lg font-semibold ${
+            darkMode ? "text-white" : "text-primary"
+          }`}
         >
           {user.name}
         </span>
@@ -80,7 +83,7 @@ const Navbar = () => {
       </div>
       <ul
         tabIndex="0"
-        className="dropdown-content mt-2.5 menu bg-primary text-white rounded-xl z-[10000] w-120 shadow-md flex flex-col justify-center"
+        className="dropdown-content mt-2.5 bm-menu bg-primary text-white rounded-xl z-[10000] w-120 shadow-md flex flex-col justify-center"
       >
         <div className="p-6 flex flex-col gap-1">
           <div className="w-full flex justify-center mb-3">
@@ -120,10 +123,11 @@ const Navbar = () => {
   const renderLoginButton = (darkMode = false) => (
     <button
       onClick={() => navigate("/login")}
-      className={`font-semibold py-2 px-4 rounded-lg border transition-all duration-300 text-lg hover:cursor-pointer ${darkMode
-        ? "text-white border-white hover:bg-white hover:text-primary"
-        : "text-primary border-primary hover:bg-primary hover:text-white"
-        }`}
+      className={`font-semibold py-2 px-4 rounded-lg border transition-all duration-300 text-lg hover:cursor-pointer ${
+        darkMode
+          ? "text-white border-white hover:bg-white hover:text-primary"
+          : "text-primary border-primary hover:bg-primary hover:text-white"
+      }`}
     >
       Login
     </button>
@@ -132,10 +136,11 @@ const Navbar = () => {
   const renderInstallAppButton = (darkMode = false) => (
     <button
       onClick={() => setShowInstallModal(true)}
-      className={`font-semibold flex justify-center py-2 px-4 rounded-lg border transition-all duration-300 text-lg hover:cursor-pointer flex items-center gap-2 ${darkMode
-        ? "text-white border-white hover:bg-white hover:text-primary"
-        : "text-primary border-primary hover:bg-primary hover:text-white"
-        }`}
+      className={`font-semibold flex justify-center py-2 px-4 rounded-lg border transition-all duration-300 text-lg hover:cursor-pointer flex items-center gap-2 ${
+        darkMode
+          ? "text-white border-white hover:bg-white hover:text-primary"
+          : "text-primary border-primary hover:bg-primary hover:text-white"
+      }`}
     >
       <Smartphone size={20} />
       Install App
@@ -149,8 +154,8 @@ const Navbar = () => {
     <>
       {/* Render the appropriate navbar based on route */}
       {currentRoute === "/mapping" ||
-        /^\/buzzline\/\w+/.test(currentRoute) ||
-        currentRoute === "/profile" ? (
+      /^\/buzzline\/\w+/.test(currentRoute) ||
+      currentRoute === "/profile" ? (
         <nav className={`${baseClass} bg-primary text-white`}>
           <LogoNamed theme="dark" />
           <div className="hidden md:flex items-center gap-x-6">
@@ -160,7 +165,13 @@ const Navbar = () => {
               ? renderProfile(true)
               : renderLoginButton(true)}
           </div>
-          <button className="md:hidden text-white" onClick={toggleDrawer} aria-label={isOpen ? "Close navigation menu" : "Open navigation menu"}>
+          <button
+            className="md:hidden text-white"
+            onClick={toggleDrawer}
+            aria-label={
+              isOpen ? "Close navigation menu" : "Open navigation menu"
+            }
+          >
             {isOpen ? (
               <X size={28} className="hover:cursor-pointer" />
             ) : (
@@ -193,7 +204,13 @@ const Navbar = () => {
             {renderInstallAppButton()}
             {user.name !== "Guest" ? renderProfile() : renderLoginButton()}
           </div>
-          <button className="md:hidden text-primary" onClick={toggleDrawer} aria-label={isOpen ? "Close navigation menu" : "Open navigation menu"}>
+          <button
+            className="md:hidden text-primary"
+            onClick={toggleDrawer}
+            aria-label={
+              isOpen ? "Close navigation menu" : "Open navigation menu"
+            }
+          >
             {isOpen ? (
               <X size={28} className="hover:cursor-pointer" />
             ) : (

@@ -302,6 +302,10 @@ const FormPublicPost = ({ onSuccess }) => {
                   type="time"
                   value={postTime}
                   onChange={(e) => setPostTime(e.target.value)}
+                  inputMode="numeric"
+                  pattern="^[0-2][0-9]:[0-5][0-9]$"
+                  placeholder="HH:MM"
+                  title="Enter time as HH:MM"
                   className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary outline-none"
                   required
                 />

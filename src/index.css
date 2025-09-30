@@ -18,3 +18,28 @@ dialog::backdrop,
 .modal::backdrop {
   z-index: 2147483646 !important;
 }
+
+/* Google Maps keyboard shortcuts panel fallback for browsers without light-dark() */
+.LGLeeN-keyboard-shortcuts-view td,
+.gm-ui-hover-effect,
+.gm-style .gm-style-iw-c,
+.gm-style .gm-style-iw-d {
+  color: #333b3c; /* fallback text color */
+}
+
+.LGLeeN-keyboard-shortcuts-view td kbd,
+.gm-style .gm-style-iw-c kbd {
+  background-color: #e8eaed; /* fallback background */
+  color: #3c4043; /* fallback text */
+}
+
+/* If the browser supports light-dark(), let it refine colors */
+@supports (color: light-dark(#000, #fff)) {
+  .LGLeeN-keyboard-shortcuts-view td {
+    color: light-dark(#333b3c, #efefec);
+  }
+  .LGLeeN-keyboard-shortcuts-view td kbd {
+    background-color: light-dark(#e8eaed, #3c4043);
+    color: light-dark(#3c4043, #e8eaed);
+  }
+}

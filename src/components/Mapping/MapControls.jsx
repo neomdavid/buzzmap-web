@@ -35,7 +35,7 @@ const MapControls = ({
   return (
     <div className="absolute top-6 left-0 md:left-10 z-10 w-full md:w-auto flex justify-center md:block">
       {showControlPanel && (
-        <div className="relative bg-white/60 backdrop-blur-md rounded-lg shadow-xl p-6 w-[90vw] sm:w-[70vw] md:w-[400px] text-primary transition-all duration-300 ease-in-out transform">
+        <div className="relative bg-white/85  rounded-lg shadow-xl p-6 w-[90vw] sm:w-[70vw] md:w-[400px] text-primary transition-all duration-300 ease-in-out transform">
           <button
             onClick={() => setShowControlPanel(false)}
             className="absolute top-3 right-3 z-20 bg-white/80 hover:bg-gray-200 text-primary rounded-full w-8 h-8 flex items-center justify-center shadow"

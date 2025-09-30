@@ -545,6 +545,10 @@ const NewPostModal = forwardRef(
                         <input
                           type="time"
                           className="input input-bordered py-6 w-full text-lg"
+                          inputMode="numeric"
+                          pattern="^[0-2][0-9]:[0-5][0-9]$"
+                          placeholder="HH:MM"
+                          title="Enter time as HH:MM"
                           value={time}
                           onChange={(e) => {
                             const val = e.target.value;
