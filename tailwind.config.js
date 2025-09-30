@@ -10,17 +10,8 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        title: ["Koulen", "Impact", "Arial Black", "sans-serif"],
-        body: [
-          "Inter",
-          "-apple-system",
-          "BlinkMacSystemFont",
-          "Segoe UI",
-          "Roboto",
-          "Helvetica Neue",
-          "Arial",
-          "sans-serif",
-        ],
+        title: ["Koulen", "sans-serif"],
+        body: ["Inter", "sans-serif"],
       },
       colors: {
         buzzRed: "#E64848",

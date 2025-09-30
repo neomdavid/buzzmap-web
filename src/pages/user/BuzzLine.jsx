@@ -8,14 +8,11 @@ import {
 } from "@tabler/icons-react";
 import { ArrowRight } from "phosphor-react";
 import { useGetAllAdminPostsQuery } from "../../api/dengueApi";
-import { useMemo, lazy, Suspense } from "react";
 import womanLowHand from "../../assets/woman_lowhand.png";
 import { useNavigate } from "react-router-dom";
-
-// Lazy load heavy components
-const BuzzLineFooter = lazy(() => import("../../components/BuzzLineFooter"));
-const UpdatesCard = lazy(() => import("../../components/UpdatesCard"));
-const ArticlesCard = lazy(() => import("../../components/ArticlesCard"));
+import BuzzLineFooter from "../../components/BuzzLineFooter";
+import UpdatesCard from "../../components/UpdatesCard";
+import ArticlesCard from "../../components/ArticlesCard";
 
 const BuzzLine = () => {
   // Fetch admin posts
@@ -65,12 +62,9 @@ const BuzzLine = () => {
               </div>
             ))
           ) : newsArticles.length > 0 ? (
-            <Suspense
-              fallback={
-                <div className="col-span-full text-center">Loading...</div>
-              }
-            >
-              {newsArticles.slice(0, 8).map((post) => (
+            newsArticles
+              .slice(0, 8)
+              .map((post) => (
                 <UpdatesCard
                   key={post._id}
                   image={
@@ -87,8 +81,7 @@ const BuzzLine = () => {
                   summary={post.content}
                   onReadMore={() => navigate(`/buzzline/${post._id}`)}
                 />
-              ))}
-            </Suspense>
+              ))
           ) : (
             <div className="col-span-full text-center py-10 mb-40">
               <p className="text-white text-xl">
@@ -130,12 +123,9 @@ const BuzzLine = () => {
               </div>
             ))
           ) : tipArticles.length > 0 ? (
-            <Suspense
-              fallback={
-                <div className="col-span-full text-center">Loading...</div>
-              }
-            >
-              {tipArticles.slice(0, 8).map((post) => (
+            tipArticles
+              .slice(0, 8)
+              .map((post) => (
                 <ArticlesCard
                   key={post._id}
                   image={
@@ -152,8 +142,7 @@ const BuzzLine = () => {
                   summary={post.content}
                   onReadMore={() => navigate(`/buzzline/${post._id}`)}
                 />
-              ))}
-            </Suspense>
+              ))
           ) : (
             <div className="col-span-full text-center py-10">
               <p className="text-primary text-xl">
@@ -225,11 +214,7 @@ const BuzzLine = () => {
           alt="illustration"
         />
       </div>
-      <Suspense
-        fallback={<div className="text-center py-10">Loading footer...</div>}
-      >
-        <BuzzLineFooter />
-      </Suspense>
+      <BuzzLineFooter />
     </main>
   );
 };

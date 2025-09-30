@@ -42,44 +42,9 @@ export default defineConfig({
           return `assets/[name]-[hash][extname]`;
         },
         chunkFileNames: "assets/[name]-[hash].js",
-        manualChunks: {
-          // Separate vendor chunks for better caching
-          "react-vendor": ["react", "react-dom", "react-router-dom"],
-          "ui-vendor": [
-            "@tabler/icons-react",
-            "phosphor-react",
-            "framer-motion",
-          ],
-          "chart-vendor": [
-            "chart.js",
-            "react-chartjs-2",
-            "recharts",
-            "@visx/responsive",
-            "@visx/shape",
-            "@visx/scale",
-            "@visx/legend",
-          ],
-          "map-vendor": ["leaflet", "react-leaflet", "@turf/turf"],
-          "table-vendor": ["@tanstack/react-table", "ag-grid-react"],
-          "utils-vendor": [
-            "axios",
-            "date-fns",
-            "dayjs",
-            "clsx",
-            "tailwind-merge",
-          ],
-        },
       },
     },
     // Increase chunk size warning limit
     chunkSizeWarningLimit: 1000,
-    // Minify options for better compression
-    minify: "terser",
-    terserOptions: {
-      compress: {
-        drop_console: true,
-        drop_debugger: true,
-      },
-    },
   },
 });

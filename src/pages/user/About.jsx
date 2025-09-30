@@ -1,10 +1,4 @@
 import womanWithHand from "../../assets/woman_withhand.png";
-import MemberCard from "../../components/About/MemberCard";
-import reyProfile from "../../assets/members/rey.png";
-import davidProfile from "../../assets/members/david.png";
-import cruzProfile from "../../assets/members/cruz.png";
-import rapiProfile from "../../assets/members/rapi.png";
-import logoDarkBg from "../../assets/logo_darkbg.svg";
 import quezonSurveillance from "../../assets/icons/quezon_surveillance.png";
 
 const About = () => {
@@ -15,8 +9,11 @@ const About = () => {
           src={womanWithHand}
           className="w-140 absolute left-[-197px] hidden md:block bottom-[23%] lg:w-165 lg:left-[-233px] xl:w-190 xl:left-[-268px] 2xl:w-205 2xl:left-[-289px] 2xl:bottom-[19%]"
           alt="BuzzMap illustration"
-          fetchpriority="high"
+          width="600"
+          height="640"
           loading="eager"
+          fetchPriority="high"
+          style={{ aspectRatio: "8/8" }}
         />
 
         <section className="text-white pl-6 pr-6 py-8  sm:p-12 font-light ">
@@ -27,7 +24,9 @@ const About = () => {
                 src={quezonSurveillance}
                 className="w-12 h-12 md:w-15 md:h-15 flex-shrink-0 object-contain"
                 alt="QCESD Logo"
-                loading="lazy"
+                width="60"
+                height="60"
+                loading="eager"
               />
               <div className="">
                 <p className="text-lg md:text-xl font-bold text-white leading-tight">
@@ -52,7 +51,7 @@ const About = () => {
               About{" "}
               <span className="italic font-[900] tracking-wider">BuzzMap</span>
             </h1>
-            <p className="max-w-full sm:max-w-[80%] mx-auto mb-10">
+            <p className="max-w-full sm:max-w-[80%] mx-auto mb-10 min-h-[120px]">
               <b className="font-bold">BuzzMap</b> is proud to partner with the
               Quezon City Epidemiology & Surveillance Division, specifically
               Quezon City Environmental and Sanitation Unit <b>(QC CESU)</b> in
