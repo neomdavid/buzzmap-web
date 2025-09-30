@@ -10,27 +10,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      rel="preload"
-      href="https://fonts.gstatic.com/s/inter/v30/AMOQz46as01GX0XBjXrhbFSgp-sMyoHnk-e7JA.woff2"
-      as="font"
-      type="font/woff2"
-      crossorigin
-    />
-    <link
-      rel="preload"
-      href="https://fonts.gstatic.com/s/koulen/v20/UcCo3FwrKzmgz6-0rJXR_MSI.woff2"
-      as="font"
-      type="font/woff2"
-      crossorigin
-    />
-    <link
-      rel="preload"
-      href="/quezon_barangays_boundaries.geojson"
-      as="fetch"
-      type="application/json"
-      crossorigin
-    />
+    <!-- Remove font preloads that are causing warnings -->
     <!-- Prefetch likely next pages -->
     <link rel="prefetch" href="/mapping" />
     <link rel="prefetch" href="/community" />
@@ -41,8 +21,7 @@
     <link
       rel="stylesheet"
       href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Koulen&display=swap"
-      media="print"
-      onload="this.media='all'"
+      media="all"
     />
     <noscript>
       <link

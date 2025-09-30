@@ -45,9 +45,6 @@ export default defineConfig({
         manualChunks: (id) => {
           // Create separate chunks for large dependencies
           if (id.includes("node_modules")) {
-            if (id.includes("react") || id.includes("react-dom")) {
-              return "react-vendor";
-            }
             if (id.includes("phosphor-react")) {
               return "phosphor-vendor";
             }
@@ -56,6 +53,10 @@ export default defineConfig({
             }
             if (id.includes("react-router")) {
               return "router-vendor";
+            }
+            // Keep React together to avoid dependency issues
+            if (id.includes("react")) {
+              return "vendor";
             }
             return "vendor";
           }
