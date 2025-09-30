@@ -2,7 +2,8 @@ import { useState } from "react";
 import { NavLink, useLocation, useNavigate, matchPath } from "react-router-dom";
 import { navLinks } from "../utils";
 import { LogoNamed, InstallAppModal } from "./";
-import { Menu, X, Smartphone } from "lucide-react";
+import { X, Smartphone } from "lucide-react";
+import { List } from "phosphor-react";
 import { useSelector, useDispatch } from "react-redux";
 import { logout } from "../features/authSlice.js";
 import { toastSuccess } from "../utils.jsx";
@@ -175,7 +176,7 @@ const Navbar = () => {
             {isOpen ? (
               <X size={28} className="hover:cursor-pointer" />
             ) : (
-              <Menu size={28} className="hover:cursor-pointer" />
+              <List size={28} className="hover:cursor-pointer" />
             )}
           </button>
           {isOpen && (
@@ -214,7 +215,7 @@ const Navbar = () => {
             {isOpen ? (
               <X size={28} className="hover:cursor-pointer" />
             ) : (
-              <Menu size={28} className="hover:cursor-pointer" />
+              <List size={28} className="hover:cursor-pointer" />
             )}
           </button>
           {isOpen && (
