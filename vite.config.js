@@ -42,6 +42,38 @@ export default defineConfig({
           return `assets/[name]-[hash][extname]`;
         },
         chunkFileNames: "assets/[name]-[hash].js",
+        manualChunks: (id) => {
+          // Create separate chunks for large dependencies
+          if (id.includes("node_modules")) {
+            if (id.includes("react") || id.includes("react-dom")) {
+              return "react-vendor";
+            }
+            if (id.includes("phosphor-react")) {
+              return "phosphor-vendor";
+            }
+            if (id.includes("@reduxjs") || id.includes("redux")) {
+              return "redux-vendor";
+            }
+            if (id.includes("react-router")) {
+              return "router-vendor";
+            }
+            return "vendor";
+          }
+          // Create separate chunks for mapping components
+          if (
+            id.includes("/components/Mapping/") ||
+            id.includes("/components/DengueMap")
+          ) {
+            return "mapping";
+          }
+          // Create separate chunks for admin components
+          if (
+            id.includes("/components/Admin/") ||
+            id.includes("/pages/admin/")
+          ) {
+            return "admin";
+          }
+        },
       },
     },
     // Increase chunk size warning limit

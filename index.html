@@ -25,9 +25,24 @@
       crossorigin
     />
     <link
+      rel="preload"
+      href="/quezon_barangays_boundaries.geojson"
+      as="fetch"
+      type="application/json"
+      crossorigin
+    />
+    <!-- Prefetch likely next pages -->
+    <link rel="prefetch" href="/mapping" />
+    <link rel="prefetch" href="/community" />
+    <link rel="prefetch" href="/buzzline" />
+    <!-- DNS prefetch for external domains -->
+    <link rel="dns-prefetch" href="//maps.googleapis.com" />
+    <link rel="dns-prefetch" href="//buzzmap-backend.onrender.com" />
+    <link
       rel="stylesheet"
       href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Koulen&display=swap"
-      media="all"
+      media="print"
+      onload="this.media='all'"
     />
     <noscript>
       <link

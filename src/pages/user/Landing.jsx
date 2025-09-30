@@ -3,7 +3,7 @@ import tubImg from "../../assets/mosquito_tub.jpg";
 import cleaningImg from "../../assets/cleaning.jpg";
 import logoFooter from "../../assets/logo_ligthbg.svg";
 import logoSurveillance from "../../assets/icons/quezon_surveillance.png";
-import landing3 from "../../assets/landing3.jpg";
+import landing4 from "../../assets/landing4.svg";
 import {
   GoalCard,
   Heading,
@@ -26,19 +26,21 @@ import ScrambledText from "../../components/Landing/ScrambledText";
 import AltPreventionCard from "../../components/Landing/AltPreventionCard";
 import { Link } from "react-router-dom";
 import StreetViewMap from "../../components/StreetViewMap";
-import { useState, useEffect, useRef } from "react";
-import Mapping from "./Mapping";
-import RiskMap from "../../components/RiskMap";
+import { useState, useEffect, useRef, lazy, Suspense } from "react";
 import NewPostModal from "../../components/Community/NewPostModal";
 import { useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { toastInfo, toastSuccess } from "../../utils";
-import MapOnly from "../../components/Mapping/MapOnly";
+
+// Lazy load heavy components
+const MapOnly = lazy(() => import("../../components/Mapping/MapOnly"));
 
 const Landing = () => {
   const modalRef = useRef(null);
+  const mapContainerRef = useRef(null);
   const navigate = useNavigate();
   const { user } = useSelector((state) => state.auth);
+  const [shouldLoadMap, setShouldLoadMap] = useState(false);
 
   useEffect(() => {
     // Check if there's a token in localStorage
@@ -82,6 +84,29 @@ const Landing = () => {
       }
     }
   }, [navigate, user]);
+
+  // Intersection Observer for lazy loading the map
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const [entry] = entries;
+        if (entry.isIntersecting) {
+          setShouldLoadMap(true);
+          observer.disconnect(); // Stop observing once loaded
+        }
+      },
+      {
+        rootMargin: "100px", // Load when 100px away from viewport
+        threshold: 0.1,
+      }
+    );
+
+    if (mapContainerRef.current) {
+      observer.observe(mapContainerRef.current);
+    }
+
+    return () => observer.disconnect();
+  }, []);
 
   const handleReportClick = () => {
     // Check if user exists and has a name property
@@ -146,7 +171,7 @@ const Landing = () => {
       </div>
 
       <img
-        src={landing3}
+        src={landing4}
         className="h-[380px] scale-105 lg:h-[420px] xl:h-[440px] object-cover object-top rounded-3xl  mx-auto mt-[-60px] z-[-1] mb-8 max-w-[95vw] w-full px-6 sm:px-6"
         style={{
           maskImage:
@@ -155,23 +180,44 @@ const Landing = () => {
             "linear-gradient(to bottom, rgba(0,0,0,0) 0%, rgba(0,0,0,0.8) 30%, rgba(0,0,0,1) 60%)",
         }}
         alt="People checking dengue map and updates"
+        loading="lazy"
+        decoding="async"
       />
 
       <section className="flex flex-col lg:flex-row lg:mt-10  justify-center  sm:max-w-[95vw] m-auto px-6 sm:px-6 gap-x-4 ">
         <div
+          ref={mapContainerRef}
           className="rounded-xl overflow-hidden h-[400px] lg:h-[550px]  mb-6 lg:mb-0 lg:flex-13 flex items-center justify-center bg-red-100 hover:cursor-pointer"
           onClick={() => navigate("/mapping")}
           role="button"
           aria-label="Open Dengue Map"
         >
-          <MapOnly
-            style={{ height: "100%", width: "100%" }}
-            useAdminEndpoint={false}
-            baseUrl="/mapping"
-            validatedOnly={true}
-            hideClusterOverlays={true}
-            suppressClusterStyling={true}
-          />
+          {shouldLoadMap ? (
+            <Suspense
+              fallback={
+                <div className="flex items-center justify-center h-full w-full">
+                  <div className="loading loading-spinner loading-lg text-primary"></div>
+                </div>
+              }
+            >
+              <MapOnly
+                style={{ height: "100%", width: "100%" }}
+                useAdminEndpoint={false}
+                baseUrl="/mapping"
+                validatedOnly={true}
+                hideClusterOverlays={true}
+                suppressClusterStyling={true}
+              />
+            </Suspense>
+          ) : (
+            <div className="flex flex-col items-center justify-center h-full w-full text-primary">
+              <div className="text-6xl mb-4">🗺️</div>
+              <p className="text-lg font-semibold">Loading map...</p>
+              <p className="text-sm text-gray-600">
+                Click to explore dengue hotspots
+              </p>
+            </div>
+          )}
         </div>
 
         <div className="mb-16 flex flex-col flex-10 text-lg  sm:mx-6 items-center text-center lg:items-end lg:text-right">
@@ -343,7 +389,11 @@ const Landing = () => {
       <footer className="flex  flex-col gap-y-6 items-center sm:flex-row text-primary sm:items-start justify-between px-6 py-10 sm:py-6 pb-12 mt-[-30px] sm:mt-[-25px] w-full  mr-6">
         <div className="flex flex-col gap-y-8 text-center sm:text-left sm:gap-y-0 w-full  items-center sm:items-start  sm:flex-row gap-x-16">
           <div className="flex flex-col sm:flex-row gap-y-6 sm:gap-y-0  w-full sm:w-auto  gap-x-6 items-center">
-            <img src={logoFooter} className="flex-1 w-42 sm:w-33 h-auto" alt="BuzzMap logo" />
+            <img
+              src={logoFooter}
+              className="flex-1 w-42 sm:w-33 h-auto"
+              alt="BuzzMap logo"
+            />
             <img
               src={logoSurveillance}
               className="flex-1 w-42 sm:w-33  h-auto"
