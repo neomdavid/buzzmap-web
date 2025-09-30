@@ -26,7 +26,6 @@ import BuzzLineFooter from "../../components/BuzzLineFooter";
 import UpdatesCard from "../../components/UpdatesCard";
 import dummyUpdates from "../../data/dummyUpdates";
 import ArticlesCard from "../../components/ArticlesCard";
-import sprayingImg from "../../assets/spray.svg";
 // Add this temporary test component
 const TestNewsGrid = ({ articles = [] }) => {
   console.log("TestNewsGrid rendered with articles:", articles);
@@ -74,13 +73,13 @@ const BuzzLine = () => {
 
     const filteredNews = Array.isArray(adminPosts?.posts)
       ? adminPosts.posts.filter((post) => {
-        return (
-          post &&
-          post.category &&
-          post.category.toLowerCase() === "news" &&
-          post.status !== "archived"
-        );
-      })
+          return (
+            post &&
+            post.category &&
+            post.category.toLowerCase() === "news" &&
+            post.status !== "archived"
+          );
+        })
       : [];
 
     return filteredNews
@@ -104,7 +103,7 @@ const BuzzLine = () => {
 
   return (
     <main className="flex flex-col text-center items-center justify-center mt-2 py-8 overflow-x-hidden py-20">
-      <div className="mx-4">
+      <div className="mx-4 mb-16">
         <Heading
           text="Stay one step /ahead/"
           className="text-8xl md:text-9xl mb-4"
@@ -115,14 +114,7 @@ const BuzzLine = () => {
         </p>
       </div>
 
-      <div className="relative mt-12 w-[112%] rounded-tl-[450px] rounded-tr-[450px] md:rounded-tl-[1000px] md:rounded-tr-[1000px] md:h-300 md:mb-[-450px] md:w-[120%] overflow-hidden">
-        {/* Image */}
-        <img className="w-full h-150 object-cover md:h-200" src={sprayingImg} alt="Illustration of dengue prevention spraying" />
-
-        {/* Gradient Overlay */}
-        <div className="absolute inset-0 bg-gradient-to-t from-primary via-primary/2 to-transparent  md:mt-[-850px]"></div>
-      </div>
-      <section className="px-6 sm:px-14 py-20 pt-24 w-full bg-primary flex flex-col text-white items-start z-10 gap-14 md:gap-23">
+      <section className="px-6 rounded-t-4xl sm:px-14 py-20 pt-24 w-full bg-primary flex flex-col text-white items-start z-10 gap-14 md:gap-23">
         <p className="font-bold italic text-4xl sm:text-5xl w-full text-center ">
           Latest Dengue Surveillance Updates
         </p>
