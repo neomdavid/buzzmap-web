@@ -1,0 +1,438 @@
+BUZZMAP API ROUTES DOCUMENTATION
+=====================================
+
+Base URL Configuration:
+- Production: Uses VITE_API_BASE_URL environment variable
+- Development: Defaults to "/" (proxy configuration)
+- Full Path Format: {BASE_URL}/api/v1/{endpoint}
+
+=====================================
+🔐 AUTHENTICATION ROUTES
+=====================================
+
+POST /api/v1/auth/register
+- Description: User registration
+- Body: { username, email, password, barangay, etc. }
+
+POST /api/v1/auth/login
+- Description: User login
+- Body: { email, password }
+
+POST /api/v1/auth/verify-otp
+- Description: OTP verification for account/password reset
+- Body: { email, otp, purpose }
+
+POST /api/v1/auth/resend-otp
+- Description: Resend OTP
+- Body: { email, purpose }
+
+POST /api/v1/auth/forgot-password
+- Description: Request password reset
+- Body: { email }
+
+POST /api/v1/auth/reset-password
+- Description: Reset password with OTP
+- Body: { email, otp, newPassword }
+
+POST /api/v1/auth/refresh-token
+- Description: Refresh access token
+- Body: { refreshToken }
+
+=====================================
+📊 REPORTS/POSTS ROUTES
+=====================================
+
+GET /api/v1/reports
+- Description: Get all reports with optional filters
+- Query Params: search, barangay, report_type, status, startDate, endDate, sortBy, sortOrder, username, description, popular, recent, myPosts
+
+GET /api/v1/reports/{id}
+- Description: Get specific report by ID
+
+GET /api/v1/reports/by-barangay
+- Description: Get reports filtered by barangay
+- Query Params: barangay
+
+POST /api/v1/reports
+- Description: Create new report (supports FormData for images)
+- Body: { barangay, report_type, description, specific_location, images?, isAnonymous? }
+
+DELETE /api/v1/reports/{id}
+- Description: Delete specific report
+
+PATCH /api/v1/reports/{id}
+- Description: Update/validate report status
+- Body: { status }
+
+POST /api/v1/reports/nearby
+- Description: Get nearby reports based on location
+- Body: { latitude, longitude, radius? }
+
+GET /api/v1/reports/grouped
+- Description: Get grouped reports (individual + clusters)
+
+=====================================
+👍 VOTING/REACTIONS ROUTES
+=====================================
+
+POST /api/v1/reports/{id}/upvote
+- Description: Upvote a report
+
+POST /api/v1/reports/{id}/downvote
+- Description: Downvote a report
+
+DELETE /api/v1/reports/{id}/upvote
+- Description: Remove upvote from report
+
+DELETE /api/v1/reports/{id}/downvote
+- Description: Remove downvote from report
+
+PATCH /api/v1/posts/{id}/like
+- Description: Like/unlike a post
+
+=====================================
+💬 COMMENTS ROUTES
+=====================================
+
+GET /api/v1/reports/{id}/comments
+- Description: Get all comments for a specific report
+
+POST /api/v1/reports/{id}/comments
+- Description: Add comment to a report
+- Body: { content }
+
+POST /api/v1/comments/{id}/upvote
+- Description: Upvote a comment
+
+POST /api/v1/comments/{id}/downvote
+- Description: Downvote a comment
+
+DELETE /api/v1/comments/{id}/upvote
+- Description: Remove upvote from comment
+
+DELETE /api/v1/comments/{id}/downvote
+- Description: Remove downvote from comment
+
+=====================================
+🎯 INTERVENTIONS ROUTES
+=====================================
+
+GET /api/v1/interventions
+- Description: Get all interventions
+
+GET /api/v1/interventions/{id}
+- Description: Get specific intervention by ID
+
+GET /api/v1/interventions/in-progress/{barangay}
+- Description: Get in-progress interventions for specific barangay
+
+GET /api/v1/interventions/barangay/{id}/grouped
+- Description: Get grouped interventions (ongoing/scheduled) by barangay ID
+
+POST /api/v1/interventions
+- Description: Create new intervention
+- Body: { title, description, barangay, scheduled_date, intervention_type, etc. }
+
+PATCH /api/v1/interventions/{id}
+- Description: Update intervention
+- Body: { updatedData }
+
+DELETE /api/v1/interventions/{id}
+- Description: Delete intervention
+
+=====================================
+📈 ANALYTICS ROUTES
+=====================================
+
+GET /api/v1/analytics/interventions
+- Description: Get analytics data for interventions
+
+GET /api/v1/analytics/analyze-crowdsourced-reports
+- Description: Analyze crowdsourced reports data
+
+POST /api/v1/analytics/get-barangay-weekly-trends
+- Description: Get weekly trends for specific barangay
+- Body: { barangay_name, number_of_weeks }
+
+POST /api/v1/analytics/generate-recommendation
+- Description: Generate AI recommendation
+- Body: { userRole, barangay }
+
+GET /api/v1/analytics/get-recommendation-for-intervention
+- Description: Get AI recommendation for intervention planning
+- Query Params: barangay
+
+POST /api/v1/analytics/analyze-intervention-effectivity
+- Description: Analyze intervention effectiveness
+- Body: { intervention_id }
+
+GET /api/v1/analytics/retrieve-pattern-recognition-results
+- Description: Get pattern recognition analysis results
+
+=====================================
+🏘️ BARANGAYS ROUTES
+=====================================
+
+GET /api/v1/barangays/get-all-barangays-for-user
+- Description: Get all barangays (user endpoint)
+
+GET /api/v1/barangays/get-all-barangays
+- Description: Get all barangays (admin endpoint with additional data)
+
+POST /api/v1/barangays/get-recent-reports-for-barangay
+- Description: Get recent reports for specific barangay
+- Body: { barangay_name }
+
+=====================================
+🚨 ALERTS ROUTES
+=====================================
+
+GET /api/v1/alerts
+- Description: Get all dengue alerts
+
+POST /api/v1/alerts
+- Description: Send new dengue alert
+- Body: { message, barangays, alert_level, etc. }
+
+PATCH /api/v1/alerts/{id}
+- Description: Update alert
+- Body: { updatedData }
+
+DELETE /api/v1/alerts/{id}
+- Description: Delete alert
+
+=====================================
+👨‍💼 ADMIN POSTS ROUTES
+=====================================
+
+GET /api/v1/adminposts
+- Description: Get all admin posts
+
+GET /api/v1/adminPosts/{id}
+- Description: Get specific admin post by ID
+
+POST /api/v1/adminPosts
+- Description: Create new admin post
+- Body: FormData with title, content, category, images?, etc.
+
+PATCH /api/v1/adminPosts/{id}
+- Description: Update admin post
+- Body: FormData with updated fields
+
+DELETE /api/v1/adminPosts/{id}
+- Description: Delete admin post
+
+=====================================
+👍 ADMIN POST VOTING ROUTES
+=====================================
+
+POST /api/v1/adminposts/{id}/upvote
+- Description: Upvote admin post
+
+POST /api/v1/adminposts/{id}/downvote
+- Description: Downvote admin post
+
+DELETE /api/v1/adminposts/{id}/upvote
+- Description: Remove upvote from admin post
+
+DELETE /api/v1/adminposts/{id}/downvote
+- Description: Remove downvote from admin post
+
+=====================================
+💬 ADMIN POST COMMENTS ROUTES
+=====================================
+
+GET /api/v1/comments/{postId}
+- Description: Get comments for admin post
+
+POST /api/v1/comments/{postId}
+- Description: Add comment to admin post
+- Body: { content }
+
+POST /api/v1/comments/{id}/upvote
+- Description: Upvote admin post comment
+
+POST /api/v1/comments/{id}/downvote
+- Description: Downvote admin post comment
+
+DELETE /api/v1/comments/{id}/upvote
+- Description: Remove upvote from admin post comment
+
+DELETE /api/v1/comments/{id}/downvote
+- Description: Remove downvote from admin post comment
+
+=====================================
+👥 ACCOUNTS MANAGEMENT ROUTES
+=====================================
+
+GET /api/v1/accounts
+- Description: Get all accounts (admin only)
+
+GET /api/v1/accounts/deleted
+- Description: Get deleted accounts
+
+GET /api/v1/accounts/archived/users
+- Description: Get archived user accounts
+
+GET /api/v1/accounts/archived/admins
+- Description: Get archived admin accounts
+
+GET /api/v1/accounts/basic
+- Description: Get basic user profiles
+
+GET /api/v1/accounts/role/user
+- Description: Get accounts by user role
+
+POST /api/v1/accounts
+- Description: Create new admin account
+- Body: { username, email, name, role, etc. }
+
+DELETE /api/v1/accounts/{id}
+- Description: Delete account
+
+PATCH /api/v1/accounts/{id}/toggle-status
+- Description: Toggle account status (active/inactive)
+- Body: { status }
+
+POST /api/v1/accounts/profile-photo
+- Description: Update profile photo
+- Body: FormData with image
+
+PATCH /api/v1/accounts/{id}/bio
+- Description: Update user bio
+- Body: { bio }
+
+=====================================
+🧩 CLUSTERS ROUTES
+=====================================
+
+GET /api/v1/clusters/get-clusters
+- Description: Get all clusters with subclusters
+
+GET /api/v1/clusters/summary
+- Description: Get cluster summaries for dropdowns/lists
+- Query Params: bbox, barangay, startDate, endDate, minReports, status, limit
+
+GET /api/v1/clusters/{id}
+- Description: Get specific cluster details
+
+POST /api/v1/clusters/sub-clusters
+- Description: Create new sub-cluster
+- Body: { name, description, parent_cluster_id, etc. }
+
+PATCH /api/v1/clusters/sub-clusters/{id}/add-reports
+- Description: Add reports to sub-cluster
+- Body: { reportIds }
+
+PATCH /api/v1/clusters/sub-clusters/{id}/remove-reports
+- Description: Remove reports from sub-cluster
+- Body: { reportIds, resetStatus? }
+
+PATCH /api/v1/clusters/{id}/remove-reports
+- Description: Remove reports from cluster
+- Body: { reportIds, permanentlyExclude?, resetStatus? }
+
+PATCH /api/v1/clusters/{id}/resolve-reports
+- Description: Resolve/unresolve reports in cluster
+- Body: { reportIds, isResolved }
+
+=====================================
+📊 ADMIN DASHBOARD ROUTES
+=====================================
+
+GET /api/v1/admin/dashboard/summary
+- Description: Get lightweight dashboard summary
+- Query Params: recent_posts_limit, recent_alerts_limit
+
+=====================================
+🧪 TEST ROUTES (Development Only)
+=====================================
+
+POST /api/v1/test/upload-test-reports
+- Description: Upload test reports for development
+
+DELETE /api/v1/test/delete-all-reports
+- Description: Delete all reports (development)
+
+GET /api/v1/health
+- Description: API health check endpoint
+
+=====================================
+HTTP METHODS SUMMARY
+=====================================
+
+GET Routes: 20
+POST Routes: 17
+PATCH Routes: 11
+DELETE Routes: 9
+
+Total API Endpoints: 57
+
+=====================================
+AUTHENTICATION REQUIREMENTS
+=====================================
+
+Public Routes (No Auth Required):
+- POST /api/v1/auth/register
+- POST /api/v1/auth/login
+- POST /api/v1/auth/verify-otp
+- POST /api/v1/auth/resend-otp
+- POST /api/v1/auth/forgot-password
+- POST /api/v1/auth/reset-password
+- GET /api/v1/health
+
+Protected Routes (Auth Required):
+- All other routes require Bearer token in Authorization header
+
+Admin Only Routes:
+- /api/v1/accounts/* (most account management)
+- /api/v1/admin/*
+- /api/v1/analytics/* (some endpoints)
+- /api/v1/clusters/*
+- /api/v1/adminposts/* (creation/modification)
+
+=====================================
+COMMON RESPONSE FORMATS
+=====================================
+
+Success Response:
+{
+  "success": true,
+  "data": {...},
+  "message": "Operation successful"
+}
+
+Error Response:
+{
+  "success": false,
+  "error": "Error message",
+  "details": {...}
+}
+
+Paginated Response:
+{
+  "success": true,
+  "data": [...],
+  "metadata": {
+    "total": 100,
+    "page": 1,
+    "limit": 10,
+    "pages": 10
+  }
+}
+
+=====================================
+RATE LIMITING & SECURITY
+=====================================
+
+- JWT tokens for authentication
+- Role-based access control (user, admin, superadmin)
+- Input validation and sanitization
+- CORS configuration
+- Rate limiting on sensitive endpoints
+- File upload restrictions (images only, size limits)
+
+=====================================
+END OF DOCUMENTATION
+Generated: $(date)
+=====================================
