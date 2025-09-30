@@ -5,6 +5,19 @@ import React, {
   useCallback,
   useEffect,
 } from "react";
+
+// Debounce utility to prevent excessive reflows
+const debounce = (func, wait) => {
+  let timeout;
+  return function executedFunction(...args) {
+    const later = () => {
+      clearTimeout(timeout);
+      func(...args);
+    };
+    clearTimeout(timeout);
+    timeout = setTimeout(later, wait);
+  };
+};
 import {
   AllCommunityModule,
   ModuleRegistry,
@@ -202,7 +215,16 @@ function InterventionsTable({
   // }, []);
 
   const onFirstDataRendered = useCallback((params) => {
-    params.api.sizeColumnsToFit();
+    // Use requestAnimationFrame to prevent forced reflow
+    requestAnimationFrame(() => {
+      try {
+        if (params?.api) {
+          params.api.sizeColumnsToFit();
+        }
+      } catch (error) {
+        console.warn("Grid initial render failed:", error);
+      }
+    });
   }, []);
 
   const openDetailsModal = (selectedRow) => {
@@ -347,13 +369,16 @@ function InterventionsTable({
               columnDefs={columnDefs}
               defaultColDef={defaultColDef}
               theme={theme}
-              pagination={isActionable && !onlyRecent} // Only show pagination when not showing only recent
+              suppressColumnVirtualisation={false}
+              suppressRowVirtualisation={false}
+              rowBuffer={10}
+              suppressAnimationFrame={false}
+              suppressPreventDefaultOnMouseWheel={true}
+              pagination={isActionable && !onlyRecent}
               paginationPageSize={10}
               paginationPageSizeSelector={[10, 20, 50, 100]}
-              // onGridSizeChanged={onGridSizeChanged}
               onFirstDataRendered={onFirstDataRendered}
               context={{ openDetailsModal }}
-              // onGridReady={onGridReady}
             />
           </div>
           <div className="flex w-full justify-center">

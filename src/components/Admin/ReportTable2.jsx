@@ -5,6 +5,19 @@ import React, {
   useCallback,
   useEffect,
 } from "react";
+
+// Debounce utility to prevent excessive reflows
+const debounce = (func, wait) => {
+  let timeout;
+  return function executedFunction(...args) {
+    const later = () => {
+      clearTimeout(timeout);
+      func(...args);
+    };
+    clearTimeout(timeout);
+    timeout = setTimeout(later, wait);
+  };
+};
 import {
   AllCommunityModule,
   ModuleRegistry,
@@ -407,33 +420,40 @@ function ReportTable2({
 
   const theme = useMemo(() => customTheme, []);
 
-  const onGridSizeChanged = useCallback((params) => {
-    const gridWidth = gridRef.current?.offsetWidth;
-    const columnsToShow = [];
-    const columnsToHide = [];
-    let totalColsWidth = 0;
+  // Debounced resize handler to prevent forced reflow
+  const debouncedResize = useCallback(
+    debounce((params) => {
+      if (params?.api && gridRef.current) {
+        requestAnimationFrame(() => {
+          try {
+            params.api.sizeColumnsToFit();
+          } catch (error) {
+            console.warn("Grid resize failed:", error);
+          }
+        });
+      }
+    }, 100),
+    []
+  );
 
-    // if (allColumns) {
-    //   allColumns.forEach((col) => {
-    //     totalColsWidth += col.getMinWidth() || 100;
-    //     if (totalColsWidth > gridWidth) {
-    //       columnsToHide.push(col.getColId());
-    //     } else {
-    //       columnsToShow.push(col.getColId());
-    //     }
-    //   });
-    // }
-
-    // params.columnApi.setColumnsVisible(columnsToShow, true);
-    // params.columnApi.setColumnsVisible(columnsToHide, false);
-
-    setTimeout(() => {
-      params.api.sizeColumnsToFit();
-    }, 10);
-  }, []);
+  const onGridSizeChanged = useCallback(
+    (params) => {
+      debouncedResize(params);
+    },
+    [debouncedResize]
+  );
 
   const onFirstDataRendered = useCallback((params) => {
-    params.api.sizeColumnsToFit();
+    // Use requestAnimationFrame to prevent forced reflow
+    requestAnimationFrame(() => {
+      try {
+        if (params?.api) {
+          params.api.sizeColumnsToFit();
+        }
+      } catch (error) {
+        console.warn("Grid initial render failed:", error);
+      }
+    });
   }, []);
 
   const openModal = (post, type) => {
@@ -512,7 +532,12 @@ function ReportTable2({
           floatingFilter={false}
           suppressMovableColumns={true}
           suppressDragLeaveHidesColumns={true}
-          pagination={isActionable && !onlyRecent} // Only show pagination when not showing only recent
+          suppressColumnVirtualisation={false}
+          suppressRowVirtualisation={false}
+          rowBuffer={10}
+          suppressAnimationFrame={false}
+          suppressPreventDefaultOnMouseWheel={true}
+          pagination={isActionable && !onlyRecent}
           paginationPageSize={paginationPageSize}
           paginationPageSizeSelector={paginationPageSizeOptions}
           onGridSizeChanged={onGridSizeChanged}
@@ -525,7 +550,6 @@ function ReportTable2({
             handleUndo,
             actionLoading,
           }}
-          // onGridReady={onGridReady} // Add this line
           ariaLabel="Recent reports"
           ariaRowCount={rowData.length}
           ariaColCount={columnDefs.length}
