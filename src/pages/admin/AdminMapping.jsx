@@ -576,7 +576,6 @@ const AdminMapping = () => {
                     letter-spacing:0.3px;
                     border:1px solid rgba(255,255,255,0.3);
                     box-shadow: 0 12px 36px rgba(0,0,0,0.3);
-                    backdrop-filter: blur(8px) saturate(115%);
                     white-space: nowrap;
                     position: relative;
                   ">

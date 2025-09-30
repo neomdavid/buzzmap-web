@@ -32,6 +32,12 @@ const FormPublicPost = ({ onSuccess }) => {
     { id: "announcement", label: "Official Announcements" },
   ];
 
+  // Detect Safari to avoid type="time" where unsupported
+  const isSafari =
+    typeof navigator !== "undefined" &&
+    /safari/i.test(navigator.userAgent) &&
+    !/chrome|android/i.test(navigator.userAgent);
+
   const formatDisplayDateTime = (dateStr, timeStr) => {
     if (!dateStr || !timeStr) return "--";
     try {
@@ -299,7 +305,7 @@ const FormPublicPost = ({ onSuccess }) => {
               </label>
               <div className="relative">
                 <input
-                  type="time"
+                  type={isSafari ? "text" : "time"}
                   value={postTime}
                   onChange={(e) => setPostTime(e.target.value)}
                   inputMode="numeric"

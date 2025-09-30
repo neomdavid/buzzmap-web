@@ -298,6 +298,12 @@ const NewPostModal = forwardRef(
       });
     };
 
+    // Detect Safari to avoid type="time" where unsupported
+    const isSafari =
+      typeof navigator !== "undefined" &&
+      /safari/i.test(navigator.userAgent) &&
+      !/chrome|android/i.test(navigator.userAgent);
+
     return (
       <dialog id="my_modal_4" ref={ref} className="modal text-xl text-primary ">
         <div className="modal-box w-11/12 max-w-5xl max-h-[95vh] p-0">
@@ -543,7 +549,7 @@ const NewPostModal = forwardRef(
                           </span>
                         </label>
                         <input
-                          type="time"
+                          type={isSafari ? "text" : "time"}
                           className="input input-bordered py-6 w-full text-lg"
                           inputMode="numeric"
                           pattern="^[0-2][0-9]:[0-5][0-9]$"
