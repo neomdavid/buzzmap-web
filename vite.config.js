@@ -43,37 +43,15 @@ export default defineConfig({
         },
         chunkFileNames: "assets/[name]-[hash].js",
         manualChunks: (id) => {
-          // Create separate chunks for large dependencies
+          // Create separate chunks for large dependencies only
           if (id.includes("node_modules")) {
             if (id.includes("phosphor-react")) {
               return "phosphor-vendor";
             }
-            if (id.includes("@reduxjs") || id.includes("redux")) {
-              return "redux-vendor";
-            }
-            if (id.includes("react-router")) {
-              return "router-vendor";
-            }
-            // Keep React together to avoid dependency issues
-            if (id.includes("react")) {
-              return "vendor";
-            }
+            // Keep everything else together to avoid dependency issues
             return "vendor";
           }
-          // Create separate chunks for mapping components
-          if (
-            id.includes("/components/Mapping/") ||
-            id.includes("/components/DengueMap")
-          ) {
-            return "mapping";
-          }
-          // Create separate chunks for admin components
-          if (
-            id.includes("/components/Admin/") ||
-            id.includes("/pages/admin/")
-          ) {
-            return "admin";
-          }
+          // Remove problematic component chunking that causes reference errors
         },
       },
     },
