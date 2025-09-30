@@ -19,6 +19,36 @@ dialog::backdrop,
   z-index: 2147483646 !important;
 }
 
+/* Backdrop filter fallbacks for browsers without support */
+@supports not (
+  (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))
+) {
+  /* Generic disable to avoid unreadable translucent UIs */
+  .backdrop-blur-sm,
+  .backdrop-blur-md,
+  .backdrop-blur-lg,
+  .backdrop-blur-xl {
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+  }
+
+  /* Primary tinted panels using DaisyUI variable if available */
+  .bg-primary\/80.backdrop-blur-sm,
+  .bg-primary\/80.backdrop-blur-md,
+  .bg-primary\/80.backdrop-blur-lg,
+  .bg-primary\/80.backdrop-blur-xl {
+    background-color: hsl(var(--p) / 0.92) !important;
+  }
+
+  /* Light panels that relied on blur over page content */
+  .bg-white\/90.backdrop-blur-sm,
+  .bg-white\/90.backdrop-blur-md,
+  .bg-white\/90.backdrop-blur-lg,
+  .bg-white\/90.backdrop-blur-xl {
+    background-color: rgba(255, 255, 255, 0.95) !important;
+  }
+}
+
 /* Google Maps keyboard shortcuts panel fallback for browsers without light-dark() */
 .LGLeeN-keyboard-shortcuts-view td,
 .gm-ui-hover-effect,
