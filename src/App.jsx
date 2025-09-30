@@ -12,7 +12,6 @@ import {
   Landing,
   LandingLayout,
   About,
-  BuzzLine,
   Updates,
   Articles,
   SingleArticle,
@@ -205,7 +204,19 @@ const AppWithProviders = () => {
           ),
         },
         { path: "/community", element: <Community /> },
-        { path: "/buzzline", element: <BuzzLine /> },
+        {
+          path: "/buzzline",
+          element: (
+            <LazyComponent
+              importFunc={() => import("./pages/user/BuzzLine.jsx")}
+              fallback={
+                <div className="flex items-center justify-center min-h-screen">
+                  <div className="loading loading-spinner loading-lg"></div>
+                </div>
+              }
+            />
+          ),
+        },
         { path: "/buzzline/updates", element: <Updates /> },
         { path: "/buzzline/articles", element: <Articles /> },
         { path: "/buzzline/:id", element: <SingleArticle /> },

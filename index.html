@@ -8,12 +8,20 @@
     />
     <link rel="icon" type="image/svg+xml" href="/src/assets/logo_ligthbg.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- Preload critical images for LCP optimization -->
+    <link
+      rel="preload"
+      href="/src/assets/woman_withhand.png"
+      as="image"
+      media="(min-width: 768px)"
+    />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      rel="stylesheet"
+      rel="preload"
       href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Koulen&display=swap"
-      media="all"
+      as="style"
+      onload="this.onload=null;this.rel='stylesheet'"
     />
     <noscript>
       <link
@@ -21,6 +29,17 @@
         href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Koulen&display=swap"
       />
     </noscript>
+    <!-- Critical CSS inline fallback -->
+    <style>
+      /* Fallback font loading styles */
+      .font-title {
+        font-family: Impact, Arial Black, sans-serif;
+      }
+      .font-body {
+        font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Roboto,
+          Helvetica Neue, Arial, sans-serif;
+      }
+    </style>
     <title>BuzzMap</title>
   </head>
   <body>

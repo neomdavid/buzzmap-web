@@ -15,6 +15,8 @@ const About = () => {
           src={womanWithHand}
           className="w-140 absolute left-[-197px] hidden md:block bottom-[23%] lg:w-165 lg:left-[-233px] xl:w-190 xl:left-[-268px] 2xl:w-205 2xl:left-[-289px] 2xl:bottom-[19%]"
           alt="BuzzMap illustration"
+          fetchpriority="high"
+          loading="eager"
         />
 
         <section className="text-white pl-6 pr-6 py-8  sm:p-12 font-light ">
@@ -25,6 +27,7 @@ const About = () => {
                 src={quezonSurveillance}
                 className="w-12 h-12 md:w-15 md:h-15 flex-shrink-0 object-contain"
                 alt="QCESD Logo"
+                loading="lazy"
               />
               <div className="">
                 <p className="text-lg md:text-xl font-bold text-white leading-tight">

@@ -1,54 +1,21 @@
-import { Heading, PreventionCard, AltPreventionCard } from "../../components";
-import sprayingAlcohol from "../../assets/sprayingalcohol.jpg";
-import tubImg from "../../assets/mosquito_tub.jpg";
-import cleaningImg from "../../assets/cleaning.jpg";
+import { Heading } from "../../components";
 import {
   IconShieldCheck,
-  IconUsersGroup,
-  IconHomeFilled,
-  IconHaze,
-  IconAutomation,
   IconMapPin,
   IconBuildingBank,
   IconBan,
   IconCircleCheck,
 } from "@tabler/icons-react";
-import { IconSearch } from "@tabler/icons-react";
-import { ShieldCheck, Heartbeat, ArrowRight } from "phosphor-react";
+import { ArrowRight } from "phosphor-react";
 import { useGetAllAdminPostsQuery } from "../../api/dengueApi";
-import { useMemo } from "react";
-import NewsGrid from "../../components/Prevention/NewsGrid";
-import logoLightBg from "../../assets/logo_ligthbg.svg";
-import logoDarkBg from "../../assets/logo_darkbg.svg";
+import { useMemo, lazy, Suspense } from "react";
 import womanLowHand from "../../assets/woman_lowhand.png";
 import { useNavigate } from "react-router-dom";
-import BuzzLineFooter from "../../components/BuzzLineFooter";
-import UpdatesCard from "../../components/UpdatesCard";
-import dummyUpdates from "../../data/dummyUpdates";
-import ArticlesCard from "../../components/ArticlesCard";
-// Add this temporary test component
-const TestNewsGrid = ({ articles = [] }) => {
-  console.log("TestNewsGrid rendered with articles:", articles);
 
-  return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-      {articles.map((article, index) => (
-        <div key={index} className="flex flex-col gap-4">
-          <img
-            src={article.image}
-            alt={article.title}
-            className="w-full h-48 object-cover rounded-lg"
-          />
-          <div className="flex flex-col gap-2">
-            <p className="text-sm text-gray-500">{article.date}</p>
-            <h3 className="text-xl font-bold">{article.title}</h3>
-            <p className="text-gray-600">{article.description}</p>
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-};
+// Lazy load heavy components
+const BuzzLineFooter = lazy(() => import("../../components/BuzzLineFooter"));
+const UpdatesCard = lazy(() => import("../../components/UpdatesCard"));
+const ArticlesCard = lazy(() => import("../../components/ArticlesCard"));
 
 const BuzzLine = () => {
   // Fetch admin posts
@@ -64,42 +31,6 @@ const BuzzLine = () => {
     adminPosts?.filter(
       (post) => post.category === "tip" && post.status !== "archived"
     ) || [];
-
-  // Filter and format news articles from admin posts
-  const formattedArticles = useMemo(() => {
-    if (!adminPosts) {
-      return [];
-    }
-
-    const filteredNews = Array.isArray(adminPosts?.posts)
-      ? adminPosts.posts.filter((post) => {
-          return (
-            post &&
-            post.category &&
-            post.category.toLowerCase() === "news" &&
-            post.status !== "archived"
-          );
-        })
-      : [];
-
-    return filteredNews
-      .map((post) => {
-        if (!post) return null;
-
-        return {
-          _id: post._id,
-          images: post.images || [],
-          date: post.publishDate
-            ? new Date(post.publishDate).toLocaleDateString()
-            : "No date",
-          title: post.title || "Untitled",
-          description: post.content || "No content available",
-        };
-      })
-      .filter(Boolean);
-  }, [adminPosts]);
-
-  const surveillanceUpdates = dummyUpdates;
 
   return (
     <main className="flex flex-col text-center items-center justify-center mt-2 py-8 overflow-x-hidden py-20">
@@ -134,9 +65,12 @@ const BuzzLine = () => {
               </div>
             ))
           ) : newsArticles.length > 0 ? (
-            newsArticles
-              .slice(0, 8)
-              .map((post) => (
+            <Suspense
+              fallback={
+                <div className="col-span-full text-center">Loading...</div>
+              }
+            >
+              {newsArticles.slice(0, 8).map((post) => (
                 <UpdatesCard
                   key={post._id}
                   image={
@@ -153,7 +87,8 @@ const BuzzLine = () => {
                   summary={post.content}
                   onReadMore={() => navigate(`/buzzline/${post._id}`)}
                 />
-              ))
+              ))}
+            </Suspense>
           ) : (
             <div className="col-span-full text-center py-10 mb-40">
               <p className="text-white text-xl">
@@ -195,9 +130,12 @@ const BuzzLine = () => {
               </div>
             ))
           ) : tipArticles.length > 0 ? (
-            tipArticles
-              .slice(0, 8)
-              .map((post) => (
+            <Suspense
+              fallback={
+                <div className="col-span-full text-center">Loading...</div>
+              }
+            >
+              {tipArticles.slice(0, 8).map((post) => (
                 <ArticlesCard
                   key={post._id}
                   image={
@@ -214,7 +152,8 @@ const BuzzLine = () => {
                   summary={post.content}
                   onReadMore={() => navigate(`/buzzline/${post._id}`)}
                 />
-              ))
+              ))}
+            </Suspense>
           ) : (
             <div className="col-span-full text-center py-10">
               <p className="text-primary text-xl">
@@ -286,7 +225,11 @@ const BuzzLine = () => {
           alt="illustration"
         />
       </div>
-      <BuzzLineFooter />
+      <Suspense
+        fallback={<div className="text-center py-10">Loading footer...</div>}
+      >
+        <BuzzLineFooter />
+      </Suspense>
     </main>
   );
 };
