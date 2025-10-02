@@ -2,7 +2,7 @@
   "redirects": [
     {
       "source": "/latest/meta-data/(.*)",
-      "destination": "/404",
+      "destination": "/api/block",
       "permanent": false
     }
   ],
