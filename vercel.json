@@ -3,10 +3,9 @@
     {
       "source": "/latest/meta-data/(.*)",
       "destination": "/404",
-      "statusCode": 404
+      "permanent": false
     }
   ],
-  "routes": [{ "src": "/latest/meta-data/.*", "status": 404 }],
   "rewrites": [{ "source": "/(.*)", "destination": "/" }],
   "headers": [
     {
