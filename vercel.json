@@ -2,7 +2,7 @@
   "rewrites": [
     { "source": "/latest/meta-data/(.*)", "destination": "/api/block" },
     { "source": "/latest/meta-data", "destination": "/api/block" },
-    { "source": "/(.*)", "destination": "/api/block" }
+    { "source": "/(.*)", "destination": "/" }
   ],
   "headers": [
     {
