@@ -1,12 +1,9 @@
 {
-  "redirects": [
-    {
-      "source": "/latest/meta-data/(.*)",
-      "destination": "/api/block",
-      "permanent": false
-    }
+  "rewrites": [
+    { "source": "/latest/meta-data/(.*)", "destination": "/api/block" },
+    { "source": "/latest/meta-data", "destination": "/api/block" },
+    { "source": "/(.*)", "destination": "/" }
   ],
-  "rewrites": [{ "source": "/(.*)", "destination": "/" }],
   "headers": [
     {
       "source": "/(.*)",
