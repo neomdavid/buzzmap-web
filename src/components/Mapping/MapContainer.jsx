@@ -728,13 +728,26 @@ const MapContainer = ({
                   : ""
               }
             </div>
-            <button class="mt-4 px-4 py-2 bg-primary w-[40%] text-white rounded-lg shadow hover:bg-primary/80 hover:cursor-pointer font-bold" onclick="window.location.href='${baseUrl}/${
-            site._id
-          }'">View Details</button>
+            <button id="view-details-${
+              site._id
+            }" class="mt-4 px-4 py-2 bg-primary w-[40%] text-white rounded-lg shadow hover:bg-primary/80 hover:cursor-pointer font-bold">View Details</button>
           </div>
         `;
           infoWindow.setContent(content);
           infoWindow.open(map, marker);
+
+          // Attach navigation handler programmatically to satisfy CSP
+          const viewBtn = content.querySelector(`#view-details-${site._id}`);
+          if (viewBtn) {
+            viewBtn.addEventListener(
+              "click",
+              (e) => {
+                e.preventDefault();
+                window.location.href = `${baseUrl}/${site._id}`;
+              },
+              { once: true }
+            );
+          }
 
           // Add close event handler to pan out when info window is closed
           infoWindow.addListener("closeclick", () => {
