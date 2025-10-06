@@ -140,9 +140,9 @@ const Landing = () => {
       </div>
 
       <div className="text-primary text-center text-xl font-normal mb-8">
-        <h3 className="text-xl sm:text-2xl italic uppercase font-bold mb-10 font-[Inter]">
+        <h2 className="text-xl sm:text-2xl italic uppercase font-bold mb-10 font-[Inter]">
           Stay protected from dengue.
-        </h3>
+        </h2>
         <p className="px-6 text-md sm:px-10">
           Join the community in&nbsp;
           <span className="font-semibold ">

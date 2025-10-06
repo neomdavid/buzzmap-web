@@ -728,9 +728,9 @@ const MapContainer = ({
                   : ""
               }
             </div>
-            <button class="mt-4 px-4 py-2 bg-primary w-[40%] text-white rounded-lg shadow hover:bg-primary/80 hover:cursor-pointer font-bold" onclick="window.location.href='${baseUrl}/${
-            site._id
-          }'">View Details</button>
+            <button class="mt-4 px-4 py-2 bg-primary w-[40%] text-white rounded-lg shadow hover:bg-primary/80 hover:cursor-pointer font-bold" id="view-details-${
+              site._id
+            }">View Details</button>
           </div>
         `;
           infoWindow.setContent(content);
@@ -744,6 +744,16 @@ const MapContainer = ({
               mapInstance.setZoom(13);
             }
           });
+
+          // Attach click handler programmatically to comply with CSP
+          const detailsButton = content.querySelector(
+            `#view-details-${site._id}`
+          );
+          if (detailsButton) {
+            detailsButton.addEventListener("click", () => {
+              window.location.href = `${baseUrl}/${site._id}`;
+            });
+          }
         });
 
         return marker;

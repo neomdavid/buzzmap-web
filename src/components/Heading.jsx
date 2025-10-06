@@ -1,6 +1,6 @@
 import React from "react";
 
-const Heading = ({ text = "", className = "" }) => {
+const Heading = ({ text = "", className = "", as = "h1" }) => {
   const highlightText = (text) => {
     if (typeof text !== "string") return text;
     const parts = text.split(/\/(.*?)\//g);
@@ -17,10 +17,12 @@ const Heading = ({ text = "", className = "" }) => {
     );
   };
 
+  const Tag = as;
+
   return (
-    <h1 className={`font-title leading-19 uppercase  ${className}`}>
+    <Tag className={`font-title leading-19 uppercase  ${className}`}>
       {highlightText(text)}
-    </h1>
+    </Tag>
   );
 };
 
