@@ -70,6 +70,7 @@ import {
   IconSearch,
   IconMapPin,
   IconCircle,
+  IconInfoCircle,
 } from "@tabler/icons-react";
 import { toast } from "react-toastify";
 import { useSelector } from "react-redux";
@@ -96,6 +97,7 @@ const ReportsVerification = () => {
     loading: false,
   });
   const [viewMode, setViewMode] = useState("individual"); // 'individual' | 'clusters'
+  const [showValidationGuide, setShowValidationGuide] = useState(false);
 
   // AG Grid config for cluster reports modal
   const clusterReportsTheme = useMemo(
@@ -628,9 +630,20 @@ const ReportsVerification = () => {
       {viewMode === "individual" ? (
         <div className="flex flex-col">
           <section className="flex flex-col gap-2">
-            <p className="text-base-content text-4xl font-bold mb-2">
-              Breeding Site Reports
-            </p>
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-base-content text-4xl font-bold">
+                Breeding Site Reports
+              </p>
+              <button
+                className="inline-flex items-center gap-1.5 text-sm link text-primary hover:text-accent"
+                onClick={() => setShowValidationGuide(true)}
+                aria-label="How do I validate a report?"
+                title="How do I validate a report?"
+              >
+                <IconInfoCircle size={16} />
+                <span>How do I validate a report?</span>
+              </button>
+            </div>
             <div className="h-[75vh]">
               {isLoadingGrouped ? (
                 <TableSkeleton rows={10} columns={5} />
@@ -1003,6 +1016,119 @@ const ReportsVerification = () => {
               </button>
             </div>
           </div>
+        </dialog>
+      )}
+      {showValidationGuide && (
+        <dialog open className="modal z-[1200]">
+          <div className="modal-box bg-white rounded-3xl shadow-2xl w-11/12 max-w-3xl p-6">
+            <div className="flex items-start justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <IconInfoCircle size={22} className="text-primary" />
+                <p className="text-xl font-bold text-primary">
+                  Report Validation Guide
+                </p>
+              </div>
+              <button
+                className="btn btn-ghost btn-sm"
+                onClick={() => setShowValidationGuide(false)}
+                aria-label="Close validation guide"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="prose max-w-none text-primary">
+              <p className="mb-2">
+                Use this checklist to decide whether to{" "}
+                <span className="font-semibold">Validate</span> or{" "}
+                <span className="font-semibold">Reject</span> a report.
+              </p>
+              <h3 className="text-lg font-bold mt-3">Validation criteria</h3>
+              <ul className="list-disc ml-5">
+                <li>
+                  <span className="font-semibold">Location precision:</span> pin
+                  coordinates exist and match the described address or visible
+                  place.
+                </li>
+                <li>
+                  <span className="font-semibold">Evidence quality:</span> clear
+                  images (if provided) support the description; not AI-generated
+                  or duplicated.
+                </li>
+                <li>
+                  <span className="font-semibold">Report completeness:</span>{" "}
+                  barangay, description, and date/time are present and
+                  reasonable.
+                </li>
+                <li>
+                  <span className="font-semibold">Recency & relevance:</span>{" "}
+                  occurred within a relevant timeframe (e.g., last 30 days) and
+                  relates to breeding sites or mosquito hotspots.
+                </li>
+                <li>
+                  <span className="font-semibold">Duplicates:</span> not an
+                  exact duplicate of an already validated report at the same
+                  spot/time.
+                </li>
+                <li>
+                  <span className="font-semibold">Clusters:</span> reports in a
+                  cluster typically describe the same incident. Prefer
+                  validating the best-evidence report and mark exact duplicates
+                  as duplicates (reject as duplicate). Avoid double-counting.
+                </li>
+                <li>
+                  <span className="font-semibold">Integrity flags:</span>{" "}
+                  content isn’t spam, malicious, or violating policy.
+                </li>
+              </ul>
+              <h3 className="text-lg font-bold mt-4">
+                Suggested validation flow
+              </h3>
+              <ol className="list-decimal ml-5">
+                <li>
+                  Open the report details via{" "}
+                  <span className="font-semibold">View</span> and inspect
+                  description, images, and timestamp.
+                </li>
+                <li>
+                  Cross-check the location on the map; zoom in to verify
+                  coordinates and nearby landmarks.
+                </li>
+                <li>
+                  Check for duplicates or cluster membership; for clustered
+                  duplicates validate one canonical report and reject the rest
+                  as duplicates.
+                </li>
+                <li>
+                  If sufficient and credible, click{" "}
+                  <span className="font-semibold">Validate</span>; otherwise
+                  choose <span className="font-semibold">Reject</span> with a
+                  brief reason.
+                </li>
+              </ol>
+              <h3 className="text-lg font-bold mt-4">Tips</h3>
+              <ul className="list-disc ml-5">
+                <li>
+                  Favor <span className="font-semibold">Validated</span> only
+                  when evidence and context are clear.
+                </li>
+                <li>
+                  Use <span className="font-semibold">Reject</span> for spam,
+                  irrelevant, or unverifiable submissions.
+                </li>
+              </ul>
+            </div>
+            <div className="mt-5 flex justify-end">
+              <button
+                className="btn btn-primary"
+                onClick={() => setShowValidationGuide(false)}
+              >
+                Got it
+              </button>
+            </div>
+          </div>
+          <form method="dialog" className="modal-backdrop">
+            <button onClick={() => setShowValidationGuide(false)}>close</button>
+          </form>
         </dialog>
       )}
       {selectedReport && (
