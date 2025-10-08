@@ -93,7 +93,12 @@ const DescriptionWithImages = ({
 
       {/* File type information and error display */}
       <div className="text-sm text-gray-600">
-        <p>Accepted file types: JPG, PNG (Max 4 images)</p>
+        <p className="font-semibold">Upload guidelines</p>
+        <ul className="list-disc ml-5">
+          <li>Accepted types: JPG, PNG</li>
+          <li>Up to 4 images; keep each under ~2MB</li>
+          <li>Show the site clearly; avoid blurry images</li>
+        </ul>
       </div>
 
       {/* Error message display */}

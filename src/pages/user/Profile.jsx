@@ -415,6 +415,10 @@ function Profile() {
             accept="image/jpeg,image/jpg,image/png,image/gif"
             className="hidden"
           />
+          <div className="mt-2 text-xs text-gray-600 text-center">
+            <p className="font-semibold">Upload guidelines</p>
+            <p>Use JPG/PNG/GIF; keep images under 5MB.</p>
+          </div>
         </div>
         <p className="text-5xl font-bold">{profileData?.account?.username}</p>
         <p className="text-xl text-primary mb-8">

@@ -359,7 +359,12 @@ const FormPublicPost = ({ onSuccess }) => {
                 <Plus size={20} className="text-gray-500" />
               </label>
               <div className="text-sm text-gray-600">
-                <p>Accepted file types: JPG, JPEG, PNG (Max 8 images)</p>
+                <p className="font-semibold">Upload guidelines</p>
+                <ul className="list-disc ml-5">
+                  <li>Accepted: JPG, JPEG, PNG</li>
+                  <li>Max 8 images; ≤ 2MB each; total ≤ 8MB</li>
+                  <li>Use clear, relevant images; avoid watermarks</li>
+                </ul>
               </div>
               {imageError && (
                 <div className="alert alert-error text-sm mt-2">

@@ -24,52 +24,55 @@ const InstallAppModal = ({ isOpen, onClose }) => {
       className="modal transition-transform duration-300 ease-in-out"
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
-      <div className="modal-box bg-white rounded-3xl shadow-3xl w-11/12 max-w-2xl max-h-[95vh] p-12 relative">
+      <div className="modal-box bg-white rounded-3xl shadow-3xl w-11/12 max-w-3xl max-h-[95vh] p-0 relative overflow-hidden">
         <button
-          className="absolute top-6 right-6 text-2xl font-semibold hover:text-gray-500 hover:cursor-pointer"
+          className="absolute top-5 right-5 text-2xl font-semibold hover:text-gray-500 hover:cursor-pointer z-10"
           onClick={onClose}
         >
           ✕
         </button>
 
-        <div className="text-center">
-          <div className="mb-8">
-            <div className="w-20 h-20 bg-primary rounded-full flex items-center justify-center mx-auto mb-6">
-              <IconQrcode size={40} className="text-white" />
-            </div>
-            <h2 className="text-4xl tracking-wide font-bold text-primary mb-3">
-              Install BuzzMap Mobile App
-            </h2>
-            <p className="text-lg text-gray-600">
-              Scan the QR code with your phone to download our mobile app
-            </p>
+        {/* Header band (subtle) */}
+        <div className="relative bg-white px-8 pt-12 pb-8 text-primary text-center border-b border-base-200">
+          <div className="w-18 h-18 bg-primary/10 rounded-2xl flex items-center justify-center mx-auto mb-5">
+            <IconQrcode size={40} className="text-primary" />
           </div>
+          <h2 className="text-3xl tracking-wide font-extrabold mb-2">
+            Install BuzzMap Mobile App
+          </h2>
+          <p className="text-gray-600">
+            Scan the QR code with your phone to download our mobile app
+          </p>
+          <div className="mt-3 inline-flex items-center gap-2 bg-gradient-to-r from-primary/10 to-secondary/10 text-primary px-4 py-2 rounded-xl text-sm">
+            <span className="font-semibold mr-[-3px]">Better experience</span>
+            <span className="opacity-90">
+              on your phone with offline-friendly UI
+            </span>
+          </div>
+        </div>
 
-          <div className="space-y-6">
-            {/* <div className="bg-info/10 border border-info/30 rounded-2xl p-6">
-              <p className="font-bold text-lg text-primary mb-6 text-center">
-                Scan QR Code with your phone:
-              </p> */}
-
-            {/* QR Code placeholder - you can replace this with a real QR code component */}
-            <div className="bg-white p-8 rounded-2xl border-2 border-dashed border-primary/30 flex flex-col items-center justify-center min-h-[250px]">
+        {/* Body */}
+        <div className="p-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-stretch">
+            {/* QR Card */}
+            <div className="rounded-2xl border border-primary/20 shadow-sm p-6 flex flex-col justify-center">
               <div className="text-center">
-                <IconQrcode size={120} className="text-primary mx-auto mb-6" />
-                <p className="text-lg font-semibold text-gray-700 mb-3">
+                <IconQrcode size={120} className="text-primary mx-auto mb-4" />
+                <p className="text-lg font-semibold text-primary mb-2">
                   QR Code for APK Download
                 </p>
-                <p className="text-sm text-gray-500 break-all bg-gray-50 p-3 rounded-lg">
+                <p className="text-xs text-gray-600 break-all bg-gray-50 p-2 rounded-lg">
                   {apkDownloadUrl}
                 </p>
               </div>
-              {/* </div> */}
             </div>
 
-            <div className="bg-info/10 border border-info/30 rounded-2xl p-6">
+            {/* Instructions Card */}
+            <div className="rounded-2xl bg-base-100 border border-base-200 shadow-sm p-6">
               <p className="font-bold text-lg text-primary mb-4">
-                Installation Instructions:
+                Installation Steps
               </p>
-              <ol className="text-base text-gray-700 text-left space-y-2">
+              <ol className="text-base text-gray-700 text-left space-y-3">
                 <li className="flex items-start gap-3">
                   <span className="bg-primary text-white rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold flex-shrink-0">
                     1
@@ -80,9 +83,7 @@ const InstallAppModal = ({ isOpen, onClose }) => {
                   <span className="bg-primary text-white rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold flex-shrink-0">
                     2
                   </span>
-                  <span>
-                    Enable "Install from Unknown Sources" in your phone settings
-                  </span>
+                  <span>Enable "Install from Unknown Sources" in settings</span>
                 </li>
                 <li className="flex items-start gap-3">
                   <span className="bg-primary text-white rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold flex-shrink-0">
