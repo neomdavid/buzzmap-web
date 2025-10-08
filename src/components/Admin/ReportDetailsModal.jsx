@@ -316,8 +316,24 @@ const ReportDetailsModal = ({
           )}
 
           {/* StreetView Container */}
-          <div className="space-y-4">
+          <div className="space-y-3">
             <p className="text-xl font-bold">Street View</p>
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-xs text-gray-600">
+                Google Street View is not real-time and may be months old. The
+                exact capture date appears on Google Maps.
+              </p>
+              {coordinates?.length === 2 && (
+                <a
+                  href={`https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${coordinates[1]},${coordinates[0]}&heading=0&pitch=0&fov=80`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn btn-sm bg-primary text-white hover:bg-primary/80"
+                >
+                  Open in Google Maps
+                </a>
+              )}
+            </div>
             <div
               id="street-view-container"
               className="w-full h-[400px] rounded-lg overflow-hidden shadow-lg"

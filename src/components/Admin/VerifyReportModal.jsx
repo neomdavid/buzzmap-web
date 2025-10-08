@@ -272,11 +272,22 @@ const VerifyReportModal = ({
 
                 <p className="text-left text-2xl font-bold">Reported Area</p>
                 <hr className="text-accent/50 mb-4" />
-                {resolvedCoordinates?.length === 2 && (
-                  <div
-                    className="w-full h-64 mt-4 shadow-sm overflow-hidden rounded-2xl"
-                    ref={streetViewRef}
-                  ></div>
+                {resolvedCoordinates?.length === 2 ? (
+                  <div className="mt-4">
+                    <div
+                      className="w-full h-64 shadow-sm overflow-hidden rounded-2xl"
+                      ref={streetViewRef}
+                    ></div>
+                    <div className="mt-2 text-xs text-gray-600">
+                      Google Street View is not real-time and may be months old.
+                      The exact capture date appears on Google Maps.
+                    </div>
+                  </div>
+                ) : (
+                  <div className="mt-2 text-xs text-gray-600">
+                    Google Street View is not real-time and may be months old.
+                    The exact capture date appears on Google Maps.
+                  </div>
                 )}
 
                 {/* Action Buttons */}
