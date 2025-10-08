@@ -16,6 +16,7 @@ import React, {
   useMemo,
   useCallback,
 } from "react";
+import { IconInfoCircle } from "@tabler/icons-react";
 import Slider from "rc-slider";
 import "rc-slider/assets/index.css";
 import profile1 from "../../assets/profile1.png";
@@ -968,6 +969,9 @@ const SpecificLocation = () => {
         onPreventionTipsClick={() => navigate("/buzzline")}
         onBarangaySelect={handleBarangaySelect}
         selectedBarangay={highlightedBarangay}
+        onOpenFullDetails={() =>
+          setOpenPopups(["full-details"]) || setShowFullReport(true)
+        }
       />
       <article className="absolute z-100000 flex flex-col text-primary right-[10px] bottom-0 md:max-w-[60vw] lg:max-w-[62vw] xl:max-w-[69vw] 2xl:max-w-[72vw]">
         <p className="text-[20px] text-white shadow-sm font-semibold text-left mb-2 w-full">

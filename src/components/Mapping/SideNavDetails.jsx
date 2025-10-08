@@ -5,6 +5,7 @@ import { useGetPostsQuery, useGetBarangaysQuery } from "../../api/dengueApi";
 import NewPostModal from "../Community/NewPostModal";
 import { useSelector } from "react-redux";
 import { toastInfo } from "../../utils.jsx";
+import { InfoIcon } from "lucide-react";
 
 // Helper: Haversine formula for distance in meters
 function getDistanceMeters(lat1, lng1, lat2, lng2) {
@@ -32,6 +33,7 @@ const SideNavDetails = ({
   onPreventionTipsClick,
   onBarangaySelect, // Add callback for when barangay is selected
   selectedBarangay, // Add prop for the currently selected barangay
+  onOpenFullDetails, // optional: open full details modal (kept for backward-compat)
 }) => {
   // Get user from Redux store
   const userFromStore = useSelector((state) => state.auth?.user);
@@ -123,6 +125,7 @@ const SideNavDetails = ({
   const [modalMode, setModalMode] = useState(null); // null | "barangays" | "report"
   const [showNewPostModal, setShowNewPostModal] = useState(false);
   const newPostModalRef = useRef(null);
+  const streetViewDetailsRef = useRef(null);
 
   // Google Street View Static API URL - memoize to prevent re-calculations
   const streetViewUrl = useMemo(() => {
@@ -222,7 +225,7 @@ md:w-[35vw]   max-w-[370px] "
         {/* Use Google Maps Street View iframe (not satellite) */}
         {coordinates ? (
           <div
-            style={{ width: "100%", height: "180px", marginBottom: "0.5rem" }}
+            style={{ width: "100%", height: "auto", marginBottom: "0.5rem" }}
           >
             <iframe
               width="100%"
@@ -234,6 +237,23 @@ md:w-[35vw]   max-w-[370px] "
               src={`https://www.google.com/maps?q=&layer=c&cbll=${coordinates.lat},${coordinates.lng}&cbp=11,0,0,0,0&z=18&output=svembed`}
               title="Street View"
             />
+            <div className="mt-1 text-white text-left text-xs gap-1 px-2 py-2 rounded-md inline-flex items-center">
+              <InfoIcon size={12} />
+              <span>
+                Google Street View is not real-time and may be months old.
+              </span>
+              <button
+                type="button"
+                className="underline underline-offset-2 font-semibold hover:opacity-90"
+                onClick={() => {
+                  if (streetViewDetailsRef.current) {
+                    streetViewDetailsRef.current.showModal();
+                  }
+                }}
+              >
+                View Details
+              </button>
+            </div>
           </div>
         ) : (
           <img
@@ -305,6 +325,36 @@ md:w-[35vw]   max-w-[370px] "
           </div>
         </div>
       </div>
+      {/* Street View Details Modal (DaisyUI) */}
+      <dialog ref={streetViewDetailsRef} className="modal">
+        <div className="modal-box bg-white text-primary rounded-3xl p-10">
+          <form method="dialog">
+            <button className="btn btn-md btn-circle btn-ghost absolute right-2 top-2">
+              ✕
+            </button>
+          </form>
+          <p className="font-extrabold text-3xl mb-3">Street View details</p>
+          <div className="text-sm leading-relaxed">
+            <p className="mb-2">
+              Google Street View imagery is not real-time and may be months old.
+              The exact capture date is shown on Google Maps.
+            </p>
+            {coordinates && (
+              <a
+                href={`https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${coordinates.lat},${coordinates.lng}&heading=0&pitch=0&fov=80`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn btn-primary btn-sm mt-2"
+              >
+                Open in Google Maps
+              </a>
+            )}
+          </div>
+        </div>
+        <form method="dialog" className="modal-backdrop">
+          <button>close</button>
+        </form>
+      </dialog>
       <div className="flex flex-col items-center mx-2 gap-y-4 text-[12px] text-primary">
         <button
           type="button"

@@ -1573,6 +1573,11 @@ const DengueMapping = () => {
           {/* StreetView Container */}
           <div className="space-y-4">
             <p className="text-xl font-bold">Street View</p>
+            <p className="text-sm text-gray-600 -mt-2">
+              Street View availability may vary by location. Imagery can take a
+              few seconds to load; if it doesn’t appear, try zooming in, moving
+              the map slightly, or closing and reopening.
+            </p>
             <div
               id="street-view-container"
               className="w-full h-[400px] rounded-lg overflow-hidden shadow-lg"
