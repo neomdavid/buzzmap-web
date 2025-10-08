@@ -259,6 +259,22 @@ const AdminSideNavDetails = ({
                 </button>
                 {showStreetView && (
                   <div id="street-view-body">
+                    <div className="flex items-center justify-between mb-1 gap-6">
+                      <p className="text-[10px] text-white/80">
+                        Google Street View is not real-time and may be months
+                        old.
+                      </p>
+                      {coordinates && (
+                        <a
+                          href={`https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${coordinates.lat},${coordinates.lng}&heading=0&pitch=0&fov=80`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-[8px] underline hover:opacity-90 whitespace-nowrap shrink-0"
+                        >
+                          Open in Google Maps
+                        </a>
+                      )}
+                    </div>
                     {coordinates ? (
                       <div
                         ref={streetViewRef}
