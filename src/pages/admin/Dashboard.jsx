@@ -6,7 +6,9 @@ import { useNavigate } from "react-router-dom";
 
 // Lazy load heavy components to reduce initial bundle size
 const ReportTable2 = lazy(() => import("../../components/Admin/ReportTable2"));
-const DengueChartCard = lazy(() => import("../../components/Admin/DengueChartCard"));
+const DengueChartCard = lazy(() =>
+  import("../../components/Admin/DengueChartCard")
+);
 const MapOnly = lazy(() => import("../../components/Mapping/MapOnly"));
 
 const Dashboard = () => {
@@ -129,9 +131,9 @@ const Dashboard = () => {
   const totalClusters =
     summary?.clusters?.total || fullyResolved + partiallyResolved + notResolved;
 
-  // Handler to redirect to /admin/mapping when a barangay is clicked
+  // Handler to redirect to /admin/map when a barangay is clicked
   const handleDashboardMapPolygonClick = () => {
-    navigate("/admin/mapping");
+    navigate("/admin/map");
   };
 
   // Add null check for user
@@ -246,10 +248,7 @@ const Dashboard = () => {
         </div>
 
         {/* ReportCard for Clusters */}
-        <div
-          className="cursor-pointer"
-          onClick={() => navigate("/admin/mapping")}
-        >
+        <div className="cursor-pointer" onClick={() => navigate("/admin/map")}>
           <ReportCard
             title="Clusters"
             count={totalClusters}
@@ -294,9 +293,9 @@ const Dashboard = () => {
         </p>
         <hr className="mb-6 border-[1.5px] border-gray-200" />
         <div className="h-120">
-          <Suspense fallback={
-            <div className="skeleton h-full w-full rounded-2xl" />
-          }>
+          <Suspense
+            fallback={<div className="skeleton h-full w-full rounded-2xl" />}
+          >
             <ReportTable2
               posts={safePosts}
               isActionable={false}
@@ -308,17 +307,19 @@ const Dashboard = () => {
 
       <section className="flex mt-10 gap-4 flex-col xl:flex-row">
         <div className="w-full shadow-sm h-86 rounded-lg xl:flex-2 overflow-hidden">
-          <Suspense fallback={
-            <div className="skeleton h-full w-full rounded-lg" />
-          }>
+          <Suspense
+            fallback={<div className="skeleton h-full w-full rounded-lg" />}
+          >
             <DengueChartCard />
           </Suspense>
         </div>
         <div className="flex  md:flex-row  gap-6 lg:flex-3">
           <div className="flex-1 min-w-[150px] shadow-sm rounded-2xl h-auto overflow-hidden  ">
-            <Suspense fallback={
-              <div className="skeleton h-[300px] w-full rounded-2xl" />
-            }>
+            <Suspense
+              fallback={
+                <div className="skeleton h-[300px] w-full rounded-2xl" />
+              }
+            >
               <MapOnly
                 style={{ height: "300px", width: "100%" }}
                 useAdminEndpoint={true}

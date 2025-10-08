@@ -25,7 +25,7 @@ const MapContainer = ({
   selectedBarangayFeature,
   setSelectedBarangayFeature,
   setShowControlPanel,
-  baseUrl = "/mapping", // Default to user mapping URL
+  baseUrl = "/map", // Default to user map URL
 }) => {
   // Debug: Log the color map to verify it's loaded correctly
 

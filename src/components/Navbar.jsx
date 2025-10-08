@@ -40,11 +40,11 @@ const Navbar = () => {
           className={({ isActive }) =>
             `${
               isActive
-                ? currentRoute.startsWith("/mapping") ||
+                ? currentRoute.startsWith("/map") ||
                   /^\/buzzline\/\w+/.test(currentRoute)
                   ? "text-secondary"
                   : "text-accent"
-                : currentRoute.startsWith("/mapping") ||
+                : currentRoute.startsWith("/map") ||
                   /^\/buzzline\/\w+/.test(currentRoute) ||
                   currentRoute === "/profile"
                 ? "text-white"
@@ -154,7 +154,7 @@ const Navbar = () => {
   return (
     <>
       {/* Render the appropriate navbar based on route */}
-      {currentRoute === "/mapping" ||
+      {currentRoute === "/map" ||
       /^\/buzzline\/\w+/.test(currentRoute) ||
       currentRoute === "/profile" ? (
         <nav className={`${baseClass} bg-primary text-white`}>
@@ -189,7 +189,7 @@ const Navbar = () => {
             </div>
           )}
         </nav>
-      ) : /^\/mapping\/.+$/.test(currentRoute) ? (
+      ) : /^\/map\/.+$/.test(currentRoute) ? (
         <nav className="z-50 fixed right-6 top-6 text-white text-md bg-primary py-3.5 px-6 rounded-2xl shadow-md flex items-center gap-x-6">
           {renderLinks()}
           {renderInstallAppButton(true)}

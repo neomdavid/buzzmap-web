@@ -12,7 +12,7 @@ const MapContainer = ({
   setSelectedFullReport,
   setShowFullReport,
   clusters = [],
-  baseUrl = "/mapping",
+  baseUrl = "/admin/map",
 }) => {
   return (
     <div className="flex h-[50vh] mb-4" ref={mapContainerRef}>

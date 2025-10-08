@@ -659,12 +659,12 @@ const AdminMapping = () => {
           <span className="hidden md:inline">Analytics</span>
         </button>
         <button
-          onClick={() => navigate("/admin/mapping")}
+          onClick={() => navigate("/admin/map")}
           className="flex items-center cursor-pointer gap-1.5 px-3 py-2 rounded-xl hover:bg-white/10 transition"
           title="Mapping"
         >
           <MapPin size={18} weight="fill" />
-          <span className="hidden md:inline">Mapping</span>
+          <span className="hidden md:inline">Map</span>
         </button>
         <button
           onClick={() => navigate("/admin/reportsverification")}

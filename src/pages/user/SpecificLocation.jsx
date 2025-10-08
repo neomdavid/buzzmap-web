@@ -732,7 +732,7 @@ const SpecificLocation = () => {
               button.addEventListener("click", () => {
                 // Highlight the clicked report's barangay and navigate
                 if (r.barangay) setHighlightedBarangay(r.barangay);
-                navigate(`/mapping/${r._id}`);
+                navigate(`/map/${r._id}`);
               });
             }
           }, 0);
@@ -964,7 +964,7 @@ const SpecificLocation = () => {
         nearbyCount={filteredReports.length}
         nearbyReports={filteredReports}
         radius={1}
-        onViewCommunityClick={() => navigate("/community")}
+        onViewCommunityClick={() => navigate("/newsfeed")}
         onPreventionTipsClick={() => navigate("/buzzline")}
         onBarangaySelect={handleBarangaySelect}
         selectedBarangay={highlightedBarangay}
@@ -1006,7 +1006,7 @@ const SpecificLocation = () => {
                   time={formattedTime}
                   reportType={r.report_type}
                   description={r.description}
-                  onViewClick={() => navigate(`/mapping/${r._id}`)}
+                  onViewClick={() => navigate(`/map/${r._id}`)}
                 />
               );
             })

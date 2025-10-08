@@ -21,7 +21,7 @@ import {
   Otp,
   ForgotPassword,
   Profile,
-  Community,
+  Newsfeed,
 } from "./pages/user";
 import { AdminLayout, CEA, Dashboard } from "./pages/admin";
 import {
@@ -179,10 +179,10 @@ const AppWithProviders = () => {
         { index: true, element: <Navigate to="/home" replace /> },
         { path: "/home", element: <Landing /> },
         {
-          path: "/mapping",
+          path: "/map",
           element: (
             <LazyComponent
-              importFunc={() => import("./pages/user/Mapping.jsx")}
+              importFunc={() => import("./pages/user/Map.jsx")}
               fallback={
                 <div className="flex items-center justify-center min-h-screen">
                   <div className="loading loading-spinner loading-lg"></div>
@@ -192,7 +192,7 @@ const AppWithProviders = () => {
           ),
         },
         {
-          path: "/mapping/:id",
+          path: "/map/:id",
           element: (
             <LazyComponent
               importFunc={() => import("./pages/user/SpecificLocation.jsx")}
@@ -204,7 +204,7 @@ const AppWithProviders = () => {
             />
           ),
         },
-        { path: "/community", element: <Community /> },
+        { path: "/newsfeed", element: <Newsfeed /> },
         { path: "/buzzline", element: <BuzzLine /> },
         { path: "/buzzline/updates", element: <Updates /> },
         { path: "/buzzline/articles", element: <Articles /> },
@@ -292,7 +292,7 @@ const AppWithProviders = () => {
           ),
         },
         {
-          path: "/admin/mapping",
+          path: "/admin/map",
           element: (
             <LazyComponent
               importFunc={() => import("./pages/admin/DengueMapping.jsx")}
@@ -343,7 +343,7 @@ const AppWithProviders = () => {
 
     // Admin mapping route (without sidebar layout)
     {
-      path: "/admin/mapping/:id",
+      path: "/admin/map/:id",
       element: (
         <PrivateRoute requiredRole="admin">
           <LazyComponent

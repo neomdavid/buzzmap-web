@@ -71,9 +71,9 @@ const AdminLayout = () => {
                 label: "Analytics",
               },
               {
-                to: "/admin/mapping",
+                to: "/admin/map",
                 icon: <MapPin weight="fill" size={20} />,
-                label: "Mapping",
+                label: "Map",
               },
               {
                 to: "/admin/reportsverification",

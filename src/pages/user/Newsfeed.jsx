@@ -1,11 +1,5 @@
 import { useState, useMemo, useRef, useCallback, useEffect } from "react";
-import { ArrowLeft, MagnifyingGlass, UserCircle } from "phosphor-react";
-import profile1 from "../../assets/profile1.png";
-import post1 from "../../assets/post1.jpg";
-import post2 from "../../assets/post2.jpg";
-import post3 from "../../assets/post3.jpg";
-import post4 from "../../assets/post4.jpg";
-import post5 from "../../assets/post5.jpg";
+import { ArrowLeft, MagnifyingGlass } from "phosphor-react";
 import defaultProfile from "../../assets/default_profile.png";
 import { formatDistanceToNow } from "date-fns";
 import {
@@ -33,7 +27,8 @@ import React from "react";
 import { useNavigate } from "react-router-dom";
 import { useVoteSync } from "../../hooks/useLocalStorageVoting";
 
-const Community = () => {
+const Newsfeed = () => {
+  // This file is a rename of Community.jsx to Newsfeed, logic preserved
   const [showAside, setShowAside] = useState(false);
   const [city, setCity] = useState("");
   const [barangay, setBarangay] = useState("");
@@ -42,7 +37,7 @@ const Community = () => {
   const [date, setDate] = useState("");
   const [time, setTime] = useState("");
   const [reportType, setReportType] = useState("");
-  const [filter, setFilter] = useState("latest"); // 'latest', 'popular', 'myPosts'
+  const [filter, setFilter] = useState("latest");
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearching, setIsSearching] = useState(false);
   const [isFilterLoading, setIsFilterLoading] = useState(false);
@@ -58,20 +53,12 @@ const Community = () => {
   });
   const navigate = useNavigate();
 
-  // Initialize background vote sync
   const { syncAllVotes, isSyncing } = useVoteSync();
-
-  // Fetch admin posts
   const { data: adminPosts, isLoading: isLoadingAdminPosts } =
     useGetAllAdminPostsQuery();
-
-  // Get basic profiles for all users
   const { data: basicProfiles = [] } = useGetBasicProfilesQuery();
-
-  // Add debug logging
   useEffect(() => {}, [adminPosts, isLoadingAdminPosts]);
 
-  // Get posts with pagination
   const { data, isLoading, isError } = useGetPostsQuery({
     status: "Validated",
     sortBy: searchParams.sortBy,
@@ -82,70 +69,51 @@ const Community = () => {
     ...searchParams,
   });
 
-  // Handle filter loading state - reset after a timeout
   useEffect(() => {
     if (isFilterLoading) {
       const timer = setTimeout(() => {
         setIsFilterLoading(false);
-      }, 1000); // 1 second timeout to prevent infinite loading
+      }, 1000);
       return () => clearTimeout(timer);
     }
   }, [isFilterLoading]);
 
-  // Also reset when data loads
   useEffect(() => {
     if (data && !isLoading) {
       setIsFilterLoading(false);
     }
   }, [data, isLoading]);
 
-  // Reset loading state when filter changes (fallback)
   useEffect(() => {
     const timer = setTimeout(() => {
       setIsFilterLoading(false);
-    }, 2000); // 2 second fallback timeout
+    }, 2000);
     return () => clearTimeout(timer);
   }, [filter]);
 
-  // Clear local vote updates only when posts are added/removed, not on vote updates
   const [lastDataHash, setLastDataHash] = useState("");
-
   useEffect(() => {
     if (data && Array.isArray(data)) {
-      // Create a hash of post IDs to detect if posts were added/removed
       const currentHash = data
         .map((post) => post._id)
         .sort()
         .join(",");
-
       if (lastDataHash && lastDataHash !== currentHash) {
-        // Posts were added/removed, clear local vote updates
         setLocalVoteUpdates({});
       }
-
       setLastDataHash(currentHash);
     }
   }, [data, lastDataHash]);
 
-  // Intersection Observer for infinite scroll (disabled since pagination was removed)
   const observer = useRef();
-
-  // Memoize the intersection observer callback
   const lastPostElementRef = useCallback((node) => {
-    // Pagination disabled - no longer needed
     return;
   }, []);
 
-  // Local state for optimistic vote updates
   const [localVoteUpdates, setLocalVoteUpdates] = useState({});
-
-  // Memoize filtered posts with local vote updates
   const filteredPosts = useMemo(() => {
     if (!data) return [];
-
     let filtered = Array.isArray(data) ? data : [];
-
-    // Apply local vote updates optimistically
     filtered = filtered.map((post) => {
       const localUpdate = localVoteUpdates[post._id];
       if (localUpdate) {
@@ -159,8 +127,6 @@ const Community = () => {
       }
       return post;
     });
-
-    // Apply search filter if there's a search query
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter(
@@ -171,39 +137,29 @@ const Community = () => {
           post.description?.toLowerCase().includes(query)
       );
     }
-
     return filtered;
   }, [data, searchQuery, localVoteUpdates]);
 
-  // Memoize the latest admin post
   const latestAnnouncement = useMemo(() => {
     if (!adminPosts) return null;
-
-    // Filter for active posts with category 'announcement'
     const activePosts = Array.isArray(adminPosts)
       ? adminPosts.filter(
           (post) => post.status === "active" && post.category === "announcement"
         )
       : [];
-
     if (activePosts.length === 0) return null;
-
-    // Sort by publishDate to get the latest scheduled post
     activePosts.sort(
       (a, b) => new Date(b.publishDate) - new Date(a.publishDate)
     );
-
     return activePosts[0];
   }, [adminPosts]);
 
-  // Helper function to get user profile from basic profiles
   const getUserProfile = useCallback(
     (userId) => {
       const profile = basicProfiles.find((p) => p._id === userId);
       if (!profile) {
         return { username: "Unknown", profilePhotoUrl: defaultProfile };
       }
-      // If profilePhotoUrl is empty string or null/undefined, use default
       const profilePhotoUrl =
         profile.profilePhotoUrl && profile.profilePhotoUrl.trim() !== ""
           ? profile.profilePhotoUrl
@@ -213,25 +169,9 @@ const Community = () => {
     [basicProfiles]
   );
 
-  // Memoize the post card render function
   const renderPostCard = useCallback(
     (post, index) => {
       const userProfile = getUserProfile(post.user?._id);
-
-      // Debug logging for vote data
-      console.log(`[Community] Post ${post._id} vote data:`, {
-        upvotes: post.upvotes,
-        downvotes: post.downvotes,
-        upvotesLength: post.upvotes?.length || 0,
-        downvotesLength: post.downvotes?.length || 0,
-        upvotesType: typeof post.upvotes,
-        downvotesType: typeof post.downvotes,
-        upvotesIsArray: Array.isArray(post.upvotes),
-        downvotesIsArray: Array.isArray(post.downvotes),
-        upvotesArrayValue: post.upvotes || [],
-        downvotesArrayValue: post.downvotes || [],
-      });
-
       return (
         <div
           key={post._id}
@@ -268,7 +208,6 @@ const Community = () => {
             currentUserId={userFromStore?._id}
             basicProfiles={basicProfiles}
             onVoteUpdate={(newUpvotes, newDownvotes) => {
-              // Update local state immediately for optimistic UI
               setLocalVoteUpdates((prev) => ({
                 ...prev,
                 [post._id]: {
@@ -279,11 +218,7 @@ const Community = () => {
                 },
               }));
             }}
-            onPostDeleted={(deletedPostId) => {
-              // The RTK Query cache will automatically update, but we can also
-              // manually remove the post from the local filtered posts if needed
-              // This is optional since RTK Query handles cache invalidation
-            }}
+            onPostDeleted={() => {}}
           />
         </div>
       );
@@ -302,16 +237,7 @@ const Community = () => {
   const setNow = () => {
     const now = new Date();
     setDate(now.toISOString().split("T")[0]);
-    setTime(now.toTimeString().split(" ")[0].slice(0, 5)); // HH:MM
-  };
-
-  // Format timestamp to relative time
-  const formatTimestamp = (dateString) => {
-    try {
-      return formatDistanceToNow(new Date(dateString), { addSuffix: true });
-    } catch (error) {
-      return "just now";
-    }
+    setTime(now.toTimeString().split(" ")[0].slice(0, 5));
   };
 
   const [createPost] = useCreatePostMutation();
@@ -405,7 +331,7 @@ const Community = () => {
                   ...prev,
                   sortBy: "upvotes",
                   sortOrder: "desc",
-                  username: undefined, // Clear username when switching filters
+                  username: undefined,
                 }));
               }}
             />
@@ -422,7 +348,7 @@ const Community = () => {
                   ...prev,
                   sortBy: "createdAt",
                   sortOrder: "desc",
-                  username: undefined, // Clear username when switching filters
+                  username: undefined,
                 }));
               }}
             />
@@ -442,7 +368,7 @@ const Community = () => {
                     ...prev,
                     sortBy: "createdAt",
                     sortOrder: "desc",
-                    username: undefined, // Clear username - API will handle myPosts parameter
+                    username: undefined,
                   }));
                 }}
               />
@@ -470,7 +396,6 @@ const Community = () => {
           Real-Time Dengue Updates from the Community.
         </p>
 
-        {/* Vote sync status indicator */}
         {isSyncing && (
           <div className="text-center mb-4">
             <div className="inline-flex items-center gap-2 text-sm text-gray-600">
@@ -589,4 +514,4 @@ const Community = () => {
   );
 };
 
-export default Community;
+export default Newsfeed;
