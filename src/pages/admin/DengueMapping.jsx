@@ -1594,20 +1594,53 @@ const DengueMapping = () => {
             <p className="text-gray-600 mb-2">
               Upload a CSV file containing dengue case data.
             </p>
-            <p className="text-sm text-gray-500 mb-4">
-              The CSV should include the following columns:
-              <br />- Barangay
-              <br />- Date
-              <br />- Number of Cases
-              <br />- Location (optional)
-            </p>
+            <div className="text-sm text-gray-600 mb-4">
+              <p className="font-semibold">CSV upload guidelines</p>
+              <ul className="list-disc ml-5">
+                <li>
+                  Required columns: Barangay, Date (YYYY-MM-DD), Number of Cases
+                </li>
+                <li>
+                  Optional column: Location (lat,lng) — e.g., 14.676,121.0437
+                </li>
+                <li>Header row required; values separated by commas</li>
+                <li>Use UTF-8 encoding; no formulas/macros</li>
+              </ul>
+            </div>
 
-            <input
-              type="file"
-              accept=".csv"
-              onChange={handleFileChange}
-              className="file-input file-input-bordered w-full"
-            />
+            <div className="flex items-center gap-3">
+              <input
+                type="file"
+                accept=".csv"
+                onChange={handleFileChange}
+                className="file-input file-input-bordered w-full"
+              />
+              <a
+                href="#"
+                className="link text-sm text-primary"
+                onClick={(e) => {
+                  e.preventDefault();
+                  const sample = [
+                    "Barangay,Date,Number of Cases,Location",
+                    "Batasan Hills,2025-06-01,12,14.676,121.0437",
+                    "Commonwealth,2025-06-02,9,14.704,121.080",
+                  ].join("\n");
+                  const blob = new Blob([sample], {
+                    type: "text/csv;charset=utf-8;",
+                  });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement("a");
+                  a.href = url;
+                  a.download = "buzzmap-cases-sample.csv";
+                  document.body.appendChild(a);
+                  a.click();
+                  document.body.removeChild(a);
+                  URL.revokeObjectURL(url);
+                }}
+              >
+                Download sample
+              </a>
+            </div>
 
             {importError && <p className="text-error mt-2">{importError}</p>}
           </div>
