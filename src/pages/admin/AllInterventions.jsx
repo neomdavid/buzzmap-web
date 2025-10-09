@@ -9,6 +9,7 @@ const AllInterventions = () => {
     data: interventions,
     isLoading,
     error,
+    refetch: refetchInterventions,
   } = useGetAllInterventionsQuery();
 
   if (isLoading) {
@@ -56,6 +57,7 @@ const AllInterventions = () => {
                 interventions={interventionsArray}
                 onlyRecent={false}
                 archivesView={false}
+                refetchInterventions={refetchInterventions}
                 showControls={false}
               />
             ) : (

@@ -357,7 +357,7 @@ function InterventionsTable({
         ) : (
           <div className="flex flex-col items-center justify-center flex-1 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300 p-8">
             <div className="text-center">
-              <p className="mt-2 mb-2 text-2xl font-semibold text-gray-900">
+              <p className="mt-2 mb-2 text-2xl font-bold text-primary">
                 No interventions found
               </p>
               <p className="mt-1 text-sm text-gray-500">

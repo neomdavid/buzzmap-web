@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import { useSelector } from "react-redux";
 import {
   IconX,
   IconCheck,
@@ -41,6 +42,7 @@ const InterventionDetailsModal = ({
   onRefetch,
 }) => {
   const modalRef = useRef(null);
+  const authToken = useSelector((state) => state?.auth?.token);
   const [barangayData, setBarangayData] = useState(null);
   const [barangayOptions, setBarangayOptions] = useState([]);
   const [isEditing, setIsEditing] = useState(false); // Track if the user is editing
@@ -340,6 +342,75 @@ const InterventionDetailsModal = ({
     } catch (err) {
       console.error("Error during archive:", err);
       toastError("Failed to archive intervention. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Unarchive (restore) archived intervention
+  const handleUnarchive = async () => {
+    if (!authToken) {
+      toastError("Authentication required. Please log in again.");
+      return;
+    }
+    setIsLoading(true);
+    try {
+      const res = await fetch(
+        `${import.meta.env.VITE_API_BASE_URL}api/v1/interventions/${
+          intervention._id
+        }/unarchive`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${authToken}`,
+          },
+        }
+      );
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(text || "Failed to unarchive");
+      }
+      toastSuccess("Intervention unarchived successfully");
+      if (onRefetch) await onRefetch();
+      onClose();
+    } catch (e) {
+      console.error("Unarchive error:", e);
+      toastError("Failed to unarchive intervention. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Hard delete archived intervention
+  const handleHardDelete = async () => {
+    if (!authToken) {
+      toastError("Authentication required. Please log in again.");
+      return;
+    }
+    setIsLoading(true);
+    try {
+      const res = await fetch(
+        `${import.meta.env.VITE_API_BASE_URL}api/v1/interventions/${
+          intervention._id
+        }/hard`,
+        {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${authToken}`,
+          },
+        }
+      );
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(text || "Failed to delete");
+      }
+      toastSuccess("Intervention deleted permanently");
+      if (onRefetch) await onRefetch();
+      onClose();
+    } catch (e) {
+      console.error("Hard delete error:", e);
+      toastError("Failed to delete intervention. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -894,25 +965,46 @@ const InterventionDetailsModal = ({
                   </>
                 ) : (
                   <>
-                    {intervention?.status !== "Complete" && (
-                      <button
-                        type="button"
-                        onClick={handleEditClick}
-                        className="bg-primary text-white font-semibold py-1 px-12 rounded-xl hover:bg-primary/80 transition-all hover:cursor-pointer flex items-center gap-2"
-                      >
-                        <IconEdit size={18} />
-                        Edit
-                      </button>
+                    {intervention?.status === "Archived" ? (
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={handleUnarchive}
+                          className="bg-primary text-white font-semibold py-1 px-6 rounded-xl hover:bg-primary/80 transition-all hover:cursor-pointer"
+                        >
+                          Unarchive
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleHardDelete}
+                          className="bg-error text-white font-semibold py-1 px-6 rounded-xl hover:bg-error/80 transition-all hover:cursor-pointer"
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    ) : (
+                      <>
+                        {intervention?.status !== "Complete" && (
+                          <button
+                            type="button"
+                            onClick={handleEditClick}
+                            className="bg-primary text-white font-semibold py-1 px-12 rounded-xl hover:bg-primary/80 transition-all hover:cursor-pointer flex items-center gap-2"
+                          >
+                            <IconEdit size={18} />
+                            Edit
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={handleDeleteClick}
+                          className="bg-error text-white font-semibold py-1 px-12 rounded-xl hover:bg-error/80 transition-all hover:cursor-pointer flex items-center gap-2"
+                          title="Archive Intervention"
+                        >
+                          <IconTrash size={18} />
+                          Archive
+                        </button>
+                      </>
                     )}
-                    <button
-                      type="button"
-                      onClick={handleDeleteClick}
-                      className="bg-error text-white font-semibold py-1 px-12 rounded-xl hover:bg-error/80 transition-all hover:cursor-pointer flex items-center gap-2"
-                      title="Archive Intervention"
-                    >
-                      <IconTrash size={18} />
-                      Archive
-                    </button>
                   </>
                 )}
               </div>
