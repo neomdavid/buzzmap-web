@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { toastWarn } from "../../utils.jsx";
 
 const DescriptionWithImages = ({
@@ -8,6 +8,8 @@ const DescriptionWithImages = ({
   onDescriptionChange,
 }) => {
   const [fileError, setFileError] = useState("");
+  const fileInputRef = useRef(null);
+  const guidelinesDialogRef = useRef(null);
 
   // Define accepted image file types (JPG, PNG only)
   const acceptedImageTypes = ["image/jpeg", "image/jpg", "image/png"];
@@ -40,6 +42,14 @@ const DescriptionWithImages = ({
 
     // If all files are valid, add them
     onImageChange([...images, ...files]);
+
+    // Close guidelines modal after successful selection
+    if (
+      guidelinesDialogRef.current &&
+      typeof guidelinesDialogRef.current.close === "function"
+    ) {
+      guidelinesDialogRef.current.close();
+    }
   };
 
   const removeImage = (index) => {
@@ -65,18 +75,69 @@ const DescriptionWithImages = ({
           Description
         </span>
 
-        {/* Image Picker */}
-        <label className="btn btn-md btn-outline cursor-pointer">
+        {/* Image Picker trigger opens guidelines modal */}
+        <button
+          type="button"
+          className="btn btn-md btn-outline cursor-pointer"
+          onClick={() => {
+            if (
+              guidelinesDialogRef.current &&
+              typeof guidelinesDialogRef.current.showModal === "function"
+            ) {
+              guidelinesDialogRef.current.showModal();
+            }
+          }}
+        >
           📷 Add Images
-          <input
-            type="file"
-            accept="image/jpeg,image/png"
-            multiple
-            className="hidden"
-            onChange={handleImageChange}
-          />
-        </label>
+        </button>
       </div>
+
+      {/* Hidden file input used by the modal's Select Images button */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/jpeg,image/png"
+        multiple
+        className="hidden"
+        onChange={handleImageChange}
+      />
+
+      {/* Upload Guidelines Modal */}
+      <dialog ref={guidelinesDialogRef} className="modal">
+        <div className="modal-box bg-white text-primary">
+          <form method="dialog">
+            <button className="btn btn-sm btn-circle btn-ghost absolute right-2 top-2">
+              ✕
+            </button>
+          </form>
+          <p className="font-extrabold text-2xl mb-2">Photo requirements</p>
+          <p className="text-sm text-gray-600 mb-2">
+            Make sure your photos meet these:
+          </p>
+          <ul className="list-disc ml-5 text-sm text-gray-700 space-y-1">
+            <li>Accepted types: JPG, PNG</li>
+            <li>Up to 4 images; keep each under ~2MB</li>
+            <li>Show the site clearly; avoid blurry images</li>
+          </ul>
+          <div className="modal-action">
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={() => {
+                if (fileInputRef.current) fileInputRef.current.click();
+              }}
+            >
+              Select photos
+            </button>
+            <form method="dialog">
+              <button className="btn">Cancel</button>
+            </form>
+          </div>
+        </div>
+        <form method="dialog" className="modal-backdrop">
+          <button>close</button>
+        </form>
+      </dialog>
 
       {/* Textarea for description */}
       <textarea
@@ -91,15 +152,7 @@ const DescriptionWithImages = ({
         {description?.length || 0}/{DESCRIPTION_MAX}
       </div>
 
-      {/* File type information and error display */}
-      <div className="text-sm text-gray-600">
-        <p className="font-semibold">Upload guidelines</p>
-        <ul className="list-disc ml-5">
-          <li>Accepted types: JPG, PNG</li>
-          <li>Up to 4 images; keep each under ~2MB</li>
-          <li>Show the site clearly; avoid blurry images</li>
-        </ul>
-      </div>
+      {/* File type information moved to modal above */}
 
       {/* Error message display */}
       {fileError && (

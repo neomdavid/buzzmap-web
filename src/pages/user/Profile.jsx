@@ -7,6 +7,7 @@ import { useSelector, useDispatch } from "react-redux";
 import axios from "axios";
 import { toastInfo, toastSuccess, toastError } from "../../utils.jsx";
 import { CustomInput, NewPostModal } from "../../components";
+import MobileProfileHeader from "../../components/Profile/MobileProfileHeader.jsx";
 import {
   useUpdateProfilePhotoMutation,
   useUpdateBioMutation,
@@ -29,6 +30,8 @@ function Profile() {
   const confirmModalRef = useRef(null);
   const editProfileModalRef = useRef(null);
   const bioModalRef = useRef(null);
+  const profileDetailsRef = useRef(null);
+  const photoGuidelinesRef = useRef(null);
   const [updateProfilePhoto] = useUpdateProfilePhotoMutation();
   const [updateBio] = useUpdateBioMutation();
 
@@ -74,8 +77,8 @@ function Profile() {
   };
 
   const handleChangePhotoClick = () => {
-    editProfileModalRef.current?.close();
-    fileInputRef.current?.click();
+    // Show photo requirements before selecting a file
+    photoGuidelinesRef.current?.showModal();
   };
 
   const handleEditBioClick = () => {
@@ -142,6 +145,10 @@ function Profile() {
     const url = URL.createObjectURL(file);
     setSelectedFile(file);
     setPreviewUrl(url);
+
+    // Close guidelines and the edit modal before confirmation
+    photoGuidelinesRef.current?.close();
+    editProfileModalRef.current?.close();
 
     // Show confirmation modal
     confirmModalRef.current?.showModal();
@@ -221,8 +228,8 @@ function Profile() {
           };
         case "rejected":
           return {
-            title: "No rejected reports",
-            subtitle: "Reports that need revision will appear here",
+            title: "No rejected reports yet",
+            subtitle: "Great news—none of your reports have been rejected.",
           };
         default:
           return {
@@ -382,12 +389,18 @@ function Profile() {
   };
 
   return (
-    <main className="text-primary flex justify-center gap-20 relative p-10 pt-20 sm:pt-20">
+    <main className="text-primary flex flex-col lg:flex-row justify-start lg:justify-center gap-0 lg:gap-20 relative p-6 sm:p-8 pt-20 sm:pt-20 w-full">
+      <MobileProfileHeader
+        profileData={profileData}
+        fallbackPhoto={profile1}
+        onEditBio={handleEditBioClick}
+        onOpenDetails={() => profileDetailsRef.current?.showModal()}
+      />
       <div
         className="absolute top-0 left-0 w-full h-100 bg-cover bg-center bg-no-repeat"
         style={{ backgroundImage: `url(${profile_bg})` }}
       ></div>
-      <section className="flex flex-col w-[90vw] lg:w-[30vw] max-w-xl shadow-lg gap-2 p-6 py-14 items-center rounded-t-2xl bg-white rounded-t-[35px] relative z-10 sticky top-24 h-fit max-h-[calc(100vh-6rem)] lg:overflow-y-auto lg:scrollbar-thin lg:scrollbar-thumb-primary sm:scrollbar-track-transparent pr-2">
+      <section className="hidden lg:flex flex-col lg:w-[30vw] max-w-xl shadow-lg gap-2 p-6 py-14 items-center rounded-t-2xl bg-white rounded-t-[35px] relative z-10 sticky top-24 h-fit max-h-[calc(100vh-6rem)] lg:overflow-y-auto lg:scrollbar-thin lg:scrollbar-thumb-primary sm:scrollbar-track-transparent pr-2">
         <div className="relative mb-4 ">
           <img
             src={profileData?.account?.profilePhotoUrl || profile1}
@@ -415,10 +428,6 @@ function Profile() {
             accept="image/jpeg,image/jpg,image/png,image/gif"
             className="hidden"
           />
-          <div className="mt-2 text-xs text-gray-600 text-center">
-            <p className="font-semibold">Upload guidelines</p>
-            <p>Use JPG/PNG/GIF; keep images under 5MB.</p>
-          </div>
         </div>
         <p className="text-5xl font-bold">{profileData?.account?.username}</p>
         <p className="text-xl text-primary mb-8">
@@ -475,21 +484,6 @@ function Profile() {
                 </span>
               </div>
             </div>
-          </div>
-
-          <div>
-            {/* <p><span className='font-bold'>Status: </span>{profileData?.account?.status}</p> */}
-            <p>
-              <span className="font-bold">Joined: </span>
-              {new Date(profileData?.account?.lastUpdated).toLocaleDateString(
-                "en-US",
-                {
-                  year: "numeric",
-                  month: "long",
-                  day: "numeric",
-                }
-              )}
-            </p>
           </div>
         </div>
         <hr className="w-[80%] border-[1px] border-gray-300 mb-6" />
@@ -565,6 +559,42 @@ function Profile() {
             </button>
           </div>
         </div>
+      </dialog>
+
+      {/* Photo Requirements Modal */}
+      <dialog ref={photoGuidelinesRef} className="modal">
+        <div className="modal-box w-11/12 max-w-md p-8">
+          <form method="dialog">
+            <button className="btn btn-sm btn-circle btn-ghost absolute right-2 top-2">
+              ✕
+            </button>
+          </form>
+          <p className="font-extrabold text-2xl mb-2">Photo requirements</p>
+          <p className="text-sm text-gray-600 mb-2">
+            Make sure your photo meets these:
+          </p>
+          <ul className="list-disc ml-5 text-sm text-gray-700 space-y-1">
+            <li>Accepted types: JPG, PNG, GIF</li>
+            <li>Max size: 5MB</li>
+            <li>Use a clear, non-blurry image</li>
+            <li>Avoid faces of others or personal info in frame</li>
+          </ul>
+          <div className="modal-action">
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={() => fileInputRef.current?.click()}
+            >
+              Select photo
+            </button>
+            <form method="dialog">
+              <button className="btn">Cancel</button>
+            </form>
+          </div>
+        </div>
+        <form method="dialog" className="modal-backdrop">
+          <button>close</button>
+        </form>
       </dialog>
 
       {/* Profile Photo Confirmation Modal - DaisyUI Style */}
@@ -650,7 +680,7 @@ function Profile() {
         </div>
       </dialog>
 
-      <section className="hidden max-w-5xl z-5 lg:block lg:flex-1 pt-55">
+      <section className="block lg:max-w-5xl z-5 w-full lg:flex-1 pt-30 lg:pt-55">
         <div className="bg-white p-6 rounded-xl flex flex-col shadow-md mb-6">
           <p className="font-bold text-xl mb-4">
             Share your experience to the Community
@@ -725,6 +755,74 @@ function Profile() {
           </div>
         </div>
       </section>
+
+      {/* Small-screen Profile Details Modal (shows left sidebar content) */}
+      <dialog ref={profileDetailsRef} className="modal lg:hidden">
+        <div className="modal-box w-11/12 max-w-md p-6">
+          <form method="dialog">
+            <button className="btn btn-sm btn-circle btn-ghost absolute right-2 top-2">
+              ✕
+            </button>
+          </form>
+          <div className="flex flex-col gap-2 items-center">
+            <div className="relative mb-4 ">
+              <img
+                src={profileData?.account?.profilePhotoUrl || profile1}
+                alt="profile"
+                className="rounded-full w-40 h-40 bg-primary border-4 border-primary shadow-sm object-cover"
+              />
+              <div
+                onClick={handleCameraClick}
+                className={`absolute text-white bottom-[5%] right-[5%] bg-primary p-2.5 rounded-full hover:cursor-pointer hover:bg-primary/80 transition-all duration-300 ${
+                  uploadingPhoto ? "opacity-50 cursor-not-allowed" : ""
+                }`}
+                disabled={uploadingPhoto}
+              >
+                {uploadingPhoto ? (
+                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white"></div>
+                ) : (
+                  <Camera size={24} />
+                )}
+              </div>
+            </div>
+            <p className="text-3xl font-bold">
+              {profileData?.account?.username}
+            </p>
+            <p className="text-base text-primary mb-4">
+              {profileData?.account?.email}
+            </p>
+            <div className="flex justify-around gap-6 mb-2 w-full">
+              <div className="flex flex-col gap-1 items-center justify-center">
+                <p className="text-3xl font-bold">
+                  {profileData?.statistics?.reportsByStatus?.Validated || 0}
+                </p>
+                <p className="text-sm text-primary">Reports Posted</p>
+              </div>
+              <div className="flex flex-col gap-1 items-center justify-center">
+                <p className="text-3xl font-bold">
+                  {profileData?.statistics?.totalUpvotes}
+                </p>
+                <p className="text-sm text-primary">Upvotes</p>
+              </div>
+            </div>
+            <div className="w-full">
+              <p className="font-bold text-xl mb-2">
+                About {profileData?.account?.username}
+              </p>
+              <p className="text-gray-700 leading-relaxed break-words">
+                {profileData?.account?.bio || (
+                  <span className="text-gray-400 italic">
+                    No bio added yet.
+                  </span>
+                )}
+              </p>
+            </div>
+          </div>
+        </div>
+        <form method="dialog" className="modal-backdrop">
+          <button>close</button>
+        </form>
+      </dialog>
     </main>
   );
 }

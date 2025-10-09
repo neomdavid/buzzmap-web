@@ -130,11 +130,11 @@ const Landing = () => {
       {/* <StreetViewMap /> */}
       <div className="text-primary font-[Koulen] uppercase flex flex-col text-7xl  sm:px-10 mb-6 sm:mb-14 lg:max-w-[80vw] lg:items-center lg:self-center text-center">
         <Heading
-          className="text-left text-5xl px-[7%] max  sm:mb-0 sm:px-0 sm:text-[46px] sm:text-left sm:text-7xl md:text-8xl md:leading-24 lg:-translate-x-50 xl:-translate-x-50 xl:text-9xl xl:leading-40"
+          className="text-left text-6xl px-[7%] max  sm:mb-0 sm:px-0 sm:text-left sm:text-7xl md:text-8xl md:leading-24 lg:-translate-x-50 xl:-translate-x-50 xl:text-9xl xl:leading-40"
           text="Buzzing /with awareness/"
         />
         <Heading
-          className="text-right text-5xl px-[7%] sm:px-0 sm:text-[46px] mt-[-17px] sm:mt-0 sm:text-right sm:text-7xl md:text-8xl lg:translate-x-50 xl:translate-x-50 xl:text-9xl"
+          className="text-right text-6xl px-[7%] sm:px-0  mt-[-17px] sm:mt-0 sm:text-right sm:text-7xl md:text-8xl lg:translate-x-50 xl:translate-x-50 xl:text-9xl"
           text="Mapping /for prevention/"
         />
       </div>
@@ -146,7 +146,7 @@ const Landing = () => {
         <p className="px-6 text-md sm:px-10">
           Join the community in&nbsp;
           <span className="font-semibold ">
-            mapping dengue hotspots, sharing reports,
+            mapping dengue patterns, sharing reports,
           </span>{" "}
           and&nbsp;
           <span className="font-semibold ">preventing outbreaks together.</span>
@@ -154,7 +154,7 @@ const Landing = () => {
       </div>
       <div className="flex flex-col text-lg font-semibold gap-4 sm:flex-row w-[80%] m-auto mt-2 gap-x-3 justify-center items-center">
         <SecondaryButton
-          text={"Check Dengue Hotspots"}
+          text={"Check Dengue Patterns"}
           to="/map"
           className="w-md "
         />
@@ -214,7 +214,7 @@ const Landing = () => {
               <div className="text-6xl mb-4">🗺️</div>
               <p className="text-lg font-semibold">Loading map...</p>
               <p className="text-sm text-gray-600">
-                Click to explore dengue hotspots
+                Click to explore dengue patterns
               </p>
             </div>
           )}
@@ -226,7 +226,7 @@ const Landing = () => {
             className="text-5xl sm:text-7xl"
           />
           <p className="text-primary text-lg font-semibold mt-5">
-            By tracking and visualizing dengue hotspots, users can stay
+            By tracking and visualizing dengue patterns, users can stay
             informed, take preventive actions, and avoid high-risk areas,
             ultimately reducing their chances of exposure and contributing to
             the fight against dengue.
