@@ -6,7 +6,7 @@ import {
   AdminPostsTable,
   AlertsTable,
 } from "../../../components";
-import { Plus } from "phosphor-react";
+import { Plus, Info } from "phosphor-react";
 
 const TABS = [
   { id: "public", label: "Public Information Posts" },
@@ -18,6 +18,7 @@ const ActivePosts = () => {
   const [activeTab, setActiveTab] = useState("public");
   const [modalType, setModalType] = useState(null); // 'public' or 'alerts'
   const dialogRef = useRef(null);
+  const [showAlertGuide, setShowAlertGuide] = useState(false);
 
   // Sync initial tab from query string (?tab=alerts|public)
   useEffect(() => {
@@ -69,7 +70,7 @@ const ActivePosts = () => {
       </div>
 
       {/* Action Button (left-aligned, styled like Add New Intervention) */}
-      <div className="mb-6 flex justify-start items-center">
+      <div className="mb-6 flex items-center justify-between">
         {activeTab === "public" ? (
           <button
             className="flex gap-1 bg-primary items-center rounded-2xl py-3 px-6 text-lg text-white font-semibold hover:cursor-pointer hover:bg-primary/90 transition-all duration-200"
@@ -79,13 +80,24 @@ const ActivePosts = () => {
             Publish Post
           </button>
         ) : (
-          <button
-            className="flex gap-1 bg-error items-center rounded-2xl py-3 px-6 text-lg text-white font-semibold hover:cursor-pointer hover:bg-error-dark transition-all duration-200"
-            onClick={() => openModal("alerts")}
-          >
-            <Plus size={17} />
-            Send Dengue Alert
-          </button>
+          <>
+            <button
+              className="flex gap-1 bg-error items-center rounded-2xl py-3 px-6 text-lg text-white font-semibold hover:cursor-pointer hover:bg-error-dark transition-all duration-200"
+              onClick={() => openModal("alerts")}
+            >
+              <Plus size={17} />
+              Send Dengue Alert
+            </button>
+            <button
+              className="inline-flex items-center gap-1.5 text-sm link text-primary hover:text-accent underline"
+              onClick={() => setShowAlertGuide(true)}
+              aria-label="What does a Dengue Alert do?"
+              title="What does a Dengue Alert do?"
+            >
+              <Info size={16} />
+              <span>What does a Dengue Alert do?</span>
+            </button>
+          </>
         )}
       </div>
 
@@ -109,6 +121,65 @@ const ActivePosts = () => {
           {modalType === "alerts" && <FormDengueAlert onSuccess={closeModal} />}
         </div>
       </dialog>
+      {showAlertGuide && (
+        <dialog open className="modal z-[1200]">
+          <div className="modal-box bg-white rounded-3xl shadow-2xl w-11/12 max-w-3xl p-6">
+            <div className="flex items-start justify-between mb-2">
+              <p className="text-2xl font-extrabold text-primary">
+                Dengue Alert Guide
+              </p>
+              <button
+                className="btn btn-ghost btn-sm"
+                onClick={() => setShowAlertGuide(false)}
+                aria-label="Close dengue alert guide"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="prose max-w-none text-primary">
+              <p className="mb-4">
+                Dengue Alerts immediately notify BuzzMap mobile users within the
+                affected barangay. Use alerts for time-sensitive risks (e.g.,
+                surge in cases, active breeding sites, or urgent community
+                actions).
+              </p>
+              <p className="text-lg font-bold mt-3">Before you send</p>
+              <ul className="list-disc ml-5">
+                <li>
+                  Confirm the barangay and ensure the information is accurate.
+                </li>
+                <li>Keep the message concise, actionable, and time-bound.</li>
+                <li>Avoid sensitive personal data or unverified claims.</li>
+              </ul>
+              <p className="text-lg font-bold mt-4">Suggested steps</p>
+              <ol className="list-decimal ml-5">
+                <li>Click "Send Dengue Alert" to open the alert form.</li>
+                <li>Provide title, message, and target barangay.</li>
+                <li>Review your message and send the alert.</li>
+              </ol>
+              <p className="text-lg font-bold mt-4">Tips</p>
+              <ul className="list-disc ml-5">
+                <li>
+                  Use clear calls to action (e.g., avoid stagnant water, seek
+                  care).
+                </li>
+                <li>Limit frequency to avoid alert fatigue.</li>
+              </ul>
+            </div>
+            <div className="mt-5 flex justify-end">
+              <button
+                className="btn btn-primary"
+                onClick={() => setShowAlertGuide(false)}
+              >
+                Got it
+              </button>
+            </div>
+          </div>
+          <form method="dialog" className="modal-backdrop">
+            <button onClick={() => setShowAlertGuide(false)}>close</button>
+          </form>
+        </dialog>
+      )}
     </main>
   );
 };

@@ -1,5 +1,11 @@
 import React, { useState, useEffect, useRef } from "react";
-import { IconX, IconCheck } from "@tabler/icons-react";
+import {
+  IconX,
+  IconCheck,
+  IconAlertTriangle,
+  IconTrash,
+  IconEdit,
+} from "@tabler/icons-react";
 import {
   useUpdateInterventionMutation,
   useDeleteInterventionMutation,
@@ -42,6 +48,8 @@ const InterventionDetailsModal = ({
   const [isLoading, setIsLoading] = useState(false); // Loading state for save operation
   const [updateIntervention] = useUpdateInterventionMutation(); // RTK Query hook for updating the intervention
   const [deleteIntervention] = useDeleteInterventionMutation();
+  const [saveError, setSaveError] = useState(null); // Inline error for save failures
+  const [completionNoticeVisible, setCompletionNoticeVisible] = useState(false); // Show notice after clicking Mark as Completed
 
   // Map and location handling states
   const [showLocationPicker, setShowLocationPicker] = useState(false);
@@ -233,6 +241,7 @@ const InterventionDetailsModal = ({
   const handleSave = async (e) => {
     e.preventDefault();
     setIsLoading(true); // Show loading indicator
+    setSaveError(null);
     try {
       // Use the user's selected status (already validated by dropdown options)
       const statusToSend = formData.status;
@@ -285,16 +294,15 @@ const InterventionDetailsModal = ({
     } catch (error) {
       // Debug logs: error details
       console.error("[EditIntervention] Update failed", error);
-      if (error && error.data) {
+      let message = "Failed to update intervention. Please try again.";
+      if (error && (error.data || error.message)) {
         try {
-          console.error("[EditIntervention] Error data", error.data);
-          console.error(
-            "[EditIntervention] Error data (JSON)",
-            JSON.stringify(error.data)
-          );
+          const details =
+            error.data?.details || error.data?.message || error.message;
+          if (details) message = details;
         } catch {}
       }
-      toastError("Failed to update intervention. Please try again.");
+      setSaveError(message);
     } finally {
       setIsLoading(false); // Hide loading indicator after the request completes
     }
@@ -302,6 +310,7 @@ const InterventionDetailsModal = ({
 
   // Handle edit click
   const handleEditClick = () => {
+    if (intervention?.status === "Complete") return; // Disallow editing completed interventions
     setIsEditing(true); // Switch to editable mode
   };
 
@@ -407,27 +416,33 @@ const InterventionDetailsModal = ({
                 ? "Edit Intervention Details"
                 : "View Intervention Details"}
             </p>
-            <div className="flex justify-center mb-6">
+            <div className="flex justify-center mb-2">
               <p
                 className={`${
-                  formData.status === "Complete"
+                  intervention.status === "Complete"
                     ? "bg-success"
-                    : formData.status === "Scheduled"
+                    : intervention.status === "Scheduled"
                     ? "bg-info"
-                    : formData.status === "Ongoing"
+                    : intervention.status === "Ongoing"
                     ? "bg-warning"
                     : "bg-gray-300"
                 } w-[40%] text-center rounded-xl py-1.5 text-white font-extrabold text-xl`}
               >
-                {formData.status}
+                {intervention.status}
               </p>
             </div>
+            {/* Status badge shows backend status only; edit guidance is near the dropdown below */}
 
             {/* Display form to edit or view */}
             <form
               onSubmit={handleSave}
               className="flex flex-col space-y-2 text-lg font-semibold"
             >
+              {isEditing && saveError && (
+                <div className="mb-2 rounded-md border border-error/30 bg-error/10 text-error p-3 text-sm">
+                  {saveError}
+                </div>
+              )}
               {!isEditing ? (
                 <>
                   <div className="flex gap-1">
@@ -459,6 +474,46 @@ const InterventionDetailsModal = ({
                       })}
                     </p>
                   </div>
+                  {intervention.completedAt && (
+                    <div className="flex gap-1">
+                      <p className="text-gray-500">Completed At: </p>
+                      <p className="font-semibold text-primary">
+                        {new Date(intervention.completedAt).toLocaleString(
+                          "en-US",
+                          {
+                            weekday: "long",
+                            year: "numeric",
+                            month: "long",
+                            day: "numeric",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                            second: "2-digit",
+                            hour12: true,
+                          }
+                        )}
+                      </p>
+                    </div>
+                  )}
+                  {intervention.updatedAt && (
+                    <div className="flex gap-1">
+                      <p className="text-gray-500">Last Updated: </p>
+                      <p className="font-semibold text-primary">
+                        {new Date(intervention.updatedAt).toLocaleString(
+                          "en-US",
+                          {
+                            weekday: "long",
+                            year: "numeric",
+                            month: "long",
+                            day: "numeric",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                            second: "2-digit",
+                            hour12: true,
+                          }
+                        )}
+                      </p>
+                    </div>
+                  )}
                   <div className="flex gap-1">
                     <p className="text-gray-500">Type of Intervention: </p>
                     <p className="font-semibold text-primary">
@@ -627,6 +682,11 @@ const InterventionDetailsModal = ({
                         (now - interventionDate) / (1000 * 60 * 60);
                       const within24Hours = hoursDiff <= 24;
 
+                      const showForcedCompleteNotice =
+                        isPast &&
+                        intervention.status === "Scheduled" &&
+                        formData.status === "Complete";
+
                       return (
                         <select
                           name="status"
@@ -634,6 +694,11 @@ const InterventionDetailsModal = ({
                           onChange={handleChange}
                           className="border-2 font-normal border-primary/60 p-3 rounded-lg w-full"
                         >
+                          {showForcedCompleteNotice && (
+                            <option disabled value="__divider__">
+                              {""}
+                            </option>
+                          )}
                           {isFuture && !isTodayDate ? (
                             <option value="Scheduled">Scheduled</option>
                           ) : isTodayDate && !isPast ? (
@@ -652,6 +717,83 @@ const InterventionDetailsModal = ({
                         </select>
                       );
                     })()}
+                    {(() => {
+                      const now = new Date();
+                      const interventionDate = new Date(formData.date);
+                      const isPast = interventionDate < now;
+                      const showNotice =
+                        isEditing &&
+                        isPast &&
+                        intervention?.status === "Scheduled" &&
+                        formData.status === "Complete";
+                      if (!showNotice) return null;
+                      return (
+                        <div className="mt-2 rounded-md border border-yellow-200 bg-yellow-50 text-yellow-800 p-3 flex items-start gap-2">
+                          <IconAlertTriangle size={18} className="mt-0.5" />
+                          <p className="text-sm">
+                            This intervention is currently marked as Scheduled,
+                            but because the date of intervention is in the past,
+                            it can only be set to
+                            <span className="font-semibold"> Complete</span>.
+                          </p>
+                        </div>
+                      );
+                    })()}
+                    {(() => {
+                      const now = new Date();
+                      const interventionDate = new Date(formData.date);
+                      const isPast = interventionDate < now;
+                      const isTodayDate = isToday(formData.date);
+                      const hoursDiff =
+                        (now - interventionDate) / (1000 * 60 * 60);
+                      const within24Hours = hoursDiff <= 24;
+                      const canBeOngoing =
+                        (!isPast && isTodayDate) || (isPast && within24Hours);
+                      const showOngoingNotice =
+                        isEditing &&
+                        intervention?.status === "Scheduled" &&
+                        formData.status === "Ongoing" &&
+                        canBeOngoing;
+                      if (!showOngoingNotice) return null;
+                      return (
+                        <div className="mt-2 rounded-md border border-yellow-200 bg-yellow-50 text-yellow-800 p-3 flex items-start gap-2">
+                          <IconAlertTriangle size={18} className="mt-0.5" />
+                          <p className="text-sm">
+                            This intervention is currently marked as Scheduled,
+                            but because the date of intervention is{" "}
+                            {isTodayDate ? "today" : "within the last 24 hours"}
+                            , it can be set to
+                            <span className="font-semibold"> Ongoing</span>.
+                          </p>
+                        </div>
+                      );
+                    })()}
+                    {(() => {
+                      const now = new Date();
+                      const interventionDate = new Date(formData.date);
+                      const isPast = interventionDate < now;
+                      const hoursDiff =
+                        (now - interventionDate) / (1000 * 60 * 60);
+                      const beyond24Hours = hoursDiff > 24;
+                      const showOngoingToCompleteNotice =
+                        isEditing &&
+                        intervention?.status === "Ongoing" &&
+                        isPast &&
+                        beyond24Hours &&
+                        formData.status === "Complete";
+                      if (!showOngoingToCompleteNotice) return null;
+                      return (
+                        <div className="mt-2 rounded-md border border-yellow-200 bg-yellow-50 text-yellow-800 p-3 flex items-start gap-2">
+                          <IconAlertTriangle size={18} className="mt-0.5" />
+                          <p className="text-sm">
+                            This intervention is currently marked as Ongoing,
+                            but because the date of intervention is in the past,
+                            it can only be set to
+                            <span className="font-semibold"> Complete</span>.
+                          </p>
+                        </div>
+                      );
+                    })()}
                   </div>
                 </>
               )}
@@ -660,35 +802,114 @@ const InterventionDetailsModal = ({
               <div className="modal-action flex justify-center gap-6">
                 {isEditing ? (
                   <>
-                    <button
-                      type="button"
-                      onClick={() => setIsEditing(false)}
-                      className="bg-gray-300 text-gray-700 font-semibold py-1 px-12 rounded-xl hover:bg-gray-400 transition-all hover:cursor-pointer"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      type="submit"
-                      className="bg-primary text-white font-semibold py-1 px-12 rounded-xl hover:bg-primary/80 transition-all hover:cursor-pointer disabled:opacity-50"
-                      disabled={!isLocationValid && showLocationPicker}
-                    >
-                      {isLoading ? "Saving changes..." : "Save changes"}
-                    </button>
+                    {!(
+                      formData.status === "Complete" && completionNoticeVisible
+                    ) && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsEditing(false);
+                          // Revert form data to backend source of truth on cancel
+                          setFormData({
+                            barangay: intervention.barangay,
+                            address: intervention.address,
+                            date: intervention.date,
+                            interventionType: intervention.interventionType,
+                            personnel: intervention.personnel,
+                            status: intervention.status,
+                            specific_location:
+                              intervention.specific_location || null,
+                          });
+                          setShowLocationPicker(false);
+                          setIsLocationValid(!!intervention.specific_location);
+                        }}
+                        className="bg-gray-300 text-gray-700 font-semibold py-1 px-12 rounded-xl hover:bg-gray-400 transition-all hover:cursor-pointer"
+                      >
+                        Cancel
+                      </button>
+                    )}
+                    {intervention?.status !== "Complete" && (
+                      <div className="flex flex-col items-center gap-2">
+                        {formData.status === "Complete" ? (
+                          <>
+                            {!completionNoticeVisible ? (
+                              <button
+                                type="button"
+                                className="bg-success text-white font-semibold py-1 px-12 rounded-xl hover:bg-success/80 transition-all hover:cursor-pointer disabled:opacity-50"
+                                disabled={
+                                  !isLocationValid && showLocationPicker
+                                }
+                                onClick={() => setCompletionNoticeVisible(true)}
+                              >
+                                Mark as Completed
+                              </button>
+                            ) : (
+                              <div className="flex flex-col items-center gap-2">
+                                <p className="text-xs text-warning-600 text-center">
+                                  Completing this intervention will lock its
+                                  status and details. You will not be able to
+                                  change them afterward.
+                                </p>
+                                <div className="flex items-center gap-2">
+                                  <button
+                                    type="button"
+                                    className="bg-gray-300 text-gray-700 font-semibold py-1 px-6 rounded-xl hover:bg-gray-400 transition-all hover:cursor-pointer"
+                                    onClick={() =>
+                                      setCompletionNoticeVisible(false)
+                                    }
+                                  >
+                                    Cancel
+                                  </button>
+                                  <button
+                                    type="submit"
+                                    className="bg-success text-white font-semibold py-1 px-6 rounded-xl hover:bg-success/80 transition-all hover:cursor-pointer disabled:opacity-50"
+                                    disabled={
+                                      (!isLocationValid &&
+                                        showLocationPicker) ||
+                                      isLoading
+                                    }
+                                  >
+                                    {isLoading
+                                      ? "Marking..."
+                                      : "Confirm Complete"}
+                                  </button>
+                                </div>
+                              </div>
+                            )}
+                          </>
+                        ) : (
+                          <button
+                            type="submit"
+                            className="bg-primary text-white font-semibold py-1 px-12 rounded-xl hover:bg-primary/80 transition-all hover:cursor-pointer disabled:opacity-50"
+                            disabled={
+                              (!isLocationValid && showLocationPicker) ||
+                              isLoading
+                            }
+                          >
+                            {isLoading ? "Saving..." : "Save changes"}
+                          </button>
+                        )}
+                      </div>
+                    )}
                   </>
                 ) : (
                   <>
-                    <button
-                      type="button"
-                      onClick={handleEditClick}
-                      className="bg-primary text-white font-semibold py-1 px-12 rounded-xl hover:bg-primary/80 transition-all hover:cursor-pointer"
-                    >
-                      Edit
-                    </button>
+                    {intervention?.status !== "Complete" && (
+                      <button
+                        type="button"
+                        onClick={handleEditClick}
+                        className="bg-primary text-white font-semibold py-1 px-12 rounded-xl hover:bg-primary/80 transition-all hover:cursor-pointer flex items-center gap-2"
+                      >
+                        <IconEdit size={18} />
+                        Edit
+                      </button>
+                    )}
                     <button
                       type="button"
                       onClick={handleDeleteClick}
-                      className="bg-error text-white font-semibold py-1 px-12 rounded-xl hover:bg-error/80 transition-all hover:cursor-pointer"
+                      className="bg-error text-white font-semibold py-1 px-12 rounded-xl hover:bg-error/80 transition-all hover:cursor-pointer flex items-center gap-2"
                     >
+                      <IconTrash size={18} />
                       Delete
                     </button>
                   </>
