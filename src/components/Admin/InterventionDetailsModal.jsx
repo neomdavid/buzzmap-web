@@ -314,21 +314,21 @@ const InterventionDetailsModal = ({
     setIsEditing(true); // Switch to editable mode
   };
 
-  // Handle delete click
+  // Handle archive click
   const handleDeleteClick = () => {
     setShowDeleteConfirmation(true); // Show delete confirmation inside the current modal
   };
 
-  // Handle delete confirmation
+  // Handle archive confirmation
   const handleConfirmDelete = async () => {
-    console.log("Start delete action...");
+    console.log("Start archive action...");
     setIsLoading(true);
     try {
       const response = await deleteIntervention(intervention._id);
-      console.log("Delete successful:", response);
+      console.log("Archive successful:", response);
 
       // Show success toast
-      toastSuccess("Intervention deleted successfully");
+      toastSuccess("Intervention archived successfully");
 
       // Refetch the interventions data
       if (onRefetch) {
@@ -338,8 +338,8 @@ const InterventionDetailsModal = ({
       // Close the modal
       onClose();
     } catch (err) {
-      console.error("Error during delete:", err);
-      toastError("Failed to delete intervention. Please try again.");
+      console.error("Error during archive:", err);
+      toastError("Failed to archive intervention. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -386,11 +386,11 @@ const InterventionDetailsModal = ({
           ✕
         </button>
 
-        {/* Show delete confirmation only if it's set to true */}
+        {/* Show archive confirmation only if it's set to true */}
         {showDeleteConfirmation ? (
           <>
             <p className="text-3xl font-bold mb-6 text-center">
-              Are you sure you want to delete this intervention?
+              Archive this intervention?
             </p>
             <div className="modal-action flex justify-center gap-6">
               <button
@@ -405,7 +405,7 @@ const InterventionDetailsModal = ({
                 onClick={handleConfirmDelete}
                 className="bg-error text-white font-semibold py-1 px-12 rounded-xl hover:bg-error/80 transition-all"
               >
-                {isLoading ? "Deleting..." : "Confirm Delete"}
+                {isLoading ? "Archiving..." : "Confirm Archive"}
               </button>
             </div>
           </>
@@ -908,9 +908,10 @@ const InterventionDetailsModal = ({
                       type="button"
                       onClick={handleDeleteClick}
                       className="bg-error text-white font-semibold py-1 px-12 rounded-xl hover:bg-error/80 transition-all hover:cursor-pointer flex items-center gap-2"
+                      title="Archive Intervention"
                     >
                       <IconTrash size={18} />
-                      Delete
+                      Archive
                     </button>
                   </>
                 )}

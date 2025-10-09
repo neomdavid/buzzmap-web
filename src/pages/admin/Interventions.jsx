@@ -788,12 +788,20 @@ const Interventions = () => {
           <p className="text-base-content text-4xl font-bold ">
             Recent Intervention Records
           </p>
-          <Link
-            to="/admin/interventions/all"
-            className="bg-primary text-center text-nowrap font-semibold text-white py-1 px-3 rounded-full text-sm hover:bg-primary/80 transition-all duration-200"
-          >
-            View All Records
-          </Link>
+          <div className="flex items-center gap-2">
+            <Link
+              to="/admin/interventions/archives"
+              className="border border-gray-300 bg-white text-gray-700 text-center text-nowrap font-semibold py-1 px-3 rounded-full text-sm hover:bg-gray-50 transition-all duration-200"
+            >
+              View Archives
+            </Link>
+            <Link
+              to="/admin/interventions/all"
+              className="bg-primary text-center text-nowrap font-semibold text-white py-1 px-3 rounded-full text-sm hover:bg-primary/80 transition-all duration-200"
+            >
+              View All Records
+            </Link>
+          </div>
         </div>
         <div className="h-135" ref={tableWrapperRef}>
           <InterventionsTable

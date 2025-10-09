@@ -5,6 +5,7 @@ import React, {
   useCallback,
   useEffect,
 } from "react";
+import { Link, useNavigate } from "react-router-dom";
 
 // Debounce utility to prevent excessive reflows
 const debounce = (func, wait) => {
@@ -55,6 +56,7 @@ const StatusCell = (p) => {
     Scheduled: "bg-info/10 text-info border-info/20",
     Ongoing: "bg-warning/10 text-warning border-warning/20",
     Complete: "bg-success/10 text-success border-success/20",
+    Archived: "bg-gray-100 text-gray-500 border-gray-200",
   };
 
   return (
@@ -110,6 +112,8 @@ function InterventionsTable({
   isActionable = true,
   onlyRecent = false,
   refetchInterventions,
+  archivesView = false,
+  showControls = true,
 }) {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
@@ -117,10 +121,16 @@ function InterventionsTable({
   const [isRefetching, setIsRefetching] = useState(false);
   const containerRef = useRef(null); // DOM container for AG Grid
   const gridRef = useRef(null); // AG Grid React ref (component/api)
+  const navigate = useNavigate();
 
   // Ensure interventions is always an array to prevent errors
   const interventionsArray = interventions || [];
-  let rowData = interventionsArray.map((intervention) => ({
+  const filtered = interventionsArray.filter((intervention) =>
+    archivesView
+      ? (intervention.status || "") === "Archived"
+      : (intervention.status || "") !== "Archived"
+  );
+  let rowData = filtered.map((intervention) => ({
     _id: intervention._id,
     barangay: intervention.barangay,
     address: intervention.address,
@@ -331,33 +341,67 @@ function InterventionsTable({
         </div>
       )}
 
-      {/* Show empty state with Add button when no interventions */}
+      {/* Empty states */}
       {rowData.length === 0 ? (
-        <div className="flex flex-col items-center justify-center flex-1 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300 p-8">
-          <div className="text-center">
-            <p className="mt-2 mb-2 text-2xl font-semibold text-gray-900">
-              No interventions found
-            </p>
-            <p className="mt-1 text-sm text-gray-500">
-              {onlyRecent
-                ? "No recent intervention records have been created yet."
-                : "No intervention records have been created yet."}
-            </p>
-            {isActionable && (
-              <div className="mt-6 flex justify-center">
-                <button
-                  onClick={openAddModal}
-                  className="flex gap-1 bg-primary items-center rounded-2xl py-3 px-6 text-lg text-white font-semibold hover:cursor-pointer hover:bg-primary/90 transition-all duration-200"
-                >
-                  <IconPlus size={17} />
-                  Add New Intervention
-                </button>
-              </div>
-            )}
+        archivesView ? (
+          <div className="flex flex-col items-center justify-center flex-1 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300 p-8">
+            <div className="text-center">
+              <p className="mt-2 mb-2 text-2xl font-bold text-primary">
+                No archived interventions found
+              </p>
+              <p className="mt-1 text-sm text-gray-500">
+                Use View All Records to see active interventions.
+              </p>
+            </div>
           </div>
-        </div>
+        ) : (
+          <div className="flex flex-col items-center justify-center flex-1 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300 p-8">
+            <div className="text-center">
+              <p className="mt-2 mb-2 text-2xl font-semibold text-gray-900">
+                No interventions found
+              </p>
+              <p className="mt-1 text-sm text-gray-500">
+                {onlyRecent
+                  ? "No recent intervention records have been created yet."
+                  : "No intervention records have been created yet."}
+              </p>
+              {isActionable && (
+                <div className="mt-6 flex justify-center">
+                  <button
+                    onClick={openAddModal}
+                    className="flex gap-1 bg-primary items-center rounded-2xl py-3 px-6 text-lg text-white font-semibold hover:cursor-pointer hover:bg-primary/90 transition-all duration-200"
+                  >
+                    <IconPlus size={17} />
+                    Add New Intervention
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        )
       ) : (
         <>
+          {/* Top-right controls (hide in condensed Recent section to avoid duplication) */}
+          {showControls && !onlyRecent && (
+            <div className="flex items-center justify-end mb-2 gap-2">
+              {archivesView ? (
+                <Link
+                  to="/admin/interventions/all"
+                  className="flex gap-1 items-center rounded-2xl py-2 px-4 text-sm font-semibold hover:cursor-pointer transition-all duration-200 border border-gray-300 bg-white text-gray-700 hover:bg-gray-50"
+                >
+                  View All Records
+                </Link>
+              ) : (
+                <Link
+                  to="/admin/interventions/archives"
+                  className="flex gap-1 items-center rounded-2xl py-2 px-4 text-sm font-semibold hover:cursor-pointer transition-all duration-200 border border-gray-300 bg-white text-gray-700 hover:bg-gray-50"
+                >
+                  View Archives
+                </Link>
+              )}
+            </div>
+          )}
+
           <div
             className="ag-theme-quartz flex-1 min-h-0"
             ref={containerRef}

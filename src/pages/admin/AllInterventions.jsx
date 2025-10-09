@@ -34,19 +34,29 @@ const AllInterventions = () => {
             <p className="text-base-content text-4xl font-bold">
               All Intervention Records
             </p>
-            <button
-              onClick={() => navigate("/admin/interventions")}
-              className="flex items-center cursor-pointer gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors"
-            >
-              <ArrowLeft size={20} />
-              Back to Interventions
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => navigate("/admin/interventions")}
+                className="flex items-center cursor-pointer gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors"
+              >
+                <ArrowLeft size={20} />
+                Back to Interventions
+              </button>
+              <button
+                onClick={() => navigate("/admin/interventions/archives")}
+                className="flex items-center cursor-pointer gap-2 px-4 py-2 border border-gray-300 bg-white text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                View Archives
+              </button>
+            </div>
           </div>
           <div className="h-[75vh]">
             {hasInterventions ? (
               <InterventionsTable
                 interventions={interventionsArray}
                 onlyRecent={false}
+                archivesView={false}
+                showControls={false}
               />
             ) : (
               <div className="flex flex-col items-center justify-center h-full bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">

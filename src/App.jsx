@@ -331,6 +331,21 @@ const AppWithProviders = () => {
           ),
         },
         {
+          path: "/admin/interventions/archives",
+          element: (
+            <LazyComponent
+              importFunc={() =>
+                import("./pages/admin/ArchivesInterventions.jsx")
+              }
+              fallback={
+                <div className="flex items-center justify-center min-h-screen">
+                  <div className="loading loading-spinner loading-lg"></div>
+                </div>
+              }
+            />
+          ),
+        },
+        {
           path: "/admin/cea",
           element: <CEA />,
           children: [
