@@ -453,6 +453,20 @@ export const dengueApi = createApi({
       ],
     }),
 
+    // Bulk validation endpoint for cluster reports
+    bulkValidateReports: builder.mutation({
+      query: ({ reportIds, status }) => ({
+        url: "reports/bulk-validate",
+        method: "PATCH",
+        body: { reportIds, status },
+      }),
+      invalidatesTags: (result, error, { reportIds }) => [
+        { type: "Post", id: "LIST" },
+        "Clusters",
+        ...reportIds.map((id) => ({ type: "Post", id })),
+      ],
+    }),
+
     likePost: builder.mutation({
       query: (id) => ({
         url: `posts/${id}/like`,
@@ -1728,6 +1742,7 @@ export const {
   useCreatePostWithImageMutation,
   useDeletePostMutation,
   useValidatePostMutation,
+  useBulkValidateReportsMutation,
   useLikePostMutation,
 
   // Comment hooks

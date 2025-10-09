@@ -5,7 +5,10 @@ import {
   ReportTable2,
   TableSkeleton,
 } from "../../components";
-import { useGetGroupedReportsQuery } from "../../api/dengueApi.js";
+import {
+  useGetGroupedReportsQuery,
+  useBulkValidateReportsMutation,
+} from "../../api/dengueApi.js";
 import { useState, useEffect, useMemo } from "react";
 import { AgGridReact } from "ag-grid-react";
 import { themeQuartz } from "ag-grid-community";
@@ -84,6 +87,9 @@ const ReportsVerification = () => {
     isLoading: isLoadingGrouped,
     refetch: refetchGrouped,
   } = useGetGroupedReportsQuery();
+
+  const [bulkValidateReports, { isLoading: isBulkValidating }] =
+    useBulkValidateReportsMutation();
   const [selectedReport, setSelectedReport] = useState(null);
   const [isRefetching, setIsRefetching] = useState(false);
   const [clusterDetails, setClusterDetails] = useState({
@@ -806,7 +812,7 @@ const ReportsVerification = () => {
                             Validate Remaining ({remaining})
                           </button>
                         ) : null}
-                        {validated !== total && (
+                        {validated === 0 && !allRejected && (
                           <button
                             className="btn btn-error btn-sm whitespace-nowrap"
                             onClick={() => {
@@ -893,7 +899,7 @@ const ReportsVerification = () => {
                     loading: false,
                   })
                 }
-                disabled={clusterBatchConfirm.loading}
+                disabled={clusterBatchConfirm.loading || isBulkValidating}
               >
                 Cancel
               </button>
@@ -912,82 +918,22 @@ const ReportsVerification = () => {
 
                   setClusterBatchConfirm((p) => ({ ...p, loading: true }));
                   try {
-                    console.log("Using token from Redux state:", {
-                      hasToken: !!token,
-                      tokenLength: token?.length,
-                      tokenPreview: token
-                        ? token.substring(0, 20) + "..."
-                        : null,
-                    });
-
-                    if (!token) {
-                      console.error(
-                        "No authentication token found in Redux state"
-                      );
-                      toast.error(
-                        "Authentication required. Please log in again."
-                      );
-                      return;
-                    }
-
                     const desiredStatus =
                       clusterBatchConfirm.mode === "reject-all"
                         ? "Rejected"
                         : "Validated";
 
-                    console.log("Making API call:", {
-                      url: "https://buzzmap-backend.onrender.com/api/v1/reports/bulk-validate",
-                      method: "PATCH",
+                    console.log("Making RTK Query API call:", {
                       reportIds: clusterBatchConfirm.ids,
                       status: desiredStatus,
-                      hasToken: !!token,
-                      tokenLength: token.length,
                     });
 
-                    const response = await fetch(
-                      "https://buzzmap-backend.onrender.com/api/v1/reports/bulk-validate",
-                      {
-                        method: "PATCH",
-                        headers: {
-                          "Content-Type": "application/json",
-                          Authorization: token ? `Bearer ${token}` : "",
-                        },
-                        body: JSON.stringify({
-                          reportIds: clusterBatchConfirm.ids,
-                          status: desiredStatus,
-                        }),
-                      }
-                    );
+                    const result = await bulkValidateReports({
+                      reportIds: clusterBatchConfirm.ids,
+                      status: desiredStatus,
+                    }).unwrap();
 
-                    console.log("API response:", {
-                      status: response.status,
-                      statusText: response.statusText,
-                      ok: response.ok,
-                    });
-
-                    if (!response.ok) {
-                      const errorText = await response.text();
-                      console.error("API error:", errorText);
-
-                      let errorMessage = "Failed to update reports";
-                      if (response.status === 401) {
-                        errorMessage =
-                          "Authentication expired. Please log in again.";
-                      } else if (response.status === 403) {
-                        errorMessage =
-                          "You don't have permission to perform this action.";
-                      } else if (response.status >= 500) {
-                        errorMessage = "Server error. Please try again later.";
-                      }
-
-                      toast.error(errorMessage);
-                      throw new Error(
-                        `API error: ${response.status} ${response.statusText}`
-                      );
-                    }
-
-                    const result = await response.json();
-                    console.log("API success result:", result);
+                    console.log("RTK Query success result:", result);
 
                     // Show success message
                     const actionText =
@@ -1005,12 +951,22 @@ const ReportsVerification = () => {
                     console.log("Refetch completed");
                   } catch (error) {
                     console.error("Batch action error:", error);
-                    // Don't show toast again if we already showed one above
-                    if (!error.message.includes("API error")) {
-                      toast.error(
-                        "An unexpected error occurred. Please try again."
-                      );
+
+                    let errorMessage =
+                      "An unexpected error occurred. Please try again.";
+                    if (error.status === 401) {
+                      errorMessage =
+                        "Authentication expired. Please log in again.";
+                    } else if (error.status === 403) {
+                      errorMessage =
+                        "You don't have permission to perform this action.";
+                    } else if (error.status >= 500) {
+                      errorMessage = "Server error. Please try again later.";
+                    } else if (error.data?.message) {
+                      errorMessage = error.data.message;
                     }
+
+                    toast.error(errorMessage);
                   } finally {
                     setClusterBatchConfirm({
                       open: false,
@@ -1020,9 +976,11 @@ const ReportsVerification = () => {
                     });
                   }
                 }}
-                disabled={clusterBatchConfirm.loading}
+                disabled={clusterBatchConfirm.loading || isBulkValidating}
               >
-                {clusterBatchConfirm.loading ? "Processing..." : "Confirm"}
+                {clusterBatchConfirm.loading || isBulkValidating
+                  ? "Processing..."
+                  : "Confirm"}
               </button>
             </div>
           </div>
