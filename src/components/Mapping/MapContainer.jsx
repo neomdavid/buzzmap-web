@@ -68,6 +68,15 @@ const MapContainer = ({
   }, [posts]);
 
   const { interventions } = useInterventions(allInterventionsData);
+  // Only show ongoing and scheduled interventions on the user map
+  const activeInterventions = React.useMemo(() => {
+    return Array.isArray(interventions)
+      ? interventions.filter((i) => {
+          const status = (i.status || "").toLowerCase();
+          return status === "ongoing" || status === "scheduled";
+        })
+      : [];
+  }, [interventions]);
   const { mapInstance, mapReady, createMap, isValidMap, error } = useGoogleMaps(
     apiKey,
     mapId,
@@ -777,8 +786,8 @@ const MapContainer = ({
     }
 
     // --- Draw intervention markers ---
-    if (showInterventions && interventions.length > 0) {
-      console.log("[DEBUG] Drawing intervention markers:", interventions);
+    if (showInterventions && activeInterventions.length > 0) {
+      console.log("[DEBUG] Drawing intervention markers:", activeInterventions);
 
       // Check if marker library is available
       if (!window.google?.maps?.marker) {
@@ -788,7 +797,7 @@ const MapContainer = ({
 
       const { AdvancedMarkerElement, PinElement } = window.google.maps.marker;
 
-      interventions.forEach((intervention) => {
+      activeInterventions.forEach((intervention) => {
         console.log("[DEBUG] Creating marker for intervention:", intervention);
 
         try {

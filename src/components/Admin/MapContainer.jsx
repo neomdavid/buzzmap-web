@@ -27,6 +27,7 @@ const MapContainer = ({
         style={{ height: "100%", width: "100%" }}
         useAdminEndpoint={true}
         baseUrl={baseUrl}
+        showRecentCompleted={true}
         onMarkerClick={(item, type) => {
           if (type === "report") {
             setSelectedFullReport(item);

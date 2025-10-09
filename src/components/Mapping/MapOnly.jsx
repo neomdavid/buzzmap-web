@@ -95,6 +95,7 @@ const MapOnly = forwardRef(
       hideClusterOverlays = false,
       suppressClusterStyling = false,
       disableSiteInfoWindows = false, // NEW: prevent site info windows
+      showRecentCompleted = false, // NEW: include completed within last 30 days when true
     },
     ref
   ) => {
@@ -732,8 +733,28 @@ const MapOnly = forwardRef(
               window.google.maps.marker;
             const interventionMarkers = interventions
               .filter((intervention) => {
-                const status = intervention.status?.toLowerCase();
-                return status === "ongoing" || status === "scheduled";
+                const status = (intervention.status || "").toLowerCase();
+                if (status === "ongoing" || status === "scheduled") {
+                  return true;
+                }
+                if (
+                  showRecentCompleted &&
+                  (status === "completed" || status === "complete")
+                ) {
+                  const d = new Date(
+                    intervention.date ||
+                      intervention.date_and_time ||
+                      intervention.updatedAt ||
+                      intervention.createdAt ||
+                      0
+                  );
+                  if (!isNaN(d.getTime())) {
+                    const now = Date.now();
+                    const THIRTY_DAYS = 30 * 24 * 60 * 60 * 1000;
+                    return now - d.getTime() <= THIRTY_DAYS;
+                  }
+                }
+                return false;
               })
               .map((intervention) => {
                 // Debug: log the raw intervention data used for the marker/info window
