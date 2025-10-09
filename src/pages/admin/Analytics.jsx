@@ -914,6 +914,80 @@ const Analytics = () => {
             <p className="text-md text-primary mb-2">
               Select a CSV file containing dengue case data for analysis.
             </p>
+            {/* Local styles to customize details/summary caret */}
+            <style>{`
+              .import-details summary::-webkit-details-marker { display: none; }
+              .import-details summary { list-style: none; }
+              .import-details .caret { transition: transform 0.2s ease; }
+              .import-details[open] .caret { transform: rotate(180deg); }
+            `}</style>
+            <details
+              className="import-details text-sm text-gray-700 bg-gray-50 border border-gray-200 rounded-lg p-4 mb-4"
+              open
+            >
+              <summary className="font-semibold cursor-pointer select-none flex items-center justify-between">
+                <span>Import Dengue Case File Instructions</span>
+                <svg
+                  className="caret w-4 h-4 text-gray-600"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                  aria-hidden="true"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.24a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+              </summary>
+              <div className="mt-2">
+                <ul className="list-disc ml-5 space-y-1">
+                  <li>
+                    Prepare a single CSV file (.csv) no larger than{" "}
+                    <span className="font-semibold">10 MB</span>, encoded in{" "}
+                    <span className="font-semibold">UTF-8</span> with
+                    comma-separated values. The first row must be the header
+                    row.
+                  </li>
+                  <li>
+                    Required header columns (exact names):{" "}
+                    <span className="font-semibold">
+                      DAdmit, DOnset, Barangay, Outcome, City
+                    </span>
+                    .
+                  </li>
+                  <li>
+                    Date formats for{" "}
+                    <span className="font-semibold">DAdmit</span> and{" "}
+                    <span className="font-semibold">DOnset</span> must be
+                    recognizable (e.g.,{" "}
+                    <span className="font-mono">YYYY-MM-DD</span>,{" "}
+                    <span className="font-mono">MM/DD/YYYY</span>, or{" "}
+                    <span className="font-mono">DD/MM/YYYY</span>).
+                  </li>
+                  <li>
+                    <span className="font-semibold">Barangay</span> names should
+                    be clearly encoded; the system will automatically
+                    standardize common variations.
+                  </li>
+                  <li>
+                    <span className="font-semibold">Outcome</span> must be
+                    either <span className="font-mono">Alive</span> or{" "}
+                    <span className="font-mono">Died</span>.
+                  </li>
+                  <li>
+                    <span className="font-semibold">City</span> must be{" "}
+                    <span className="font-mono">QUEZON CITY</span>; other cities
+                    will be ignored.
+                  </li>
+                  <li>
+                    Files with missing required columns or rows with
+                    invalid/blank values will be{" "}
+                    <span className="font-semibold">rejected</span>.
+                  </li>
+                </ul>
+              </div>
+            </details>
             <input
               type="file"
               accept=".csv"

@@ -98,6 +98,7 @@ const ReportsVerification = () => {
   });
   const [viewMode, setViewMode] = useState("individual"); // 'individual' | 'clusters'
   const [showValidationGuide, setShowValidationGuide] = useState(false);
+  const [showClusterGuide, setShowClusterGuide] = useState(false);
 
   // AG Grid config for cluster reports modal
   const clusterReportsTheme = useMemo(
@@ -663,9 +664,18 @@ const ReportsVerification = () => {
       ) : (
         <div className="flex flex-col">
           <section className="flex flex-col gap-2">
-            <p className="text-base-content text-4xl font-bold mb-2">
-              Clusters
-            </p>
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-base-content text-4xl font-bold">Clusters</p>
+              <button
+                className="inline-flex items-center gap-1.5 text-sm link text-primary hover:text-accent"
+                onClick={() => setShowClusterGuide(true)}
+                aria-label="How do I validate a cluster?"
+                title="How do I validate a cluster?"
+              >
+                <IconInfoCircle size={16} />
+                <span>How do I validate a cluster?</span>
+              </button>
+            </div>
             <ClusterTable
               clustersList={clustersList}
               onOpenDetails={(cluster) =>
@@ -1021,15 +1031,15 @@ const ReportsVerification = () => {
       {showValidationGuide && (
         <dialog open className="modal z-[1200]">
           <div className="modal-box bg-white rounded-3xl shadow-2xl w-11/12 max-w-3xl p-6">
-            <div className="flex items-start justify-between mb-3">
+            <div className="flex items-start justify-between mb-1">
               <div className="flex items-center gap-2">
                 <IconInfoCircle size={22} className="text-primary" />
-                <p className="text-xl font-bold text-primary">
+                <p className="text-2xl font-extrabold text-primary">
                   Report Validation Guide
                 </p>
               </div>
               <button
-                className="btn btn-ghost btn-sm"
+                className="btn btn-ghost btn-md rounded-full"
                 onClick={() => setShowValidationGuide(false)}
                 aria-label="Close validation guide"
               >
@@ -1037,12 +1047,12 @@ const ReportsVerification = () => {
               </button>
             </div>
             <div className="prose max-w-none text-primary">
-              <p className="mb-2">
+              <p className="mb-6">
                 Use this checklist to decide whether to{" "}
                 <span className="font-semibold">Validate</span> or{" "}
                 <span className="font-semibold">Reject</span> a report.
               </p>
-              <h3 className="text-lg font-bold mt-3">Validation criteria</h3>
+              <p className="text-lg font-bold mt-3">Validation criteria</p>
               <ul className="list-disc ml-5">
                 <li>
                   <span className="font-semibold">Location precision:</span> pin
@@ -1064,25 +1074,15 @@ const ReportsVerification = () => {
                   occurred within a relevant timeframe (e.g., last 30 days) and
                   relates to breeding sites or mosquito hotspots.
                 </li>
-                <li>
-                  <span className="font-semibold">Duplicates:</span> not an
-                  exact duplicate of an already validated report at the same
-                  spot/time.
-                </li>
-                <li>
-                  <span className="font-semibold">Clusters:</span> reports in a
-                  cluster typically describe the same incident. Prefer
-                  validating the best-evidence report and mark exact duplicates
-                  as duplicates (reject as duplicate). Avoid double-counting.
-                </li>
+
                 <li>
                   <span className="font-semibold">Integrity flags:</span>{" "}
                   content isn’t spam, malicious, or violating policy.
                 </li>
               </ul>
-              <h3 className="text-lg font-bold mt-4">
+              <p className="text-lg font-bold mt-6">
                 Suggested validation flow
-              </h3>
+              </p>
               <ol className="list-decimal ml-5">
                 <li>
                   Open the report details via{" "}
@@ -1093,19 +1093,14 @@ const ReportsVerification = () => {
                   Cross-check the location on the map; zoom in to verify
                   coordinates and nearby landmarks.
                 </li>
-                <li>
-                  Check for duplicates or cluster membership; for clustered
-                  duplicates validate one canonical report and reject the rest
-                  as duplicates.
-                </li>
+
                 <li>
                   If sufficient and credible, click{" "}
                   <span className="font-semibold">Validate</span>; otherwise
-                  choose <span className="font-semibold">Reject</span> with a
-                  brief reason.
+                  choose <span className="font-semibold">Reject</span>
                 </li>
               </ol>
-              <h3 className="text-lg font-bold mt-4">Tips</h3>
+              <p className="text-lg font-bold mt-6">Tips</p>
               <ul className="list-disc ml-5">
                 <li>
                   Favor <span className="font-semibold">Validated</span> only
@@ -1128,6 +1123,126 @@ const ReportsVerification = () => {
           </div>
           <form method="dialog" className="modal-backdrop">
             <button onClick={() => setShowValidationGuide(false)}>close</button>
+          </form>
+        </dialog>
+      )}
+      {showClusterGuide && (
+        <dialog open className="modal z-[1200]">
+          <div className="modal-box bg-white rounded-3xl shadow-2xl w-11/12 max-w-3xl p-6">
+            <div className="flex items-start justify-between mb-1">
+              <div className="flex items-center gap-2">
+                <IconInfoCircle size={22} className="text-primary" />
+                <p className="text-2xl font-extrabold text-primary">
+                  Cluster Validation Guide
+                </p>
+              </div>
+              <button
+                className="btn btn-ghost btn-md rounded-full"
+                onClick={() => setShowClusterGuide(false)}
+                aria-label="Close cluster validation guide"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="prose max-w-none text-primary">
+              <p className="mb-6">
+                Clusters shown here are already grouped in the{" "}
+                <span className="font-semibold underline cursor-pointer">
+                  Map
+                </span>{" "}
+                as resolved duplicates referring to the same breeding site.
+                These rows represent multiple submissions about the same
+                location. Make a group decision:{" "}
+                <span className="font-semibold">Validate </span>
+                or <span className="font-semibold">Reject</span> the cluster
+                based on whether the duplicates collectively describe a valid
+                breeding site.
+              </p>
+              <p className="text-lg font-bold mt-3">What a cluster means</p>
+              <ul className="list-disc ml-5">
+                <li>
+                  <span className="font-semibold">Same location:</span> reports
+                  share the same or very close coordinates and describe the same
+                  site.
+                </li>
+                <li>
+                  <span className="font-semibold">Duplicates:</span> multiple
+                  submissions from different users or times for the same
+                  breeding site.
+                </li>
+              </ul>
+              <p className="text-lg font-bold mt-6">Validation strategy</p>
+              <ul className="list-disc ml-5">
+                <li>
+                  <span className="font-semibold">Group decision:</span> if the
+                  cluster clearly refers to the same site and evidence is
+                  sufficient, use{" "}
+                  <span className="font-semibold">Validate All</span>.
+                </li>
+                <li>
+                  <span className="font-semibold">Reject as a group:</span> if
+                  submissions are spam, irrelevant, or unverifiable, use
+                  <span className="font-semibold"> Reject All</span>.
+                </li>
+                <li>
+                  <span className="font-semibold">Finish pending items: </span>
+                  if you already processed part of the cluster, use
+                  <span className="font-semibold"> Validate Remaining</span> to
+                  complete the group.
+                </li>
+                <li>
+                  <span className="font-semibold">Per-report action:</span> you
+                  can also <span className="font-semibold">Validate</span> or
+                  <span className="font-semibold">Reject</span> a specific
+                  report from its <span className="font-semibold">View</span>
+                  details when an individual item is clearly valid or invalid.
+                </li>
+              </ul>
+              <p className="text-lg font-bold mt-6">Suggested flow</p>
+              <ol className="list-decimal ml-5">
+                <li>
+                  Open the cluster and scan descriptions, images, and dates.
+                </li>
+                <li>
+                  Open a few sample reports via
+                  <span className="font-semibold"> View</span> to confirm they
+                  reference the same site and are credible.
+                </li>
+                <li>
+                  Decide if the site is valid based on evidence and location.
+                </li>
+                <li>
+                  Use <span className="font-semibold">Validate All</span> or
+                  <span className="font-semibold"> Reject All </span>
+                  accordingly (or{" "}
+                  <span className="font-semibold">Validate Remaining</span> to
+                  finish pending ones).
+                </li>
+                <li>
+                  If needed, make a per-report decision from the details view
+                  for a specific outlier.
+                </li>
+              </ol>
+              <p className="text-lg font-bold mt-6">Tips</p>
+              <ul className="list-disc ml-5">
+                <li>Make consistent group decisions within a cluster.</li>
+                <li>Validate only when evidence and location are clear.</li>
+                <li>
+                  Leave uncertain clusters pending and review more context.
+                </li>
+              </ul>
+            </div>
+            <div className="mt-5 flex justify-end">
+              <button
+                className="btn btn-primary"
+                onClick={() => setShowClusterGuide(false)}
+              >
+                Got it
+              </button>
+            </div>
+          </div>
+          <form method="dialog" className="modal-backdrop">
+            <button onClick={() => setShowClusterGuide(false)}>close</button>
           </form>
         </dialog>
       )}
