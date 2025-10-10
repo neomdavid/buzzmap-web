@@ -56,7 +56,18 @@ const QC_CENTER = {
   lng: 121.0437, // Quezon City's approximate center longitude
 };
 
-// Similarity analysis removed: use strict name comparisons only
+// Lightweight normalization helpers for tolerant barangay name matching (search-only)
+const normalizeName = (name) => {
+  if (!name) return "";
+  return name
+    .toLowerCase()
+    .replace(/\bbarangay\s+/g, "")
+    .replace(/\bsr\.?$/g, "")
+    .replace(/[.'\-]/g, "")
+    .replace(/\s+/g, "")
+    .trim();
+};
+const namesAreEquivalent = (a, b) => normalizeName(a) === normalizeName(b);
 
 // Add breeding site type icon mapping
 const BREEDING_SITE_TYPE_ICONS = {
@@ -899,9 +910,14 @@ const DengueMapping = () => {
 
     const q = (query || "").toLowerCase().trim();
     const filtered = barangaysList.filter((barangay) => {
-      const name = (barangay.name || "").toLowerCase();
-      const display = (barangay.displayName || "").toLowerCase();
-      return name.includes(q) || display.includes(q);
+      const name = barangay.name || "";
+      const display = barangay.displayName || "";
+      return (
+        name.toLowerCase().includes(q) ||
+        display.toLowerCase().includes(q) ||
+        namesAreEquivalent(name, query) ||
+        namesAreEquivalent(display, query)
+      );
     });
     setFilteredBarangays(filtered);
   };
@@ -912,10 +928,8 @@ const DengueMapping = () => {
     // If this is a GeoJSON feature (clicked on map)
     if (barangay.type === "Feature") {
       // Find matching barangay from barangaysList
-      const matching = barangaysList?.find(
-        (b) =>
-          (b.name || "").toLowerCase() ===
-          (barangay.properties?.name || "").toLowerCase()
+      const matching = barangaysList?.find((b) =>
+        namesAreEquivalent(b.name, barangay.properties?.name)
       );
       console.log("[DengueMapping] Map click select:", {
         featureName: barangay.properties?.name,
@@ -970,10 +984,8 @@ const DengueMapping = () => {
     fetch("/quezon_barangays_boundaries.geojson")
       .then((res) => res.json())
       .then((geoData) => {
-        const feature = geoData.features.find(
-          (f) =>
-            (f.properties.name || "").toLowerCase() ===
-            (barangay.name || "").toLowerCase()
+        const feature = geoData.features.find((f) =>
+          namesAreEquivalent(f.properties?.name, barangay.name)
         );
 
         if (feature) {

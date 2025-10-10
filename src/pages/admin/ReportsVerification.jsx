@@ -1021,8 +1021,8 @@ const ReportsVerification = () => {
                 </li>
                 <li>
                   <span className="font-semibold">Evidence quality:</span> clear
-                  images (if provided) support the description; not AI-generated
-                  or duplicated.
+                  images support the description; not AI-generated or
+                  duplicated.
                 </li>
                 <li>
                   <span className="font-semibold">Report completeness:</span>{" "}
@@ -1031,8 +1031,8 @@ const ReportsVerification = () => {
                 </li>
                 <li>
                   <span className="font-semibold">Recency & relevance:</span>{" "}
-                  occurred within a relevant timeframe (e.g., last 30 days) and
-                  relates to breeding sites or mosquito hotspots.
+                  occurred within a relevant timeframe and relates to breeding
+                  sites or mosquito hotspots.
                 </li>
 
                 <li>

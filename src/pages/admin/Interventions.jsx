@@ -478,7 +478,6 @@ const Interventions = () => {
     PATTERN_TYPES.DECREASE,
     PATTERN_TYPES.LOW_LEVEL_ACTIVITY,
     PATTERN_TYPES.NO_CHANGE,
-    "none",
   ];
   const patternMeta = {
     [PATTERN_TYPES.SPIKE]: {
@@ -506,11 +505,7 @@ const Interventions = () => {
       color: "text-gray-500",
       border: "border-gray-300",
     },
-    none: {
-      label: "No Pattern",
-      color: "text-gray-500",
-      border: "border-gray-300",
-    },
+    // 'none' tab removed per requirements
   };
   // Show ALL standardized pattern types, even if they don't have data yet
   const availablePatterns = tabOrder; // Show all patterns
@@ -543,7 +538,6 @@ const Interventions = () => {
     [PATTERN_TYPES.DECREASE]: "Continue Monitoring",
     [PATTERN_TYPES.LOW_LEVEL_ACTIVITY]: "Monitor Situation",
     [PATTERN_TYPES.NO_CHANGE]: "No Specific Pattern",
-    none: "No Specific Pattern",
   };
 
   if (isLoadingInterventions || isLoadingPosts || isLoadingBarangays) {
