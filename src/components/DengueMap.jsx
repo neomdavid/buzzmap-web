@@ -149,6 +149,8 @@ const DengueMap = ({
           center: QC_CENTER,
           zoom: 12,
           mapId: import.meta.env.VITE_GOOGLE_MAPS_MAP_ID,
+          fullscreenControl: false,
+          streetViewControl: false,
           styles: [
             {
               featureType: "administrative",

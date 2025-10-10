@@ -85,6 +85,14 @@ const Interventions = () => {
       .catch(() => setAllBarangayNames([]));
   }, []);
 
+  // Helper: normalize any raw pattern status to a tab key
+  const normalizeForTabs = (value) => {
+    const n = normalizePatternType(value);
+    // Empty/missing/none/default => No Data; keep explicit no_change distinct
+    if (!n || n === "none" || n === "default") return "no_data";
+    return n;
+  };
+
   // Log the raw API response data and transform it, augmenting with missing barangays as 'none'
   const transformedBarangays = React.useMemo(() => {
     const datasetBarangays = Array.isArray(barangaysList) ? barangaysList : [];
@@ -102,7 +110,7 @@ const Interventions = () => {
       return {
         name: b.name,
         _id: b._id,
-        patternType: normalizePatternType(patternBased.status) || "none",
+        patternType: normalizeForTabs(patternBased.status),
         issueDetected: patternBased.alert || "",
         suggestedAction:
           patternBased.admin_recommendation ||
@@ -132,7 +140,8 @@ const Interventions = () => {
       .map((name) => ({
         name,
         _id: `missing-${name}`,
-        patternType: "none",
+        // Not present in dataset => No Data
+        patternType: "no_data",
         issueDetected: "",
         suggestedAction: "",
         ongoing_interventions: 0,
@@ -165,6 +174,31 @@ const Interventions = () => {
         (item) => normalizePatternType(item.patternType) === "spike"
       );
       console.log("[DEBUG] Spike Barangays:", spikeBarangays);
+
+      // Targeted debug for specific barangay (e.g., Doña Josefa)
+      const target = transformedBarangays.find((b) =>
+        (b.name || "").toLowerCase().includes("doña josefa")
+      );
+      console.log("[DEBUG] Target Barangay (Doña Josefa):", target);
+      if (target) {
+        console.log(
+          "[DEBUG] Target normalized pattern:",
+          normalizePatternType(target.patternType)
+        );
+        console.log(
+          "[DEBUG] Target has signals:",
+          !!(
+            (target.issueDetected &&
+              target.issueDetected.toLowerCase() !== "none") ||
+            (target.suggestedAction && target.suggestedAction.trim() !== "") ||
+            target.death_priority?.count > 0 ||
+            (target.death_priority?.alert &&
+              target.death_priority.alert.trim() !== "") ||
+            (target.death_priority?.recommendation &&
+              target.death_priority.recommendation.trim() !== "")
+          )
+        );
+      }
     }
   }, [transformedBarangays]);
 
@@ -277,10 +311,16 @@ const Interventions = () => {
         }, {})
       : {};
 
+    console.log(
+      "[DEBUG] Filtering recommendations — total transformed:",
+      transformedBarangays.length
+    );
     let recommendations = transformedBarangays
       .filter((item) => {
-        // Always include items explicitly missing from dataset under 'none'
-        const isNone = normalizePatternType(item.patternType) === "none";
+        // Include No Data and No Change barangays even if no explicit signals
+        const normalized = normalizeForTabs(item.patternType);
+        const includeNoData = normalized === "no_data";
+        const includeNoChange = normalized === "no_change";
         const hasSignals =
           (item.issueDetected && item.issueDetected.toLowerCase() !== "none") ||
           (item.suggestedAction && item.suggestedAction.trim() !== "") ||
@@ -289,7 +329,17 @@ const Interventions = () => {
             item.death_priority.alert.trim() !== "") ||
           (item.death_priority.recommendation &&
             item.death_priority.recommendation.trim() !== "");
-        return hasSignals || isNone;
+        const decision = hasSignals || includeNoData || includeNoChange;
+        if ((item.name || "").toLowerCase().includes("doña josefa")) {
+          console.log("[DEBUG] Doña Josefa filter check:", {
+            normalized,
+            includeNoData,
+            includeNoChange,
+            hasSignals,
+            decision,
+          });
+        }
+        return decision;
       })
       // Sort by death count first (descending), then by pattern type
       .sort((a, b) => {
@@ -304,10 +354,25 @@ const Interventions = () => {
           decrease: 2,
           low_level_activity: 3,
           no_change: 4,
-          none: 4,
+          no_data: 5,
         };
         return patternOrder[a.patternType] - patternOrder[b.patternType];
       });
+    console.log(
+      "[DEBUG] Filtered recommendations count:",
+      recommendations.length
+    );
+    const debugNoChange = recommendations.filter(
+      (r) => normalizeForTabs(r.patternType) === "no_change"
+    );
+    const debugNoData = recommendations.filter(
+      (r) => normalizeForTabs(r.patternType) === "no_data"
+    );
+    console.log(
+      "[DEBUG] No Change recommendations count:",
+      debugNoChange.length
+    );
+    console.log("[DEBUG] No Data recommendations count:", debugNoData.length);
 
     // Apply pattern filter
     if (patternFilter) {
@@ -395,9 +460,10 @@ const Interventions = () => {
   // Carousel state for recommendations
   const [cardStartIndex, setCardStartIndex] = useState(0);
   const [cardsPerPage, setCardsPerPage] = useState(3);
-  const cards = filteredRecommendations.filter(
-    (item) => normalizePatternType(item.patternType) === activeTab
-  );
+  const cards = filteredRecommendations.filter((item) => {
+    const norm = normalizeForTabs(item.patternType);
+    return norm === activeTab;
+  });
 
   // Debug logging for cards filtering
   console.log("[DEBUG] Cards Filtering:", {
@@ -421,11 +487,25 @@ const Interventions = () => {
   const patternCountsByTab = React.useMemo(() => {
     const counts = {};
     (filteredRecommendations || []).forEach((item) => {
-      const key = normalizePatternType(item.patternType);
+      const key = normalizeForTabs(item.patternType);
       counts[key] = (counts[key] || 0) + 1;
     });
     return counts;
   }, [filteredRecommendations]);
+
+  // If current tab has no items but No Change has items, auto-switch to No Change
+  useEffect(() => {
+    const currentCount =
+      (patternCountsByTab && patternCountsByTab[activeTab]) || 0;
+    const noChangeCount =
+      (patternCountsByTab && patternCountsByTab[PATTERN_TYPES.NO_CHANGE]) || 0;
+    if ((cards.length === 0 || currentCount === 0) && noChangeCount > 0) {
+      console.log(
+        "[DEBUG] Auto-switching tab to NO_CHANGE due to empty current tab."
+      );
+      setActiveTab(PATTERN_TYPES.NO_CHANGE);
+    }
+  }, [cards.length, patternCountsByTab, activeTab]);
 
   // Responsive cardsPerPage
   useEffect(() => {
@@ -478,6 +558,8 @@ const Interventions = () => {
     PATTERN_TYPES.DECREASE,
     PATTERN_TYPES.LOW_LEVEL_ACTIVITY,
     PATTERN_TYPES.NO_CHANGE,
+    // Local-only tab for barangays with empty/missing pattern info
+    "no_data",
   ];
   const patternMeta = {
     [PATTERN_TYPES.SPIKE]: {
@@ -502,6 +584,12 @@ const Interventions = () => {
     },
     [PATTERN_TYPES.NO_CHANGE]: {
       label: PATTERN_LABELS[PATTERN_TYPES.NO_CHANGE],
+      color: "text-gray-500",
+      border: "border-gray-300",
+    },
+    // Local-only meta for No Data tab
+    no_data: {
+      label: "No Data",
       color: "text-gray-500",
       border: "border-gray-300",
     },
