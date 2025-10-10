@@ -1,14 +1,13 @@
 import React, { useRef, useEffect } from "react";
 import { IconX, IconQrcode } from "@tabler/icons-react";
+import mobileQr from "../assets/mobile_qr.svg";
 
 const InstallAppModal = ({ isOpen, onClose }) => {
   const modalRef = useRef(null);
 
-  // Replace this with your actual APK download URL
-  const apkDownloadUrl = "https://your-domain.com/buzzmap-app.apk";
-
-  // QR code data - you can use a QR code generator service or library
-  const qrCodeData = apkDownloadUrl;
+  // App download URL (Google Drive)
+  const apkDownloadUrl =
+    "https://drive.google.com/file/d/1PIgeQ5z2-xG7NNKlhXhK_HdT1qmmdgaE/view";
 
   useEffect(() => {
     if (modalRef.current) {
@@ -57,13 +56,22 @@ const InstallAppModal = ({ isOpen, onClose }) => {
             {/* QR Card */}
             <div className="rounded-2xl border border-primary/20 shadow-sm p-6 flex flex-col justify-center">
               <div className="text-center">
-                <IconQrcode size={120} className="text-primary mx-auto mb-4" />
+                <img
+                  src={mobileQr}
+                  alt="BuzzMap mobile app QR code"
+                  className="mx-auto mb-4 w-60 h-60 object-contain"
+                />
                 <p className="text-lg font-semibold text-primary mb-2">
                   QR Code for APK Download
                 </p>
-                <p className="text-xs text-gray-600 break-all bg-gray-50 p-2 rounded-lg">
+                <a
+                  href={apkDownloadUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs text-blue-600 hover:underline break-all bg-gray-50 p-2 rounded-lg inline-block"
+                >
                   {apkDownloadUrl}
-                </p>
+                </a>
               </div>
             </div>
 
@@ -77,7 +85,10 @@ const InstallAppModal = ({ isOpen, onClose }) => {
                   <span className="bg-primary text-white rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold flex-shrink-0">
                     1
                   </span>
-                  <span>Scan the QR code with your phone camera</span>
+                  <span>
+                    Scan the QR code with your phone camera or visit the link
+                    below to open the download page
+                  </span>
                 </li>
                 <li className="flex items-start gap-3">
                   <span className="bg-primary text-white rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold flex-shrink-0">

@@ -319,18 +319,13 @@ export default function DengueTrendChart({
               <option>No barangays available</option>
             )}
           </select>
-          <label htmlFor="dtc-interval" className="sr-only">
-            Select interval
-          </label>
-          <select
-            id="dtc-interval"
-            aria-label="Select interval"
-            value={intervalType}
-            onChange={(e) => setIntervalType(e.target.value)}
-            className="select select-bordered w-full max-w-xs bg-white/10 text-base-content border-base-content/20 [&>option]:text-black"
+          {/* Interval: fixed bi-weekly; show as static label instead of a dropdown */}
+          <div
+            aria-label="Interval"
+            className="px-3 py-2 text-nowrap rounded-lg bg-white/10 text-base-content border border-base-content/20 text-sm"
           >
-            <option value="biweekly">Bi-weekly</option>
-          </select>
+            Bi-weekly
+          </div>
           <label htmlFor="dtc-weeks" className="sr-only">
             Select week range
           </label>
