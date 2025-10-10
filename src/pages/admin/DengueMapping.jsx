@@ -56,24 +56,7 @@ const QC_CENTER = {
   lng: 121.0437, // Quezon City's approximate center longitude
 };
 
-// Add this helper function before the DengueMapping component
-const normalizeBarangayName = (name) => {
-  if (!name) return "";
-  return name
-    .toLowerCase()
-    .replace(/barangay\s+/i, "") // Remove "Barangay" prefix
-    .replace(/\s+/g, "") // Remove all spaces
-    .replace(/[^a-z0-9]/g, ""); // Remove special characters
-};
-
-// Treat common variants as equivalent (e.g., with/without 'Sr')
-const namesAreEquivalent = (a, b) => {
-  const na = normalizeBarangayName(a || "");
-  const nb = normalizeBarangayName(b || "");
-  if (na === nb) return true;
-  const stripSr = (s) => s.replace(/sr$/i, "");
-  return stripSr(na) === stripSr(nb);
-};
+// Similarity analysis removed: use strict name comparisons only
 
 // Add breeding site type icon mapping
 const BREEDING_SITE_TYPE_ICONS = {
@@ -916,14 +899,9 @@ const DengueMapping = () => {
 
     const q = (query || "").toLowerCase().trim();
     const filtered = barangaysList.filter((barangay) => {
-      const name = barangay.name || "";
-      const display = barangay.displayName || "";
-      return (
-        name.toLowerCase().includes(q) ||
-        display.toLowerCase().includes(q) ||
-        // Allow loose match for variants like 'E. Rodriguez' vs 'E. Rodriguez Sr.'
-        namesAreEquivalent(name, q)
-      );
+      const name = (barangay.name || "").toLowerCase();
+      const display = (barangay.displayName || "").toLowerCase();
+      return name.includes(q) || display.includes(q);
     });
     setFilteredBarangays(filtered);
   };
@@ -934,8 +912,10 @@ const DengueMapping = () => {
     // If this is a GeoJSON feature (clicked on map)
     if (barangay.type === "Feature") {
       // Find matching barangay from barangaysList
-      const matching = barangaysList?.find((b) =>
-        namesAreEquivalent(b.name, barangay.properties?.name)
+      const matching = barangaysList?.find(
+        (b) =>
+          (b.name || "").toLowerCase() ===
+          (barangay.properties?.name || "").toLowerCase()
       );
       console.log("[DengueMapping] Map click select:", {
         featureName: barangay.properties?.name,
@@ -990,8 +970,10 @@ const DengueMapping = () => {
     fetch("/quezon_barangays_boundaries.geojson")
       .then((res) => res.json())
       .then((geoData) => {
-        const feature = geoData.features.find((f) =>
-          namesAreEquivalent(f.properties.name, barangay.name)
+        const feature = geoData.features.find(
+          (f) =>
+            (f.properties.name || "").toLowerCase() ===
+            (barangay.name || "").toLowerCase()
         );
 
         if (feature) {
@@ -1717,7 +1699,13 @@ const DengueMapping = () => {
                     {r.type} • {r.description || "No description"}
                   </span>
                   <span className="text-sm text-gray-500">
-                    {new Date(r.date).toLocaleString()}
+                    {(() => {
+                      const raw =
+                        r.date || r.date_and_time || r.createdAt || r.updatedAt;
+                      const d = raw ? new Date(raw) : null;
+                      const isValid = d && !isNaN(d.getTime());
+                      return isValid ? d.toLocaleString() : "—";
+                    })()}
                   </span>
                 </li>
               ))}
