@@ -248,7 +248,10 @@ const ReactionsTab = ({
 
   return (
     <div className={`flex justify-between items-center ${className}`}>
-      <div className="flex items-center gap-x-2 py-2 px-2">
+      <div
+        className="flex items-center gap-x-2 py-2 px-2"
+        title={`Upvote: ${upvoteCount} • Downvote: ${downvoteCount}`}
+      >
         <ArrowFatUp
           size={iconSize}
           weight={hasUpvoted ? "fill" : "regular"}
@@ -264,7 +267,12 @@ const ReactionsTab = ({
             if (!isVoting) handleUpvote();
           }}
         />
-        <span className={`font-normal ${textSize}`}>{netVotes}</span>
+        <span
+          className={`font-normal ${textSize}`}
+          title={`Upvote: ${upvoteCount} • Downvote: ${downvoteCount}`}
+        >
+          {netVotes}
+        </span>
         <ArrowFatDown
           size={iconSize}
           weight={hasDownvoted ? "fill" : "regular"}
