@@ -84,6 +84,7 @@ const DengueMapping = () => {
   const [selectedMapItem, setSelectedMapItem] = useState(null);
   const [showFullReport, setShowFullReport] = useState(false);
   const [selectedFullReport, setSelectedFullReport] = useState(null);
+  const [selectedMapReportId, setSelectedMapReportId] = useState(null);
   const [isFetchingFullReport, setIsFetchingFullReport] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
   const [csvFile, setCsvFile] = useState(null);
@@ -239,6 +240,13 @@ const DengueMapping = () => {
     if (resolvedCount === totalReports) return "fully-resolved";
     if (resolvedCount > 0) return "partially-resolved";
     return "pending";
+  };
+
+  const handleUnselectOnMap = () => {
+    if (mapOnlyRef.current?.clearHighlight) {
+      mapOnlyRef.current.clearHighlight();
+    }
+    setSelectedMapReportId(null);
   };
 
   const getClusterStatusColor = (status) => {
@@ -1036,7 +1044,26 @@ const DengueMapping = () => {
         lng: coordinates[0],
       };
       mapOnlyRef.current.panTo(position);
-      mapOnlyRef.current.setZoom(17);
+      // Zoom in more when showing a specific report
+      mapOnlyRef.current.setZoom(20);
+      // If this is a report, highlight its marker and gray out others
+      const reportId = item?._id || item?.id;
+      if (type === "report" && mapOnlyRef.current.highlightMarker) {
+        // Delay slightly to ensure markers have been rendered after pan/zoom
+        setTimeout(() => {
+          // try by id first; fall back to coordinates
+          if (reportId) {
+            mapOnlyRef.current.highlightMarker(String(reportId));
+            setSelectedMapReportId(String(reportId));
+          } else if (coordinates?.length === 2) {
+            mapOnlyRef.current.highlightMarker({
+              lat: coordinates[1],
+              lng: coordinates[0],
+            });
+            setSelectedMapReportId(null);
+          }
+        }, 50);
+      }
       if (mapContainerRef.current) {
         mapContainerRef.current.scrollIntoView({
           behavior: "smooth",
@@ -1485,6 +1512,8 @@ const DengueMapping = () => {
         interventionsData={interventionsData}
         handleViewFullReport={handleViewFullReport}
         handleShowOnMap={handleShowOnMap}
+        handleUnselectOnMap={handleUnselectOnMap}
+        selectedMapReportId={selectedMapReportId}
         BREEDING_SITE_TYPE_ICONS={BREEDING_SITE_TYPE_ICONS}
       />
 

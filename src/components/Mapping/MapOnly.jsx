@@ -145,6 +145,8 @@ const MapOnly = forwardRef(
     }
     const clusterOverlaysRef = useRef([]);
     const breedingMarkersRef = useRef([]);
+    const breedingMarkerMetaRef = useRef([]); // track reportId -> marker/content for highlight
+    const selectedHighlightRef = useRef(null); // persist last selected target
 
     useEffect(() => {
       return () => {
@@ -246,6 +248,82 @@ const MapOnly = forwardRef(
           if (mapInstance.current) {
             mapInstance.current.setZoom(zoom);
           }
+        },
+        // Highlight one report marker and gray out others
+        highlightMarker: (arg) => {
+          try {
+            let targetId = null;
+            let targetLat = null;
+            let targetLng = null;
+            if (typeof arg === "string" || typeof arg === "number") {
+              targetId = String(arg);
+            } else if (arg && typeof arg === "object") {
+              if (arg.reportId !== undefined && arg.reportId !== null) {
+                targetId = String(arg.reportId);
+              }
+              if (typeof arg.lat === "number" && typeof arg.lng === "number") {
+                targetLat = arg.lat;
+                targetLng = arg.lng;
+              }
+            }
+            // persist selected target for later re-application
+            selectedHighlightRef.current = {
+              reportId: targetId,
+              lat: targetLat,
+              lng: targetLng,
+            };
+            const grayCss = {
+              filter: "grayscale(100%) opacity(50%)",
+            };
+            const resetCss = {
+              filter: "none",
+            };
+            const EPS = 1e-5;
+            const apply = () => {
+              const meta = breedingMarkerMetaRef.current || [];
+              if (!meta.length) return false;
+              let matched = false;
+              meta.forEach((m) => {
+                const el = m?.contentEl;
+                if (!el) return;
+                const idMatch =
+                  targetId !== null && targetId !== undefined
+                    ? String(m.reportId) === String(targetId)
+                    : false;
+                const coordMatch =
+                  typeof targetLat === "number" && typeof targetLng === "number"
+                    ? Math.abs((m.lat || 0) - targetLat) < EPS &&
+                      Math.abs((m.lng || 0) - targetLng) < EPS
+                    : false;
+                if (idMatch || coordMatch) {
+                  matched = true;
+                  Object.assign(el.style, resetCss);
+                  el.style.transform = "scale(1.05)";
+                } else {
+                  Object.assign(el.style, grayCss);
+                  el.style.transform = "scale(1.0)";
+                }
+              });
+              return matched;
+            };
+            if (!apply()) {
+              // retry shortly if markers not yet rendered
+              setTimeout(apply, 80);
+              setTimeout(apply, 160);
+              setTimeout(apply, 320);
+            }
+          } catch (_) {}
+        },
+        clearHighlight: () => {
+          try {
+            breedingMarkerMetaRef.current.forEach((m) => {
+              const el = m?.contentEl;
+              if (!el) return;
+              el.style.filter = "none";
+              el.style.transform = "scale(1.0)";
+            });
+            selectedHighlightRef.current = null;
+          } catch (_) {}
         },
         showInfoWindow: (content, position) => {
           if (
@@ -428,6 +506,7 @@ const MapOnly = forwardRef(
           });
 
           let breedingMarkers = [];
+          breedingMarkerMetaRef.current = [];
           if (
             showBreedingSites &&
             breedingSites.length > 0 &&
@@ -570,6 +649,16 @@ const MapOnly = forwardRef(
                     : isValidated
                     ? " (Validated)"
                     : ""),
+              });
+
+              // track meta for highlight
+              const reportId = site?._id || site?.id;
+              breedingMarkerMetaRef.current.push({
+                reportId,
+                marker,
+                contentEl: markerContent,
+                lat: adjLat,
+                lng: adjLng,
               });
 
               if (!validatedOnly && !disableSiteInfoWindows) {
@@ -726,6 +815,23 @@ const MapOnly = forwardRef(
             breedingMarkers.forEach((m) => m.setMap(map));
             overlays.push(...breedingMarkers);
             breedingMarkersRef.current = breedingMarkers;
+
+            // Re-apply highlight if a selection exists after markers are ready
+            if (selectedHighlightRef.current) {
+              const { reportId, lat, lng } = selectedHighlightRef.current;
+              try {
+                if (reportId) {
+                  // call through ref API to reuse logic
+                  if (typeof ref?.current?.highlightMarker === "function") {
+                    ref.current.highlightMarker(String(reportId));
+                  }
+                } else if (typeof lat === "number" && typeof lng === "number") {
+                  if (typeof ref?.current?.highlightMarker === "function") {
+                    ref.current.highlightMarker({ lat, lng });
+                  }
+                }
+              } catch (_) {}
+            }
           }
 
           // Draw intervention markers

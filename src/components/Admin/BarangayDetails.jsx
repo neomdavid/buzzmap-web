@@ -20,6 +20,8 @@ const BarangayDetails = ({
   interventionsData,
   handleViewFullReport,
   handleShowOnMap,
+  handleUnselectOnMap,
+  selectedMapReportId,
   BREEDING_SITE_TYPE_ICONS,
 }) => {
   // Search functionality
@@ -439,12 +441,23 @@ const BarangayDetails = ({
                     >
                       View Full Report
                     </button>
-                    <button
-                      onClick={() => handleShowOnMap(report, "report")}
-                      className="bg-primary rounded-full text-white px-4 py-1 text-[11px] hover:bg-primary/80 hover:scale-105 transition-all duration-200 active:scale-95 cursor-pointer"
-                    >
-                      Show on Map
-                    </button>
+                    {selectedMapReportId &&
+                    (report._id === selectedMapReportId ||
+                      report.id === selectedMapReportId) ? (
+                      <button
+                        onClick={handleUnselectOnMap}
+                        className="bg-gray-300 rounded-full text-gray-800 px-4 py-1 text-[11px] hover:bg-gray-400 hover:scale-105 transition-all duration-200 active:scale-95 cursor-pointer"
+                      >
+                        Unselect
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => handleShowOnMap(report, "report")}
+                        className="bg-primary rounded-full text-white px-4 py-1 text-[11px] hover:bg-primary/80 hover:scale-105 transition-all duration-200 active:scale-95 cursor-pointer"
+                      >
+                        Show on Map
+                      </button>
+                    )}
                   </div>
                 </div>
               ))}
