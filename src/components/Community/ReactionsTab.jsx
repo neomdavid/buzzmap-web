@@ -95,11 +95,21 @@ const ReactionsTab = ({
       expectedStateRef.current = null;
     }, 5000);
 
-    if (!currentUserId) {
+    if (!currentUserId || userFromStore?.role !== "user") {
       if (onShowToast) {
-        onShowToast("Please log in to vote", "error");
+        onShowToast(
+          userFromStore?.role !== "user"
+            ? "Only regular users can vote"
+            : "Please log in to vote",
+          "error"
+        );
       } else {
-        showCustomToast("Please log in to vote", "error");
+        showCustomToast(
+          userFromStore?.role !== "user"
+            ? "Only regular users can vote"
+            : "Please log in to vote",
+          "error"
+        );
       }
       setIsVoting(false);
       return;
@@ -156,11 +166,21 @@ const ReactionsTab = ({
       expectedStateRef.current = null;
     }, 5000);
 
-    if (!currentUserId) {
+    if (!currentUserId || userFromStore?.role !== "user") {
       if (onShowToast) {
-        onShowToast("Please log in to vote", "error");
+        onShowToast(
+          userFromStore?.role !== "user"
+            ? "Only regular users can vote"
+            : "Please log in to vote",
+          "error"
+        );
       } else {
-        showCustomToast("Please log in to vote", "error");
+        showCustomToast(
+          userFromStore?.role !== "user"
+            ? "Only regular users can vote"
+            : "Please log in to vote",
+          "error"
+        );
       }
       setIsVoting(false);
       return;

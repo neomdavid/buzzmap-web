@@ -106,9 +106,9 @@ const PostCard = ({
 
   const userProfile = getUserProfile();
 
-  // Check if current user can delete this post (post owner or admin)
+  // Allow deletion only if the current authenticated user owns the post AND is a regular user
   const canDeletePost =
-    currentUserId === userId || userFromStore?.role === "admin";
+    currentUserId === userId && userFromStore?.role === "user";
 
   // Fetch actual comments to get real count
   const { data: actualComments } = useGetCommentsQuery(postId, {
@@ -321,6 +321,7 @@ const PostCard = ({
           upvotesArray={upvotesArray}
           downvotesArray={downvotesArray}
           currentUserId={currentUserId}
+          userFromStore={userFromStore}
           onCommentClick={handleCommentClick}
           iconSize={30}
           onVoteUpdate={undefined}
