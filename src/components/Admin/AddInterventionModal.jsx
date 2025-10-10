@@ -771,7 +771,13 @@ const AddInterventionModal = ({
                       onChange={handleChange}
                       name="status"
                       required
+                      disabled={!formData.date}
                     >
+                      {!formData.date && (
+                        <option value="" disabled>
+                          Select a date first
+                        </option>
+                      )}
                       {getAllowedStatuses(formData.date).map((status) => (
                         <option key={status} value={status}>
                           {status}
@@ -805,10 +811,6 @@ const AddInterventionModal = ({
                         preselectedBarangay={preselectedBarangay}
                         highlightedBarangay={highlightedBarangay}
                       />
-                      {/* Debug info */}
-                      <div className="text-xs text-gray-500 mt-2">
-                        Debug: highlightedBarangay = "{highlightedBarangay}"
-                      </div>
                     </div>
                   </div>
 
