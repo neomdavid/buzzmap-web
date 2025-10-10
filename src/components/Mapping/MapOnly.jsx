@@ -291,9 +291,14 @@ const MapOnly = forwardRef(
                 center: QC_CENTER,
                 zoom: 13,
                 mapId: mapId || undefined,
+                disableDefaultUI: true,
                 mapTypeControl: false,
                 streetViewControl: false,
                 fullscreenControl: false,
+                fullscreenControlOptions: {
+                  position: window.google?.maps?.ControlPosition?.RIGHT_BOTTOM,
+                },
+                zoomControl: true,
               });
               window.google.maps.event.addListenerOnce(
                 mapInstance.current,

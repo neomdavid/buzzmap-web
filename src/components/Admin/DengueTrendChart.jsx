@@ -329,7 +329,6 @@ export default function DengueTrendChart({
             onChange={(e) => setIntervalType(e.target.value)}
             className="select select-bordered w-full max-w-xs bg-white/10 text-base-content border-base-content/20 [&>option]:text-black"
           >
-            <option value="weekly">Weekly</option>
             <option value="biweekly">Bi-weekly</option>
           </select>
           <label htmlFor="dtc-weeks" className="sr-only">

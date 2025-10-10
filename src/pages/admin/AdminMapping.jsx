@@ -312,9 +312,14 @@ const AdminMapping = () => {
         : defaultCenter,
       zoom: 18,
       mapTypeId: "satellite",
+      disableDefaultUI: true,
       fullscreenControl: false,
+      fullscreenControlOptions: {
+        position: window.google?.maps?.ControlPosition?.RIGHT_BOTTOM,
+      },
       streetViewControl: false,
       mapTypeControl: false,
+      zoomControl: true,
       zoomControl: true,
       mapId: import.meta.env.VITE_GOOGLE_MAPS_MAP_ID,
     });

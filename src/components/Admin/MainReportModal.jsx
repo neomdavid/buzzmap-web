@@ -1,4 +1,5 @@
 import React from "react";
+import ImageExpansionModal from "../ImageExpansionModal";
 
 const MainReportModal = ({
   modalRef,
@@ -9,6 +10,18 @@ const MainReportModal = ({
   openStreetViewModal,
   handleShowOnMap,
 }) => {
+  const [isImageModalOpen, setIsImageModalOpen] = React.useState(false);
+  const [expandedImage, setExpandedImage] = React.useState(null);
+
+  const openImage = (src) => {
+    setExpandedImage(src);
+    setIsImageModalOpen(true);
+  };
+
+  const closeImage = () => {
+    setIsImageModalOpen(false);
+    setExpandedImage(null);
+  };
   return (
     <dialog
       ref={modalRef}
@@ -91,9 +104,12 @@ const MainReportModal = ({
                   {selectedFullReport.images.map((img, idx) => (
                     <div key={idx} className="relative">
                       <img
-                        src={img}
+                        src={typeof img === "string" ? img : img?.url}
                         alt={`Evidence ${idx + 1}`}
-                        className="w-full h-48 object-cover rounded-lg"
+                        className="w-full h-48 object-cover rounded-lg cursor-zoom-in hover:ring-2 hover:ring-primary/50"
+                        onClick={() =>
+                          openImage(typeof img === "string" ? img : img?.url)
+                        }
                       />
                     </div>
                   ))}
@@ -130,6 +146,11 @@ const MainReportModal = ({
           </div>
         </div>
       </div>
+      <ImageExpansionModal
+        isOpen={isImageModalOpen}
+        image={expandedImage}
+        onClose={closeImage}
+      />
       <form method="dialog" className="modal-backdrop">
         <button>close</button>
       </form>

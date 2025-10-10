@@ -69,16 +69,32 @@ const Interventions = () => {
     error: errorBarangays,
   } = useGetAdminBarangaysQuery();
 
-  // Log the raw API response data and transform it
+  // Load all QC barangay names from GeoJSON so we can add missing ones as 'No Pattern'
+  const [allBarangayNames, setAllBarangayNames] = useState([]);
+  useEffect(() => {
+    fetch("/quezon_barangays_boundaries.geojson")
+      .then((res) => res.json())
+      .then((geo) => {
+        const names = Array.isArray(geo?.features)
+          ? geo.features
+              .map((f) => f?.properties?.name)
+              .filter((n) => typeof n === "string" && n.trim() !== "")
+          : [];
+        setAllBarangayNames(names);
+      })
+      .catch(() => setAllBarangayNames([]));
+  }, []);
+
+  // Log the raw API response data and transform it, augmenting with missing barangays as 'none'
   const transformedBarangays = React.useMemo(() => {
-    if (!barangaysList) return [];
+    const datasetBarangays = Array.isArray(barangaysList) ? barangaysList : [];
 
     console.log(
       "[DEBUG] Raw Barangays List:",
-      JSON.stringify(barangaysList, null, 2)
+      JSON.stringify(datasetBarangays, null, 2)
     );
 
-    return barangaysList.map((b) => {
+    const mapped = datasetBarangays.map((b) => {
       const patternBased = b.status_and_recommendation?.pattern_based || {};
       const reportBased = b.status_and_recommendation?.report_based || {};
       const deathBased = b.status_and_recommendation?.death_priority || {};
@@ -106,7 +122,28 @@ const Interventions = () => {
         },
       };
     });
-  }, [barangaysList]);
+
+    // Add barangays not present in dataset as 'No Pattern'
+    const datasetNameSet = new Set(
+      mapped.map((m) => (m.name || "").toLowerCase())
+    );
+    const extras = (allBarangayNames || [])
+      .filter((n) => n && !datasetNameSet.has(n.toLowerCase()))
+      .map((name) => ({
+        name,
+        _id: `missing-${name}`,
+        patternType: "none",
+        issueDetected: "",
+        suggestedAction: "",
+        ongoing_interventions: 0,
+        scheduled_interventions: 0,
+        report_based: { count: 0, alert: "", recommendation: "" },
+        death_priority: { count: 0, alert: "", recommendation: "" },
+        _isMissingInDataset: true,
+      }));
+
+    return [...mapped, ...extras];
+  }, [barangaysList, allBarangayNames]);
 
   // Log the transformed data
   useEffect(() => {
@@ -242,18 +279,17 @@ const Interventions = () => {
 
     let recommendations = transformedBarangays
       .filter((item) => {
-        // Show item if it has any of these:
-        // 1. Pattern-based alert or recommendation
-        // 2. Death-based alert, recommendation, or count
-        return (
+        // Always include items explicitly missing from dataset under 'none'
+        const isNone = normalizePatternType(item.patternType) === "none";
+        const hasSignals =
           (item.issueDetected && item.issueDetected.toLowerCase() !== "none") ||
           (item.suggestedAction && item.suggestedAction.trim() !== "") ||
           item.death_priority.count > 0 ||
           (item.death_priority.alert &&
             item.death_priority.alert.trim() !== "") ||
           (item.death_priority.recommendation &&
-            item.death_priority.recommendation.trim() !== "")
-        );
+            item.death_priority.recommendation.trim() !== "");
+        return hasSignals || isNone;
       })
       // Sort by death count first (descending), then by pattern type
       .sort((a, b) => {

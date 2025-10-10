@@ -671,7 +671,9 @@ const ReportsVerification = () => {
         <div className="flex flex-col">
           <section className="flex flex-col gap-2">
             <div className="flex items-center justify-between mb-2">
-              <p className="text-base-content text-4xl font-bold">Clusters</p>
+              <p className="text-base-content text-4xl font-bold">
+                Resolved Clusters
+              </p>
               <button
                 className="inline-flex items-center gap-1.5 text-sm link text-primary hover:text-accent"
                 onClick={() => setShowClusterGuide(true)}

@@ -1150,6 +1150,7 @@ const DengueMapping = () => {
           },
           pov: { heading: 165, pitch: 0 },
           zoom: 1,
+          fullscreenControl: false,
         }
       );
     }

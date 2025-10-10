@@ -658,13 +658,10 @@ const DengueMap = ({
       recommendation: deathPriority.recommendation,
     });
 
-    // If we don't have the required data, don't create the InfoWindow
-    if (!patternType || !status_and_recommendation || !patternBased.status) {
-      console.log(
-        "[DengueMap DEBUG] Missing required data, skipping InfoWindow creation"
-      );
-      return;
-    }
+    // If required data is missing, still show a minimal InfoWindow stating no cases recorded
+    const hasPatternData = Boolean(
+      patternType && status_and_recommendation && patternBased.status
+    );
 
     // Color for report-based alert
     const reportStatus = (reportBased.status || "unknown").toLowerCase();
@@ -678,116 +675,133 @@ const DengueMap = ({
       REPORT_STATUS_COLORS[reportStatus] || REPORT_STATUS_COLORS.unknown;
 
     const content = document.createElement("div");
-    content.innerHTML = `
-      <div class="bg-white p-4 rounded-lg text-center h-auto w-[50vw] max-w-[500px] min-w-[320px] break-words overflow-x-auto">
-        <p class="text-4xl font-[900]" style="color: ${
-          PATTERN_COLORS[patternType]?.fill || PATTERN_COLORS.default.fill
-        }">
-          Barangay ${props.displayName || props.name}
-        </p>
-        <div class="mt-3 flex flex-col gap-3 text-black">
-          <!-- Pattern Card -->
-          <div class="p-3 rounded-lg border-2 ${
-            patternType === "spike"
-              ? "border-error bg-error/5"
-              : patternType === "increase"
-              ? "border-warning bg-warning/5"
-              : patternType === "decrease"
-              ? "border-success bg-success/5"
-              : patternType === "low_level_activity"
-              ? "border-info bg-info/5"
-              : "border-gray-400 bg-gray-100"
-          }">
-            <div>
-              <p class="text-sm font-medium text-gray-600 uppercase">Pattern</p>
-              <div class="flex justify-center mt-1">
-                <span class="px-3 py-1 rounded-full font-semibold text-md" style="background-color: ${
-                  PATTERN_COLORS[patternType]?.fill ||
-                  PATTERN_COLORS.default.fill
-                }; color: white;">
-                  ${
-                    patternType === "none"
-                      ? "No pattern detected"
-                      : patternType === "low_level_activity"
-                      ? "Low Level Activity"
-                      : patternType
-                          .split("_")
-                          .map(
-                            (word) =>
-                              word.charAt(0).toUpperCase() + word.slice(1)
-                          )
-                          .join(" ")
-                  }
-                </span>
-              </div>
-              ${
-                patternBased.alert
-                  ? `
-                <p class="text-base text-gray-700 mt-2">${patternBased.alert}</p>
-              `
-                  : ""
-              }
+    if (!hasPatternData) {
+      // Minimal info for barangays without dataset/pattern
+      content.innerHTML = `
+        <div class="bg-white p-4 rounded-lg text-center h-auto w-[50vw] max-w-[500px] min-w-[320px] break-words overflow-x-auto">
+          <p class="text-4xl font-[900]" style="color: ${
+            PATTERN_COLORS.default.fill
+          }">Barangay ${props.displayName || props.name}</p>
+          <div class="mt-3 text-black">
+            <div class="p-3 rounded-lg border-2 border-gray-300 bg-gray-100">
+              <p class="text-md font-semibold text-gray-700">No dengue cases recorded</p>
+              <p class="text-sm text-gray-600 mt-1">This barangay is not present in the dataset or has no recorded cases.</p>
             </div>
           </div>
-          <!-- Report-Based Alert Card -->
-          ${
-            reportBased.alert &&
-            reportBased.alert !== "None" &&
-            reportBased.count >= 0
-              ? `
-            <div class="p-3 rounded-lg border-2 border-primary/30 bg-primary/5">
+        </div>
+      `;
+    } else {
+      content.innerHTML = `
+        <div class="bg-white p-4 rounded-lg text-center h-auto w-[50vw] max-w-[500px] min-w-[320px] break-words overflow-x-auto">
+          <p class="text-4xl font-[900]" style="color: ${
+            PATTERN_COLORS[patternType]?.fill || PATTERN_COLORS.default.fill
+          }">
+            Barangay ${props.displayName || props.name}
+          </p>
+          <div class="mt-3 flex flex-col gap-3 text-black">
+            <div class="p-3 rounded-lg border-2 ${
+              patternType === "spike"
+                ? "border-error bg-error/5"
+                : patternType === "increase"
+                ? "border-warning bg-warning/5"
+                : patternType === "decrease"
+                ? "border-success bg-success/5"
+                : patternType === "low_level_activity"
+                ? "border-info bg-info/5"
+                : "border-gray-400 bg-gray-100"
+            }">
               <div>
-                <p class="text-sm font-medium text-gray-600 uppercase">Report-Based Alert</p>
-                <p class="text-lg font-semibold">${reportBased.alert}</p>
+                <p class="text-sm font-medium text-gray-600 uppercase">Pattern</p>
+                <div class="flex justify-center mt-1">
+                  <span class="px-3 py-1 rounded-full font-semibold text-md" style="background-color: ${
+                    PATTERN_COLORS[patternType]?.fill ||
+                    PATTERN_COLORS.default.fill
+                  }; color: white;">
+                    ${
+                      patternType === "none"
+                        ? "No pattern detected"
+                        : patternType === "low_level_activity"
+                        ? "Low Level Activity"
+                        : patternType
+                            .split("_")
+                            .map(
+                              (word) =>
+                                word.charAt(0).toUpperCase() + word.slice(1)
+                            )
+                            .join(" ")
+                    }
+                  </span>
+                </div>
                 ${
-                  reportBased.count > 0
-                    ? `<p class="text-sm text-gray-600 mt-1">Count: ${reportBased.count}</p>`
+                  patternBased.alert
+                    ? `
+                  <p class="text-base text-gray-700 mt-2">${patternBased.alert}</p>
+                `
                     : ""
                 }
               </div>
             </div>
-          `
-              : ""
-          }
-          <!-- Death Priority Alert Card -->
-          ${
-            deathPriority.alert &&
-            deathPriority.alert !== "None" &&
-            deathPriority.count > 0
-              ? `
-            <div class="p-3 rounded-lg border-2 border-primary/30 bg-primary/5">
-              <div>
-                <p class="text-sm font-medium text-gray-600 uppercase">Death Priority Alert</p>
-                <p class="text-lg font-semibold">${deathPriority.alert}</p>
+            ${
+              reportBased.alert &&
+              reportBased.alert !== "None" &&
+              reportBased.count >= 0
+                ? `
+              <div class="p-3 rounded-lg border-2 border-primary/30 bg-primary/5">
+                <div>
+                  <p class="text-sm font-medium text-gray-600 uppercase">Report-Based Alert</p>
+                  <p class="text-lg font-semibold">${reportBased.alert}</p>
+                  ${
+                    reportBased.count > 0
+                      ? `<p class="text-sm text-gray-600 mt-1">Count: ${reportBased.count}</p>`
+                      : ""
+                  }
+                </div>
               </div>
-            </div>
-          `
-              : ""
-          }
-          <!-- Last Analyzed Card -->
-          <div class="p-3 rounded-lg border-2 border-primary/20 bg-primary/5">
-            <div class="flex flex-col items-center">
-              <p class="text-sm font-medium text-gray-600">Last Analyzed</p>
-              <p class="text-lg font-semibold">
-                ${
-                  lastAnalysisTime
-                    ? isNaN(new Date(lastAnalysisTime).getTime())
-                      ? "Invalid date"
-                      : new Date(lastAnalysisTime).toLocaleString()
-                    : "No recent analysis"
-                }
-              </p>
+            `
+                : ""
+            }
+            ${
+              deathPriority.alert &&
+              deathPriority.alert !== "None" &&
+              deathPriority.count > 0
+                ? `
+              <div class="p-3 rounded-lg border-2 border-primary/30 bg-primary/5">
+                <div>
+                  <p class="text-sm font-medium text-gray-600 uppercase">Death Priority Alert</p>
+                  <p class="text-lg font-semibold">${deathPriority.alert}</p>
+                </div>
+              </div>
+            `
+                : ""
+            }
+            <div class="p-3 rounded-lg border-2 border-primary/20 bg-primary/5">
+              <div class="flex flex-col items-center">
+                <p class="text-sm font-medium text-gray-600">Last Analyzed</p>
+                <p class="text-lg font-semibold">
+                  ${
+                    lastAnalysisTime
+                      ? isNaN(new Date(lastAnalysisTime).getTime())
+                        ? "Invalid date"
+                        : new Date(lastAnalysisTime).toLocaleString()
+                      : "No recent analysis"
+                  }
+                </p>
+              </div>
             </div>
           </div>
         </div>
-      </div>
-    `;
+      `;
+    }
     if (!infoWindowRef.current) {
       infoWindowRef.current = new window.google.maps.InfoWindow({
         maxWidth: 1000,
       });
     }
     const infoWindow = infoWindowRef.current;
+    // Close any previous info window before showing a new one
+    try {
+      infoWindow.close();
+    } catch (_) {}
     infoWindow.setContent(content);
     infoWindow.setPosition(infoWindowPosition);
     infoWindow.open(mapInstanceRef.current);

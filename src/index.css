@@ -73,3 +73,16 @@ dialog::backdrop,
     color: light-dark(#3c4043, #e8eaed);
   }
 }
+
+/* Hide Google Maps fullscreen control as a hard fallback */
+.gm-fullscreen-control {
+  display: none !important;
+}
+
+/* Hide any Google Maps control that exposes 'Open in Google Maps' entry */
+.gm-control-active[aria-label*="Open in Google Maps"],
+.gm-control-active[title*="Open in Google Maps"],
+.gm-control-active a[aria-label*="Open in Google Maps"],
+.gm-control-active a[title*="Open in Google Maps"] {
+  display: none !important;
+}
