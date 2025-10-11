@@ -89,7 +89,7 @@ const MapOnly = forwardRef(
       recentOnly = false, // Show only recent validated reports markers
       recentCount = 5, // How many recent markers to show when recentOnly is true
       recentPosts = null, // Optional: provide the same recent posts as table
-      baseUrl = "/map",
+      baseUrl = "/mapping",
       // User map controls
       validatedOnly = false,
       hideClusterOverlays = false,
@@ -129,8 +129,8 @@ const MapOnly = forwardRef(
         const path =
           typeof window !== "undefined" ? window.location.pathname : "";
         effectiveBaseUrl.current = path.includes("/admin")
-          ? "/admin/map"
-          : "/map";
+          ? "/admin/mapping"
+          : "/mapping";
       }
       try {
         console.debug("[MapOnly] Base URL debug", {
@@ -766,7 +766,7 @@ const MapOnly = forwardRef(
                               ? window.location.pathname
                               : "";
                           const derived =
-                            path.indexOf("/admin") > -1 ? "/admin/map" : "/map";
+                            path.indexOf("/admin") > -1 ? "/admin/mapping" : "/mapping";
                           const finalBase =
                             effectiveBaseUrl.current &&
                             typeof effectiveBaseUrl.current === "string" &&

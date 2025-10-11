@@ -1,8 +1,8 @@
 import React from "react";
 import { Mapping } from "../../components/Mapping";
 
-const MapPage = () => {
+const MappingPage = () => {
   return <Mapping />;
 };
 
-export default MapPage;
+export default MappingPage;

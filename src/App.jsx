@@ -22,6 +22,7 @@ import {
   ForgotPassword,
   Profile,
   Community,
+  Mapping,
 } from "./pages/user";
 import { AdminLayout, CEA, Dashboard } from "./pages/admin";
 import {
@@ -179,10 +180,10 @@ const AppWithProviders = () => {
         { index: true, element: <Navigate to="/home" replace /> },
         { path: "/home", element: <Landing /> },
         {
-          path: "/map",
+          path: "/mapping",
           element: (
             <LazyComponent
-              importFunc={() => import("./pages/user/Map.jsx")}
+              importFunc={() => import("./pages/user/Mapping.jsx")}
               fallback={
                 <div className="flex items-center justify-center min-h-screen">
                   <div className="loading loading-spinner loading-lg"></div>
@@ -192,7 +193,7 @@ const AppWithProviders = () => {
           ),
         },
         {
-          path: "/map/:id",
+          path: "/mapping/:id",
           element: (
             <LazyComponent
               importFunc={() => import("./pages/user/SpecificLocation.jsx")}
@@ -292,7 +293,7 @@ const AppWithProviders = () => {
           ),
         },
         {
-          path: "/admin/map",
+          path: "/admin/mapping",
           element: (
             <LazyComponent
               importFunc={() => import("./pages/admin/DengueMapping.jsx")}
@@ -358,7 +359,7 @@ const AppWithProviders = () => {
 
     // Admin mapping route (without sidebar layout)
     {
-      path: "/admin/map/:id",
+      path: "/admin/mapping/:id",
       element: (
         <PrivateRoute requiredRole="admin">
           <LazyComponent

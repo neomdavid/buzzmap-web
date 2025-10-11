@@ -156,7 +156,7 @@ const Landing = () => {
       <div className="flex flex-col text-lg font-semibold gap-4 sm:flex-row w-[80%] m-auto mt-2 gap-x-3 justify-center items-center">
         <SecondaryButton
           text={"Check Dengue Patterns"}
-          to="/map"
+          to="/mapping"
           className="w-md "
         />
         <SecondaryButton
@@ -189,7 +189,7 @@ const Landing = () => {
         <div
           ref={mapContainerRef}
           className="rounded-xl overflow-hidden h-[400px] lg:h-[550px]  mb-6 lg:mb-0 lg:flex-13 flex items-center justify-center bg-red-100 hover:cursor-pointer"
-          onClick={() => navigate("/map")}
+          onClick={() => navigate("/mapping")}
           role="button"
           aria-label="Open Dengue Map"
         >
@@ -204,7 +204,7 @@ const Landing = () => {
               <MapOnly
                 style={{ height: "100%", width: "100%" }}
                 useAdminEndpoint={false}
-                baseUrl="/map"
+                baseUrl="/mapping"
                 validatedOnly={true}
                 hideClusterOverlays={true}
                 suppressClusterStyling={true}
@@ -244,7 +244,7 @@ const Landing = () => {
             text="Explore the Dengue Map"
             maxWidth={"max-w-[230px]"}
             Icon={ArrowRight}
-            to="/map"
+            to="/mapping"
             className="mb-2"
           />
           <div className="flex flex-col  sm:flex-row justify-around gap-4 w-full mt-8">
