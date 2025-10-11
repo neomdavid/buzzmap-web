@@ -15,6 +15,7 @@ import {
   Sparkle,
   MagnifyingGlass,
   Lightbulb,
+  Info,
 } from "phosphor-react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -86,6 +87,7 @@ const RecommendationModal = ({
   const [showWeatherDetails, setShowWeatherDetails] = useState(false);
   const [showAnalysisDetails, setShowAnalysisDetails] = useState(false);
   const [showPredictionDetails, setShowPredictionDetails] = useState(false);
+  const [showDisclaimerDetails, setShowDisclaimerDetails] = useState(false);
 
   // Normalized recommendation data (supports snake_case and camelCase)
   const reco = aiRecommendations?.[barangayName] || {};
@@ -211,6 +213,7 @@ const RecommendationModal = ({
               AI-Powered Recommendations
             </p>
           </div>
+
           <p className="text-center text-2xl font-bold mb-5">
             <span
               className={`text-white text-center px-4 py-1 font-normal text-xl font-semibold ml-1 rounded-full ${patternBadgeDotBgClass}`}
@@ -292,6 +295,50 @@ const RecommendationModal = ({
             {Object.keys(reco).length > 0 &&
               !recommendationLoading[barangayName] && (
                 <div className="space-y-4">
+                  {/* AI Accuracy Disclaimer */}
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <div className="flex items-center gap-3">
+                      <Info size={20} className="text-blue-600 flex-shrink-0" />
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between">
+                          <p className="font-semibold text-blue-800 text-sm">
+                            AI Recommendations Notice
+                          </p>
+                          <button
+                            onClick={() =>
+                              setShowDisclaimerDetails(!showDisclaimerDetails)
+                            }
+                            className="text-blue-600 hover:text-blue-800 text-sm font-medium hover:underline"
+                          >
+                            {showDisclaimerDetails ? "Less" : "More"}
+                          </button>
+                        </div>
+                        <AnimatePresence initial={false}>
+                          {showDisclaimerDetails && (
+                            <motion.div
+                              initial={{ height: 0, opacity: 0 }}
+                              animate={{ height: "auto", opacity: 1 }}
+                              exit={{ height: 0, opacity: 0 }}
+                              transition={{ duration: 0.25 }}
+                              className="overflow-hidden"
+                            >
+                              <p className="text-sm text-blue-800 leading-relaxed mt-2">
+                                These AI-generated recommendations are based on
+                                available data patterns and should be used as
+                                supplementary insights. Please verify critical
+                                information through additional research and
+                                consider local context factors that may not be
+                                captured in the data. AI recommendations are
+                                tools to support decision-making, not definitive
+                                solutions.
+                              </p>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                      </div>
+                    </div>
+                  </div>
+
                   {/* Summary - Always visible */}
                   {summary && (
                     <div className="p-4 bg-base-300/60 rounded-lg">

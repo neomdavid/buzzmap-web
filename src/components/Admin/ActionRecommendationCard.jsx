@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   getPatternColor,
   getPatternLabel,
@@ -84,6 +85,7 @@ const ActionRecommendationCard = ({
 
   // AI recommendation state - only fetch when modal is opened
   const [showAIRecommendations, setShowAIRecommendations] = useState(false);
+  const [showDisclaimerDetails, setShowDisclaimerDetails] = useState(false);
   const {
     data: aiRecommendation,
     isLoading: isLoadingAI,
@@ -506,6 +508,49 @@ const ActionRecommendationCard = ({
               AI-Powered Recommendations
             </p>
           </div>
+
+          {/* AI Accuracy Disclaimer */}
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+            <div className="flex items-center gap-3">
+              <Info size={20} className="text-blue-600 flex-shrink-0" />
+              <div className="flex-1">
+                <div className="flex items-center justify-between">
+                  <p className="font-semibold text-blue-800 text-sm">
+                    AI Recommendations Notice
+                  </p>
+                  <button
+                    onClick={() =>
+                      setShowDisclaimerDetails(!showDisclaimerDetails)
+                    }
+                    className="text-blue-600 hover:text-blue-800 text-sm font-medium hover:underline"
+                  >
+                    {showDisclaimerDetails ? "Less" : "More"}
+                  </button>
+                </div>
+                <AnimatePresence initial={false}>
+                  {showDisclaimerDetails && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: "auto", opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      transition={{ duration: 0.25 }}
+                      className="overflow-hidden"
+                    >
+                      <p className="text-sm text-blue-800 leading-relaxed mt-2">
+                        These AI-generated recommendations are based on
+                        available data patterns and should be used as
+                        supplementary insights. Please verify critical
+                        information through additional research and consider
+                        local context factors that may not be captured in the
+                        data.
+                      </p>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            </div>
+          </div>
+
           <p className="text-center text-2xl font-bold mb-5">
             <span
               className={`text-white text-center px-4 py-1 font-normal text-xl font-semibold ml-1 rounded-full ${getPatternColor(
