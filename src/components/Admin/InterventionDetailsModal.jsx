@@ -6,6 +6,7 @@ import {
   IconAlertTriangle,
   IconTrash,
   IconEdit,
+  IconRestore,
 } from "@tabler/icons-react";
 import {
   useUpdateInterventionMutation,
@@ -970,15 +971,17 @@ const InterventionDetailsModal = ({
                         <button
                           type="button"
                           onClick={handleUnarchive}
-                          className="bg-primary text-white font-semibold py-1 px-6 rounded-xl hover:bg-primary/80 transition-all hover:cursor-pointer"
+                          className="bg-primary text-white font-semibold py-1 px-6 rounded-xl hover:bg-primary/80 transition-all hover:cursor-pointer flex items-center gap-2"
                         >
+                          <IconRestore size={18} />
                           Unarchive
                         </button>
                         <button
                           type="button"
                           onClick={handleHardDelete}
-                          className="bg-error text-white font-semibold py-1 px-6 rounded-xl hover:bg-error/80 transition-all hover:cursor-pointer"
+                          className="bg-error text-white font-semibold py-1 px-6 rounded-xl hover:bg-error/80 transition-all hover:cursor-pointer flex items-center gap-2"
                         >
+                          <IconTrash size={18} />
                           Delete
                         </button>
                       </div>
