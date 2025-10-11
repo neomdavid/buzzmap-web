@@ -1723,7 +1723,7 @@ const DengueMapping = () => {
 
           <p className="text-sm text-gray-600 mb-4">
             {bulkConfirm.action === "resolve-all"
-              ? "The following reports will be selected for resolution. This will not call the API until you click Resolve Selected in the details view."
+              ? "The following reports will be selected for resolution. You can review and confirm the selection in the details view."
               : "The following reports will be marked for rejection. You can still confirm or cancel each afterwards."}
           </p>
 
