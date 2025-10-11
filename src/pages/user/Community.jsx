@@ -27,8 +27,8 @@ import React from "react";
 import { useNavigate } from "react-router-dom";
 import { useVoteSync } from "../../hooks/useLocalStorageVoting";
 
-const Newsfeed = () => {
-  // This file is a rename of Community.jsx to Newsfeed, logic preserved
+const Community = () => {
+  // This file was renamed from Newsfeed.jsx to Community.jsx, logic preserved
   const [showAside, setShowAside] = useState(false);
   const [city, setCity] = useState("");
   const [barangay, setBarangay] = useState("");
@@ -514,4 +514,4 @@ const Newsfeed = () => {
   );
 };
 
-export default Newsfeed;
+export default Community;

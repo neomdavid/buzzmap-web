@@ -1,5 +1,5 @@
 export { default as About } from "./About.jsx";
-export { default as Newsfeed } from "./Newsfeed.jsx";
+export { default as Community } from "./Community.jsx";
 export { default as Landing } from "./Landing.jsx";
 export { default as LandingLayout } from "./LandingLayout.jsx";
 export { default as Map } from "./Map.jsx";

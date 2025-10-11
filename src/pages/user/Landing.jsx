@@ -161,7 +161,7 @@ const Landing = () => {
         />
         <SecondaryButton
           text={"Report a Breeding Site"}
-          to="/newsfeed"
+          to="/community"
           className="w-md "
         />
         <SecondaryButton
@@ -298,7 +298,7 @@ const Landing = () => {
           </div>
         </div>
         <Link
-          to="/newsfeed"
+          to="/community"
           className="bg-gradient-to-b from-[#FADD37] to-[#F8A900] italic text-primary font-semibold px-6 py-3 rounded-xl hover:scale-105 transition-transform duration-300 active:opacity-70 hover:cursor-pointer text-lg"
         >
           Read more dengue reports <span className="font-extrabold">here</span>.

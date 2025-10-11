@@ -965,7 +965,7 @@ const SpecificLocation = () => {
         nearbyCount={filteredReports.length}
         nearbyReports={filteredReports}
         radius={1}
-        onViewCommunityClick={() => navigate("/newsfeed")}
+        onViewCommunityClick={() => navigate("/community")}
         onPreventionTipsClick={() => navigate("/buzzline")}
         onBarangaySelect={handleBarangaySelect}
         selectedBarangay={highlightedBarangay}

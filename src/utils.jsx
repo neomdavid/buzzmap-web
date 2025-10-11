@@ -2,7 +2,7 @@ import { toast } from "react-toastify";
 export const navLinks = [
   { name: "Home", to: "/home" },
   { name: "Map", to: "/map" },
-  { name: "Newsfeed", to: "/newsfeed" },
+  { name: "Community", to: "/community" },
   { name: "BuzzLine", to: "/buzzline" },
   { name: "About", to: "/about" },
 ];

@@ -21,7 +21,7 @@ import {
   Otp,
   ForgotPassword,
   Profile,
-  Newsfeed,
+  Community,
 } from "./pages/user";
 import { AdminLayout, CEA, Dashboard } from "./pages/admin";
 import {
@@ -204,7 +204,7 @@ const AppWithProviders = () => {
             />
           ),
         },
-        { path: "/newsfeed", element: <Newsfeed /> },
+        { path: "/community", element: <Community /> },
         { path: "/buzzline", element: <BuzzLine /> },
         { path: "/buzzline/updates", element: <Updates /> },
         { path: "/buzzline/articles", element: <Articles /> },
