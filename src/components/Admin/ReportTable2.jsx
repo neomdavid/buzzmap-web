@@ -518,7 +518,6 @@ function ReportTable2({
           columnDefs={columnDefs}
           defaultColDef={defaultColDef}
           theme={theme}
-          floatingFilter={false}
           suppressMovableColumns={true}
           suppressDragLeaveHidesColumns={true}
           suppressColumnVirtualisation={false}
@@ -539,7 +538,6 @@ function ReportTable2({
             handleUndo,
             actionLoading,
           }}
-          ariaLabel="Recent reports"
           ariaRowCount={rowData.length}
           ariaColCount={columnDefs.length}
         />

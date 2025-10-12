@@ -1,31 +1,68 @@
-import React, { useState } from 'react';
-import { useGetBarangaysQuery, useSendDengueAlertMutation, useGetPatternRecognitionResultsQuery } from '../api/dengueApi';
-import { AlertCircle, Plus, X } from 'phosphor-react';
+import React, { useState, useEffect } from "react";
+import {
+  useGetBarangaysQuery,
+  useSendDengueAlertMutation,
+  useGetPatternRecognitionResultsQuery,
+} from "../api/dengueApi";
+import { AlertCircle, Plus, X, Clock } from "phosphor-react";
 
-const FormDengueAlert = () => {
+const FormDengueAlert = ({ onSuccess }) => {
   const [selectedBarangays, setSelectedBarangays] = useState([]);
-  const [messages, setMessages] = useState(['']);
+  const [messages, setMessages] = useState([""]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+
+  // Cooldown state
+  const [cooldownTime, setCooldownTime] = useState(0);
+  const [isOnCooldown, setIsOnCooldown] = useState(false);
 
   const { data: barangays, isLoading } = useGetBarangaysQuery();
   const [sendAlert] = useSendDengueAlertMutation();
   const { data: patternResultsData } = useGetPatternRecognitionResultsQuery();
   const patternResults = patternResultsData?.data || [];
 
+  // Cooldown timer effect
+  useEffect(() => {
+    let interval;
+    if (cooldownTime > 0) {
+      interval = setInterval(() => {
+        setCooldownTime((prev) => {
+          if (prev <= 1) {
+            setIsOnCooldown(false);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [cooldownTime]);
+
   // Helper to extract barangay name without risk level
-  const getCleanBarangayName = (name) => name.replace(/\s*\(.*?\)\s*$/, '').trim();
+  const getCleanBarangayName = (name) =>
+    name.replace(/\s*\(.*?\)\s*$/, "").trim();
 
   // Helper to get pattern for a barangay
   const getPatternForBarangay = (barangayName) => {
-    if (!patternResults) return 'No pattern';
+    if (!patternResults) return "No pattern";
     const cleanName = getCleanBarangayName(barangayName);
     const match = patternResults.find(
-      (item) => item.name?.toLowerCase().replace(/barangay /g, '').trim() === cleanName.toLowerCase().replace(/barangay /g, '').trim()
+      (item) =>
+        item.name
+          ?.toLowerCase()
+          .replace(/barangay /g, "")
+          .trim() ===
+        cleanName
+          .toLowerCase()
+          .replace(/barangay /g, "")
+          .trim()
     );
     return match?.triggered_pattern
-      ? match.triggered_pattern.charAt(0).toUpperCase() + match.triggered_pattern.slice(1).replace('_', ' ')
-      : 'No pattern';
+      ? match.triggered_pattern.charAt(0).toUpperCase() +
+          match.triggered_pattern.slice(1).replace("_", " ")
+      : "No pattern";
   };
 
   const handleBarangayChange = (e) => {
@@ -46,7 +83,7 @@ const FormDengueAlert = () => {
   };
 
   const addMessage = () => {
-    setMessages([...messages, '']);
+    setMessages([...messages, ""]);
   };
 
   const removeMessage = (index) => {
@@ -56,23 +93,38 @@ const FormDengueAlert = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    // Check if on cooldown
+    if (isOnCooldown) {
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
       const alertData = {
         barangayIds: selectedBarangays,
-        messages: messages.filter(msg => msg.trim() !== ''),
+        messages: messages.filter((msg) => msg.trim() !== ""),
       };
 
       await sendAlert(alertData).unwrap();
       setShowSuccess(true);
       setSelectedBarangays([]);
-      setMessages(['']);
-      
+      setMessages([""]);
+
+      // Start cooldown timer (60 seconds)
+      setIsOnCooldown(true);
+      setCooldownTime(60);
+
       // Hide success message after 3 seconds
       setTimeout(() => setShowSuccess(false), 3000);
+
+      // Call onSuccess callback if provided
+      if (onSuccess) {
+        setTimeout(() => onSuccess(), 3000);
+      }
     } catch (error) {
-      console.error('Failed to send alert:', error);
+      console.error("Failed to send alert:", error);
     } finally {
       setIsSubmitting(false);
     }
@@ -101,8 +153,8 @@ const FormDengueAlert = () => {
               {barangays?.map((barangay) => {
                 const cleanName = getCleanBarangayName(barangay.name);
                 return (
-                  <option 
-                    key={barangay._id} 
+                  <option
+                    key={barangay._id}
                     value={barangay._id}
                     className="p-2 hover:bg-primary/10 cursor-pointer"
                   >
@@ -113,9 +165,9 @@ const FormDengueAlert = () => {
             </select>
             <div className="mt-2 flex flex-wrap gap-2">
               {selectedBarangays.map((barangayId) => {
-                const barangay = barangays?.find(b => b._id === barangayId);
+                const barangay = barangays?.find((b) => b._id === barangayId);
                 return barangay ? (
-                  <div 
+                  <div
                     key={barangayId}
                     className="bg-primary/10 text-primary px-3 py-1 rounded-full text-sm flex items-center gap-2"
                   >
@@ -123,8 +175,8 @@ const FormDengueAlert = () => {
                     <button
                       type="button"
                       onClick={() => {
-                        setSelectedBarangays(prev => 
-                          prev.filter(id => id !== barangayId)
+                        setSelectedBarangays((prev) =>
+                          prev.filter((id) => id !== barangayId)
                         );
                       }}
                       className="hover:text-error"
@@ -137,7 +189,8 @@ const FormDengueAlert = () => {
             </div>
           </div>
           <p className="text-sm text-gray-500 mt-1">
-            Hold Ctrl/Cmd to select multiple barangays or click to select/deselect
+            Hold Ctrl/Cmd to select multiple barangays or click to
+            select/deselect
           </p>
         </div>
 
@@ -176,17 +229,34 @@ const FormDengueAlert = () => {
           </button>
         </div>
 
+        {/* Cooldown Warning */}
+        {isOnCooldown && (
+          <div className="flex items-center gap-2 p-3 bg-warning/10 text-warning rounded-lg">
+            <Clock size={20} />
+            <span className="text-sm font-medium">
+              Please wait {cooldownTime} seconds before sending another alert to
+              prevent spam.
+            </span>
+          </div>
+        )}
+
         {/* Submit Button */}
         <button
           type="submit"
-          disabled={isSubmitting || selectedBarangays.length === 0}
+          disabled={
+            isSubmitting || selectedBarangays.length === 0 || isOnCooldown
+          }
           className={`w-full py-2 px-4 rounded-lg text-white font-medium transition-colors ${
-            isSubmitting || selectedBarangays.length === 0
-              ? 'bg-gray-400 cursor-not-allowed'
-              : 'bg-error hover:bg-error/80'
+            isSubmitting || selectedBarangays.length === 0 || isOnCooldown
+              ? "bg-gray-400 cursor-not-allowed"
+              : "bg-error hover:bg-error/80"
           }`}
         >
-          {isSubmitting ? 'Sending Alert...' : 'Send Alert'}
+          {isSubmitting
+            ? "Sending Alert..."
+            : isOnCooldown
+            ? `Cooldown: ${cooldownTime}s`
+            : "Send Alert"}
         </button>
 
         {/* Success Message */}
@@ -200,4 +270,4 @@ const FormDengueAlert = () => {
   );
 };
 
-export default FormDengueAlert; 
+export default FormDengueAlert;

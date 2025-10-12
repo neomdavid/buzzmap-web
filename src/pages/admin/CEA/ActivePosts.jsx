@@ -6,7 +6,7 @@ import {
   AdminPostsTable,
   AlertsTable,
 } from "../../../components";
-import { Plus, Info } from "phosphor-react";
+import { Plus, Info, Clock } from "phosphor-react";
 
 const TABS = [
   { id: "public", label: "Public Information Posts" },
@@ -20,6 +20,10 @@ const ActivePosts = () => {
   const dialogRef = useRef(null);
   const [showAlertGuide, setShowAlertGuide] = useState(false);
 
+  // Cooldown state
+  const [cooldownTime, setCooldownTime] = useState(0);
+  const [isOnCooldown, setIsOnCooldown] = useState(false);
+
   // Sync initial tab from query string (?tab=alerts|public)
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -29,7 +33,31 @@ const ActivePosts = () => {
     }
   }, [location.search]);
 
+  // Cooldown timer effect
+  useEffect(() => {
+    let interval;
+    if (cooldownTime > 0) {
+      interval = setInterval(() => {
+        setCooldownTime((prev) => {
+          if (prev <= 1) {
+            setIsOnCooldown(false);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [cooldownTime]);
+
   const openModal = (type) => {
+    // Check if on cooldown for alerts
+    if (type === "alerts" && isOnCooldown) {
+      return;
+    }
+
     setModalType(type);
     setTimeout(() => {
       dialogRef.current?.showModal();
@@ -39,6 +67,17 @@ const ActivePosts = () => {
   const closeModal = () => {
     dialogRef.current?.close();
     setModalType(null);
+  };
+
+  const handleAlertSuccess = () => {
+    // Close modal first
+    closeModal();
+
+    // Start cooldown timer (60 seconds) after a short delay
+    setTimeout(() => {
+      setIsOnCooldown(true);
+      setCooldownTime(60);
+    }, 100);
   };
 
   return (
@@ -81,13 +120,34 @@ const ActivePosts = () => {
           </button>
         ) : (
           <>
-            <button
-              className="flex gap-1 bg-error items-center rounded-2xl py-3 px-6 text-lg text-white font-semibold hover:cursor-pointer hover:bg-error-dark transition-all duration-200"
-              onClick={() => openModal("alerts")}
-            >
-              <Plus size={17} />
-              Send Dengue Alert
-            </button>
+            <div className="flex items-center gap-4">
+              <button
+                className={`flex gap-1 items-center rounded-2xl py-3 px-6 text-lg text-white font-semibold transition-all duration-200 ${
+                  isOnCooldown
+                    ? "bg-gray-400 cursor-not-allowed"
+                    : "bg-error hover:cursor-pointer hover:bg-error-dark"
+                }`}
+                onClick={() => openModal("alerts")}
+                disabled={isOnCooldown}
+              >
+                <Plus size={17} />
+                {isOnCooldown
+                  ? `Cooldown: ${cooldownTime}s`
+                  : "Send Dengue Alert"}
+              </button>
+
+              {/* Cooldown Warning - inline with button */}
+              {isOnCooldown && (
+                <div className="flex items-center gap-2 px-3 py-2 bg-blue-50 text-blue-700 rounded-lg border border-blue-200">
+                  <Clock size={16} />
+                  <span className="text-sm font-medium">
+                    Please wait {cooldownTime} seconds before sending another
+                    alert
+                  </span>
+                </div>
+              )}
+            </div>
+
             <button
               className="inline-flex items-center gap-1.5 text-sm link text-primary hover:text-accent underline"
               onClick={() => setShowAlertGuide(true)}
@@ -118,7 +178,9 @@ const ActivePosts = () => {
             ✕
           </button>
           {modalType === "public" && <FormPublicPost onSuccess={closeModal} />}
-          {modalType === "alerts" && <FormDengueAlert onSuccess={closeModal} />}
+          {modalType === "alerts" && (
+            <FormDengueAlert onSuccess={handleAlertSuccess} />
+          )}
         </div>
       </dialog>
       {showAlertGuide && (
