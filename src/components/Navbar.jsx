@@ -8,6 +8,7 @@ import { useSelector, useDispatch } from "react-redux";
 import { logout } from "../features/authSlice.js";
 import { toastSuccess } from "../utils.jsx";
 import { IconCaretDownFilled, IconUserCircle } from "@tabler/icons-react";
+import defaultProfile from "../assets/default_profile.png";
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -67,9 +68,7 @@ const Navbar = () => {
         onClick={() => navigate("/profile")}
       >
         <img
-          src={
-            user.profilePhotoUrl || "https://i.ibb.co/0VvffYVH/a1c820a6453b.png"
-          }
+          src={user.profilePhotoUrl || defaultProfile}
           alt="profile"
           className="w-10 h-10 rounded-full object-cover border-2 border-white"
         />
@@ -89,10 +88,7 @@ const Navbar = () => {
         <div className="p-6 flex flex-col gap-1">
           <div className="w-full flex justify-center mb-3">
             <img
-              src={
-                user.profilePhotoUrl ||
-                "https://i.ibb.co/0VvffYVH/a1c820a6453b.png"
-              }
+              src={user.profilePhotoUrl || defaultProfile}
               alt="profile"
               className="w-16 h-16 rounded-full object-cover border-2 border-white hover:cursor-pointer hover:opacity-80 transition-all duration-300"
               onClick={() => {

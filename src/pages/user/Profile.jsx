@@ -1,5 +1,5 @@
 import { Camera, PencilLine, PencilSimple } from "phosphor-react";
-import profile1 from "../../assets/profile1.png";
+import defaultProfile from "../../assets/default_profile.png";
 import profile_bg from "../../assets/profile_bg.png";
 import { PostCard } from "@/components";
 import { useEffect, useState, useRef } from "react";
@@ -266,7 +266,9 @@ function Profile() {
               {/* Debug logging */}
               <PostCard
                 postId={report._id}
-                profileImage={profileData?.account?.profilePhotoUrl || profile1}
+                profileImage={
+                  profileData?.account?.profilePhotoUrl || defaultProfile
+                }
                 username={profileData?.account?.username}
                 timestamp={new Date(report.date_and_time).toLocaleDateString(
                   "en-US",
@@ -375,7 +377,7 @@ function Profile() {
     <main className="text-primary flex flex-col lg:flex-row justify-start lg:justify-center gap-0 lg:gap-20 relative p-6 sm:p-8 pt-20 sm:pt-20 w-full">
       <MobileProfileHeader
         profileData={profileData}
-        fallbackPhoto={profile1}
+        fallbackPhoto={defaultProfile}
         onEditBio={handleEditBioClick}
         onOpenDetails={() => profileDetailsRef.current?.showModal()}
       />
@@ -386,7 +388,7 @@ function Profile() {
       <section className="hidden lg:flex flex-col lg:w-[30vw] max-w-xl shadow-lg gap-2 p-6 py-14 items-center rounded-t-2xl bg-white rounded-t-[35px] relative z-10 sticky top-24 h-fit max-h-[calc(100vh-6rem)] lg:overflow-y-auto lg:scrollbar-thin lg:scrollbar-thumb-primary sm:scrollbar-track-transparent pr-2">
         <div className="relative mb-4 ">
           <img
-            src={profileData?.account?.profilePhotoUrl || profile1}
+            src={profileData?.account?.profilePhotoUrl || defaultProfile}
             alt="profile"
             className="rounded-full w-59 h-59 bg-primary border-5 border-primary shadow-sm object-cover"
           />
@@ -516,7 +518,7 @@ function Profile() {
           <div className="flex justify-center mb-6">
             <div className="relative">
               <img
-                src={profileData?.account?.profilePhotoUrl || profile1}
+                src={profileData?.account?.profilePhotoUrl || defaultProfile}
                 alt="profile"
                 className="w-32 h-32 rounded-full object-cover border-4 border-primary"
               />
@@ -678,7 +680,9 @@ function Profile() {
             className="w-full hover:cursor-pointer"
           >
             <CustomInput
-              profileSrc={profileData?.account?.profilePhotoUrl || profile1}
+              profileSrc={
+                profileData?.account?.profilePhotoUrl || defaultProfile
+              }
               showImagePicker={true}
               className="hover:cursor-pointer"
               readOnly
@@ -692,7 +696,7 @@ function Profile() {
               fetchProfileData();
             }
           }}
-          profilePhoto={profileData?.account?.profilePhotoUrl || profile1}
+          profilePhoto={profileData?.account?.profilePhotoUrl || defaultProfile}
         />
         <div className="flex flex-col gap-8">
           <div>
@@ -750,7 +754,7 @@ function Profile() {
           <div className="flex flex-col gap-2 items-center">
             <div className="relative mb-4 ">
               <img
-                src={profileData?.account?.profilePhotoUrl || profile1}
+                src={profileData?.account?.profilePhotoUrl || defaultProfile}
                 alt="profile"
                 className="rounded-full w-40 h-40 bg-primary border-4 border-primary shadow-sm object-cover"
               />
