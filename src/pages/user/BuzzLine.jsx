@@ -44,7 +44,7 @@ const BuzzLine = () => {
 
       <section className="px-6 rounded-t-4xl sm:px-14 py-20 pt-24 w-full bg-primary flex flex-col text-white items-start z-10 gap-14 md:gap-23">
         <p className="font-bold italic text-4xl sm:text-5xl w-full text-center ">
-          Latest Dengue Surveillance Updates
+          Latest News
         </p>
         {/* THIS IS FOR DATA WITH CATEGORY OF NEWS SO USE UPDATECARD */}
         <div className="grid grid-cols-1 sm:grid-cols-2  lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-4 w-full gap-12">

@@ -25,13 +25,21 @@ const MapControls = ({
   setSelectedIntervention,
 }) => {
   const [showBreedingInfo, setShowBreedingInfo] = useState(false);
+  const [showStatusInfo, setShowStatusInfo] = useState(false);
   const breedingInfoRef = useRef(null);
+  const statusInfoRef = useRef(null);
 
   useEffect(() => {
     if (showBreedingInfo && breedingInfoRef.current) {
       breedingInfoRef.current.showModal?.();
     }
   }, [showBreedingInfo]);
+
+  useEffect(() => {
+    if (showStatusInfo && statusInfoRef.current) {
+      statusInfoRef.current.showModal?.();
+    }
+  }, [showStatusInfo]);
   return (
     <div className="absolute top-6 left-0 md:left-10 z-10 w-full md:w-auto flex justify-center md:block">
       {showControlPanel && (
@@ -161,9 +169,19 @@ const MapControls = ({
             <div className="flex flex-col gap-3">
               {/* Barangay Color Legend */}
               <div className="bg-white rounded-md shadow px-4 py-3 border border-gray-200">
-                <p className="text-sm font-medium text-gray-600 mb-2">
-                  Barangay Status Colors
-                </p>
+                <div className="flex items-center gap-2 mb-2">
+                  <p className="text-sm font-medium text-gray-600">
+                    Barangay Status Colors
+                  </p>
+                  <button
+                    type="button"
+                    className="text-gray-500 hover:text-primary"
+                    aria-label="What do these colors mean?"
+                    onClick={() => setShowStatusInfo(true)}
+                  >
+                    <IconInfoCircle size={16} />
+                  </button>
+                </div>
                 <div className="space-y-2">
                   <div className="flex items-center space-x-2">
                     <div
@@ -398,6 +416,75 @@ const MapControls = ({
                   <span className="font-semibold">Others:</span> Any
                   dengue-related concern not listed above (e.g., suspected
                   breeding areas, related hazards).
+                </p>
+              </div>
+            </div>
+          </div>
+        </dialog>
+      )}
+      {showStatusInfo && (
+        <dialog
+          ref={statusInfoRef}
+          className="modal"
+          onClick={(e) =>
+            e.target === e.currentTarget && setShowStatusInfo(false)
+          }
+        >
+          <div className="modal-box bg-white rounded-2xl shadow-2xl w-11/12 max-w-xl p-8 relative text-primary">
+            <button
+              className="absolute top-3 right-4 text-xl hover:text-gray-600 hover:cursor-pointer"
+              onClick={() => setShowStatusInfo(false)}
+              aria-label="Close"
+            >
+              ✕
+            </button>
+            <p className="text-2xl font-extrabold mb-6 tracking-wide">
+              DENGUE PATTERN RECOGNITION
+            </p>
+            <div className="flex flex-col gap-4 text-md leading-snug">
+              <div className="flex items-start gap-3">
+                <div
+                  className="w-6 h-6 rounded border-2 flex-shrink-0 mt-1"
+                  style={{
+                    backgroundColor: "#ea580c",
+                    borderColor: "#ea580c",
+                  }}
+                ></div>
+                <div>
+                  <p className="font-semibold text-lg">Increase</p>
+                  <p className="text-gray-600">Rising trend</p>
+                </div>
+              </div>
+              <div className="flex items-start gap-3">
+                <div
+                  className="w-6 h-6 rounded border-2 flex-shrink-0 mt-1"
+                  style={{
+                    backgroundColor: "#38a169",
+                    borderColor: "#38a169",
+                  }}
+                ></div>
+                <div>
+                  <p className="font-semibold text-lg">Decrease</p>
+                  <p className="text-gray-600">Decreasing trend</p>
+                </div>
+              </div>
+              <div className="flex items-start gap-3">
+                <div
+                  className="w-6 h-6 rounded border-2 flex-shrink-0 mt-1"
+                  style={{
+                    backgroundColor: "#718096",
+                    borderColor: "#718096",
+                  }}
+                ></div>
+                <div>
+                  <p className="font-semibold text-lg">No Change</p>
+                  <p className="text-gray-600">No change in trend</p>
+                </div>
+              </div>
+              <div className=" p-4 bg-gray-50 rounded-lg">
+                <p className="text-sm text-gray-700">
+                  Areas are color-coded based on dengue case patterns. Click on
+                  any area to see detailed information.
                 </p>
               </div>
             </div>
