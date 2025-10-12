@@ -164,7 +164,15 @@ const DengueMap = ({
         setMapLoaded(true);
       } catch (error) {
         console.error("[DengueMap] Error initializing map:", error);
-        setError("Failed to initialize map");
+        // Only set error if this is a genuine failure, not a race condition
+        // Check if the map element is still valid and Google Maps is loaded
+        if (
+          mapRef.current &&
+          document.contains(mapRef.current) &&
+          window.google?.maps?.Map
+        ) {
+          setError("Failed to initialize map");
+        }
       }
     }
 

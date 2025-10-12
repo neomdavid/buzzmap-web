@@ -12,7 +12,9 @@ export const useGoogleMaps = (apiKey, mapId, mapRef) => {
   const mapInstance = useRef(null);
   const isMountedRef = useRef(true);
   const retryCountRef = useRef(0);
-  const maxRetries = 100; // Maximum 10 seconds of retries (100 * 100ms)
+  const maxRetries = 50; // Reduced from 100 to 5 seconds (50 * 100ms)
+  const initializationTimeoutRef = useRef(null);
+  const lastSuccessfulInitRef = useRef(null);
 
   useEffect(() => {
     return () => {
@@ -23,16 +25,38 @@ export const useGoogleMaps = (apiKey, mapId, mapRef) => {
   const initializeMap = (options = {}) => {
     if (!isMountedRef.current) return;
 
+    // Clear any existing timeout
+    if (initializationTimeoutRef.current) {
+      clearTimeout(initializationTimeoutRef.current);
+      initializationTimeoutRef.current = null;
+    }
+
+    // Check if we recently had a successful initialization (within 2 seconds)
+    const now = Date.now();
+    if (
+      lastSuccessfulInitRef.current &&
+      now - lastSuccessfulInitRef.current < 2000
+    ) {
+      // If we recently had a successful init, don't retry immediately
+      return;
+    }
+
     // Check retry limit to prevent infinite loops
     if (retryCountRef.current >= maxRetries) {
-      setError("Failed to initialize map after maximum retries");
+      // Only set error if we haven't had a successful initialization recently
+      if (
+        !lastSuccessfulInitRef.current ||
+        now - lastSuccessfulInitRef.current > 5000
+      ) {
+        setError("Failed to initialize map after maximum retries");
+      }
       return;
     }
 
     // Ensure map ref is available and attached to DOM
     if (!mapRef.current || !document.contains(mapRef.current)) {
       retryCountRef.current++;
-      setTimeout(() => {
+      initializationTimeoutRef.current = setTimeout(() => {
         if (isMountedRef.current) {
           initializeMap(options);
         }
@@ -44,7 +68,7 @@ export const useGoogleMaps = (apiKey, mapId, mapRef) => {
     const rect = mapRef.current.getBoundingClientRect();
     if (rect.width === 0 || rect.height === 0) {
       retryCountRef.current++;
-      setTimeout(() => {
+      initializationTimeoutRef.current = setTimeout(() => {
         if (isMountedRef.current) {
           initializeMap(options);
         }
@@ -55,7 +79,7 @@ export const useGoogleMaps = (apiKey, mapId, mapRef) => {
     // Ensure Google Maps and marker library are fully loaded
     if (!window.google?.maps?.Map || !window.google?.maps?.marker) {
       retryCountRef.current++;
-      setTimeout(() => {
+      initializationTimeoutRef.current = setTimeout(() => {
         if (isMountedRef.current) {
           initializeMap(options);
         }
@@ -65,6 +89,7 @@ export const useGoogleMaps = (apiKey, mapId, mapRef) => {
 
     // Reset retry count on successful initialization
     retryCountRef.current = 0;
+    lastSuccessfulInitRef.current = now;
 
     // Only create map if not already created or invalid
     if (!mapInstance.current || !isValidMapInstance(mapInstance.current)) {
@@ -83,10 +108,16 @@ export const useGoogleMaps = (apiKey, mapId, mapRef) => {
         setTimeout(() => {
           if (isMountedRef.current) {
             setMapReady(true);
+            setError(null); // Clear any previous errors on successful initialization
           }
         }, 100);
       } catch (err) {
         if (isMountedRef.current) {
+          // Only set error if this is a genuine failure, not a race condition
+          console.warn(
+            "[useGoogleMaps] Map initialization attempt failed:",
+            err
+          );
           setError("Failed to initialize map");
         }
         return;
@@ -145,11 +176,21 @@ export const useGoogleMaps = (apiKey, mapId, mapRef) => {
   };
 
   const cleanup = () => {
+    // Clear any pending initialization timeout
+    if (initializationTimeoutRef.current) {
+      clearTimeout(initializationTimeoutRef.current);
+      initializationTimeoutRef.current = null;
+    }
+
     if (mapInstance.current) {
       cleanupMapInstance(mapInstance.current);
       mapInstance.current = null;
       setMapReady(false);
     }
+
+    // Reset retry count and error state
+    retryCountRef.current = 0;
+    setError(null);
   };
 
   useEffect(() => {

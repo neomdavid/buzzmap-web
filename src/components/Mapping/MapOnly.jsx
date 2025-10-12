@@ -106,6 +106,7 @@ const MapOnly = forwardRef(
     const isMountedRef = useRef(true);
     const infoWindowRef = useRef(null);
     const [error, setError] = useState(null);
+    const errorTimeoutRef = useRef(null);
     const [barangayData, setBarangayData] = useState(null);
     const [breedingSites, setBreedingSites] = useState([]);
     const [mapLoaded, setMapLoaded] = useState(false);
@@ -383,11 +384,28 @@ const MapOnly = forwardRef(
                 "tilesloaded",
                 () => {
                   setMapLoaded(true);
+                  // Clear any error when map loads successfully
+                  if (errorTimeoutRef.current) {
+                    clearTimeout(errorTimeoutRef.current);
+                  }
+                  setError(null);
                 }
               );
             } catch (err) {
               if (isMountedRef.current) {
-                setError("Failed to initialize map");
+                console.warn(
+                  "[MapOnly] Map initialization attempt failed:",
+                  err
+                );
+                // Only set error if this is a genuine failure, not a race condition
+                // Check if the map element is still valid
+                if (mapRef.current && document.contains(mapRef.current)) {
+                  setError("Failed to initialize map");
+                  // Auto-dismiss error after 5 seconds
+                  errorTimeoutRef.current = setTimeout(() => {
+                    setError(null);
+                  }, 5000);
+                }
               }
               return;
             }
@@ -397,6 +415,11 @@ const MapOnly = forwardRef(
               "tilesloaded",
               () => {
                 setMapLoaded(true);
+                // Clear any error when map loads successfully
+                if (errorTimeoutRef.current) {
+                  clearTimeout(errorTimeoutRef.current);
+                }
+                setError(null);
               }
             );
           }
@@ -766,7 +789,9 @@ const MapOnly = forwardRef(
                               ? window.location.pathname
                               : "";
                           const derived =
-                            path.indexOf("/admin") > -1 ? "/admin/mapping" : "/mapping";
+                            path.indexOf("/admin") > -1
+                              ? "/admin/mapping"
+                              : "/mapping";
                           const finalBase =
                             effectiveBaseUrl.current &&
                             typeof effectiveBaseUrl.current === "string" &&
@@ -791,7 +816,12 @@ const MapOnly = forwardRef(
                             "[MapOnly] Navigate click error (listener)",
                             e
                           );
-                          window.location.href = `/map/${site._id}`;
+                          // Use the same derived logic for fallback to ensure admin routes work
+                          const fallbackBase =
+                            path.indexOf("/admin") > -1
+                              ? "/admin/mapping"
+                              : "/mapping";
+                          window.location.href = `${fallbackBase}/${site._id}`;
                         }
                       });
                     }
@@ -1289,7 +1319,16 @@ const MapOnly = forwardRef(
           id="map-only"
         />
         {error && (
-          <ErrorMessage error={error} className="absolute top-2 left-2 z-20" />
+          <ErrorMessage
+            error={error}
+            className="absolute top-2 left-2 z-20"
+            onDismiss={() => {
+              if (errorTimeoutRef.current) {
+                clearTimeout(errorTimeoutRef.current);
+              }
+              setError(null);
+            }}
+          />
         )}
       </div>
     );

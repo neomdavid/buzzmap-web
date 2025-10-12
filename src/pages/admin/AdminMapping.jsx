@@ -10,6 +10,7 @@ import {
   useGetPostByIdQuery,
   useGetBasicProfilesQuery,
   useGetBarangaysQuery,
+  useGetGroupedReportsQuery,
 } from "../../api/dengueApi";
 import { skipToken } from "@reduxjs/toolkit/query";
 import { useGoogleMaps } from "../../components/GoogleMapsProvider";
@@ -229,23 +230,8 @@ const AdminMapping = () => {
   // Use the fetched report
   const report = fetchedReport?.data || fetchedReport;
 
-  // Grouped reports (individual + clusters)
-  const [groupedReportsData, setGroupedReportsData] = useState(null);
-  useEffect(() => {
-    async function fetchGrouped() {
-      try {
-        const res = await fetch(
-          "https://buzzmap-backend.onrender.com/api/v1/reports/grouped"
-        );
-        const json = await res.json();
-        setGroupedReportsData(json || null);
-      } catch (e) {
-        console.error("[AdminMapping] Failed to fetch grouped reports", e);
-        setGroupedReportsData(null);
-      }
-    }
-    fetchGrouped();
-  }, []);
+  // Get grouped reports using the proper API hook
+  const { data: groupedReportsData } = useGetGroupedReportsQuery();
 
   // When switching to a different report, default-highlight its barangay
   useEffect(() => {
@@ -664,7 +650,7 @@ const AdminMapping = () => {
           <span className="hidden md:inline">Analytics</span>
         </button>
         <button
-          onClick={() => navigate("/admin/map")}
+          onClick={() => navigate("/admin/mapping")}
           className="flex items-center cursor-pointer gap-1.5 px-3 py-2 rounded-xl hover:bg-white/10 transition"
           title="Mapping"
         >
