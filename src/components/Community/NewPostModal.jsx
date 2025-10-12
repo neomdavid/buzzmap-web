@@ -230,14 +230,40 @@ const NewPostModal = forwardRef(
 
     const setNow = () => {
       const now = new Date();
-      setDate(now.toISOString().split("T")[0]);
-      setTime(now.toTimeString().slice(0, 5));
+      // Use local date methods to avoid timezone issues
+      const year = now.getFullYear();
+      const month = String(now.getMonth() + 1).padStart(2, "0");
+      const day = String(now.getDate()).padStart(2, "0");
+      const hours = String(now.getHours()).padStart(2, "0");
+      const minutes = String(now.getMinutes()).padStart(2, "0");
+
+      setDate(`${year}-${month}-${day}`);
+      setTime(`${hours}:${minutes}`);
     };
 
-    const getTodayString = () => new Date().toISOString().split("T")[0];
-    const getYesterdayString = () =>
-      new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().split("T")[0];
-    const getCurrentHHMM = () => new Date().toTimeString().slice(0, 5);
+    const getTodayString = () => {
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = String(now.getMonth() + 1).padStart(2, "0");
+      const day = String(now.getDate()).padStart(2, "0");
+      return `${year}-${month}-${day}`;
+    };
+
+    const getYesterdayString = () => {
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+      const year = yesterday.getFullYear();
+      const month = String(yesterday.getMonth() + 1).padStart(2, "0");
+      const day = String(yesterday.getDate()).padStart(2, "0");
+      return `${year}-${month}-${day}`;
+    };
+
+    const getCurrentHHMM = () => {
+      const now = new Date();
+      const hours = String(now.getHours()).padStart(2, "0");
+      const minutes = String(now.getMinutes()).padStart(2, "0");
+      return `${hours}:${minutes}`;
+    };
 
     const handleLocationSelect = (coords, barangayName) => {
       setLocationError("");
@@ -543,8 +569,8 @@ const NewPostModal = forwardRef(
                             }
                           }}
                           max={
-                            date === new Date().toISOString().split("T")[0]
-                              ? new Date().toTimeString().slice(0, 5)
+                            date === getTodayString()
+                              ? getCurrentHHMM()
                               : undefined
                           }
                         />
