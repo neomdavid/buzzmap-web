@@ -7,6 +7,7 @@ import { DotsThree, PaperPlaneRight, ArrowLeft } from "phosphor-react";
 import ImageGrid from "./ImageGrid";
 import ReactionsTab from "./ReactionsTab";
 import Comment2 from "./Comment2";
+import ImageExpansionModal from "../ImageExpansionModal";
 import { useSelector } from "react-redux";
 import {
   useGetAdminPostCommentsQuery,
@@ -23,6 +24,21 @@ import { formatDistanceToNow } from "date-fns";
 const AnnouncementCard = ({ announcement }) => {
   const [comment, setComment] = useState("");
   const userFromStore = useSelector((state) => state.auth?.user);
+
+  // Image expansion modal state
+  const [showImageModal, setShowImageModal] = useState(false);
+  const [selectedImage, setSelectedImage] = useState(null);
+
+  // Image expansion modal handlers
+  const handleImageClick = (image) => {
+    setSelectedImage(image);
+    setShowImageModal(true);
+  };
+
+  const handleCloseImageModal = () => {
+    setShowImageModal(false);
+    setSelectedImage(null);
+  };
 
   // Use the admin post comments endpoint
   const {
@@ -167,6 +183,7 @@ const AnnouncementCard = ({ announcement }) => {
               <ImageGrid
                 images={images}
                 sourceType={announcement?.images ? "url" : "import"}
+                onImageClick={handleImageClick}
               />
             </div>
           )}
@@ -277,6 +294,13 @@ const AnnouncementCard = ({ announcement }) => {
           </div>
         </div>
       </section>
+
+      {/* Image Expansion Modal */}
+      <ImageExpansionModal
+        isOpen={showImageModal}
+        onClose={handleCloseImageModal}
+        image={selectedImage}
+      />
     </div>
   );
 };

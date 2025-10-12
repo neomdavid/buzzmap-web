@@ -106,7 +106,10 @@ const FormPublicPost = ({ onSuccess }) => {
       const formData = new FormData();
       formData.append("title", postTitle.trim());
       formData.append("content", postContent.trim());
-      formData.append("publishDate", `${postDate}T${postTime}:00Z`);
+      formData.append(
+        "publishDate",
+        new Date(`${postDate}T${postTime}`).toISOString()
+      );
       formData.append("category", postType);
       images.forEach((img) => formData.append("images", img));
 
@@ -126,7 +129,7 @@ const FormPublicPost = ({ onSuccess }) => {
             <p className="text-[12px] text-gray-700">Category: {postType}</p>
             <p className="text-[12px] text-gray-700">Title: {postTitle}</p>
             <p className="text-[12px] text-gray-700">
-              When: {postDate} {postTime}
+              When: {formatDisplayDateTime(postDate, postTime)}
             </p>
           </div>
         </div>,
