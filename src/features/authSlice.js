@@ -14,6 +14,16 @@ const getInitialAuthState = () => {
   const refreshToken = refreshFromLocal || refreshFromSession || null;
   const isAuthenticated = !!(token && user);
 
+  console.log("[AUTH DEBUG] Initial auth state:", {
+    userFromLocal,
+    userFromSession,
+    tokenFromLocal,
+    tokenFromSession,
+    user,
+    token,
+    isAuthenticated,
+  });
+
   return { user, token, refreshToken, isAuthenticated };
 };
 
@@ -25,6 +35,13 @@ const authSlice = createSlice({
   reducers: {
     setAuthCredentials: (state, action) => {
       const { user, token, refreshToken, rememberMe } = action.payload;
+
+      console.log("[AUTH DEBUG] Setting auth credentials:", {
+        user: user?.name,
+        role: user?.role,
+        rememberMe,
+        hasToken: !!token,
+      });
 
       // Update Redux state
       state.user = user;
@@ -45,10 +62,12 @@ const authSlice = createSlice({
         localStorage.setItem("token", token);
         if (refreshToken) localStorage.setItem("refreshToken", refreshToken);
         localStorage.setItem("user", JSON.stringify(user));
+        console.log("[AUTH DEBUG] Stored in localStorage");
       } else {
         sessionStorage.setItem("token", token);
         if (refreshToken) sessionStorage.setItem("refreshToken", refreshToken);
         sessionStorage.setItem("user", JSON.stringify(user));
+        console.log("[AUTH DEBUG] Stored in sessionStorage");
       }
 
       // Verify storage was successful
@@ -58,6 +77,13 @@ const authSlice = createSlice({
       const storedTokenSession = sessionStorage.getItem("token");
       const storedRefreshLocal = localStorage.getItem("refreshToken");
       const storedRefreshSession = sessionStorage.getItem("refreshToken");
+
+      console.log("[AUTH DEBUG] Storage verification:", {
+        storedUserLocal: !!storedUserLocal,
+        storedTokenLocal: !!storedTokenLocal,
+        storedUserSession: !!storedUserSession,
+        storedTokenSession: !!storedTokenSession,
+      });
     },
     logout: (state) => {
       state.user = null;

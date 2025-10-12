@@ -129,10 +129,54 @@ const PrivateRoute = ({ children, requiredRole }) => {
     return <AuthGuard requiredRole={requiredRole}>{children}</AuthGuard>;
   }
 
-  // For user role, just verify user exists and role matches
-  if (requiredRole === "user" && user.role !== "user") {
-    toastError("You don't have permission to access this page.");
-    return <Navigate to="/login" replace />;
+  // For user role, verify user exists, role matches, and token is valid
+  if (requiredRole === "user") {
+    if (user.role !== "user") {
+      toastError("You don't have permission to access this page.");
+      return <Navigate to="/login" replace />;
+    }
+
+    // Verify token exists and is valid
+    if (!token) {
+      toastError("Please log in to access this page.");
+      return <Navigate to="/login" replace />;
+    }
+
+    try {
+      // Decode the JWT token to get the role and expiration
+      const tokenPayload = JSON.parse(atob(token.split(".")[1]));
+
+      // Check if token is expired
+      const currentTime = Math.floor(Date.now() / 1000);
+      if (tokenPayload.exp < currentTime) {
+        // Clear auth data from both storage types
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
+        sessionStorage.removeItem("token");
+        sessionStorage.removeItem("user");
+        toastError("Your session has expired. Please log in again.");
+        return <Navigate to="/login" replace />;
+      }
+
+      // Verify token role matches user role
+      if (tokenPayload.role !== user.role) {
+        // Clear auth data from both storage types
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
+        sessionStorage.removeItem("token");
+        sessionStorage.removeItem("user");
+        toastError("Invalid session. Please log in again.");
+        return <Navigate to="/login" replace />;
+      }
+    } catch (error) {
+      // Clear auth data from both storage types
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+      sessionStorage.removeItem("token");
+      sessionStorage.removeItem("user");
+      toastError("Invalid session. Please log in again.");
+      return <Navigate to="/login" replace />;
+    }
   }
 
   // If we get here, the user is authenticated and has the correct role

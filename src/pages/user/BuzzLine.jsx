@@ -105,7 +105,9 @@ const BuzzLine = () => {
       </section>
       <section className="text-primary flex flex-col font-normal gap-14 md:gap-23 w-full px-6 sm:px-14 py-20 ">
         <p className="text-primary text-4xl sm:text-5xl font-bold italic">
-          #QCESDhelps
+          Prevention Tips
+          <br />
+          <span className="text-2xl font-normal ">#QCESDhelps</span>
         </p>
         <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-10 text-white">
           {/* THIS IS FOR DATA WITH CATEGORY OF TIP SO CREATE A CARD FOR IT  */}
