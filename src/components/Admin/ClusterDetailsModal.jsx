@@ -220,6 +220,84 @@ const ClusterDetailsModal = ({
   const clusterId = clusterData._id || clusterData.id;
   const severity = clusterData.severity || "medium";
 
+  // Debug: Log the actual date values to see what we're working with
+  console.log("ClusterDetailsModal - Debug date values:", {
+    dateRange,
+    start_date: dateRange.start_date,
+    end_date: dateRange.end_date,
+    clusterData: clusterData,
+    selectedCluster: selectedCluster,
+  });
+
+  // Debug: Log individual report dates
+  console.log(
+    "ClusterDetailsModal - Individual report dates:",
+    reports.map((r) => ({
+      id: r._id || r.id,
+      date_and_time: r.date_and_time,
+      date: r.date,
+      createdAt: r.createdAt,
+      updatedAt: r.updatedAt,
+      allDateFields: Object.keys(r).filter((key) =>
+        key.toLowerCase().includes("date")
+      ),
+    }))
+  );
+
+  // Alternative: Calculate date range from individual reports if date_range is not reliable
+  const calculateDateRangeFromReports = () => {
+    if (!reports || reports.length === 0)
+      return { start_date: null, end_date: null };
+
+    // Helper function to parse date strings more reliably (same as formatDateRange)
+    const parseDate = (dateString) => {
+      if (!dateString) return null;
+
+      // Handle the specific format "10/3/2025, 8:30:01 AM"
+      if (typeof dateString === "string" && dateString.includes(",")) {
+        // Split by comma to separate date and time
+        const [datePart, timePart] = dateString.split(",");
+        if (datePart && timePart) {
+          // Parse the date part (M/D/YYYY format)
+          const [month, day, year] = datePart.trim().split("/");
+          if (month && day && year) {
+            // Create date with explicit month/day/year (month is 0-indexed)
+            return new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+          }
+        }
+      }
+
+      // Fallback to standard Date parsing
+      return new Date(dateString);
+    };
+
+    const dates = reports
+      .map((r) => r.date_and_time || r.date)
+      .filter(Boolean)
+      .map((d) => parseDate(d))
+      .filter((d) => d && !isNaN(d.getTime()));
+
+    if (dates.length === 0) return { start_date: null, end_date: null };
+
+    const minDate = new Date(Math.min(...dates));
+    const maxDate = new Date(Math.max(...dates));
+
+    console.log("ClusterDetailsModal - Calculated date range from reports:", {
+      minDate: minDate.toISOString(),
+      maxDate: maxDate.toISOString(),
+      minDateFormatted: minDate.toLocaleDateString(),
+      maxDateFormatted: maxDate.toLocaleDateString(),
+    });
+
+    return {
+      start_date: minDate.toISOString(),
+      end_date: maxDate.toISOString(),
+    };
+  };
+
+  // Use calculated date range instead of potentially unreliable API date_range
+  const finalDateRange = calculateDateRangeFromReports();
+
   // Check if cluster is resolved (no unprocessed reports)
   const breakdown = clusterData.breakdown || {};
   const totalReportsCount = Array.isArray(reports) ? reports.length : 0;
@@ -299,8 +377,11 @@ const ClusterDetailsModal = ({
               </p>
               <p className="text-sm text-gray-600">
                 {effectiveReports.length} reports •{" "}
-                {dateRange.start_date && dateRange.end_date
-                  ? formatDateRange(dateRange.start_date, dateRange.end_date)
+                {finalDateRange.start_date && finalDateRange.end_date
+                  ? formatDateRange(
+                      finalDateRange.start_date,
+                      finalDateRange.end_date
+                    )
                   : "Date range unavailable"}
               </p>
             </div>
@@ -829,10 +910,10 @@ const ClusterDetailsModal = ({
                   <div className="flex justify-between">
                     <span className="text-gray-600">Active Period:</span>
                     <span className="font-semibold">
-                      {dateRange.start_date && dateRange.end_date
+                      {finalDateRange.start_date && finalDateRange.end_date
                         ? formatDateRange(
-                            dateRange.start_date,
-                            dateRange.end_date
+                            finalDateRange.start_date,
+                            finalDateRange.end_date
                           )
                         : "Date range unavailable"}
                     </span>

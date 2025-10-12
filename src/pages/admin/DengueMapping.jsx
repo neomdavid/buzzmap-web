@@ -346,9 +346,40 @@ const DengueMapping = () => {
   };
 
   const formatDateRange = (earliestDate, latestDate) => {
-    const earliest = new Date(earliestDate);
-    const latest = new Date(latestDate);
-    const now = new Date();
+    // Helper function to parse date strings more reliably
+    const parseDate = (dateString) => {
+      if (!dateString) return null;
+
+      // Handle the specific format "10/3/2025, 8:30:01 AM"
+      if (typeof dateString === "string" && dateString.includes(",")) {
+        // Split by comma to separate date and time
+        const [datePart, timePart] = dateString.split(",");
+        if (datePart && timePart) {
+          // Parse the date part (M/D/YYYY format)
+          const [month, day, year] = datePart.trim().split("/");
+          if (month && day && year) {
+            // Create date with explicit month/day/year (month is 0-indexed)
+            return new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+          }
+        }
+      }
+
+      // Fallback to standard Date parsing
+      return new Date(dateString);
+    };
+
+    const earliest = parseDate(earliestDate);
+    const latest = parseDate(latestDate);
+
+    // Check if dates are valid
+    if (
+      !earliest ||
+      !latest ||
+      isNaN(earliest.getTime()) ||
+      isNaN(latest.getTime())
+    ) {
+      return "Date range unavailable";
+    }
 
     // If same day, show just the date
     if (earliest.toDateString() === latest.toDateString()) {

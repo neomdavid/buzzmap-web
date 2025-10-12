@@ -207,9 +207,34 @@ const ReportsVerification = () => {
   // Utilities placed before usage to avoid temporal dead zone
   const formatDateRangeTop = (start, end) => {
     if (!start || !end) return "-";
-    const s = new Date(start);
-    const e = new Date(end);
-    if (isNaN(s) || isNaN(e)) return "-";
+
+    // Helper function to parse date strings more reliably
+    const parseDate = (dateString) => {
+      if (!dateString) return null;
+
+      // Handle the specific format "10/3/2025, 8:30:01 AM"
+      if (typeof dateString === "string" && dateString.includes(",")) {
+        // Split by comma to separate date and time
+        const [datePart, timePart] = dateString.split(",");
+        if (datePart && timePart) {
+          // Parse the date part (M/D/YYYY format)
+          const [month, day, year] = datePart.trim().split("/");
+          if (month && day && year) {
+            // Create date with explicit month/day/year (month is 0-indexed)
+            return new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+          }
+        }
+      }
+
+      // Fallback to standard Date parsing
+      return new Date(dateString);
+    };
+
+    const s = parseDate(start);
+    const e = parseDate(end);
+
+    if (!s || isNaN(s.getTime()) || !e || isNaN(e.getTime())) return "-";
+
     if (s.toDateString() === e.toDateString())
       return s.toLocaleDateString("en-US", { month: "short", day: "numeric" });
     if (s.getFullYear() === e.getFullYear() && s.getMonth() === e.getMonth())
@@ -381,9 +406,34 @@ const ReportsVerification = () => {
 
   const formatDateRange = (start, end) => {
     if (!start || !end) return "-";
-    const s = new Date(start);
-    const e = new Date(end);
-    if (isNaN(s) || isNaN(e)) return "-";
+
+    // Helper function to parse date strings more reliably
+    const parseDate = (dateString) => {
+      if (!dateString) return null;
+
+      // Handle the specific format "10/3/2025, 8:30:01 AM"
+      if (typeof dateString === "string" && dateString.includes(",")) {
+        // Split by comma to separate date and time
+        const [datePart, timePart] = dateString.split(",");
+        if (datePart && timePart) {
+          // Parse the date part (M/D/YYYY format)
+          const [month, day, year] = datePart.trim().split("/");
+          if (month && day && year) {
+            // Create date with explicit month/day/year (month is 0-indexed)
+            return new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+          }
+        }
+      }
+
+      // Fallback to standard Date parsing
+      return new Date(dateString);
+    };
+
+    const s = parseDate(start);
+    const e = parseDate(end);
+
+    if (!s || isNaN(s.getTime()) || !e || isNaN(e.getTime())) return "-";
+
     if (s.toDateString() === e.toDateString())
       return s.toLocaleDateString("en-US", { month: "short", day: "numeric" });
     if (s.getFullYear() === e.getFullYear() && s.getMonth() === e.getMonth())

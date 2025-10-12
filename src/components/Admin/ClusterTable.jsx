@@ -42,22 +42,44 @@ const ClusterActionsCell = (params) => (
 );
 
 const formatDateRange = (start, end, fallbackReports) => {
-  let s = start ? new Date(start) : null;
-  let e = end ? new Date(end) : null;
-  if (!s || isNaN(s) || !e || isNaN(e)) {
+  // Helper function to parse date strings more reliably
+  const parseDate = (dateString) => {
+    if (!dateString) return null;
+
+    // Handle the specific format "10/3/2025, 8:30:01 AM"
+    if (typeof dateString === "string" && dateString.includes(",")) {
+      // Split by comma to separate date and time
+      const [datePart, timePart] = dateString.split(",");
+      if (datePart && timePart) {
+        // Parse the date part (M/D/YYYY format)
+        const [month, day, year] = datePart.trim().split("/");
+        if (month && day && year) {
+          // Create date with explicit month/day/year (month is 0-indexed)
+          return new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+        }
+      }
+    }
+
+    // Fallback to standard Date parsing
+    return new Date(dateString);
+  };
+
+  let s = start ? parseDate(start) : null;
+  let e = end ? parseDate(end) : null;
+  if (!s || isNaN(s.getTime()) || !e || isNaN(e.getTime())) {
     const dates = Array.isArray(fallbackReports)
       ? fallbackReports
           .map((r) => r?.date_and_time || r?.date)
           .filter(Boolean)
-          .map((d) => new Date(d))
-          .filter((d) => !isNaN(d))
+          .map((d) => parseDate(d))
+          .filter((d) => d && !isNaN(d.getTime()))
       : [];
     if (dates.length > 0) {
       s = new Date(Math.min(...dates));
       e = new Date(Math.max(...dates));
     }
   }
-  if (!s || !e || isNaN(s) || isNaN(e)) return "-";
+  if (!s || !e || isNaN(s.getTime()) || isNaN(e.getTime())) return "-";
   if (s.toDateString() === e.toDateString())
     return s.toLocaleDateString("en-US", { month: "short", day: "numeric" });
   if (s.getFullYear() === e.getFullYear() && s.getMonth() === e.getMonth())
