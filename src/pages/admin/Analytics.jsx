@@ -96,6 +96,32 @@ const Analytics = () => {
   const { data: barangaysList, isLoading: isLoadingBarangays } =
     useGetAdminBarangaysQuery();
 
+  // Filter interventions to exclude archived ones (same logic as Admin DengueMapping)
+  const activeInterventions = useMemo(() => {
+    if (!allInterventionsData) return [];
+
+    const now = Date.now();
+    const THIRTY_DAYS = 30 * 24 * 60 * 60 * 1000;
+    const filtered = allInterventionsData.filter((intervention) => {
+      const status = (intervention.status || "").toLowerCase();
+      if (status === "ongoing" || status === "scheduled") return true;
+      if (status === "completed" || status === "complete") {
+        const d = new Date(
+          intervention.date ||
+            intervention.date_and_time ||
+            intervention.updatedAt ||
+            intervention.createdAt ||
+            0
+        );
+        return !isNaN(d.getTime()) && now - d.getTime() <= THIRTY_DAYS;
+      }
+      return false;
+    });
+
+    const sorted = filtered.sort((a, b) => new Date(b.date) - new Date(a.date));
+    return sorted;
+  }, [allInterventionsData]);
+
   // Count barangays for the currently selected pattern tab
   const selectedTabCount = useMemo(() => {
     const items = patternResultsData?.data || [];
@@ -696,7 +722,7 @@ const Analytics = () => {
                 initialFocusBarangayName={initialBarangayNameForMap}
                 searchQuery={searchBarangay}
                 selectedBarangay={mapSelectedBarangay}
-                activeInterventions={allInterventionsData}
+                activeInterventions={activeInterventions}
                 isLoadingInterventions={isLoadingAllInterventions}
                 barangaysList={barangaysList}
                 onBarangaySelect={handleMapBarangaySelect}
