@@ -247,18 +247,19 @@ function AdminsTable({ statusFilter, roleFilter, searchQuery }) {
 
   // Cooldown timer for resend OTP in verify modal
   useEffect(() => {
-    if (!showVerifyModal) return;
+    if (!showVerifyModal || verifyResendCooldown <= 0) return;
+
     const intervalId = setInterval(() => {
       setVerifyResendCooldown((prev) => {
         if (prev <= 1) {
-          clearInterval(intervalId);
           return 0;
         }
         return prev - 1;
       });
     }, 1000);
+
     return () => clearInterval(intervalId);
-  }, [showVerifyModal]);
+  }, [showVerifyModal, verifyResendCooldown]);
 
   const handleStatusConfirm = async () => {
     if (!superAdminPassword.trim()) {

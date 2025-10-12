@@ -23,7 +23,8 @@ function SprAdmins() {
     confirmPassword: "",
   });
   const [otp, setOtp] = useState("");
-  const [resendCooldown, setResendCooldown] = useState(60);
+  const [resendCooldown, setResendCooldown] = useState(0);
+  const [timerActive, setTimerActive] = useState(false);
   const [superAdminAuth, setSuperAdminAuth] = useState({
     password: "",
   });
@@ -204,6 +205,8 @@ function SprAdmins() {
         "Admin account created successfully. Please check your email for verification."
       );
       setCurrentStep(3);
+      setResendCooldown(0);
+      setTimerActive(false);
     } catch (error) {
       console.error("[DEBUG] Admin creation failed:", {
         errorStatus: error?.status,
@@ -259,7 +262,14 @@ function SprAdmins() {
         "Verification OTP resent. Please check the inbox/spam of " +
           formData.email
       );
-      setResendCooldown(60);
+      // Reset timer states first
+      setTimerActive(false);
+      setResendCooldown(0);
+      // Use setTimeout to ensure state updates are processed
+      setTimeout(() => {
+        setResendCooldown(60);
+        setTimerActive(true);
+      }, 100);
     } catch (error) {
       toastError(error?.data?.message || "Failed to resend OTP");
     }
@@ -267,20 +277,26 @@ function SprAdmins() {
 
   // Cooldown timer for resend OTP on step 3
   useEffect(() => {
-    if (isModalOpen && currentStep === 3) {
-      setResendCooldown((prev) => (prev > 0 ? prev : 60));
-      const intervalId = setInterval(() => {
+    let intervalId;
+
+    if (timerActive) {
+      intervalId = setInterval(() => {
         setResendCooldown((prev) => {
           if (prev <= 1) {
-            clearInterval(intervalId);
+            setTimerActive(false);
             return 0;
           }
           return prev - 1;
         });
       }, 1000);
-      return () => clearInterval(intervalId);
     }
-  }, [isModalOpen, currentStep]);
+
+    return () => {
+      if (intervalId) {
+        clearInterval(intervalId);
+      }
+    };
+  }, [timerActive]);
 
   const isFormValid =
     Object.values(errors).every((error) => !error) &&
@@ -304,6 +320,8 @@ function SprAdmins() {
     setErrors({});
     setAuthError("");
     setIsSubmitting(false);
+    setResendCooldown(0);
+    setTimerActive(false);
   };
 
   return (
