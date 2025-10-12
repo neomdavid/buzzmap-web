@@ -19,7 +19,7 @@ const About = () => {
         <section className="text-white pl-6 pr-6 py-8  sm:p-12 font-light ">
           {/* QCESD Partnership Card - At the top */}
           <div className="bg-white/10 rounded-2xl p-6 shadow-lg border border-white/30 w-full sm:w-[80%] mx-auto">
-            <div className="flex justify-center  md:items-center gap-4 mb-6">
+            <div className="flex justify-center  md:items-center gap-4 ">
               <img
                 src={quezonSurveillance}
                 className="w-12 h-12 md:w-15 md:h-15 flex-shrink-0 object-contain"
@@ -37,13 +37,6 @@ const About = () => {
                 </p>
               </div>
             </div>
-
-            <p className="text-white/90 text-md text-center leading-relaxed">
-              Dedicated to protecting public health through disease
-              surveillance, outbreak investigation, and health promotion.
-              Working to prevent and control the spread of diseases, including
-              dengue, through community education and rapid response.
-            </p>
           </div>
 
           <div className="text-center pt-12">
@@ -82,15 +75,6 @@ const About = () => {
                   To be the leading community-driven dengue prevention platform,
                   harnessing technology and collective action to create a safer,
                   healthier, and dengue-free future for all.
-                </p>
-              </div>
-              <div className="flex flex-col">
-                <p className="text-2xl font-bold">Team iTech</p>
-                <p className="text-xl mb-2">Developers</p>
-                <p>
-                  {" "}
-                  College of Computing and Information Technology <br />
-                  National University - Manila
                 </p>
               </div>
             </div>
