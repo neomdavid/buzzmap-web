@@ -1,13 +1,13 @@
 import React, { useRef, useEffect } from "react";
 import { IconX, IconQrcode } from "@tabler/icons-react";
-import mobileQr from "../assets/mobile_qr.svg";
+import mobileQr from "../assets/mobile_qr.png";
 
 const InstallAppModal = ({ isOpen, onClose }) => {
   const modalRef = useRef(null);
 
   // App download URL (Google Drive)
   const apkDownloadUrl =
-    "https://drive.google.com/file/d/1PIgeQ5z2-xG7NNKlhXhK_HdT1qmmdgaE/view";
+    "https://drive.google.com/file/d/17qeWMdWSrnpyVHm2K5MHos50xCjScIbP/view?fbclid=IwY2xjawNYvPdleHRuA2FlbQIxMQABHjAFb63EOrqjho65H6Lv7GmHAiBGJ0odFRC1r1TOggTejo7uY8kaV6O6fxjV_aem_jPLz_kNT-GBfufb3B-ZP0A";
 
   useEffect(() => {
     if (modalRef.current) {
@@ -59,18 +59,23 @@ const InstallAppModal = ({ isOpen, onClose }) => {
                 <img
                   src={mobileQr}
                   alt="BuzzMap mobile app QR code"
-                  className="mx-auto mb-4 w-60 h-60 object-contain"
+                  className="mx-auto mb-1 w-60 h-60 object-contain"
                 />
                 <p className="text-lg font-semibold text-primary mb-2">
                   QR Code for APK Download
                 </p>
+                <div className="inline-flex items-center gap-2 bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium mb-3">
+                  <span className="w-2 h-2 bg-green-500 rounded-full"></span>
+                  Android Only
+                </div>
+                <p className="text-sm text-gray-600 ">or</p>
                 <a
                   href={apkDownloadUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-xs text-blue-600 hover:underline break-all bg-gray-50 p-2 rounded-lg inline-block"
+                  className="text-sm text-blue-600 hover:underline bg-gray-50 p-3 rounded-lg inline-block font-medium"
                 >
-                  {apkDownloadUrl}
+                  Click here to download
                 </a>
               </div>
             </div>
