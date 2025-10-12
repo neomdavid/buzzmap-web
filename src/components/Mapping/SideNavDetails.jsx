@@ -141,7 +141,6 @@ const SideNavDetails = ({
       const selectedValue = e.target.value;
       if (selectedValue && onBarangaySelect) {
         const barangay = barangays.find((b) => b._id === selectedValue);
-        console.log("[DEBUG] Selected barangay:", barangay);
         onBarangaySelect(barangay);
       }
     },

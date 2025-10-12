@@ -268,13 +268,7 @@ function AdminsTable({ statusFilter, roleFilter, searchQuery }) {
 
     setIsSubmitting(true);
     try {
-      console.log(
-        "Starting status toggle process for account:",
-        selectedAccount
-      );
-
       const isVerified = await verifySuperAdmin();
-      console.log("Super admin verification result:", isVerified);
 
       if (!isVerified) {
         setIsSubmitting(false);
@@ -282,17 +276,11 @@ function AdminsTable({ statusFilter, roleFilter, searchQuery }) {
       }
 
       const newStatus = isDisabling ? "disabled" : "active";
-      console.log("Sending toggle status request:", {
-        id: selectedAccount._id,
-        status: newStatus,
-      });
 
       const response = await toggleStatus({
         id: selectedAccount._id,
         status: newStatus,
       }).unwrap();
-
-      console.log("Toggle status API response:", response);
 
       // Force immediate refetch
       await refetch();

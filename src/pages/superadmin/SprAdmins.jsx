@@ -191,9 +191,6 @@ function SprAdmins() {
       role: "admin",
     };
 
-    console.log("[DEBUG] Creating admin account with data:", requestData);
-    console.log("[DEBUG] API URL:", "http://localhost:4000/api/v1/accounts");
-
     try {
       const isVerified = await verifySuperAdmin();
       if (!isVerified) {
@@ -201,9 +198,7 @@ function SprAdmins() {
         return;
       }
 
-      console.log("[DEBUG] Sending create admin request...");
       const response = await createAdmin(requestData).unwrap();
-      console.log("[DEBUG] Create admin response:", response);
 
       toastSuccess(
         "Admin account created successfully. Please check your email for verification."
@@ -488,7 +483,6 @@ function SprAdmins() {
           <form
             onSubmit={(e) => {
               e.preventDefault();
-              console.log("[DEBUG] Form submitted");
               handleSubmit(e);
             }}
           >
@@ -627,7 +621,6 @@ function SprAdmins() {
                   </button>
                   <button
                     type="submit"
-                    onClick={() => console.log("[DEBUG] Submit button clicked")}
                     className={`flex items-center gap-2 bg-gradient-to-r from-[#245261] to-[#4AA8C7] text-white px-6 py-2.5 rounded-xl hover:opacity-90 transition-opacity hover:cursor-pointer ${
                       isSubmitting ? "opacity-70 cursor-wait" : ""
                     }`}

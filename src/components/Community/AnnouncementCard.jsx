@@ -21,8 +21,6 @@ import { showCustomToast } from "../../utils.jsx";
 import { formatDistanceToNow } from "date-fns";
 
 const AnnouncementCard = ({ announcement }) => {
-  console.log("[DEBUG] AnnouncementCard - Initial announcement:", announcement);
-
   const [comment, setComment] = useState("");
   const userFromStore = useSelector((state) => state.auth?.user);
 
@@ -52,15 +50,7 @@ const AnnouncementCard = ({ announcement }) => {
   const [addComment] = useAddAdminPostCommentMutation();
 
   // Debug effect for comments
-  useEffect(() => {
-    console.log(
-      "[DEBUG] AnnouncementCard - Fetching comments for announcement:",
-      announcement?._id
-    );
-    console.log("[DEBUG] AnnouncementCard - Comments data:", comments);
-    console.log("[DEBUG] AnnouncementCard - Is loading:", isLoadingComments);
-    console.log("[DEBUG] AnnouncementCard - Error:", error);
-  }, [announcement?._id, comments, isLoadingComments, error]);
+  useEffect(() => {}, [announcement?._id, comments, isLoadingComments, error]);
 
   // Add local state for announcement votes
   const [localUpvotes, setLocalUpvotes] = useState(announcement?.upvotes || []);
@@ -114,11 +104,6 @@ const AnnouncementCard = ({ announcement }) => {
 
   const handleCommentSubmit = async (e) => {
     e.preventDefault();
-    console.log("[DEBUG] AnnouncementCard - Submitting comment:", {
-      postId: announcement._id,
-      content: comment.trim(),
-      user: userFromStore,
-    });
 
     if (!userFromStore) {
       showCustomToast("Please log in to comment", "error");
@@ -130,10 +115,6 @@ const AnnouncementCard = ({ announcement }) => {
         postId: announcement._id,
         content: comment.trim(),
       }).unwrap();
-      console.log(
-        "[DEBUG] AnnouncementCard - Comment submission result:",
-        result
-      );
       setComment("");
       refetch();
     } catch (error) {
@@ -203,7 +184,7 @@ const AnnouncementCard = ({ announcement }) => {
             upvotesArray={localUpvotes}
             downvotesArray={localDownvotes}
             currentUserId={userFromStore?._id}
-            onCommentClick={() => { }}
+            onCommentClick={() => {}}
             useCustomToast={true}
             onShowToast={showCustomToast}
             isAdminPost={true}

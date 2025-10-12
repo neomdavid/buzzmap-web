@@ -7,28 +7,20 @@ let isGoogleMapsLoaded = false;
 export function loadGoogleMapsScript(apiKey) {
   // If already loaded, return resolved promise
   if (window.google?.maps?.Map && isGoogleMapsLoaded) {
-    console.log("[GoogleMapsLoader] Google Maps already loaded, skipping...");
     return Promise.resolve();
   }
 
   // If already loading, return existing promise
   if (googleMapsScriptLoadingPromise) {
-    console.log(
-      "[GoogleMapsLoader] Script already loading, returning existing promise..."
-    );
     return googleMapsScriptLoadingPromise;
   }
 
   // Check if script element already exists in DOM
   const existingScript = document.getElementById("google-maps-script");
   if (existingScript) {
-    console.log(
-      "[GoogleMapsLoader] Script element already exists, waiting for load..."
-    );
     return new Promise((resolve, reject) => {
       const checkReady = () => {
         if (window.google?.maps?.Map && window.google?.maps?.marker) {
-          console.log("[GoogleMapsLoader] Existing script loaded successfully");
           isGoogleMapsLoaded = true;
           resolve();
         } else {
@@ -43,12 +35,8 @@ export function loadGoogleMapsScript(apiKey) {
   googleMapsScriptLoadingPromise = new Promise((resolve, reject) => {
     // Check if script element already exists
     if (document.getElementById("google-maps-script")) {
-      console.log(
-        "[GoogleMapsLoader] Script element exists, waiting for load..."
-      );
       const check = () => {
         if (window.google?.maps?.Map) {
-          console.log("[GoogleMapsLoader] Script loaded from existing element");
           isGoogleMapsLoaded = true;
           resolve();
         } else {
@@ -59,7 +47,6 @@ export function loadGoogleMapsScript(apiKey) {
       return;
     }
 
-    console.log("[GoogleMapsLoader] Creating new script element...");
     // Create and append script element
     const script = document.createElement("script");
     script.id = "google-maps-script";
@@ -68,7 +55,6 @@ export function loadGoogleMapsScript(apiKey) {
     script.defer = true;
 
     script.onload = () => {
-      console.log("[GoogleMapsLoader] Script loaded successfully");
       isGoogleMapsLoaded = true;
       resolve();
     };
@@ -108,14 +94,6 @@ export function createMapInstance(element, options) {
 
   const map = new window.google.maps.Map(element, options);
   activeMapInstances.add(map);
-  console.log(
-    "[GoogleMapsLoader] Map created and added to activeMapInstances:",
-    map
-  );
-  console.log(
-    "[GoogleMapsLoader] activeMapInstances size:",
-    activeMapInstances.size
-  );
   return map;
 }
 
@@ -151,51 +129,26 @@ export function cleanupAllMapInstances() {
 
 // Function to check if a map instance is valid
 export function isValidMapInstance(map) {
-  console.log("[GoogleMapsLoader] isValidMapInstance called with:", map);
-  console.log(
-    "[GoogleMapsLoader] activeMapInstances has map:",
-    activeMapInstances.has(map)
-  );
-  console.log(
-    "[GoogleMapsLoader] activeMapInstances size:",
-    activeMapInstances.size
-  );
-
   if (!map) return false;
   if (!activeMapInstances.has(map)) return false;
 
   // Additional checks for map validity
   try {
     // Check if map has required methods
-    console.log("[GoogleMapsLoader] Checking map methods...");
-    console.log("[GoogleMapsLoader] setCenter type:", typeof map.setCenter);
-    console.log("[GoogleMapsLoader] setZoom type:", typeof map.setZoom);
-    console.log("[GoogleMapsLoader] setMap type:", typeof map.setMap);
-
     if (
       typeof map.setCenter !== "function" ||
       typeof map.setZoom !== "function" ||
       typeof map.getDiv !== "function"
     ) {
-      console.log("[GoogleMapsLoader] Method validation failed");
       return false;
     }
-
-    console.log("[GoogleMapsLoader] Method validation passed");
 
     // Check if map is still attached to DOM
     const mapDiv = map.getDiv();
-    console.log("[GoogleMapsLoader] mapDiv:", mapDiv);
-    console.log(
-      "[GoogleMapsLoader] document.contains(mapDiv):",
-      mapDiv ? document.contains(mapDiv) : "mapDiv is null"
-    );
     if (!mapDiv || !document.contains(mapDiv)) {
-      console.log("[GoogleMapsLoader] DOM attachment check failed");
       return false;
     }
 
-    console.log("[GoogleMapsLoader] Map validation passed successfully");
     return true;
   } catch (error) {
     console.warn("[GoogleMapsLoader] Map instance validation failed:", error);

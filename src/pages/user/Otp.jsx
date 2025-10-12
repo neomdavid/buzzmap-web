@@ -25,29 +25,24 @@ function Otp() {
   // Get email from either Redux or location state
   const emailToUse = email || location.state?.email;
 
-  // Log component mount and state
+  // Component mount and state
   useEffect(() => {
-    console.log("[OTP] Component mounted");
-    console.log("[OTP] Email from Redux:", email);
-    console.log("[OTP] Location state:", location.state);
+    // Component mounted
   }, []);
 
   // Add useEffect for cooldown timer
   useEffect(() => {
     let timer;
     if (cooldown > 0) {
-      console.log("[OTP] Starting cooldown timer:", cooldown);
       timer = setInterval(() => {
         setCooldown((prev) => {
           const newValue = prev - 1;
-          console.log("[OTP] Cooldown updated:", newValue);
           return newValue;
         });
       }, 1000);
     }
     return () => {
       if (timer) {
-        console.log("[OTP] Clearing cooldown timer");
         clearInterval(timer);
       }
     };
@@ -55,16 +50,8 @@ function Otp() {
 
   // Add useEffect to handle initialization
   useEffect(() => {
-    console.log("[OTP] Initialization effect running");
-    console.log("[OTP] Has initialized:", hasInitialized);
-    console.log("[OTP] Email:", email);
-    console.log("[OTP] Location state:", location.state);
-
     const initializeOtp = async () => {
-      console.log("[OTP] Initializing OTP component");
-
       if (!emailToUse) {
-        console.log("[OTP] No email found, redirecting to login");
         toastError("No email found. Please try logging in again.");
         navigate("/login");
         return;
@@ -72,26 +59,21 @@ function Otp() {
 
       // Show toast if redirected from login
       if (location.state?.from === "login") {
-        console.log("[OTP] Redirected from login, showing toast");
         toastError(
           "Account registration was not completed. Please verify your email to continue."
         );
       }
 
       try {
-        console.log("[OTP] Attempting to send initial OTP to:", emailToUse);
         const response = await resendOtp({
           email: emailToUse,
           purpose: "account-verification",
         }).unwrap();
-        console.log("[OTP] Initial OTP send response:", response);
         setCooldown(60); // Set initial cooldown
       } catch (err) {
-        console.error("[OTP] Initial OTP send error:", err);
         // Extract cooldown time from error message if available
         if (err?.data?.message?.includes("wait")) {
           const waitTime = parseInt(err.data.message.match(/\d+/)[0]);
-          console.log("[OTP] Setting cooldown from error message:", waitTime);
           setCooldown(waitTime);
         } else {
           toastError(err?.data?.message || "Failed to send OTP");
@@ -101,7 +83,6 @@ function Otp() {
 
     // Only run initialization if we haven't already
     if (!hasInitialized) {
-      console.log("[OTP] Running initialization");
       initializeOtp();
       setHasInitialized(true);
     }
@@ -109,30 +90,22 @@ function Otp() {
 
   const handleResendOtp = async () => {
     if (!emailToUse) {
-      console.log("[OTP] No email found for resend");
       toastError("No email found. Please try logging in again.");
       navigate("/login");
       return;
     }
 
     try {
-      console.log("[OTP] Sending resend request with:", {
-        email: emailToUse,
-        purpose: "account-verification",
-      });
       const response = await resendOtp({
         email: emailToUse,
         purpose: "account-verification",
       }).unwrap();
-      console.log("[OTP] OTP resend response:", response);
       setCooldown(60); // Start 60 second cooldown only for resend
       setHasResent(true);
     } catch (err) {
-      console.error("[OTP] OTP resend error:", err);
       // Extract cooldown time from error message if available
       if (err?.data?.message?.includes("wait")) {
         const waitTime = parseInt(err.data.message.match(/\d+/)[0]);
-        console.log("[OTP] Setting cooldown from error message:", waitTime);
         setCooldown(waitTime);
       } else {
         toastError(err?.data?.message || "Failed to resend OTP");
@@ -167,7 +140,6 @@ function Otp() {
   const handleVerify = async () => {
     try {
       const fullOtp = otp.join(""); // combine 4 digits into a string
-      console.log("[OTP] Attempting to verify OTP");
       const response = await verifyOtp({
         email: emailToUse,
         otp: fullOtp,
@@ -178,7 +150,7 @@ function Otp() {
         "Your account has been created successfully! You can now log in."
       );
     } catch (err) {
-      console.error("[OTP] OTP verification failed:", err);
+      // OTP verification failed
     }
   };
 

@@ -12,25 +12,6 @@ const DengueMapNoInfo = forwardRef((props, ref) => {
   const [infoWindowPosition, setInfoWindowPosition] = useState(null);
   const [mapRefState, setMapRefState] = useState(null);
 
-  // DEBUGGING: Log received props
-  useEffect(() => {
-    console.log("[DengueMapNoInfo DEBUG] Received props:", {
-      activeInterventions: props.activeInterventions,
-      isLoadingInterventions: props.isLoadingInterventions,
-      selectedMapItem: props.selectedMapItem,
-      // Do not log props.onPropsDebug itself to avoid recursion if it contains complex objects
-    });
-    if (props.onPropsDebug) {
-      // This is a dummy prop used by parent for logging what it sends.
-      // console.log("[DengueMapNoInfo DEBUG] Parent logged props via onPropsDebug:", props.onPropsDebug);
-    }
-  }, [
-    props.activeInterventions,
-    props.isLoadingInterventions,
-    props.selectedMapItem,
-    props.onPropsDebug,
-  ]);
-
   // Update useImperativeHandle to properly expose the map methods
   useImperativeHandle(
     ref,
@@ -38,19 +19,11 @@ const DengueMapNoInfo = forwardRef((props, ref) => {
       panTo: (position) => {
         if (mapRefState) {
           mapRefState.panTo(position);
-        } else {
-          console.error(
-            "Map reference (mapRefState) is not available in DengueMapNoInfo"
-          );
         }
       },
       setZoom: (zoom) => {
         if (mapRefState) {
           mapRefState.setZoom(zoom);
-        } else {
-          console.error(
-            "Map reference (mapRefState) is not available in DengueMapNoInfo"
-          );
         }
       },
     }),
@@ -147,7 +120,6 @@ const DengueMapNoInfo = forwardRef((props, ref) => {
 
   // Update handleMapLoad
   const handleMapLoad = (map) => {
-    console.log("Map loaded in DengueMapNoInfo, setting mapRefState");
     setMapRefState(map);
     if (props.onMapLoad) {
       props.onMapLoad(map);
@@ -172,11 +144,7 @@ const DengueMapNoInfo = forwardRef((props, ref) => {
 
   // Add debug logging for props being passed to DengueMap
   useEffect(() => {
-    console.log("[DengueMapNoInfo DEBUG] Props being passed to DengueMap:", {
-      activeInterventions: propsToDengueMap.activeInterventions,
-      isLoadingInterventions: propsToDengueMap.isLoadingInterventions,
-      selectedMapItem: propsToDengueMap.selectedMapItem,
-    });
+    // Debug logging removed
   }, [
     propsToDengueMap.activeInterventions,
     propsToDengueMap.isLoadingInterventions,

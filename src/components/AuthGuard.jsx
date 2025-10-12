@@ -24,7 +24,6 @@ const AuthGuard = ({ children, requiredRole }) => {
   useEffect(() => {
     const handleAccountDisabled = (event) => {
       if (event.detail?.status === "ACCOUNT_DISABLED") {
-        console.log("[AuthGuard] Account disabled event received");
         handleAccountDisabledError(dispatch, navigate, event.detail?.message);
       }
     };
@@ -40,14 +39,12 @@ const AuthGuard = ({ children, requiredRole }) => {
   // Handle immediate logout if no valid session
   useEffect(() => {
     if (!user || !token) {
-      console.log("[AuthGuard] No valid session, redirecting to login");
       navigate("/login", { replace: true });
       return;
     }
 
     // Check role requirements
     if (requiredRole && user.role !== requiredRole) {
-      console.log("[AuthGuard] Role mismatch, redirecting to login");
       toastError("You don't have permission to access this page.");
       navigate("/login", { replace: true });
       return;

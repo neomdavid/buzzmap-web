@@ -90,7 +90,6 @@ const MapPicker = forwardRef(
     // Compute a single union polygon for QC to use as a hole for the outside overlay
     useEffect(() => {
       if (!barangayData || barangayData.features.length < 2) {
-        console.log("Not enough features for union operation, skipping...");
         setQcUnionHoles([]);
         return;
       }
@@ -120,38 +119,16 @@ const MapPicker = forwardRef(
         }
         setQcUnionHoles(holes);
       } catch (e) {
-        console.warn("QC union failed; will fall back to per-feature holes", e);
         setQcUnionHoles([]);
       }
     }, [barangayData]);
 
     // Helper: find barangay by point
     function findBarangay(coords, geojson) {
-      console.log("[MapPicker DEBUG] findBarangay called with:", {
-        coords,
-        geojson: !!geojson,
-      });
       if (!geojson) {
-        console.log("[MapPicker DEBUG] No geojson data");
         return null;
       }
       const pt = point([coords.lng, coords.lat]);
-      console.log("[MapPicker DEBUG] Created point:", pt);
-      let firstFeature = geojson.features[0];
-      if (firstFeature) {
-        let featureBbox = bbox(firstFeature);
-        console.log(
-          "[MapPicker DEBUG] First polygon bbox:",
-          featureBbox,
-          "Click:",
-          [coords.lng, coords.lat]
-        );
-      }
-      console.log(
-        "[MapPicker DEBUG] Checking",
-        geojson.features.length,
-        "features"
-      );
       for (let i = 0; i < geojson.features.length; i++) {
         let feature = geojson.features[i];
         let polys = [];
@@ -160,13 +137,6 @@ const MapPicker = forwardRef(
         } else if (feature.geometry.type === "MultiPolygon") {
           polys = feature.geometry.coordinates;
         }
-        console.log(
-          "[MapPicker DEBUG] Feature",
-          i,
-          "has",
-          polys.length,
-          "polygons"
-        );
         for (let polyCoords of polys) {
           let ring = [...polyCoords[0]];
           if (
@@ -177,22 +147,11 @@ const MapPicker = forwardRef(
           }
           const poly = polygon([ring]);
           const isInside = booleanPointInPolygon(pt, poly);
-          console.log(
-            "[MapPicker DEBUG] Feature",
-            i,
-            "polygon check:",
-            isInside
-          );
           if (isInside) {
-            console.log(
-              "[MapPicker DEBUG] Found matching barangay:",
-              feature.properties.name
-            );
             return feature.properties.name;
           }
         }
       }
-      console.log("[MapPicker DEBUG] No matching barangay found");
       return null;
     }
 
@@ -203,10 +162,6 @@ const MapPicker = forwardRef(
       highlightedBarangayName,
       markerPos
     ) {
-      console.log("[MapPicker DEBUG] Drawing map features:", {
-        highlightedBarangayName,
-        markerPos,
-      });
       overlaysRef.current.forEach((o) => o.setMap(null));
       overlaysRef.current = [];
 
@@ -404,48 +359,33 @@ const MapPicker = forwardRef(
       // Add click handler
       map.clickListener = map.addListener("click", (e) => {
         const coords = { lat: e.latLng.lat(), lng: e.latLng.lng() };
-        console.log("[MapPicker DEBUG] Map clicked at:", coords);
         // Check if point is within QC bounds
         const isInQC =
           coords.lat >= QC_BOUNDS.south &&
           coords.lat <= QC_BOUNDS.north &&
           coords.lng >= QC_BOUNDS.west &&
           coords.lng <= QC_BOUNDS.east;
-        console.log("[MapPicker DEBUG] QC bounds check:", {
-          coords,
-          bounds: QC_BOUNDS,
-          isInQC,
-        });
         if (!isInQC) {
           setToast({
             type: "error",
             message: "Please click a location within Quezon City",
           });
-          console.log("[MapPicker DEBUG] Click outside QC bounds");
           return;
         }
         // Find which barangay contains this point
         const barangayName = findBarangay(coords, barangayData);
-        console.log("[MapPicker DEBUG] Found barangay:", barangayName);
         if (!barangayName) {
           setToast({
             type: "error",
             message: "Selected location is not within any barangay boundary",
           });
-          console.log("[MapPicker DEBUG] No barangay found for click");
           return;
         }
 
-        console.log("[MapPicker DEBUG] Setting marker position to:", coords);
         setMarkerPosition(coords);
         markerPositionRef.current = coords;
         setHighlightedBarangay(null);
         if (onLocationSelect) {
-          console.log(
-            "[MapPicker DEBUG] Calling onLocationSelect:",
-            coords,
-            barangayName
-          );
           onLocationSelect(
             `${coords.lat.toFixed(6)}, ${coords.lng.toFixed(6)}`,
             barangayName
@@ -455,10 +395,6 @@ const MapPicker = forwardRef(
           type: "success",
           message: `Location set in ${barangayName}`,
         });
-        console.log(
-          "[MapPicker DEBUG] Calling drawMapFeatures with marker position:",
-          coords
-        );
         setTimeout(() => {
           drawMapFeatures(map, barangayData, null, coords);
         }, 0);
@@ -501,21 +437,9 @@ const MapPicker = forwardRef(
 
     // Redraw polygons/marker when highlightedBarangay or markerPosition changes
     useEffect(() => {
-      console.log(
-        "[MapPicker DEBUG] useEffect triggered - markerPosition:",
-        markerPosition,
-        "highlightedBarangay:",
-        highlightedBarangay
-      );
       if (!isDataLoaded || !mapInstance.current || !barangayData) {
-        console.log("[MapPicker DEBUG] useEffect - missing dependencies:", {
-          isDataLoaded,
-          mapInstance: !!mapInstance.current,
-          barangayData: !!barangayData,
-        });
         return;
       }
-      console.log("[MapPicker DEBUG] Calling drawMapFeatures from useEffect");
       drawMapFeatures(
         mapInstance.current,
         barangayData,

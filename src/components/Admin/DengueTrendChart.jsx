@@ -136,7 +136,6 @@ export default function DengueTrendChart({
   const chartData = useMemo(() => {
     try {
       if (!trendsData?.data?.complete_weeks) {
-        console.log("[DEBUG] No complete weeks data available");
         return [];
       }
 
@@ -259,10 +258,6 @@ export default function DengueTrendChart({
 
   // Extra diagnostics for visibility
   if (error) {
-    console.log("[DengueTrendChart] Raw error object:", error);
-  }
-  if (trendsData !== undefined) {
-    console.log("[DengueTrendChart] Raw trendsData:", trendsData);
   }
 
   if (isLoading || barangaysLoading) {

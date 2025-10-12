@@ -46,7 +46,6 @@ import LazyComponent from "./components/LazyComponent";
 // Helper functions
 const getUserData = () => {
   const user = localStorage.getItem("user") || sessionStorage.getItem("user");
-  console.log("[DEBUG] getUserData - user from storage:", user);
   return user ? JSON.parse(user) : null;
 };
 
@@ -54,8 +53,6 @@ const isAuthenticated = () => {
   const user = localStorage.getItem("user") || sessionStorage.getItem("user");
   const token =
     localStorage.getItem("token") || sessionStorage.getItem("token");
-  console.log("[DEBUG] isAuthenticated - user from storage:", user);
-  console.log("[DEBUG] isAuthenticated - token from storage:", token);
   return user !== null && token !== null;
 };
 
@@ -69,15 +66,8 @@ const PrivateRoute = ({ children, requiredRole }) => {
   const token =
     localStorage.getItem("token") || sessionStorage.getItem("token");
 
-  console.log("[DEBUG] PrivateRoute - Required Role:", requiredRole);
-  console.log("[DEBUG] PrivateRoute - User from storage:", user);
-  console.log("[DEBUG] PrivateRoute - Token from storage:", token);
-
   // If no user data in storage, redirect to login regardless of token
   if (!user) {
-    console.log(
-      "[DEBUG] PrivateRoute - No user data found, redirecting to login"
-    );
     // Clear any existing token since it's invalid without user data
     localStorage.removeItem("token");
     sessionStorage.removeItem("token");
@@ -89,19 +79,12 @@ const PrivateRoute = ({ children, requiredRole }) => {
   if (requiredRole === "admin" || requiredRole === "superadmin") {
     // First check user role from storage
     if (user.role !== requiredRole) {
-      console.log(
-        "[DEBUG] PrivateRoute - User role mismatch:",
-        user.role,
-        "!=",
-        requiredRole
-      );
       toastError("You don't have permission to access this page.");
       return <Navigate to="/login" replace />;
     }
 
     // Then verify token
     if (!token) {
-      console.log("[DEBUG] PrivateRoute - No token found for admin/superadmin");
       toastError("Please log in to access this page.");
       return <Navigate to="/login" replace />;
     }
@@ -109,12 +92,10 @@ const PrivateRoute = ({ children, requiredRole }) => {
     try {
       // Decode the JWT token to get the role
       const tokenPayload = JSON.parse(atob(token.split(".")[1]));
-      console.log("[DEBUG] PrivateRoute - Token payload:", tokenPayload);
 
       // Check if token is expired
       const currentTime = Math.floor(Date.now() / 1000);
       if (tokenPayload.exp < currentTime) {
-        console.log("[DEBUG] PrivateRoute - Token expired");
         // Clear auth data from both storage types
         localStorage.removeItem("token");
         localStorage.removeItem("user");
@@ -126,9 +107,6 @@ const PrivateRoute = ({ children, requiredRole }) => {
 
       // Verify token role matches user role
       if (tokenPayload.role !== user.role) {
-        console.log(
-          "[DEBUG] PrivateRoute - Token role mismatch with user role"
-        );
         // Clear auth data from both storage types
         localStorage.removeItem("token");
         localStorage.removeItem("user");
@@ -138,7 +116,6 @@ const PrivateRoute = ({ children, requiredRole }) => {
         return <Navigate to="/login" replace />;
       }
     } catch (error) {
-      console.error("[DEBUG] PrivateRoute - Error decoding token:", error);
       // Clear auth data from both storage types
       localStorage.removeItem("token");
       localStorage.removeItem("user");
@@ -154,12 +131,6 @@ const PrivateRoute = ({ children, requiredRole }) => {
 
   // For user role, just verify user exists and role matches
   if (requiredRole === "user" && user.role !== "user") {
-    console.log(
-      "[DEBUG] PrivateRoute - User role mismatch:",
-      user.role,
-      "!=",
-      "user"
-    );
     toastError("You don't have permission to access this page.");
     return <Navigate to="/login" replace />;
   }

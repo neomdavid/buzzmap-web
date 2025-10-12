@@ -1,7 +1,12 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { CustomFormInput, LogoNamed } from "../../components";
-import { useForgotPasswordMutation, useVerifyResetOtpMutation, useResetPasswordMutation, useResendResetOtpMutation } from "../../api/dengueApi";
+import {
+  useForgotPasswordMutation,
+  useVerifyResetOtpMutation,
+  useResetPasswordMutation,
+  useResendResetOtpMutation,
+} from "../../api/dengueApi";
 import { toastSuccess, toastError } from "../../utils.jsx";
 import manHighHand from "../../assets/man_highhand.png";
 
@@ -19,13 +24,14 @@ const ForgotPassword = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  console.log("ForgotPassword component mounted");
-  console.log("Current location:", location.pathname);
-
-  const [forgotPassword, { isLoading: isForgotLoading }] = useForgotPasswordMutation();
-  const [verifyOtp, { isLoading: isVerifyLoading }] = useVerifyResetOtpMutation();
-  const [resetPassword, { isLoading: isResetLoading }] = useResetPasswordMutation();
-  const [resendOtp, { isLoading: isResendLoading }] = useResendResetOtpMutation();
+  const [forgotPassword, { isLoading: isForgotLoading }] =
+    useForgotPasswordMutation();
+  const [verifyOtp, { isLoading: isVerifyLoading }] =
+    useVerifyResetOtpMutation();
+  const [resetPassword, { isLoading: isResetLoading }] =
+    useResetPasswordMutation();
+  const [resendOtp, { isLoading: isResendLoading }] =
+    useResendResetOtpMutation();
 
   // Add useEffect for cooldown timer
   useEffect(() => {
@@ -60,7 +66,7 @@ const ForgotPassword = () => {
       const response = await verifyOtp({
         email,
         otp: otpString,
-        purpose: "password-reset"
+        purpose: "password-reset",
       }).unwrap();
       setResetToken(response.resetToken);
       setStep(3);
@@ -85,29 +91,31 @@ const ForgotPassword = () => {
       errors.push("Password must contain at least one number");
     }
     if (!/(?=.*[@$!%*?&])/.test(password)) {
-      errors.push("Password must contain at least one special character (@$!%*?&)");
+      errors.push(
+        "Password must contain at least one special character (@$!%*?&)"
+      );
     }
     return errors;
   };
 
   const handleResetPassword = async (e) => {
     e.preventDefault();
-    
+
     const errors = validatePassword(newPassword);
     if (newPassword !== confirmPassword) {
       errors.push("Passwords do not match");
     }
-    
+
     if (errors.length > 0) {
       setPasswordErrors(errors);
       return;
     }
-    
+
     setPasswordErrors([]);
     try {
       await resetPassword({
         resetToken,
-        newPassword
+        newPassword,
       }).unwrap();
       toastSuccess("Password has been reset successfully!");
       navigate("/login");
@@ -118,12 +126,7 @@ const ForgotPassword = () => {
 
   const handleResendOtp = async () => {
     try {
-      console.log("Sending resend request with:", {
-        email,
-        purpose: "password-reset"
-      });
       const response = await resendOtp(email).unwrap();
-      console.log("OTP resend response:", response);
       toastSuccess("OTP has been resent successfully!");
       setCooldown(60); // Start 60 second cooldown only for resend
       setHasResent(true);
@@ -142,14 +145,18 @@ const ForgotPassword = () => {
 
     // Auto-focus next input
     if (value && index < 3) {
-      const nextInput = document.querySelector(`input[name="otp-${index + 1}"]`);
+      const nextInput = document.querySelector(
+        `input[name="otp-${index + 1}"]`
+      );
       if (nextInput) nextInput.focus();
     }
   };
 
   const handleOtpKeyDown = (index, e) => {
     if (e.key === "Backspace" && !otp[index] && index > 0) {
-      const prevInput = document.querySelector(`input[name="otp-${index - 1}"]`);
+      const prevInput = document.querySelector(
+        `input[name="otp-${index - 1}"]`
+      );
       if (prevInput) prevInput.focus();
     }
   };
@@ -172,15 +179,20 @@ const ForgotPassword = () => {
         />
       )}
 
-      <section className={`w-[87vw] h-[80vh] max-w-220 mt-25 rounded-2xl shadow-md text-primary bg-white py-8 px-[7%] lg:px-25 flex flex-col justify-center items-center text-center text-xl lg:text-2xl lg:shadow-none lg:max-w-none lg:m-0 lg:rounded-none lg:absolute lg:top-0 lg:h-[100vh] overflow-y-auto ${step === 1 ? 'lg:right-0 lg:w-[60vw] xl:w-250' : 'lg:left-1/2 lg:transform lg:-translate-x-1/2 lg:w-[60vw] xl:w-250'}`}>
+      <section
+        className={`w-[87vw] h-[80vh] max-w-220 mt-25 rounded-2xl shadow-md text-primary bg-white py-8 px-[7%] lg:px-25 flex flex-col justify-center items-center text-center text-xl lg:text-2xl lg:shadow-none lg:max-w-none lg:m-0 lg:rounded-none lg:absolute lg:top-0 lg:h-[100vh] overflow-y-auto ${
+          step === 1
+            ? "lg:right-0 lg:w-[60vw] xl:w-250"
+            : "lg:left-1/2 lg:transform lg:-translate-x-1/2 lg:w-[60vw] xl:w-250"
+        }`}
+      >
         <h1 className="mb-2 text-7xl lg:text-8xl">Forgot Password?</h1>
         <p className="font-normal w-[70%] text-center mb-4">
-          {step === 1 
+          {step === 1
             ? "Enter your email address and we'll send you a one-time password (OTP) to reset your password."
-            : step === 2 
+            : step === 2
             ? "We've sent a 4-digit OTP code to your email. Please enter it below to verify your account."
-            : "Create a new password for your account."
-          }
+            : "Create a new password for your account."}
         </p>
         {step > 1 && (
           <p className="font-bold text-primary text-2xl text-center mb-6">
@@ -189,7 +201,10 @@ const ForgotPassword = () => {
         )}
 
         {step === 1 ? (
-          <form onSubmit={handleForgotPassword} className="flex flex-col items-center gap-y-6 lg:gap-y-4 w-[85%]">
+          <form
+            onSubmit={handleForgotPassword}
+            className="flex flex-col items-center gap-y-6 lg:gap-y-4 w-[85%]"
+          >
             <CustomFormInput
               label="Email"
               type="email"
@@ -224,7 +239,7 @@ const ForgotPassword = () => {
                   onChange={(e) => handleOtpChange(idx, e.target.value)}
                   onKeyDown={(e) => handleOtpKeyDown(idx, e)}
                   className={`text-center text-4xl sm:text-9xl border-2 rounded-lg focus:outline-none focus:border-accent ${
-                    otpError ? 'border-red-500' : 'border-primary'
+                    otpError ? "border-red-500" : "border-primary"
                   }`}
                 />
               ))}
@@ -236,14 +251,15 @@ const ForgotPassword = () => {
                 onClick={handleResendOtp}
                 disabled={isResendLoading || cooldown > 0}
                 className={`font-bold hover:underline ${
-                  (isResendLoading || cooldown > 0) && "opacity-50 cursor-not-allowed"
+                  (isResendLoading || cooldown > 0) &&
+                  "opacity-50 cursor-not-allowed"
                 }`}
               >
-                {isResendLoading 
-                  ? "Sending..." 
-                  : cooldown > 0 
-                    ? `Resend (${cooldown}s)` 
-                    : "Resend"}
+                {isResendLoading
+                  ? "Sending..."
+                  : cooldown > 0
+                  ? `Resend (${cooldown}s)`
+                  : "Resend"}
               </button>
             </p>
 
@@ -258,7 +274,10 @@ const ForgotPassword = () => {
             </button>
           </div>
         ) : (
-          <form onSubmit={handleResetPassword} className="flex flex-col items-center gap-y-3 lg:gap-y-4 w-[85%]">
+          <form
+            onSubmit={handleResetPassword}
+            className="flex flex-col items-center gap-y-3 lg:gap-y-4 w-[85%]"
+          >
             <CustomFormInput
               label="New Password"
               type="password"
@@ -307,4 +326,4 @@ const ForgotPassword = () => {
   );
 };
 
-export default ForgotPassword; 
+export default ForgotPassword;

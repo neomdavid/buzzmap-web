@@ -18,13 +18,10 @@ const AccountStatusTest = () => {
   }
 
   const handleManualValidation = () => {
-    console.log("[AccountStatusTest] Manual validation triggered");
     const isValid = validateAccountStatus();
-    console.log("[AccountStatusTest] Validation result:", isValid);
   };
 
   const handleSimulateDisabled = () => {
-    console.log("[AccountStatusTest] Simulating account disabled event");
     dispatchAccountDisabledEvent(
       "Test: Your account has been disabled for testing purposes."
     );

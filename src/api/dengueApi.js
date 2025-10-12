@@ -2,17 +2,12 @@
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 
 // Debug environment variables
-console.log("Current Mode:", import.meta.env.MODE);
-console.log("VITE_API_BASE_URL:", import.meta.env.VITE_API_BASE_URL);
-console.log("VITE_MODE:", import.meta.env.VITE_MODE);
 
 // Determine base URL based on environment
 const BASE_URL =
   import.meta.env.VITE_MODE === "PROD" || import.meta.env.MODE === "PROD"
     ? import.meta.env.VITE_API_BASE_URL
     : "/";
-
-console.log("Final BASE_URL:", BASE_URL);
 
 const customBaseQuery = fetchBaseQuery({
   baseUrl: BASE_URL + "api/v1/",
@@ -94,7 +89,7 @@ const baseQueryWithErrorHandling = async (args, api, extraOptions) => {
             return retryResult;
           }
         } catch (refreshError) {
-          console.error("[AUTH] Refresh token failed:", refreshError);
+          // Refresh token failed
         }
       }
 
@@ -140,7 +135,6 @@ const baseQueryWithErrorHandling = async (args, api, extraOptions) => {
       error.message?.includes("Failed to fetch") ||
       error.message?.includes("NetworkError")
     ) {
-      console.error("Connection error:", error);
       return {
         error: {
           status: "CONNECTION_ERROR",
@@ -198,7 +192,6 @@ export const dengueApi = createApi({
           await queryFulfilled;
         } catch (error) {
           // Handle registration error
-          console.error("Registration failed:", error);
         }
       },
     }),
@@ -217,7 +210,6 @@ export const dengueApi = createApi({
           await queryFulfilled;
         } catch (error) {
           // Don't handle the error here, let it propagate to the component
-          console.log("Login error in onQueryStarted:", error);
         }
       },
     }),
@@ -328,8 +320,6 @@ export const dengueApi = createApi({
           url += `?${queryString}`;
         }
 
-        // Log the final URL
-        console.log("API Request URL:", url);
         return url;
       },
       async onQueryStarted(arg, { dispatch, queryFulfilled, getState }) {
@@ -339,21 +329,14 @@ export const dengueApi = createApi({
           const user = state.auth?.user;
 
           if (user?.role === "admin") {
-            console.log(
-              "[DEBUG] Admin fetching posts, triggering crowdsourced analysis first..."
-            );
             // Trigger analysis before fetching posts
             await dispatch(
               dengueApi.endpoints.analyzeCrowdsourcedReports.initiate()
             ).unwrap();
-            console.log(
-              "[DEBUG] Crowdsourced analysis completed, now fetching posts..."
-            );
           }
 
           await queryFulfilled;
         } catch (error) {
-          console.error("[DEBUG] Error in getPosts onQueryStarted:", error);
           // Still allow posts to be fetched even if analysis fails
         }
       },
@@ -478,7 +461,6 @@ export const dengueApi = createApi({
     // Analytics Endpoints
     getAnalytics: builder.query({
       query: () => {
-        console.log("[DEBUG] Fetching analytics data...");
         return "analytics/interventions";
       },
       providesTags: ["Analytics"],
@@ -491,7 +473,6 @@ export const dengueApi = createApi({
         method: "GET",
       }),
       transformResponse: (response) => {
-        console.log("[DEBUG] Crowdsourced analysis response:", response);
         return response;
       },
     }),
@@ -518,7 +499,6 @@ export const dengueApi = createApi({
     getAllInterventions: builder.query({
       query: () => `interventions`,
       transformResponse: (response) => {
-        console.log("[DEBUG] All interventions response:", response);
         return response;
       },
       providesTags: (result) => {
@@ -541,7 +521,6 @@ export const dengueApi = createApi({
     getInterventionsInProgress: builder.query({
       query: (barangay) => `interventions/in-progress/${barangay}`,
       transformResponse: (response) => {
-        console.log("[DEBUG] Interventions for barangay response:", response);
         return response;
       },
       providesTags: (result, error, barangay) => [
@@ -743,10 +722,6 @@ export const dengueApi = createApi({
     // Add this to your endpoints object in dengueApi
     getBarangayWeeklyTrends: builder.query({
       query: ({ barangay_name, number_of_weeks }) => {
-        console.log("[DEBUG] Fetching weekly trends for:", {
-          barangay_name,
-          number_of_weeks,
-        });
         return {
           url: "analytics/get-barangay-weekly-trends",
           method: "POST",
@@ -780,7 +755,6 @@ export const dengueApi = createApi({
         )}`,
       providesTags: ["Analytics"],
       transformResponse: (response) => {
-        console.log("[DEBUG] AI recommendation response:", response);
         return response;
       },
     }),
@@ -903,7 +877,7 @@ export const dengueApi = createApi({
         try {
           await queryFulfilled;
         } catch (error) {
-          console.error("Error updating account status:", error);
+          // Error updating account status
         }
       },
     }),
@@ -929,7 +903,6 @@ export const dengueApi = createApi({
 
     upvoteReport: builder.mutation({
       query: (reportId) => {
-        console.log("[DEBUG] Upvoting report:", reportId);
         return {
           url: `reports/${reportId}/upvote`,
           method: "POST",
@@ -938,14 +911,6 @@ export const dengueApi = createApi({
       async onQueryStarted(reportId, { dispatch, queryFulfilled }) {
         try {
           const { data } = await queryFulfilled;
-          console.log(
-            "[DEBUG] Vote API success - Post:",
-            reportId,
-            "Upvotes:",
-            data.upvotes,
-            "Downvotes:",
-            data.downvotes
-          );
 
           // Update the cache for both the specific post and the post list
           dispatch(
@@ -960,7 +925,7 @@ export const dengueApi = createApi({
             })
           );
         } catch (error) {
-          console.error("[DEBUG] Upvote API failed:", error);
+          // Upvote API failed
         }
       },
       invalidatesTags: (result, error, reportId) => [
@@ -969,7 +934,6 @@ export const dengueApi = createApi({
     }),
     downvoteReport: builder.mutation({
       query: (reportId) => {
-        console.log("[DEBUG] Downvoting report:", reportId);
         return {
           url: `reports/${reportId}/downvote`,
           method: "POST",
@@ -978,7 +942,6 @@ export const dengueApi = createApi({
       async onQueryStarted(reportId, { dispatch, queryFulfilled }) {
         try {
           const { data } = await queryFulfilled;
-          console.log("[DEBUG] Downvote successful:", data);
 
           // Update the cache for both the specific post and the post list
           dispatch(
@@ -993,7 +956,7 @@ export const dengueApi = createApi({
             })
           );
         } catch (error) {
-          console.error("[DEBUG] Downvote failed:", error);
+          // Downvote failed
         }
       },
       invalidatesTags: (result, error, reportId) => [
@@ -1002,7 +965,6 @@ export const dengueApi = createApi({
     }),
     removeUpvote: builder.mutation({
       query: (reportId) => {
-        console.log("[DEBUG] Removing upvote from report:", reportId);
         return {
           url: `reports/${reportId}/upvote`,
           method: "DELETE",
@@ -1011,7 +973,6 @@ export const dengueApi = createApi({
       async onQueryStarted(reportId, { dispatch, queryFulfilled }) {
         try {
           const { data } = await queryFulfilled;
-          console.log("[DEBUG] Remove upvote successful:", data);
 
           // Update the cache for both the specific post and the post list
           dispatch(
@@ -1026,7 +987,7 @@ export const dengueApi = createApi({
             })
           );
         } catch (error) {
-          console.error("[DEBUG] Remove upvote failed:", error);
+          // Remove upvote failed
         }
       },
       invalidatesTags: (result, error, reportId) => [
@@ -1035,7 +996,6 @@ export const dengueApi = createApi({
     }),
     removeDownvote: builder.mutation({
       query: (reportId) => {
-        console.log("[DEBUG] Removing downvote from report:", reportId);
         return {
           url: `reports/${reportId}/downvote`,
           method: "DELETE",
@@ -1044,7 +1004,6 @@ export const dengueApi = createApi({
       async onQueryStarted(reportId, { dispatch, queryFulfilled }) {
         try {
           const { data } = await queryFulfilled;
-          console.log("[DEBUG] Remove downvote successful:", data);
 
           // Update the cache for both the specific post and the post list
           dispatch(
@@ -1059,7 +1018,7 @@ export const dengueApi = createApi({
             })
           );
         } catch (error) {
-          console.error("[DEBUG] Remove downvote failed:", error);
+          // Remove downvote failed
         }
       },
       invalidatesTags: (result, error, reportId) => [
@@ -1079,9 +1038,7 @@ export const dengueApi = createApi({
     }),
     getComments: builder.query({
       query: (postId) => {
-        console.log("[DEBUG] Fetching comments for postId:", postId);
         const url = `reports/${postId}/comments`;
-        console.log("[DEBUG] Comments API URL:", url);
         return {
           url,
           method: "GET",
@@ -1091,47 +1048,27 @@ export const dengueApi = createApi({
         };
       },
       transformResponse: (response, meta, arg) => {
-        console.log("[DEBUG] Raw Comments API Response:", response);
-        console.log("[DEBUG] Response type:", typeof response);
-        console.log("[DEBUG] Is Array?", Array.isArray(response));
-
         try {
           // If response is an array, return it directly
           if (Array.isArray(response)) {
-            console.log(
-              "[DEBUG] Response is an array with length:",
-              response.length
-            );
             return response;
           }
 
           // If response is an object with a data property, return that
           if (response && response.data) {
-            console.log(
-              "[DEBUG] Response has data property with length:",
-              response.data.length
-            );
             return response.data;
           }
 
           // If response is empty or null, return empty array
-          console.log("[DEBUG] Response is empty or null");
           return [];
         } catch (error) {
-          console.error("[DEBUG] Error transforming comments response:", error);
           return [];
         }
       },
       transformErrorResponse: (response, meta, arg) => {
-        console.error("[DEBUG] Comments API Error:", response);
-        console.error("[DEBUG] Error meta:", meta);
-        console.error("[DEBUG] Error arg:", arg);
         return response;
       },
       providesTags: (result, error, postId) => {
-        console.log("[DEBUG] Comments cache tags for postId:", postId);
-        console.log("[DEBUG] Comments result:", result);
-        console.log("[DEBUG] Comments error:", error);
         return [{ type: "Comments", id: postId }];
       },
     }),
@@ -1153,7 +1090,6 @@ export const dengueApi = createApi({
       async onQueryStarted(commentId, { dispatch, queryFulfilled, getState }) {
         try {
           const { data } = await queryFulfilled;
-          console.log("[DEBUG] Comment upvote successful:", data);
 
           // Get the report ID from the comment data
           const reportId = data.report;
@@ -1169,7 +1105,7 @@ export const dengueApi = createApi({
             })
           );
         } catch (error) {
-          console.error("[DEBUG] Comment upvote failed:", error);
+          // Comment upvote failed
         }
       },
       invalidatesTags: (result, error, commentId) => [
@@ -1185,7 +1121,6 @@ export const dengueApi = createApi({
       async onQueryStarted(commentId, { dispatch, queryFulfilled, getState }) {
         try {
           const { data } = await queryFulfilled;
-          console.log("[DEBUG] Comment downvote successful:", data);
 
           // Get the report ID from the comment data
           const reportId = data.report;
@@ -1201,7 +1136,7 @@ export const dengueApi = createApi({
             })
           );
         } catch (error) {
-          console.error("[DEBUG] Comment downvote failed:", error);
+          // Comment downvote failed
         }
       },
       invalidatesTags: (result, error, commentId) => [
@@ -1217,7 +1152,6 @@ export const dengueApi = createApi({
       async onQueryStarted(commentId, { dispatch, queryFulfilled, getState }) {
         try {
           const { data } = await queryFulfilled;
-          console.log("[DEBUG] Remove comment upvote successful:", data);
 
           // Get the report ID from the comment data
           const reportId = data.report;
@@ -1233,7 +1167,7 @@ export const dengueApi = createApi({
             })
           );
         } catch (error) {
-          console.error("[DEBUG] Remove comment upvote failed:", error);
+          // Remove comment upvote failed
         }
       },
       invalidatesTags: (result, error, commentId) => [
@@ -1249,7 +1183,6 @@ export const dengueApi = createApi({
       async onQueryStarted(commentId, { dispatch, queryFulfilled, getState }) {
         try {
           const { data } = await queryFulfilled;
-          console.log("[DEBUG] Remove comment downvote successful:", data);
 
           // Get the report ID from the comment data
           const reportId = data.report;
@@ -1265,7 +1198,7 @@ export const dengueApi = createApi({
             })
           );
         } catch (error) {
-          console.error("[DEBUG] Remove comment downvote failed:", error);
+          // Remove comment downvote failed
         }
       },
       invalidatesTags: (result, error, commentId) => [
@@ -1282,7 +1215,6 @@ export const dengueApi = createApi({
       async onQueryStarted(postId, { dispatch, queryFulfilled }) {
         try {
           const { data } = await queryFulfilled;
-          console.log("[DEBUG] Admin post upvote successful:", data);
 
           // Update the cache for admin posts
           dispatch(
@@ -1299,7 +1231,7 @@ export const dengueApi = createApi({
             )
           );
         } catch (error) {
-          console.error("[DEBUG] Admin post upvote failed:", error);
+          // Admin post upvote failed
         }
       },
       invalidatesTags: [],
@@ -1313,7 +1245,6 @@ export const dengueApi = createApi({
       async onQueryStarted(postId, { dispatch, queryFulfilled }) {
         try {
           const { data } = await queryFulfilled;
-          console.log("[DEBUG] Admin post downvote successful:", data);
 
           // Update the cache for admin posts
           dispatch(
@@ -1330,7 +1261,7 @@ export const dengueApi = createApi({
             )
           );
         } catch (error) {
-          console.error("[DEBUG] Admin post downvote failed:", error);
+          // Admin post downvote failed
         }
       },
       invalidatesTags: [],
@@ -1344,7 +1275,6 @@ export const dengueApi = createApi({
       async onQueryStarted(postId, { dispatch, queryFulfilled }) {
         try {
           const { data } = await queryFulfilled;
-          console.log("[DEBUG] Remove admin post upvote successful:", data);
 
           // Update the cache for admin posts
           dispatch(
@@ -1361,7 +1291,7 @@ export const dengueApi = createApi({
             )
           );
         } catch (error) {
-          console.error("[DEBUG] Remove admin post upvote failed:", error);
+          // Remove admin post upvote failed
         }
       },
       invalidatesTags: [],
@@ -1375,7 +1305,6 @@ export const dengueApi = createApi({
       async onQueryStarted(postId, { dispatch, queryFulfilled }) {
         try {
           const { data } = await queryFulfilled;
-          console.log("[DEBUG] Remove admin post downvote successful:", data);
 
           // Update the cache for admin posts
           dispatch(
@@ -1392,7 +1321,7 @@ export const dengueApi = createApi({
             )
           );
         } catch (error) {
-          console.error("[DEBUG] Remove admin post downvote failed:", error);
+          // Remove admin post downvote failed
         }
       },
       invalidatesTags: [],
@@ -1425,7 +1354,6 @@ export const dengueApi = createApi({
       async onQueryStarted(commentId, { dispatch, queryFulfilled }) {
         try {
           const { data } = await queryFulfilled;
-          console.log("[DEBUG] Admin post comment upvote successful:", data);
 
           // Update the cache for admin post comments
           dispatch(
@@ -1442,7 +1370,7 @@ export const dengueApi = createApi({
             )
           );
         } catch (error) {
-          console.error("[DEBUG] Admin post comment upvote failed:", error);
+          // Admin post comment upvote failed
         }
       },
       invalidatesTags: (result, error, commentId) => [
@@ -1458,7 +1386,6 @@ export const dengueApi = createApi({
       async onQueryStarted(commentId, { dispatch, queryFulfilled }) {
         try {
           const { data } = await queryFulfilled;
-          console.log("[DEBUG] Admin post comment downvote successful:", data);
 
           // Update the cache for admin post comments
           dispatch(
@@ -1475,7 +1402,7 @@ export const dengueApi = createApi({
             )
           );
         } catch (error) {
-          console.error("[DEBUG] Admin post comment downvote failed:", error);
+          // Admin post comment downvote failed
         }
       },
       invalidatesTags: (result, error, commentId) => [
@@ -1491,10 +1418,6 @@ export const dengueApi = createApi({
       async onQueryStarted(commentId, { dispatch, queryFulfilled }) {
         try {
           const { data } = await queryFulfilled;
-          console.log(
-            "[DEBUG] Remove admin post comment upvote successful:",
-            data
-          );
 
           // Update the cache for admin post comments
           dispatch(
@@ -1511,10 +1434,7 @@ export const dengueApi = createApi({
             )
           );
         } catch (error) {
-          console.error(
-            "[DEBUG] Remove admin post comment upvote failed:",
-            error
-          );
+          // Remove admin post comment upvote failed
         }
       },
       invalidatesTags: (result, error, commentId) => [
@@ -1530,10 +1450,6 @@ export const dengueApi = createApi({
       async onQueryStarted(commentId, { dispatch, queryFulfilled }) {
         try {
           const { data } = await queryFulfilled;
-          console.log(
-            "[DEBUG] Remove admin post comment downvote successful:",
-            data
-          );
 
           // Update the cache for admin post comments
           dispatch(
@@ -1550,10 +1466,7 @@ export const dengueApi = createApi({
             )
           );
         } catch (error) {
-          console.error(
-            "[DEBUG] Remove admin post comment downvote failed:",
-            error
-          );
+          // Remove admin post comment downvote failed
         }
       },
       invalidatesTags: (result, error, commentId) => [
@@ -1569,7 +1482,6 @@ export const dengueApi = createApi({
         body: { barangay_name: barangayName },
       }),
       transformResponse: (response) => {
-        console.log("[DEBUG] Recent reports for barangay response:", response);
         return response;
       },
     }),
@@ -1600,7 +1512,6 @@ export const dengueApi = createApi({
       query: () => "clusters/get-clusters",
       providesTags: ["Clusters"],
       transformResponse: (response) => {
-        console.log("[DEBUG] Clusters response:", response);
         return response;
       },
     }),
@@ -1639,7 +1550,6 @@ export const dengueApi = createApi({
       query: () => "reports/grouped",
       providesTags: ["Clusters"],
       transformResponse: (response) => {
-        console.log("[DEBUG] Grouped reports response:", response);
         return response;
       },
     }),
@@ -1651,7 +1561,6 @@ export const dengueApi = createApi({
         { type: "Clusters", id: clusterId },
       ],
       transformResponse: (response) => {
-        console.log("[DEBUG] Specific cluster response:", response);
         return response;
       },
     }),

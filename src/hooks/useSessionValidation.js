@@ -37,8 +37,6 @@ export const useSessionValidation = (interval = 30000) => {
     if (currentUserAccount) {
       // Check if account is disabled
       if (currentUserAccount.status === "disabled") {
-        console.log("[SESSION_VALIDATION] Account disabled, logging out user");
-
         // Clear auth data
         dispatch(logout());
 
@@ -53,7 +51,6 @@ export const useSessionValidation = (interval = 30000) => {
       }
     } else {
       // Account not found in active accounts (might be deleted)
-      console.log("[SESSION_VALIDATION] Account not found, logging out user");
 
       // Clear auth data
       dispatch(logout());

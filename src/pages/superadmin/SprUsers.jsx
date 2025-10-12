@@ -8,11 +8,6 @@ function SprUsers() {
   // Use the same query as UsersTable for consistency
   const { data: accounts, isLoading, error } = useGetAccountsQuery();
 
-  // Add console.log to debug the response
-  console.log("Accounts API Response:", accounts);
-  console.log("Loading state:", isLoading);
-  console.log("Error state:", error);
-
   // Add statistics states
   const [stats, setStats] = useState({
     totalUsers: 0,

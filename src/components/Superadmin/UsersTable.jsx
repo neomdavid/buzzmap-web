@@ -148,10 +148,7 @@ function UsersTable({ statusFilter, roleFilter, searchQuery }) {
 
     setIsSubmitting(true);
     try {
-      console.log("Starting ban/unban process for user:", selectedUser);
-
       const isVerified = await verifySuperAdmin();
-      console.log("Super admin verification result:", isVerified);
 
       if (!isVerified) {
         setIsSubmitting(false);
@@ -159,24 +156,17 @@ function UsersTable({ statusFilter, roleFilter, searchQuery }) {
       }
 
       const newStatus = isBanning ? "banned" : "active";
-      console.log("Sending toggle status request:", {
-        id: selectedUser._id,
-        status: newStatus,
-      });
 
       const response = await toggleStatus({
         id: selectedUser._id,
         status: newStatus,
       }).unwrap();
 
-      console.log("Toggle status API response:", response);
-
       toastSuccess(`User ${isBanning ? "banned" : "unbanned"} successfully`);
       setShowBanModal(false);
       setSuperAdminPassword("");
       setAuthError("");
 
-      console.log("Refreshing data...");
       await refetch();
     } catch (error) {
       console.error("Error in handleBanConfirm:", {
@@ -263,8 +253,6 @@ function UsersTable({ statusFilter, roleFilter, searchQuery }) {
   const rowData = useMemo(() => {
     if (!accounts) return [];
 
-    console.log("Raw accounts data before transformation:", accounts);
-
     const transformedData = accounts
       .filter((account) => {
         // First filter for users only and not deleted
@@ -296,7 +284,6 @@ function UsersTable({ statusFilter, roleFilter, searchQuery }) {
         status: account.status,
       }));
 
-    console.log("Final transformed data:", transformedData);
     return transformedData;
   }, [accounts, statusFilter, roleFilter, searchQuery]);
 

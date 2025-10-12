@@ -20,15 +20,6 @@ const ClusterStatusCell = (params) => {
   const rejected = params.data?.rejected || 0;
   const total = params.data?.total || 0;
 
-  // Debug logging to see what data we're getting (commented out to prevent performance issues)
-  // console.log("ClusterStatusCell debug:", {
-  //   clusterId: params.data?.id,
-  //   validated,
-  //   rejected,
-  //   total,
-  //   rawData: params.data,
-  // });
-
   // Determine the primary status and badge styling
   let statusText, badgeClass;
 
@@ -251,19 +242,6 @@ const ReportsVerification = () => {
     const resolvedReports = reports.filter((r) => r?.isResolved === true);
     const total = resolvedReports.length;
 
-    // Debug: log all report statuses (commented out to prevent performance issues)
-    // console.log("deriveClusterCountsTop debug:", {
-    //   clusterId: cluster?._id || cluster?.id,
-    //   totalReports: reports.length,
-    //   resolvedReports: total,
-    //   reportStatuses: resolvedReports.map((r) => ({
-    //     id: r._id || r.id,
-    //     status: r?.status || r?.report_status || "undefined",
-    //     isResolved: r?.isResolved,
-    //     hasStatus: !!(r?.status || r?.report_status),
-    //   })),
-    // });
-
     const validated = resolvedReports.filter((r) => {
       const s = r?.status || r?.report_status;
       return s === "Validated";
@@ -277,15 +255,6 @@ const ReportsVerification = () => {
       return s === "Pending" || !s;
     }).length;
     const unprocessed = Math.max(0, total - validated);
-
-    // console.log("Cluster counts result:", {
-    //   clusterId: cluster?._id || cluster?.id,
-    //   total,
-    //   validated,
-    //   rejected,
-    //   pending,
-    //   unprocessed,
-    // });
 
     return { total, validated, rejected, pending, unprocessed };
   };
@@ -744,22 +713,6 @@ const ReportsVerification = () => {
                 const allValidated = validated === total;
                 const showBatchActions = !allRejected && !allValidated;
 
-                console.log("Cluster batch actions debug:", {
-                  reports,
-                  total,
-                  remaining,
-                  validated,
-                  rejected,
-                  allFinalized,
-                  allRejected,
-                  allValidated,
-                  showBatchActions,
-                  reportStatuses: reports.map((r) => ({
-                    id: r._id || r.id,
-                    status: r.status || r.report_status,
-                  })),
-                });
-
                 return (
                   <>
                     {showBatchActions && (
@@ -772,10 +725,6 @@ const ReportsVerification = () => {
                               const ids = reports
                                 .map((r) => r._id || r.id)
                                 .filter(Boolean);
-                              console.log("Validate All clicked:", {
-                                ids,
-                                total,
-                              });
                               setClusterBatchConfirm({
                                 open: true,
                                 mode: "all",
@@ -799,10 +748,6 @@ const ReportsVerification = () => {
                                 )
                                 .map((r) => r._id || r.id)
                                 .filter(Boolean);
-                              console.log("Validate Remaining clicked:", {
-                                ids,
-                                remaining,
-                              });
                               setClusterBatchConfirm({
                                 open: true,
                                 mode: "remaining",
@@ -827,7 +772,6 @@ const ReportsVerification = () => {
                                 )
                                 .map((r) => r._id || r.id)
                                 .filter(Boolean);
-                              console.log("Reject All clicked:", { ids });
                               setClusterBatchConfirm({
                                 open: true,
                                 mode: "reject-all",
@@ -912,12 +856,6 @@ const ReportsVerification = () => {
                     : "btn-success"
                 } ${clusterBatchConfirm.loading ? "loading" : ""}`}
                 onClick={async () => {
-                  console.log("Batch confirm clicked:", {
-                    mode: clusterBatchConfirm.mode,
-                    ids: clusterBatchConfirm.ids,
-                    idsLength: clusterBatchConfirm.ids.length,
-                  });
-
                   setClusterBatchConfirm((p) => ({ ...p, loading: true }));
                   try {
                     const desiredStatus =
@@ -925,17 +863,10 @@ const ReportsVerification = () => {
                         ? "Rejected"
                         : "Validated";
 
-                    console.log("Making RTK Query API call:", {
-                      reportIds: clusterBatchConfirm.ids,
-                      status: desiredStatus,
-                    });
-
                     const result = await bulkValidateReports({
                       reportIds: clusterBatchConfirm.ids,
                       status: desiredStatus,
                     }).unwrap();
-
-                    console.log("RTK Query success result:", result);
 
                     // Show success message
                     const actionText =
@@ -950,10 +881,7 @@ const ReportsVerification = () => {
                     );
 
                     await refetchGrouped?.();
-                    console.log("Refetch completed");
                   } catch (error) {
-                    console.error("Batch action error:", error);
-
                     let errorMessage =
                       "An unexpected error occurred. Please try again.";
                     if (error.status === 401) {
@@ -1208,14 +1136,6 @@ const ReportsVerification = () => {
       )}
       {selectedReport && (
         <>
-          {console.log("Selected report data for admin:", {
-            id: selectedReport._id,
-            isAnonymous: selectedReport.isAnonymous,
-            user: selectedReport.user,
-            displayUser: selectedReport.displayUser,
-            anonymousId: selectedReport.anonymousId,
-            username: selectedReport.user?.username,
-          })}
           <VerifyReportModal
             reportId={selectedReport._id}
             barangay={selectedReport.barangay}

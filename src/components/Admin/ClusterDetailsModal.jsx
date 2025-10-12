@@ -138,17 +138,12 @@ const ClusterDetailsModal = ({
   const confirmRemoveFromCluster = async (id) => {
     try {
       setRemovingId(id);
-      console.log("[Cluster] Removing report from cluster", {
-        clusterId,
-        reportId: id,
-      });
       const response = await removeReportsFromCluster({
         clusterId,
         reportIds: [id],
         permanentlyExclude: true,
         resetStatus: false,
       }).unwrap();
-      console.log("[Cluster] Remove response:", response);
       toast.success(
         response?.message || "Report removed from cluster successfully"
       );

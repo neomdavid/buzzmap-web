@@ -92,14 +92,7 @@ const MapContainer = ({
 
   // Debug: Track when mapRef is set
   useEffect(() => {
-    console.log("[MapContainer] mapRef changed:", mapRef.current);
-    if (mapRef.current) {
-      console.log("[MapContainer] mapRef is now set, element:", mapRef.current);
-      console.log(
-        "[MapContainer] element in DOM:",
-        document.contains(mapRef.current)
-      );
-    }
+    // Map ref tracking removed for production
   }, [mapRef.current]);
 
   // Initialize map when data is ready
@@ -109,11 +102,8 @@ const MapContainer = ({
     if (isInitializingRef.current) return; // Prevent multiple initializations
 
     if (mapInstance && isValidMap()) {
-      console.log("Map already initialized, skipping...");
       return;
     }
-
-    console.log("Starting map initialization...");
     isInitializingRef.current = true;
 
     // Wait for Google Maps to be fully loaded before creating map
@@ -121,7 +111,6 @@ const MapContainer = ({
       return new Promise((resolve) => {
         const checkReady = () => {
           if (window.google?.maps?.Map && window.google?.maps?.marker) {
-            console.log("[MapContainer] Google Maps fully loaded");
             resolve();
           } else {
             setTimeout(checkReady, 100);
@@ -135,12 +124,6 @@ const MapContainer = ({
     const waitForDOM = () => {
       return new Promise((resolve) => {
         setTimeout(() => {
-          console.log("[MapContainer] DOM should be ready now");
-          console.log("[MapContainer] mapRef.current:", mapRef.current);
-          console.log(
-            "[MapContainer] document.contains:",
-            mapRef.current ? document.contains(mapRef.current) : "ref is null"
-          );
           resolve();
         }, 500); // Give extra time for DOM rendering
       });
@@ -155,7 +138,6 @@ const MapContainer = ({
           isInitializingRef.current = false; // Reset initialization flag
         }
       } catch (error) {
-        console.error("[MapContainer] Error waiting for Google Maps:", error);
         isInitializingRef.current = false; // Reset on error
       }
     };
@@ -165,25 +147,11 @@ const MapContainer = ({
 
   // Show info window when barangay is selected from dropdown
   useEffect(() => {
-    console.log("[MapContainer] Dropdown selection effect triggered:", {
-      hasMapInstance: !!mapInstance,
-      isValidMap: isValidMap(),
-      hasSelectedBarangayFeature: !!selectedBarangayFeature,
-      hasInfoWindow: !!infoWindowRef.current,
-      selectedBarangayName: selectedBarangayFeature?.properties?.name,
-    });
-
     if (!mapInstance || !isValidMap() || !selectedBarangayFeature) {
-      console.log(
-        "[MapContainer] Early return from dropdown effect (missing deps)"
-      );
       return;
     }
 
     if (!infoWindowRef.current) {
-      console.log(
-        "[MapContainer] Creating InfoWindow instance (dropdown effect)"
-      );
       infoWindowRef.current = new window.google.maps.InfoWindow({
         maxWidth: 500,
       });
@@ -199,13 +167,8 @@ const MapContainer = ({
       try {
         const centerFeature = center(selectedBarangayFeature.geometry);
         const [lng, lat] = centerFeature.geometry.coordinates;
-        console.log("[MapContainer] Dropdown center computed:", { lat, lng });
 
         if (isNaN(lat) || isNaN(lng) || !isFinite(lat) || !isFinite(lng)) {
-          console.error("[MapContainer] Invalid coordinates calculated:", {
-            lat,
-            lng,
-          });
           return;
         }
 
@@ -216,11 +179,6 @@ const MapContainer = ({
         let barangayObj = barangaysList?.find((b) =>
           namesAreEquivalent(b.name, selectedBarangayFeature.properties.name)
         );
-        console.log("[MapContainer] Dropdown matched API barangay:", {
-          selectedName: selectedBarangayFeature.properties.name,
-          matchedName: barangayObj?.name,
-          found: !!barangayObj,
-        });
 
         let patternBased =
           barangayObj?.status_and_recommendation?.pattern_based;
@@ -229,14 +187,6 @@ const MapContainer = ({
           selectedBarangayFeature.properties.patternType ||
           "none"
         ).toLowerCase();
-
-        console.log("[MapContainer] Dropdown pattern details:", {
-          patternType,
-          patternBased,
-          reportBased: barangayObj?.status_and_recommendation?.report_based,
-          deathPriority: barangayObj?.status_and_recommendation?.death_priority,
-          statusAndRec: barangayObj?.status_and_recommendation,
-        });
 
         if (!patternType || patternType === "") patternType = "no_change";
 
@@ -304,10 +254,6 @@ const MapContainer = ({
 
         infoWindow.setContent(content);
         infoWindow.setPosition({ lat, lng });
-        console.log("[MapContainer] Opening InfoWindow (dropdown) at:", {
-          lat,
-          lng,
-        });
         infoWindow.open(mapInstance);
 
         infoWindow.addListener("closeclick", () => {
@@ -318,10 +264,6 @@ const MapContainer = ({
           }
         });
       } catch (error) {
-        console.error(
-          "[MapContainer] Error calculating barangay center:",
-          error
-        );
         return;
       }
     }
@@ -341,11 +283,8 @@ const MapContainer = ({
 
     // Ensure map container is properly mounted
     if (!mapRef.current || !document.contains(mapRef.current)) {
-      console.log("Map container not ready, skipping update...");
       return;
     }
-
-    console.log("Updating map with new data...");
 
     // Clean up previous overlays
     overlaysRef.current.forEach((o) => {
@@ -456,11 +395,6 @@ const MapContainer = ({
           let barangayObj = barangaysList?.find((b) =>
             namesAreEquivalent(b.name, feature.properties.name)
           );
-          console.log("[MapContainer] Polygon click - matching API barangay:", {
-            featureName: feature.properties.name,
-            matchedName: barangayObj?.name,
-            found: !!barangayObj,
-          });
 
           let patternBased =
             barangayObj?.status_and_recommendation?.pattern_based;
@@ -470,34 +404,8 @@ const MapContainer = ({
             "none"
           ).toLowerCase();
 
-          console.log("[MapContainer] Polygon click pattern details:", {
-            patternType,
-            patternBased,
-            reportBased: barangayObj?.status_and_recommendation?.report_based,
-            deathPriority:
-              barangayObj?.status_and_recommendation?.death_priority,
-            statusAndRec: barangayObj?.status_and_recommendation,
-          });
-
-          // Debug logging for polygon click pattern type
-          console.log("Polygon click pattern debug:", {
-            barangayName: feature.properties.name,
-            patternBased: patternBased,
-            patternType: patternType,
-            originalStatus: patternBased?.status,
-            fallbackPatternType: feature.properties.patternType,
-          });
-
           if (!patternType || patternType === "" || patternType === "none")
             patternType = "no_change";
-
-          // Debug logging for color selection
-          console.log("Polygon click color debug:", {
-            patternType: patternType,
-            availableColors: Object.keys(USER_PATTERN_COLORS_MAP),
-            selectedColor: USER_PATTERN_COLORS_MAP[patternType],
-            fallbackColor: USER_PATTERN_COLORS_MAP.default,
-          });
 
           // Ensure no_change, empty status, and none status get the same blue color
           let patternCardColor;
@@ -508,18 +416,10 @@ const MapContainer = ({
             patternType === "none"
           ) {
             patternCardColor = USER_PATTERN_COLORS_MAP.no_change;
-            console.log(
-              "Polygon click using no_change color:",
-              patternCardColor
-            );
           } else {
             patternCardColor =
               USER_PATTERN_COLORS_MAP[patternType] ||
               USER_PATTERN_COLORS_MAP.default;
-            console.log(
-              "Polygon click using pattern-specific color:",
-              patternCardColor
-            );
           }
 
           let reportBased =
@@ -644,9 +544,6 @@ const MapContainer = ({
 
         // Ensure map instance is valid before creating marker
         if (!map || !isValidMap()) {
-          console.warn(
-            "[MapContainer] Invalid map instance, skipping marker creation"
-          );
           return null;
         }
 
@@ -787,25 +684,17 @@ const MapContainer = ({
 
     // --- Draw intervention markers ---
     if (showInterventions && activeInterventions.length > 0) {
-      console.log("[DEBUG] Drawing intervention markers:", activeInterventions);
-
       // Check if marker library is available
       if (!window.google?.maps?.marker) {
-        console.error("[DEBUG] Marker library not available");
         return;
       }
 
       const { AdvancedMarkerElement, PinElement } = window.google.maps.marker;
 
       activeInterventions.forEach((intervention) => {
-        console.log("[DEBUG] Creating marker for intervention:", intervention);
-
         try {
           // Ensure map instance is valid before creating marker
           if (!map || !isValidMap()) {
-            console.warn(
-              "[MapContainer] Invalid map instance, skipping intervention marker creation"
-            );
             return;
           }
 
@@ -842,12 +731,6 @@ const MapContainer = ({
           });
 
           marker.addListener("click", () => {
-            try {
-              console.debug(
-                "[User/MapContainer] Clicked intervention marker (raw object):",
-                intervention
-              );
-            } catch (_) {}
             // Close barangay info window if open
             if (infoWindowRef.current) {
               infoWindowRef.current.close();
@@ -947,7 +830,7 @@ const MapContainer = ({
 
           overlaysRef.current.push(marker);
         } catch (error) {
-          console.error("[DEBUG] Error creating marker:", error);
+          // Error creating marker
         }
       });
     }

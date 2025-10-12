@@ -16,13 +16,8 @@ const Login = () => {
   const location = useLocation();
   const dispatch = useDispatch();
 
-  console.log("Login component rendered");
-  console.log("Current location:", location.pathname);
-
   const handleForgotPasswordClick = (e) => {
     e.preventDefault();
-    console.log("Forgot password clicked");
-    console.log("Attempting to navigate to /forgot-password");
     navigate("/forgot-password", { replace: false });
   };
 
@@ -31,14 +26,12 @@ const Login = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log("Login attempt started for email:", email);
 
     try {
       const response = await login({
         email,
         password,
       }).unwrap();
-      console.log("Login successful:", response);
 
       const { user, accessToken, refreshToken } = response;
 
@@ -105,9 +98,6 @@ const Login = () => {
         errorMessage.includes("not been verified") ||
         errorMessage.includes("pending activation")
       ) {
-        console.log("Unverified account detected");
-        console.log("Storing email in Redux:", email);
-
         // Store email in Redux for OTP verification
         dispatch(setEmailForOtp(email));
 
@@ -122,7 +112,6 @@ const Login = () => {
 
           // Wait for Redux state to update
           setTimeout(() => {
-            console.log("Redirecting to OTP page with state");
             // Use replace: true to prevent back navigation
             navigate("/otp", {
               replace: true,

@@ -59,13 +59,6 @@ export const useLocalStorageVoting = (
     const newNormalizedUpvotes = normalizeVoteArray(initialUpvotes);
     const newNormalizedDownvotes = normalizeVoteArray(initialDownvotes);
 
-    console.log(`[useLocalStorageVoting] Post ${postId} - API data:`, {
-      initialUpvotes,
-      initialDownvotes,
-      newNormalizedUpvotes,
-      newNormalizedDownvotes,
-    });
-
     // Always update with fresh API data if it's different
     setLocalVotes((prev) => {
       // Check if we have localStorage data for this post
@@ -76,9 +69,6 @@ export const useLocalStorageVoting = (
           const postVotes = allVotes[postId];
           if (postVotes) {
             // Use localStorage data if available
-            console.log(
-              `[useLocalStorageVoting] Post ${postId} - Using localStorage data`
-            );
             return prev;
           }
         } catch (error) {
@@ -87,7 +77,6 @@ export const useLocalStorageVoting = (
       }
 
       // Use API data if no localStorage data
-      console.log(`[useLocalStorageVoting] Post ${postId} - Using API data`);
       return {
         upvotes: newNormalizedUpvotes,
         downvotes: newNormalizedDownvotes,
@@ -186,8 +175,6 @@ export const useVoteSync = () => {
         ([postId, votes]) => now - votes.lastSynced > SYNC_INTERVAL
       );
 
-      console.log(`[VOTE SYNC] Syncing ${votesToSync.length} posts...`);
-
       // Here you would implement the actual sync logic
       // For now, we'll just update the lastSynced timestamp
       const updatedVotes = { ...allVotes };
@@ -199,7 +186,6 @@ export const useVoteSync = () => {
       });
 
       localStorage.setItem(VOTES_STORAGE_KEY, JSON.stringify(updatedVotes));
-      console.log("[VOTE SYNC] Sync completed");
     } catch (error) {
       console.error("[VOTE SYNC] Error syncing votes:", error);
     } finally {

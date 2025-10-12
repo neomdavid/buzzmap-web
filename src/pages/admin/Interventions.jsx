@@ -97,11 +97,6 @@ const Interventions = () => {
   const transformedBarangays = React.useMemo(() => {
     const datasetBarangays = Array.isArray(barangaysList) ? barangaysList : [];
 
-    console.log(
-      "[DEBUG] Raw Barangays List:",
-      JSON.stringify(datasetBarangays, null, 2)
-    );
-
     const mapped = datasetBarangays.map((b) => {
       const patternBased = b.status_and_recommendation?.pattern_based || {};
       const reportBased = b.status_and_recommendation?.report_based || {};
@@ -153,54 +148,6 @@ const Interventions = () => {
 
     return [...mapped, ...extras];
   }, [barangaysList, allBarangayNames]);
-
-  // Log the transformed data
-  useEffect(() => {
-    if (transformedBarangays.length > 0) {
-      console.log(
-        "[DEBUG] Transformed Barangays List:",
-        JSON.stringify(transformedBarangays, null, 2)
-      );
-
-      // Log pattern distribution
-      const patternCounts = transformedBarangays.reduce((acc, item) => {
-        acc[item.patternType] = (acc[item.patternType] || 0) + 1;
-        return acc;
-      }, {});
-      console.log("[DEBUG] Pattern Distribution:", patternCounts);
-
-      // Log spike patterns specifically
-      const spikeBarangays = transformedBarangays.filter(
-        (item) => normalizePatternType(item.patternType) === "spike"
-      );
-      console.log("[DEBUG] Spike Barangays:", spikeBarangays);
-
-      // Targeted debug for specific barangay (e.g., Doña Josefa)
-      const target = transformedBarangays.find((b) =>
-        (b.name || "").toLowerCase().includes("doña josefa")
-      );
-      console.log("[DEBUG] Target Barangay (Doña Josefa):", target);
-      if (target) {
-        console.log(
-          "[DEBUG] Target normalized pattern:",
-          normalizePatternType(target.patternType)
-        );
-        console.log(
-          "[DEBUG] Target has signals:",
-          !!(
-            (target.issueDetected &&
-              target.issueDetected.toLowerCase() !== "none") ||
-            (target.suggestedAction && target.suggestedAction.trim() !== "") ||
-            target.death_priority?.count > 0 ||
-            (target.death_priority?.alert &&
-              target.death_priority.alert.trim() !== "") ||
-            (target.death_priority?.recommendation &&
-              target.death_priority.recommendation.trim() !== "")
-          )
-        );
-      }
-    }
-  }, [transformedBarangays]);
 
   const completedInterventions = interventions
     ? interventions.filter((i) => {
@@ -311,10 +258,6 @@ const Interventions = () => {
         }, {})
       : {};
 
-    console.log(
-      "[DEBUG] Filtering recommendations — total transformed:",
-      transformedBarangays.length
-    );
     let recommendations = transformedBarangays
       .filter((item) => {
         // Include No Data and No Change barangays even if no explicit signals
@@ -330,15 +273,6 @@ const Interventions = () => {
           (item.death_priority.recommendation &&
             item.death_priority.recommendation.trim() !== "");
         const decision = hasSignals || includeNoData || includeNoChange;
-        if ((item.name || "").toLowerCase().includes("doña josefa")) {
-          console.log("[DEBUG] Doña Josefa filter check:", {
-            normalized,
-            includeNoData,
-            includeNoChange,
-            hasSignals,
-            decision,
-          });
-        }
         return decision;
       })
       // Sort by death count first (descending), then by pattern type
@@ -358,21 +292,6 @@ const Interventions = () => {
         };
         return patternOrder[a.patternType] - patternOrder[b.patternType];
       });
-    console.log(
-      "[DEBUG] Filtered recommendations count:",
-      recommendations.length
-    );
-    const debugNoChange = recommendations.filter(
-      (r) => normalizeForTabs(r.patternType) === "no_change"
-    );
-    const debugNoData = recommendations.filter(
-      (r) => normalizeForTabs(r.patternType) === "no_data"
-    );
-    console.log(
-      "[DEBUG] No Change recommendations count:",
-      debugNoChange.length
-    );
-    console.log("[DEBUG] No Data recommendations count:", debugNoData.length);
 
     // Apply pattern filter
     if (patternFilter) {
@@ -450,9 +369,6 @@ const Interventions = () => {
     } catch {}
   }, [interventions]);
 
-  // Log what is being rendered in ActionRecommendationCard for debugging
-  console.log("ActionRecommendationCard data:", filteredRecommendations);
-
   // Tab state hooks at the top level - use centralized pattern types
   const [activeTab, setActiveTab] = useState(PATTERN_TYPES.SPIKE);
   const [showAllTabs, setShowAllTabs] = useState(false);
@@ -465,19 +381,6 @@ const Interventions = () => {
     return norm === activeTab;
   });
 
-  // Debug logging for cards filtering
-  console.log("[DEBUG] Cards Filtering:", {
-    activeTab,
-    filteredRecommendationsCount: filteredRecommendations.length,
-    cardsCount: cards.length,
-    activeTabPatterns: filteredRecommendations
-      .filter((item) => normalizePatternType(item.patternType) === activeTab)
-      .map((item) => ({
-        name: item.name,
-        patternType: item.patternType,
-        normalized: normalizePatternType(item.patternType),
-      })),
-  });
   const visibleCards = cards.slice(
     cardStartIndex,
     cardStartIndex + cardsPerPage
@@ -500,9 +403,6 @@ const Interventions = () => {
     const noChangeCount =
       (patternCountsByTab && patternCountsByTab[PATTERN_TYPES.NO_CHANGE]) || 0;
     if ((cards.length === 0 || currentCount === 0) && noChangeCount > 0) {
-      console.log(
-        "[DEBUG] Auto-switching tab to NO_CHANGE due to empty current tab."
-      );
       setActiveTab(PATTERN_TYPES.NO_CHANGE);
     }
   }, [cards.length, patternCountsByTab, activeTab]);

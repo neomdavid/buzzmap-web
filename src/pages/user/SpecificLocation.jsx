@@ -187,15 +187,6 @@ const BREEDING_SITE_TYPE_ICONS = {
   default: stagnantIcon,
 };
 
-// Debug the icon URLs in deployment
-console.log("[DEBUG] SpecificLocation - Breeding Site Icons:", {
-  "Stagnant Water": stagnantIcon,
-  "Standing Water": standingIcon,
-  "Uncollected Garbage or Trash": garbageIcon,
-  Others: othersIcon,
-  default: stagnantIcon,
-});
-
 const SpecificLocation = () => {
   const { isLoaded } = useGoogleMaps();
   const { state } = useLocation();
@@ -212,10 +203,6 @@ const SpecificLocation = () => {
   const [barangayGeoJsonData, setBarangayGeoJsonData] = useState(null);
   const [highlightedBarangay, setHighlightedBarangay] = useState(null);
   const barangayPolygonsRef = useRef([]);
-
-  console.log("[DEBUG] SpecificLocation: isLoaded =", isLoaded);
-  console.log("[DEBUG] SpecificLocation: state =", state);
-  console.log("[DEBUG] SpecificLocation: id =", id);
 
   // Use report from navigation state if available, otherwise fetch by ID
   const breedingSite = state?.breedingSite;
@@ -290,38 +277,25 @@ const SpecificLocation = () => {
 
   // Preload SVG icons to ensure they're available when needed
   useEffect(() => {
-    console.log("[DEBUG] Preloading SVG icons...");
     const iconsToPreload = Object.values(BREEDING_SITE_TYPE_ICONS);
 
     iconsToPreload.forEach((iconUrl, index) => {
       const img = new Image();
-      img.onload = () =>
-        console.log(
-          `[DEBUG] Preloaded icon ${index + 1}/${iconsToPreload.length}:`,
-          iconUrl
-        );
-      img.onerror = () =>
-        console.error(
-          `[ERROR] Failed to preload icon ${index + 1}/${
-            iconsToPreload.length
-          }:`,
-          iconUrl
-        );
+      img.onload = () => {};
+      img.onerror = () => {};
       img.src = iconUrl;
     });
   }, []);
 
   // Load barangay boundary data
   useEffect(() => {
-    console.log("[DEBUG] Loading boundary data...");
     fetch("/quezon_barangays_boundaries.geojson")
       .then((res) => res.json())
       .then((data) => {
-        console.log("[DEBUG] Boundary data loaded successfully");
         setBarangayGeoJsonData(data);
       })
       .catch((error) => {
-        console.error("[DEBUG] Error loading boundary data:", error);
+        // Error loading boundary data
       });
   }, []);
 
@@ -367,24 +341,13 @@ const SpecificLocation = () => {
   // Initialize map
   useEffect(() => {
     if (!isLoaded || !window.google) {
-      console.log("[DEBUG] Map initialization skipped:", {
-        isLoaded,
-        hasGoogle: !!window.google,
-      });
       return;
     }
 
     const mapContainer = document.getElementById("map");
     if (!mapContainer) {
-      console.log("[DEBUG] Map container not found");
       return;
     }
-
-    console.log("[DEBUG] Initializing map with:", {
-      hasReport: !!report,
-      coordinates: report?.specific_location?.coordinates,
-      container: mapContainer,
-    });
 
     const map = new window.google.maps.Map(mapContainer, {
       center: report?.specific_location?.coordinates
@@ -428,10 +391,6 @@ const SpecificLocation = () => {
           },
         },
       });
-    } else {
-      console.warn(
-        "MarkerClusterer not available. Markers will not be clustered."
-      );
     }
 
     return () => {
@@ -451,18 +410,8 @@ const SpecificLocation = () => {
   // Add markers and polylines
   useEffect(() => {
     if (!mapRef.current || !window.google || !allReports.length) {
-      console.log("[DEBUG] Skipping marker creation:", {
-        hasMap: !!mapRef.current,
-        hasGoogle: !!window.google,
-        reportsCount: allReports.length,
-      });
       return;
     }
-
-    console.log("[DEBUG] Creating markers for:", {
-      reportId: report?._id,
-      filteredReportsCount: filteredReports.length,
-    });
 
     const { AdvancedMarkerElement, PinElement } = window.google.maps.marker;
 
@@ -483,32 +432,14 @@ const SpecificLocation = () => {
       const iconUrl =
         BREEDING_SITE_TYPE_ICONS[report.report_type] ||
         BREEDING_SITE_TYPE_ICONS.default;
-      console.log(
-        "[DEBUG] Main marker - Report type:",
-        report.report_type,
-        "Icon URL:",
-        iconUrl
-      );
 
       const glyphImg = document.createElement("img");
       glyphImg.alt = `${report.report_type || "Breeding Site"} icon`;
 
       // Add success and error handling for missing images
-      glyphImg.onload = function () {
-        console.log("[DEBUG] Successfully loaded main marker icon:", iconUrl);
-      };
+      glyphImg.onload = function () {};
 
       glyphImg.onerror = function () {
-        console.error(
-          "[ERROR] Failed to load main marker icon:",
-          iconUrl,
-          "for report type:",
-          report.report_type
-        );
-        console.error(
-          "[ERROR] Available icon keys:",
-          Object.keys(BREEDING_SITE_TYPE_ICONS)
-        );
         // Fallback to a simple colored circle if image fails
         this.style.display = "none";
       };
@@ -622,36 +553,14 @@ const SpecificLocation = () => {
         const iconUrl =
           BREEDING_SITE_TYPE_ICONS[r.report_type] ||
           BREEDING_SITE_TYPE_ICONS.default;
-        console.log(
-          "[DEBUG] Nearby marker - Report type:",
-          r.report_type,
-          "Icon URL:",
-          iconUrl
-        );
 
         const glyphImg = document.createElement("img");
         glyphImg.alt = `${r.report_type || "Breeding Site"} icon`;
 
         // Add success and error handling for missing images
-        glyphImg.onload = function () {
-          console.log(
-            "[DEBUG] Successfully loaded nearby marker icon:",
-            iconUrl
-          );
-        };
+        glyphImg.onload = function () {};
 
         glyphImg.onerror = function () {
-          console.error(
-            "[ERROR] Failed to load nearby marker icon:",
-            iconUrl,
-            "for report type:",
-            r.report_type
-          );
-          console.error(
-            "[ERROR] Available icon keys:",
-            Object.keys(BREEDING_SITE_TYPE_ICONS)
-          );
-          console.error("[ERROR] Report object:", r);
           // Fallback to a simple colored circle if image fails
           this.style.display = "none";
         };
@@ -757,11 +666,6 @@ const SpecificLocation = () => {
   useEffect(() => {
     if (!mapRef.current || !barangayGeoJsonData || !isLoaded) return;
 
-    console.log(
-      "[DEBUG] Drawing barangay polygons, highlighted:",
-      highlightedBarangay
-    );
-
     // Small delay to ensure map is fully ready and other overlays are drawn
     const timeoutId = setTimeout(() => {
       // Clear existing polygons
@@ -810,17 +714,9 @@ const SpecificLocation = () => {
   // Memoize the onBarangaySelect callback to prevent unnecessary re-renders
   const handleBarangaySelect = useCallback(
     (barangay) => {
-      console.log("[DEBUG] Barangay selected:", barangay);
-      console.log("[DEBUG] Barangay keys:", Object.keys(barangay));
-      console.log(
-        "[DEBUG] Full barangay object:",
-        JSON.stringify(barangay, null, 2)
-      );
-
       if (mapRef.current && barangay && barangayGeoJsonData) {
         // Use the same approach as intervention modal - find barangay in GeoJSON and calculate center
         const barangayName = barangay.displayName || barangay.name;
-        console.log("[DEBUG] Looking for barangay name:", barangayName);
 
         const selectedFeature = barangayGeoJsonData.features.find(
           (feature) => feature.properties.name === barangayName
@@ -835,10 +731,6 @@ const SpecificLocation = () => {
               centerFeature.geometry.coordinates
             ) {
               const [lng, lat] = centerFeature.geometry.coordinates;
-              console.log("[DEBUG] Calculated center using turf:", {
-                lat,
-                lng,
-              });
 
               // Pan to the calculated center
               const centerLatLng = new window.google.maps.LatLng(lat, lng);
@@ -847,34 +739,11 @@ const SpecificLocation = () => {
 
               // Set highlighted barangay for border highlighting
               setHighlightedBarangay(barangayName);
-              console.log(
-                "[DEBUG] Pan completed to calculated center and highlighted:",
-                barangayName
-              );
-            } else {
-              console.warn(
-                "[DEBUG] Failed to get center coordinates from turf calculation"
-              );
             }
           } catch (err) {
-            console.error("[DEBUG] Error calculating center with turf:", err);
+            // Error calculating center with turf
           }
-        } else {
-          console.warn(
-            "[DEBUG] Barangay feature not found in GeoJSON:",
-            barangayName
-          );
-          console.log(
-            "[DEBUG] Available barangay names in GeoJSON:",
-            barangayGeoJsonData.features.map((f) => f.properties.name)
-          );
         }
-      } else {
-        console.warn("[DEBUG] Missing requirements:", {
-          hasMapRef: !!mapRef.current,
-          hasBarangay: !!barangay,
-          hasGeoJsonData: !!barangayGeoJsonData,
-        });
       }
     },
     [barangayGeoJsonData]

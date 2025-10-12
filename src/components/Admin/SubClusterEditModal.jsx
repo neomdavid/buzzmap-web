@@ -20,22 +20,9 @@ const SubClusterEditModal = ({
   const subClusterReports = subCluster.reports || [];
   const subClusterId = subCluster._id || subCluster.id;
 
-  console.log("SubClusterEditModal - subCluster data:", {
-    subCluster,
-    subClusterId,
-    subClusterReports,
-    reportsCount: subClusterReports.length,
-  });
-
   const handleRemoveReport = async (reportId) => {
     try {
       setRemovingReportId(reportId);
-
-      console.log("Removing report from sub-cluster:", {
-        subClusterId,
-        reportId,
-        reportIds: [reportId],
-      });
 
       const response = await removeReportsFromSubCluster({
         subClusterId,
@@ -43,7 +30,6 @@ const SubClusterEditModal = ({
         resetStatus: false,
       }).unwrap();
 
-      console.log("Remove response:", response);
       toast.success("Report removed from sub-cluster successfully");
 
       // Call the callback to update parent component

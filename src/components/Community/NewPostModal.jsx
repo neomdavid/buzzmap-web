@@ -136,27 +136,12 @@ const NewPostModal = forwardRef(
 
     const handleSubmit = async (e) => {
       e.preventDefault();
-      console.log("🔐 Current token:", token);
-      console.log("✅ SUBMIT button clicked");
-
-      console.log("📝 Current form values:");
-      console.log({
-        barangay,
-        coordinates,
-        date,
-        time,
-        reportType,
-        images,
-        description,
-      });
 
       if (!validateForm()) {
         console.warn("❌ Form validation failed");
         toastError("Please fill all required fields");
         return;
       }
-
-      console.log("✅ Form validation passed");
 
       try {
         // Prepare coordinates as [longitude, latitude]
@@ -180,22 +165,14 @@ const NewPostModal = forwardRef(
 
         // If images are added, append each image to the FormData
         if (images.length > 0) {
-          console.log(`📸 Appending ${images.length} image(s)`);
           images.forEach((img) => {
             formData.append("images", img); // Append each image (file) to the FormData
           });
         }
 
-        // Log FormData contents properly
-        console.log("📦 FormData contents:");
-        for (let pair of formData.entries()) {
-          console.log(pair[0] + ": " + pair[1]);
-        }
-
         // Call createPost mutation with FormData
         const response = await createPostWithImage(formData).unwrap();
 
-        console.log("✅ Post uploaded successfully", response);
         toastSuccess("Post reported to surveillance");
 
         // Reset form
@@ -206,7 +183,6 @@ const NewPostModal = forwardRef(
         setReportType("");
         setDescription("");
         setImages([]);
-        console.log("🧹 Form reset after successful submission");
 
         if (onSubmit) {
           onSubmit();
@@ -264,8 +240,6 @@ const NewPostModal = forwardRef(
     const getCurrentHHMM = () => new Date().toTimeString().slice(0, 5);
 
     const handleLocationSelect = (coords, barangayName) => {
-      console.log("NewPostModal received:", { coords, barangayName });
-
       setLocationError("");
       setCoordinates(coords);
       setBarangay(barangayName || ""); // Always set barangay, even if empty
@@ -292,10 +266,6 @@ const NewPostModal = forwardRef(
       });
 
       // Debug log to verify state updates
-      console.log("Updated state:", {
-        coordinates: coords,
-        barangay: barangayName || "",
-      });
     };
 
     // Detect Safari to avoid type="time" where unsupported

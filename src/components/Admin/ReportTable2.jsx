@@ -238,16 +238,6 @@ function ReportTable2({
 
   // Format the rowData to match the structure of the grid
   let rowData = posts.map((post) => {
-    // Log the post data to see what we're getting
-    console.log("Post data for admin:", {
-      id: post._id,
-      isAnonymous: post.isAnonymous,
-      user: post.user,
-      displayUser: post.displayUser,
-      anonymousId: post.anonymousId,
-      username: post.user?.username,
-    });
-
     return {
       id: post._id,
       username: post.user?.username || "User", // Always show real username for admin
@@ -457,7 +447,6 @@ function ReportTable2({
   }, []);
 
   const openModal = (post, type) => {
-    console.log("Selected Report Data:", post); // Log the full post data to ensure everything is correct
     setSelectedReport(post);
     setSelectedReportType(type);
     setIsModalOpen(true);

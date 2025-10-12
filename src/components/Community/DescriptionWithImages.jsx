@@ -105,11 +105,14 @@ const DescriptionWithImages = ({
       {/* Upload Guidelines Modal */}
       <dialog ref={guidelinesDialogRef} className="modal">
         <div className="modal-box bg-white text-primary">
-          <form method="dialog">
-            <button className="btn btn-sm btn-circle btn-ghost absolute right-2 top-2">
+          <div>
+            <button
+              className="btn btn-sm btn-circle btn-ghost absolute right-2 top-2"
+              onClick={() => guidelinesDialogRef.current?.close()}
+            >
               ✕
             </button>
-          </form>
+          </div>
           <p className="font-extrabold text-2xl mb-2">Photo requirements</p>
           <p className="text-sm text-gray-600 mb-2">
             Make sure your photos meet these:
@@ -129,14 +132,21 @@ const DescriptionWithImages = ({
             >
               Select photos
             </button>
-            <form method="dialog">
-              <button className="btn">Cancel</button>
-            </form>
+            <div>
+              <button
+                className="btn"
+                onClick={() => guidelinesDialogRef.current?.close()}
+              >
+                Cancel
+              </button>
+            </div>
           </div>
         </div>
-        <form method="dialog" className="modal-backdrop">
-          <button>close</button>
-        </form>
+        <div className="modal-backdrop">
+          <button onClick={() => guidelinesDialogRef.current?.close()}>
+            close
+          </button>
+        </div>
       </dialog>
 
       {/* Textarea for description */}

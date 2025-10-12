@@ -264,15 +264,6 @@ function Profile() {
                 </div>
               )}
               {/* Debug logging */}
-              {console.log("[DEBUG] Profile PostCard data:", {
-                postId: report._id,
-                upvotes: report.upvotes,
-                downvotes: report.downvotes,
-                upvotesLength: report.upvotes?.length,
-                downvotesLength: report.downvotes?.length,
-                currentUser: user,
-                report: report,
-              })}
               <PostCard
                 postId={report._id}
                 profileImage={profileData?.account?.profilePhotoUrl || profile1}
@@ -313,12 +304,6 @@ function Profile() {
                 currentUserId={user?._id}
                 readOnly={activeTab === "pending" || activeTab === "rejected"}
                 onVoteUpdate={(newUpvotes, newDownvotes) => {
-                  console.log("[DEBUG] Profile onVoteUpdate called:", {
-                    newUpvotes,
-                    newDownvotes,
-                    reportId: report._id,
-                  });
-
                   // Update the specific report in profileData
                   setProfileData((prevData) => {
                     if (!prevData?.recentActivity?.reports) return prevData;
@@ -352,8 +337,6 @@ function Profile() {
                   });
                 }}
                 onPostDeleted={(deletedPostId) => {
-                  console.log("[DEBUG] Profile post deleted:", deletedPostId);
-
                   // Remove the deleted post from profileData
                   setProfileData((prevData) => {
                     if (!prevData?.recentActivity?.reports) return prevData;

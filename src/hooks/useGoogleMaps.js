@@ -25,23 +25,12 @@ export const useGoogleMaps = (apiKey, mapId, mapRef) => {
 
     // Check retry limit to prevent infinite loops
     if (retryCountRef.current >= maxRetries) {
-      console.error("Max retries reached for map initialization");
       setError("Failed to initialize map after maximum retries");
       return;
     }
 
     // Ensure map ref is available and attached to DOM
     if (!mapRef.current || !document.contains(mapRef.current)) {
-      console.log(
-        `Map ref not ready or not in DOM, retrying in 100ms... (attempt ${
-          retryCountRef.current + 1
-        }/${maxRetries})`
-      );
-      console.log("Debug - mapRef.current:", mapRef.current);
-      console.log(
-        "Debug - document.contains:",
-        mapRef.current ? document.contains(mapRef.current) : "ref is null"
-      );
       retryCountRef.current++;
       setTimeout(() => {
         if (isMountedRef.current) {
@@ -54,11 +43,6 @@ export const useGoogleMaps = (apiKey, mapId, mapRef) => {
     // Additional check: ensure the element has dimensions
     const rect = mapRef.current.getBoundingClientRect();
     if (rect.width === 0 || rect.height === 0) {
-      console.log(
-        `Map element has no dimensions, retrying in 100ms... (attempt ${
-          retryCountRef.current + 1
-        }/${maxRetries})`
-      );
       retryCountRef.current++;
       setTimeout(() => {
         if (isMountedRef.current) {
@@ -70,11 +54,6 @@ export const useGoogleMaps = (apiKey, mapId, mapRef) => {
 
     // Ensure Google Maps and marker library are fully loaded
     if (!window.google?.maps?.Map || !window.google?.maps?.marker) {
-      console.log(
-        `Google Maps not fully loaded, retrying in 100ms... (attempt ${
-          retryCountRef.current + 1
-        }/${maxRetries})`
-      );
       retryCountRef.current++;
       setTimeout(() => {
         if (isMountedRef.current) {
@@ -87,12 +66,8 @@ export const useGoogleMaps = (apiKey, mapId, mapRef) => {
     // Reset retry count on successful initialization
     retryCountRef.current = 0;
 
-    console.log("Google Maps script loaded");
-
     // Only create map if not already created or invalid
     if (!mapInstance.current || !isValidMapInstance(mapInstance.current)) {
-      console.log("Creating new map instance...");
-
       try {
         mapInstance.current = createMapInstance(mapRef.current, {
           center: { lat: 14.676, lng: 121.0437 }, // QC_CENTER
@@ -103,7 +78,6 @@ export const useGoogleMaps = (apiKey, mapId, mapRef) => {
           fullscreenControl: false,
           ...options,
         });
-        console.log("Map instance created successfully");
 
         // Small delay to ensure map is fully initialized before setting ready
         setTimeout(() => {
@@ -112,7 +86,6 @@ export const useGoogleMaps = (apiKey, mapId, mapRef) => {
           }
         }, 100);
       } catch (err) {
-        console.error("Error creating map instance:", err);
         if (isMountedRef.current) {
           setError("Failed to initialize map");
         }
@@ -164,7 +137,6 @@ export const useGoogleMaps = (apiKey, mapId, mapRef) => {
           }
         })
         .catch((err) => {
-          console.error("Error loading Google Maps script:", err);
           if (isMountedRef.current) {
             setError("Failed to load Google Maps");
           }
@@ -174,7 +146,6 @@ export const useGoogleMaps = (apiKey, mapId, mapRef) => {
 
   const cleanup = () => {
     if (mapInstance.current) {
-      console.log("Cleaning up map instance...");
       cleanupMapInstance(mapInstance.current);
       mapInstance.current = null;
       setMapReady(false);

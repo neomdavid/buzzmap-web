@@ -40,7 +40,6 @@ const SignUp = () => {
     if (!el) return;
 
     const canScroll = el.scrollHeight > el.clientHeight;
-    console.log("CAN SCROLL:", canScroll);
     if (!canScroll) {
       setHasScrolledToBottom(true);
     } else {
@@ -80,7 +79,6 @@ const SignUp = () => {
         confirmPassword,
         role: "user",
       }).unwrap();
-      console.log("Registration successful:", response);
 
       // Store email in Redux for OTP verification
       dispatch(setEmailForOtp(email));

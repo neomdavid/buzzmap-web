@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Line } from 'react-chartjs-2';
+import React, { useState, useEffect } from "react";
+import { Line } from "react-chartjs-2";
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -8,9 +8,13 @@ import {
   LineElement,
   Title,
   Tooltip,
-  Legend
-} from 'chart.js';
-import { useGetBarangayWeeklyTrendsQuery, useGetPatternRecognitionResultsQuery, useGetBarangaysQuery } from '../api/dengueApi';
+  Legend,
+} from "chart.js";
+import {
+  useGetBarangayWeeklyTrendsQuery,
+  useGetPatternRecognitionResultsQuery,
+  useGetBarangaysQuery,
+} from "../api/dengueApi";
 
 // Register ChartJS components
 ChartJS.register(
@@ -24,56 +28,62 @@ ChartJS.register(
 );
 
 const PATTERN_COLORS = {
-  spike: 'rgb(239, 68, 68)',        // Red (Tailwind error)
-  gradual_rise: 'rgb(249, 115, 22)', // Orange (Tailwind warning)
-  decline: 'rgb(34, 197, 94)',      // Green (Tailwind success)
-  stability: 'rgb(59, 130, 246)',    // Blue (Tailwind info)
-  none: 'rgb(107, 114, 128)',         // Gray (Tailwind gray-500)
-  default: 'rgb(107, 114, 128)',      // Gray (Tailwind gray-500)
+  spike: "rgb(239, 68, 68)", // Red (Tailwind error)
+  gradual_rise: "rgb(249, 115, 22)", // Orange (Tailwind warning)
+  decline: "rgb(34, 197, 94)", // Green (Tailwind success)
+  stability: "rgb(59, 130, 246)", // Blue (Tailwind info)
+  none: "rgb(107, 114, 128)", // Gray (Tailwind gray-500)
+  default: "rgb(107, 114, 128)", // Gray (Tailwind gray-500)
 };
 
 const DengueChartCard = () => {
-  console.log('[DengueChartCard DEBUG] COMPONENT RENDER');
-  const [selectedBarangay, setSelectedBarangay] = useState('bahay toro');
+  const [selectedBarangay, setSelectedBarangay] = useState("bahay toro");
   const [weeks, setWeeks] = useState(6);
 
   // Fetch barangays for dropdown
-  const { data: barangaysData, isLoading: barangaysLoading } = useGetBarangaysQuery();
-  console.log('[DengueChartCard DEBUG] barangaysData (from getAllBarangays):', barangaysData);
+  const { data: barangaysData, isLoading: barangaysLoading } =
+    useGetBarangaysQuery();
   // Fetch pattern recognition results
-  const { data: patternResults, isLoading: patternsLoading } = useGetPatternRecognitionResultsQuery();
+  const { data: patternResults, isLoading: patternsLoading } =
+    useGetPatternRecognitionResultsQuery();
 
-  const { data: trendsData, isLoading: trendsLoading, error } = useGetBarangayWeeklyTrendsQuery({
+  const {
+    data: trendsData,
+    isLoading: trendsLoading,
+    error,
+  } = useGetBarangayWeeklyTrendsQuery({
     barangay_name: selectedBarangay,
-    number_of_weeks: weeks
+    number_of_weeks: weeks,
   });
 
   // Set default selectedBarangay once barangaysData is loaded
   useEffect(() => {
-    if (barangaysData?.data && barangaysData.data.length > 0 && selectedBarangay === 'bahay toro') {
-      setSelectedBarangay(barangaysData.data[0].name); 
+    if (
+      barangaysData?.data &&
+      barangaysData.data.length > 0 &&
+      selectedBarangay === "bahay toro"
+    ) {
+      setSelectedBarangay(barangaysData.data[0].name);
     }
   }, [barangaysData, selectedBarangay]);
 
   // Determine pattern for the selected barangay (from barangaysData)
   const selectedBarangayPattern = React.useMemo(() => {
-    if (!barangaysData?.data || !selectedBarangay) return 'none';
+    if (!barangaysData?.data || !selectedBarangay) return "none";
     const barangay = barangaysData.data.find(
-      item => item.name?.toLowerCase() === selectedBarangay.toLowerCase()
+      (item) => item.name?.toLowerCase() === selectedBarangay.toLowerCase()
     );
-    // Debug logs
-    console.log('[DengueChartCard DEBUG] selectedBarangay:', selectedBarangay);
-    console.log('[DengueChartCard DEBUG] found barangay (from getAllBarangays):', barangay);
-    let pattern = barangay?.status_and_recommendation?.pattern_based?.status?.toLowerCase();
-    if (!pattern || pattern === '') pattern = 'none';
-    console.log('[DengueChartCard DEBUG] selectedBarangayPattern (from getAllBarangays):', pattern);
+    let pattern =
+      barangay?.status_and_recommendation?.pattern_based?.status?.toLowerCase();
+    if (!pattern || pattern === "") pattern = "none";
     return pattern;
   }, [barangaysData, selectedBarangay]);
 
   const isLoading = barangaysLoading || patternsLoading || trendsLoading;
 
   // Get the correct color for the line based on the pattern
-  const lineColor = PATTERN_COLORS[selectedBarangayPattern] || PATTERN_COLORS.default;
+  const lineColor =
+    PATTERN_COLORS[selectedBarangayPattern] || PATTERN_COLORS.default;
 
   // Transform the API data to match the chart format (new API structure)
   const chartData = React.useMemo(() => {
@@ -90,15 +100,15 @@ const DengueChartCard = () => {
       }))
       .sort((a, b) => {
         // Sort by week number
-        const numA = parseInt(a.week.replace(/\D/g, ''));
-        const numB = parseInt(b.week.replace(/\D/g, ''));
+        const numA = parseInt(a.week.replace(/\D/g, ""));
+        const numB = parseInt(b.week.replace(/\D/g, ""));
         return numA - numB;
       });
 
     // Optionally add current week
     if (currentWeek) {
       weekEntries.push({
-        week: 'Current Week',
+        week: "Current Week",
         cases: currentWeek.count,
         dateRange: currentWeek.date_range,
       });
@@ -108,48 +118,48 @@ const DengueChartCard = () => {
   }, [trendsData]);
 
   // Update chart labels and data
-  const chartLabels = chartData.map(d => d.week);
-  const chartCases = chartData.map(d => d.cases);
+  const chartLabels = chartData.map((d) => d.week);
+  const chartCases = chartData.map((d) => d.cases);
 
   const options = {
     responsive: true,
     plugins: {
       legend: {
-        position: 'top',
+        position: "top",
       },
       title: {
         display: true,
-        text: `Dengue Cases Trend - ${selectedBarangay}`
-      }
+        text: `Dengue Cases Trend - ${selectedBarangay}`,
+      },
     },
     scales: {
       y: {
         beginAtZero: true,
         title: {
           display: true,
-          text: 'Number of Cases'
-        }
+          text: "Number of Cases",
+        },
       },
       x: {
         title: {
           display: true,
-          text: 'Week'
-        }
-      }
-    }
+          text: "Week",
+        },
+      },
+    },
   };
 
   const chartJsData = {
     labels: chartLabels,
     datasets: [
       {
-        label: 'Dengue Cases',
+        label: "Dengue Cases",
         data: chartCases,
         borderColor: lineColor, // Use dynamic line color
         tension: 0.1,
-        fill: false
-      }
-    ]
+        fill: false,
+      },
+    ],
   };
 
   if (isLoading) {
@@ -181,8 +191,11 @@ const DengueChartCard = () => {
             {barangaysLoading ? (
               <option>Loading...</option>
             ) : (
-              barangaysData?.data?.map(barangay => (
-                <option key={barangay._id || barangay.name} value={barangay.name}>
+              barangaysData?.data?.map((barangay) => (
+                <option
+                  key={barangay._id || barangay.name}
+                  value={barangay.name}
+                >
                   {barangay.name}
                 </option>
               ))
@@ -205,8 +218,10 @@ const DengueChartCard = () => {
           Barangay: <span className="font-semibold">{selectedBarangay}</span>
         </p>
         <p className="text-sm text-gray-600">
-          Pattern: <span style={{ color: lineColor, fontWeight: '600' }}>
-            {selectedBarangayPattern.charAt(0).toUpperCase() + selectedBarangayPattern.slice(1).replace('_', ' ')}
+          Pattern:{" "}
+          <span style={{ color: lineColor, fontWeight: "600" }}>
+            {selectedBarangayPattern.charAt(0).toUpperCase() +
+              selectedBarangayPattern.slice(1).replace("_", " ")}
           </span>
         </p>
       </div>
@@ -217,4 +232,4 @@ const DengueChartCard = () => {
   );
 };
 
-export default DengueChartCard; 
+export default DengueChartCard;

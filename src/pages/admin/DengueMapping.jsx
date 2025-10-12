@@ -939,11 +939,6 @@ const DengueMapping = () => {
       const matching = barangaysList?.find((b) =>
         namesAreEquivalent(b.name, barangay.properties?.name)
       );
-      console.log("[DengueMapping] Map click select:", {
-        featureName: barangay.properties?.name,
-        matchedName: matching?.name,
-        found: !!matching,
-      });
 
       // Merge the data, ensuring all properties are properly set
       const merged = {
@@ -1084,12 +1079,6 @@ const DengueMapping = () => {
 
   // Function to handle report removal from sub-cluster
   const handleReportRemovedFromSubCluster = (subClusterId, reportId) => {
-    console.log(
-      "Report removed from sub-cluster, refetching data:",
-      subClusterId,
-      reportId
-    );
-
     // Refetch the specific cluster data to get updated sub-clusters
     if (refetchSpecificCluster) {
       refetchSpecificCluster();

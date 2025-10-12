@@ -49,8 +49,6 @@ const SearchResults = () => {
 
   // Transform data to handle different response structures and apply client-side search as fallback
   const data = useMemo(() => {
-    console.log("[DEBUG] Raw API data:", rawData);
-
     // Handle different response structures
     let posts = [];
     if (Array.isArray(rawData)) {
@@ -92,15 +90,6 @@ const SearchResults = () => {
             post.description?.toLowerCase().includes(query)
         );
       }
-
-      console.log(
-        "[DEBUG] Server returned:",
-        serverFilteredCount,
-        "posts, client filtering found:",
-        clientFiltered.length,
-        "with filter type:",
-        filters.filterType
-      );
 
       return {
         posts: clientFiltered,
@@ -179,13 +168,7 @@ const SearchResults = () => {
   };
 
   // Log the current search parameters
-  useEffect(() => {
-    console.log("Current Search Parameters:", {
-      searchQuery,
-      filters,
-      status: "Validated",
-    });
-  }, [searchQuery, filters]);
+  useEffect(() => {}, [searchQuery, filters]);
 
   return (
     <>
@@ -486,16 +469,8 @@ const SearchResults = () => {
                         basicProfiles={[]}
                         onVoteUpdate={(newUpvotes, newDownvotes) => {
                           // Handle vote updates if needed
-                          console.log(
-                            "[DEBUG] SearchResults onVoteUpdate called:",
-                            { newUpvotes, newDownvotes, postId: post._id }
-                          );
                         }}
                         onPostDeleted={(deletedPostId) => {
-                          console.log(
-                            "[DEBUG] SearchResults post deleted:",
-                            deletedPostId
-                          );
                           // The RTK Query cache will automatically update
                           // No need to manually remove from local state here
                         }}

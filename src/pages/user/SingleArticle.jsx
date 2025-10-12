@@ -83,10 +83,6 @@ const SingleArticle = () => {
     );
   }
 
-  // Debug: Log images and currentSlide
-  console.log("article.images:", displayArticle?.images);
-  console.log("currentSlide:", currentSlide);
-
   return (
     <main className="mt-[-50px] pt-10 flex flex-col text-primary w-full overflow-x-hidden pb-20">
       <div className="flex p-6 items-center gap-3 pt-8 justify-center w-full bg-primary text-white">

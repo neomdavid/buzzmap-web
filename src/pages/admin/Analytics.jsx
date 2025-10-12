@@ -332,7 +332,6 @@ const Analytics = () => {
       await new Promise((resolve) => setTimeout(resolve, 300));
 
       // Refetch all relevant data after successful import
-      console.log("Refetching data after successful CSV import...");
       await Promise.all([
         refetchAnalytics(),
         refetchPosts(),
@@ -477,7 +476,7 @@ const Analytics = () => {
                 { type: "done", label: "Hosted seminar with 50 attendees" },
                 { type: "pending", label: "Post-event survey analysis" },
               ]}
-              onEdit={() => console.log("Edit Awareness Progress")}
+              onEdit={() => {}}
             />
             <ProgressCard
               title="Clean-Up Drive in Batasan"
@@ -489,7 +488,7 @@ const Analytics = () => {
                 { type: "result", label: "Initial improvement in water flow" },
                 { type: "pending", label: "Debris disposal coordination" },
               ]}
-              onEdit={() => console.log("Edit Cleanup Progress")}
+              onEdit={() => {}}
             />
           </section>
         </div> */}
@@ -503,10 +502,6 @@ const Analytics = () => {
         )}
         {!isLoadingPatterns && spikeRecommendationDetails && (
           <div className="w-full shadow-sm shadow-lg p-6 py-8 rounded-lg mt-6">
-            {console.log(
-              "[Analytics DEBUG] spikeRecommendationDetails:",
-              spikeRecommendationDetails
-            )}
             <p className="text-base-content text-3xl font-bold mb-4">
               {spikeRecommendationDetails.patternType.toLowerCase() === "spike"
                 ? "Priority Action Recommendation (Spike Detected)"

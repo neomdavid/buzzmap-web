@@ -173,7 +173,6 @@ const InterventionDetailsModal = ({
 
       return isWithin;
     } catch (error) {
-      console.error("Error validating pin within barangay:", error);
       return false;
     }
   };
@@ -228,18 +227,11 @@ const InterventionDetailsModal = ({
               zoom: 15,
             });
           }
-        } catch (err) {
-          console.error(
-            "Error calculating center for barangay:",
-            intervention.barangay,
-            err
-          );
-        }
+        } catch (err) {}
       }
     }
   };
 
-  console.log(formData.date);
   // Handle save button
   const handleSave = async (e) => {
     e.preventDefault();
@@ -262,29 +254,10 @@ const InterventionDetailsModal = ({
           : null,
       };
 
-      // Debug logs: request
-      console.log("[EditIntervention] Submitting update", {
-        id: intervention._id,
-        payload: formattedData,
-      });
-      console.log(
-        "[EditIntervention] Request body (JSON)",
-        JSON.stringify(formattedData)
-      );
-
       const response = await updateIntervention({
         id: intervention._id, // intervention id
         updatedData: formattedData, // the data to update
       }).unwrap();
-
-      // Debug logs: response
-      console.log("[EditIntervention] Update response", response);
-      try {
-        console.log(
-          "[EditIntervention] Response (JSON)",
-          JSON.stringify(response)
-        );
-      } catch {}
 
       // Refetch the interventions data
       if (onRefetch) {
@@ -295,8 +268,6 @@ const InterventionDetailsModal = ({
       onClose();
       toastSuccess("Intervention updated successfully");
     } catch (error) {
-      // Debug logs: error details
-      console.error("[EditIntervention] Update failed", error);
       let message = "Failed to update intervention. Please try again.";
       if (error && (error.data || error.message)) {
         try {
@@ -324,11 +295,9 @@ const InterventionDetailsModal = ({
 
   // Handle archive confirmation
   const handleConfirmDelete = async () => {
-    console.log("Start archive action...");
     setIsLoading(true);
     try {
       const response = await deleteIntervention(intervention._id);
-      console.log("Archive successful:", response);
 
       // Show success toast
       toastSuccess("Intervention archived successfully");
@@ -341,7 +310,6 @@ const InterventionDetailsModal = ({
       // Close the modal
       onClose();
     } catch (err) {
-      console.error("Error during archive:", err);
       toastError("Failed to archive intervention. Please try again.");
     } finally {
       setIsLoading(false);
@@ -376,7 +344,6 @@ const InterventionDetailsModal = ({
       if (onRefetch) await onRefetch();
       onClose();
     } catch (e) {
-      console.error("Unarchive error:", e);
       toastError("Failed to unarchive intervention. Please try again.");
     } finally {
       setIsLoading(false);
@@ -410,7 +377,6 @@ const InterventionDetailsModal = ({
       if (onRefetch) await onRefetch();
       onClose();
     } catch (e) {
-      console.error("Hard delete error:", e);
       toastError("Failed to delete intervention. Please try again.");
     } finally {
       setIsLoading(false);

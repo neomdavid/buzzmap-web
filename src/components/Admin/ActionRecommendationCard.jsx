@@ -255,14 +255,6 @@ const ActionRecommendationCard = ({
     );
     const isWithin = daysFromToday >= -14 && daysFromToday <= 14;
 
-    console.log("[DEBUG] Date validation for", dateStr, ":");
-    console.log("- Today:", today.toISOString());
-    console.log("- Intervention date:", interventionDate.toISOString());
-    console.log("- Days from today:", daysFromToday);
-    console.log("- Two weeks ago:", twoWeeksAgo.toISOString());
-    console.log("- Two weeks ahead:", twoWeeksAhead.toISOString());
-    console.log("- Is within two weeks:", isWithin);
-
     return isWithin;
   };
 
@@ -270,57 +262,19 @@ const ActionRecommendationCard = ({
   const barangayInterventions =
     allInterventions?.filter((i) => i.barangay === barangay) || [];
 
-  // Debug each intervention's date validation
-  console.log(`[DEBUG] Checking interventions for ${barangay}:`);
-  barangayInterventions.forEach((i) => {
-    console.log(`\nValidating intervention from ${i.date}:`);
-    const isValid = isWithinTwoWeeks(i.date);
-    console.log(`- Is within 2 weeks: ${isValid}`);
-  });
-
   // Filter to only include interventions within the 2-week window
   const recentInterventions = barangayInterventions.filter((i) => {
     const isValid = isWithinTwoWeeks(i.date);
-    console.log(
-      `[DEBUG] Filtering intervention from ${i.date}: ${
-        isValid ? "INCLUDED" : "EXCLUDED"
-      }`
-    );
     return isValid;
   });
-
-  console.log(`[DEBUG] Summary for ${barangay}:`);
-  console.log("- Total interventions:", barangayInterventions.length);
-  console.log(
-    "- Recent interventions (within 2 weeks):",
-    recentInterventions.length
-  );
-  console.log(
-    "- Recent intervention dates:",
-    recentInterventions.map((i) => i.date)
-  );
 
   const hasRecentIntervention = recentInterventions.length > 0;
   const latestRecentIntervention = hasRecentIntervention
     ? recentInterventions.sort((a, b) => new Date(b.date) - new Date(a.date))[0]
     : null;
 
-  console.log(`[DEBUG] Final status for ${barangay}:`);
-  console.log("- Has recent intervention:", hasRecentIntervention);
-  console.log("- Latest recent intervention:", latestRecentIntervention?.date);
-  console.log("- Latest status:", latestRecentIntervention?.status);
-
   // Show Apply button if there are no recent interventions
   const showApplyButton = !hasRecentIntervention;
-
-  console.log(`[DEBUG] Button state for ${barangay}:`);
-  console.log("- Show Apply button:", showApplyButton);
-  console.log(
-    "- Reason:",
-    hasRecentIntervention
-      ? "Has recent intervention"
-      : "No recent interventions"
-  );
 
   // Determine colors and urgency based on pattern type
   const patternType = normalizePatternType(pattern_based?.status) || "none";

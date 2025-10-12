@@ -21,7 +21,6 @@ export const dispatchAccountDisabledEvent = (
   });
 
   window.dispatchEvent(event);
-  console.log("[AccountStatusHandler] Account disabled event dispatched");
 };
 
 /**
@@ -38,10 +37,6 @@ export const handleAccountDisabledError = (
     return;
   }
   window.__ACCOUNT_DISABLED_HANDLING__ = true;
-  console.log(
-    "[AccountStatusHandler] Handling account disabled error:",
-    errorMessage
-  );
 
   // Clear auth data
   dispatch(logout());
@@ -89,11 +84,6 @@ export const isAccountDisabledError = (error) => {
 export const setupGlobalAccountStatusHandler = (store, navigate) => {
   // Listen for account disabled events
   const handleAccountDisabled = (event) => {
-    console.log(
-      "[AccountStatusHandler] Global account disabled event received:",
-      event.detail
-    );
-
     const dispatch = store.dispatch;
     const message =
       event.detail?.message ||

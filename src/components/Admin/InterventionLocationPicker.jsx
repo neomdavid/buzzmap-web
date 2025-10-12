@@ -78,24 +78,11 @@ const InterventionLocationPicker = ({
 
   // Sync highlightedBarangayName with highlightedBarangay prop
   useEffect(() => {
-    console.log(
-      "[DEBUG] InterventionLocationPicker received highlightedBarangay:",
-      highlightedBarangay
-    );
     setHighlightedBarangayName(highlightedBarangay || "");
     highlightedBarangayRef.current = highlightedBarangay;
-    console.log(
-      "[DEBUG] Set highlightedBarangayName to:",
-      highlightedBarangay || ""
-    );
-    console.log(
-      "[DEBUG] highlightedBarangayRef.current is now:",
-      highlightedBarangayRef.current
-    );
 
     // Clear marker when barangay changes
     if (highlightedBarangay) {
-      console.log("Clearing marker due to barangay change");
       setCurrentMarker(null);
       setErrorMessage("");
     }
@@ -117,10 +104,6 @@ const InterventionLocationPicker = ({
   // Helper: validate coordinates
   const validateCoordinates = useCallback(
     (latLng) => {
-      console.log(
-        "[DEBUG] validateCoordinates called with highlightedBarangay:",
-        highlightedBarangayRef.current
-      );
       if (!isBoundaryDataLoaded || !qcBoundaryFeatures.length) {
         return {
           barangayName: null,
@@ -149,10 +132,6 @@ const InterventionLocationPicker = ({
                   firstCoord[0] !== lastCoord[0] ||
                   firstCoord[1] !== lastCoord[1]
                 ) {
-                  console.log(
-                    "Fixing unclosed polygon ring for",
-                    feature.properties.name
-                  );
                   // Close the ring by adding the first coordinate at the end
                   const fixedCoords = [...coords, firstCoord];
                   validFeature = {
@@ -168,19 +147,7 @@ const InterventionLocationPicker = ({
               // Now try to validate the (possibly fixed) polygon
               try {
                 isInside = booleanPointInPolygon(point, validFeature);
-                if (validFeature !== feature) {
-                  console.log(
-                    "Successfully used fixed polygon for",
-                    feature.properties.name
-                  );
-                }
               } catch (validationError) {
-                console.warn(
-                  "Polygon validation failed for",
-                  feature.properties.name,
-                  "even after fixing:",
-                  validationError.message
-                );
                 continue;
               }
             } else if (feature.geometry.type === "MultiPolygon") {
@@ -194,10 +161,6 @@ const InterventionLocationPicker = ({
                       firstCoord[0] !== lastCoord[0] ||
                       firstCoord[1] !== lastCoord[1]
                     ) {
-                      console.log(
-                        "Fixing unclosed ring in MultiPolygon for",
-                        feature.properties.name
-                      );
                       return [...ring, firstCoord];
                     }
                   }
@@ -218,10 +181,6 @@ const InterventionLocationPicker = ({
                     coordinates: fixedPolygonCoords,
                   },
                 };
-                console.log(
-                  "Using fixed MultiPolygon for",
-                  feature.properties.name
-                );
               }
 
               // Now try to validate each polygon in the MultiPolygon
@@ -234,43 +193,17 @@ const InterventionLocationPicker = ({
                     break;
                   }
                 } catch (multiPolygonError) {
-                  console.warn(
-                    "Error in MultiPolygon ring for",
-                    feature.properties.name,
-                    multiPolygonError
-                  );
                   continue;
                 }
               }
             }
-
-            // Debug logging for Laging Handa specifically
-            if (feature.properties.name === "Laging Handa") {
-              console.log("Checking Laging Handa polygon:", {
-                featureName: feature.properties.name,
-                geometryType: feature.geometry.type,
-                isInside,
-                coordinates: latLng,
-                point: point,
-              });
-            }
           } catch (error) {
-            console.warn(
-              "Error checking point in polygon for feature:",
-              feature.properties.name,
-              error
-            );
             // Skip this feature if there's an error
             continue;
           }
           if (isInside) {
             foundBarangayName = feature.properties.name || "Unknown Barangay";
             isWithinAnyBarangay = true;
-            console.log("Point is inside barangay:", {
-              barangayName: foundBarangayName,
-              coordinates: latLng,
-              featureName: feature.properties.name,
-            });
             break;
           }
         }
@@ -299,9 +232,6 @@ const InterventionLocationPicker = ({
         }
 
         // If within QC bounds but not in any barangay, allow it but show warning
-        console.warn(
-          "Point is within QC bounds but not in any barangay polygon"
-        );
         foundBarangayName = "Unknown Barangay";
         isWithinAnyBarangay = true;
       }
@@ -322,23 +252,6 @@ const InterventionLocationPicker = ({
           .normalize("NFD") // Normalize unicode
           .replace(/[\u0300-\u036f]/g, ""); // Remove diacritics
 
-        // Debug logging with more details
-        console.log("Barangay name comparison:", {
-          foundBarangayName,
-          highlightedBarangay: highlightedBarangayRef.current,
-          normalizedFound,
-          normalizedHighlighted,
-          match: normalizedFound === normalizedHighlighted,
-          foundLength: foundBarangayName.length,
-          highlightedLength: highlightedBarangayRef.current.length,
-          foundCharCodes: foundBarangayName
-            .split("")
-            .map((c) => c.charCodeAt(0)),
-          highlightedCharCodes: highlightedBarangayRef.current
-            .split("")
-            .map((c) => c.charCodeAt(0)),
-        });
-
         // Try exact match first
         if (normalizedFound !== normalizedHighlighted) {
           // Try a more flexible comparison - check if one contains the other
@@ -353,28 +266,17 @@ const InterventionLocationPicker = ({
             )
           );
 
-          console.log("Flexible match check:", {
-            foundWords,
-            highlightedWords,
-            isFlexibleMatch,
-          });
-
           if (!isFlexibleMatch) {
             return {
               barangayName: foundBarangayName,
               isValid: false,
               error: `Pin must be within ${highlightedBarangayRef.current} only`,
             };
-          } else {
-            console.log("Using flexible match for barangay validation");
           }
         }
       }
 
       // If no highlighted barangay is set, allow pinning anywhere within QC
-      if (!highlightedBarangayRef.current && foundBarangayName) {
-        console.log("No highlighted barangay set, allowing pin anywhere in QC");
-      }
       return { barangayName: foundBarangayName, isValid: true, error: "" };
     },
     [qcBoundaryFeatures, isBoundaryDataLoaded]
@@ -534,29 +436,11 @@ const InterventionLocationPicker = ({
       // Click handler with barangay enforcement
       mapInstance.current.addListener("click", (e) => {
         const coords = { lat: e.latLng.lat(), lng: e.latLng.lng() };
-        console.log("Map clicked at:", coords);
-        console.log(
-          "Current highlightedBarangayName:",
-          highlightedBarangayName
-        );
-        console.log("Current highlightedBarangay prop:", highlightedBarangay);
-        console.log(
-          "Current highlightedBarangayRef:",
-          highlightedBarangayRef.current
-        );
-        console.log(
-          "Boundary data loaded:",
-          isBoundaryDataLoaded,
-          "Features count:",
-          qcBoundaryFeatures.length
-        );
 
         const validation = validateCoordinates(coords);
-        console.log("Validation result:", validation);
 
         if (!validation.isValid) {
           // Show inline message and do not place marker
-          console.log("Validation failed, showing error:", validation.error);
           setErrorMessage(validation.error || "Invalid location");
 
           // Clear any existing timeout
@@ -572,7 +456,6 @@ const InterventionLocationPicker = ({
           return;
         }
         // Place marker only when valid and within highlighted barangay (if provided)
-        console.log("Setting current marker to:", coords);
         setCurrentMarker(coords);
 
         // Clear any existing error timeout and error message
@@ -584,7 +467,6 @@ const InterventionLocationPicker = ({
 
         mapInstance.current.panTo(coords);
         mapInstance.current.setZoom(18);
-        console.log("Calling drawMapFeatures with coords:", coords);
         drawMapFeatures(
           mapInstance.current,
           qcBoundaryFeatures,
@@ -598,10 +480,6 @@ const InterventionLocationPicker = ({
   // Redraw polygons/marker when highlight or marker changes
   useEffect(() => {
     if (!isBoundaryDataLoaded || !mapInstance.current) return;
-    console.log(
-      "useEffect redraw triggered with currentMarker:",
-      currentMarker
-    );
     drawMapFeatures(
       mapInstance.current,
       qcBoundaryFeatures,
@@ -617,7 +495,6 @@ const InterventionLocationPicker = ({
 
   // Draw polygons and marker
   function drawMapFeatures(map, features, highlightedBarangayName, markerPos) {
-    console.log("drawMapFeatures called with markerPos:", markerPos);
     overlaysRef.current.forEach((o) => o.setMap(null));
     overlaysRef.current = [];
     // Pattern color map - use centralized configuration
@@ -659,16 +536,13 @@ const InterventionLocationPicker = ({
     });
     // Draw marker
     if (markerPos) {
-      console.log("Creating marker at position:", markerPos);
       if (markerRef.current) markerRef.current.setMap(null);
       markerRef.current = new window.google.maps.Marker({
         position: markerPos,
         map,
         title: "Pinned Location",
       });
-      console.log("Marker created:", markerRef.current);
     } else {
-      console.log("No marker position provided, removing existing marker");
       if (markerRef.current) markerRef.current.setMap(null);
     }
   }

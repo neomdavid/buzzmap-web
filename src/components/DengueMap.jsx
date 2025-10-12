@@ -54,33 +54,10 @@ const PATTERN_COLORS = {
 };
 
 // Debug logging for PATTERN_COLORS object
-console.log("🔧 PATTERN_COLORS DEBUG:", {
-  PATTERN_COLORS: PATTERN_COLORS,
-  ADMIN_PATTERN_COLORS_MAP: ADMIN_PATTERN_COLORS_MAP,
-  availableKeys: Object.keys(PATTERN_COLORS),
-  correctPatterns: [
-    "spike",
-    "increase",
-    "decrease",
-    "low_level_activity",
-    "no_change",
-  ],
-});
 
 const getPatternColor = (patternType, type = "fill") => {
   const patternTypeLower = patternType?.toLowerCase();
   const pattern = PATTERN_COLORS[patternTypeLower] || PATTERN_COLORS.default;
-
-  // Debug logging for getPatternColor function
-  console.log("🎨 GETPATTERNCOLOR DEBUG:", {
-    inputPatternType: patternType,
-    normalizedPatternType: patternTypeLower,
-    foundPattern: pattern,
-    requestedType: type,
-    result: pattern[type] || pattern.fill,
-    availablePatterns: Object.keys(PATTERN_COLORS),
-    patternExists: patternTypeLower in PATTERN_COLORS,
-  });
 
   return pattern[type] || pattern.fill;
 };
@@ -334,25 +311,6 @@ const DengueMap = ({
 
       const fillColor = getPatternColor(patternType);
 
-      // Debug logging for color selection
-      console.log("🔍 POLYGON COLOR DEBUG:", {
-        barangayName: barangay.properties?.name,
-        originalPatternType: barangay.patternType,
-        normalizedPatternType: patternType,
-        fillColor: fillColor,
-        strokeColor: getPatternColor(patternType, "stroke"),
-        hoverColor: getPatternColor(patternType, "hover"),
-        availablePatterns: Object.keys(PATTERN_COLORS),
-        correctPatterns: [
-          "spike",
-          "increase",
-          "decrease",
-          "low_level_activity",
-          "no_change",
-        ],
-        patternExists: patternType in PATTERN_COLORS,
-        adminColors: ADMIN_PATTERN_COLORS_MAP,
-      });
       const barangayNorm = normalizeBarangayName(
         barangay.properties?.name || ""
       );
@@ -585,15 +543,6 @@ const DengueMap = ({
     )
       return;
 
-    console.log(
-      "[DengueMap DEBUG] InfoWindow Creation - Full Selected Feature:",
-      selectedBarangayFeature
-    );
-    console.log(
-      "[DengueMap DEBUG] InfoWindow Creation - Properties:",
-      selectedBarangayFeature.properties
-    );
-
     // Get patternType and status_and_recommendation from top-level or properties
     let patternType =
       selectedBarangayFeature.patternType?.toLowerCase() ||
@@ -630,35 +579,6 @@ const DengueMap = ({
     const patternBased = status_and_recommendation?.pattern_based || {};
     const reportBased = status_and_recommendation?.report_based || {};
     const deathPriority = status_and_recommendation?.death_priority || {};
-
-    // Detailed debug logs
-    console.log("[DengueMap DEBUG] InfoWindow Data Access:", {
-      patternType,
-      status_and_recommendation,
-      lastAnalysisTime,
-      patternBased,
-      reportBased,
-      deathPriority,
-    });
-
-    console.log("[DengueMap DEBUG] Pattern Based Details:", {
-      status: patternBased.status,
-      alert: patternBased.alert,
-      admin_recommendation: patternBased.admin_recommendation,
-      user_recommendation: patternBased.user_recommendation,
-    });
-
-    console.log("[DengueMap DEBUG] Report Based Details:", {
-      count: reportBased.count,
-      alert: reportBased.alert,
-      recommendation: reportBased.recommendation,
-    });
-
-    console.log("[DengueMap DEBUG] Death Priority Details:", {
-      count: deathPriority.count,
-      alert: deathPriority.alert,
-      recommendation: deathPriority.recommendation,
-    });
 
     // If required data is missing, still show a minimal InfoWindow stating no cases recorded
     const hasPatternData = Boolean(
@@ -891,12 +811,6 @@ const DengueMap = ({
     if (!selectedIntervention || !infoWindowPosition || !mapInstanceRef.current)
       return;
     const intervention = selectedIntervention;
-    try {
-      console.debug(
-        "[DengueMap] Clicked intervention marker (raw object):",
-        intervention
-      );
-    } catch (_) {}
     const content = document.createElement("div");
     const dateValue =
       intervention.date ||
@@ -972,13 +886,10 @@ const DengueMap = ({
 
       // Find the matching barangay in the API data
       const geoName = normalizeBarangayName(feature.properties?.name);
-      console.log("[DengueMap DEBUG] Normalized Barangay Name:", geoName);
 
       const apiBarangay = barangaysList.find((b) =>
         namesAreEquivalent(b.name, feature.properties?.name)
       );
-      console.log("[DengueMap DEBUG] Found API Barangay:", apiBarangay);
-      console.log("[DengueMap DEBUG] Original Feature:", feature);
 
       // Create a feature object with all necessary properties
       const enhancedFeature = {
@@ -1047,20 +958,6 @@ const DengueMap = ({
         apiBarangayName: apiBarangay?.name,
         last_analysis_time: apiBarangay?.last_analysis_time,
       };
-
-      // Detailed debug logs
-      console.log(
-        "[DengueMap DEBUG] Enhanced Feature Properties:",
-        enhancedFeature.properties
-      );
-      console.log("[DengueMap DEBUG] Enhanced Feature Top Level:", {
-        patternType: enhancedFeature.patternType,
-        status_and_recommendation: enhancedFeature.status_and_recommendation,
-        risk_level: enhancedFeature.risk_level,
-        pattern_data: enhancedFeature.pattern_data,
-        apiBarangayName: enhancedFeature.apiBarangayName,
-        last_analysis_time: enhancedFeature.last_analysis_time,
-      });
 
       // Update the state with the enhanced feature
       setSelectedBarangayFeature(enhancedFeature);
