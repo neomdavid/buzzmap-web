@@ -48,6 +48,8 @@ const InterventionDetailsModal = ({
   const [barangayOptions, setBarangayOptions] = useState([]);
   const [isEditing, setIsEditing] = useState(false); // Track if the user is editing
   const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false); // For delete confirmation inside modal
+  const [showHardDeleteConfirmation, setShowHardDeleteConfirmation] =
+    useState(false); // For hard delete confirmation
   const [isLoading, setIsLoading] = useState(false); // Loading state for save operation
   const [updateIntervention] = useUpdateInterventionMutation(); // RTK Query hook for updating the intervention
   const [deleteIntervention] = useDeleteInterventionMutation();
@@ -388,6 +390,17 @@ const InterventionDetailsModal = ({
     setShowDeleteConfirmation(false); // Revert back to original modal content
   };
 
+  // Handle hard delete confirmation
+  const handleConfirmHardDelete = async () => {
+    setShowHardDeleteConfirmation(false);
+    await handleHardDelete();
+  };
+
+  // Handle cancel hard delete
+  const handleCancelHardDelete = () => {
+    setShowHardDeleteConfirmation(false);
+  };
+
   useEffect(() => {
     if (modalRef.current) {
       modalRef.current.showModal();
@@ -444,6 +457,38 @@ const InterventionDetailsModal = ({
                 className="bg-error text-white font-semibold py-1 px-12 rounded-xl hover:bg-error/80 transition-all"
               >
                 {isLoading ? "Archiving..." : "Confirm Archive"}
+              </button>
+            </div>
+          </>
+        ) : showHardDeleteConfirmation ? (
+          <>
+            <div className="text-center mb-6">
+              <IconAlertTriangle
+                size={48}
+                className="mx-auto mb-4 text-error"
+              />
+              <p className="text-3xl font-bold mb-2 text-error">
+                Permanently Delete Intervention?
+              </p>
+              <p className="text-lg text-gray-600 mb-4">
+                This action cannot be undone. The intervention will be
+                permanently removed from the system.
+              </p>
+            </div>
+            <div className="modal-action flex justify-center gap-6">
+              <button
+                type="button"
+                onClick={handleCancelHardDelete}
+                className="bg-gray-300 text-gray-700 font-semibold py-1 px-12 rounded-xl hover:bg-gray-400 transition-all"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmHardDelete}
+                className="bg-error text-white font-semibold py-1 px-12 rounded-xl hover:bg-error/80 transition-all"
+              >
+                {isLoading ? "Deleting..." : "Confirm Delete"}
               </button>
             </div>
           </>
@@ -944,7 +989,7 @@ const InterventionDetailsModal = ({
                         </button>
                         <button
                           type="button"
-                          onClick={handleHardDelete}
+                          onClick={() => setShowHardDeleteConfirmation(true)}
                           className="bg-error text-white font-semibold py-1 px-6 rounded-xl hover:bg-error/80 transition-all hover:cursor-pointer flex items-center gap-2"
                         >
                           <IconTrash size={18} />
