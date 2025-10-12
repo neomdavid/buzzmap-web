@@ -51,12 +51,12 @@ const BarangayDetails = ({
   // Don't render anything if no barangay is selected
   if (!selectedBarangay) {
     return (
-      <p className="text-left text-primary text-lg font-extrabold flex items-center gap-2 mb-8">
+      <div className="text-left text-primary text-lg font-extrabold flex items-center gap-2 mb-8">
         <div className="text-success">
           <MapPinLine size={16} />
         </div>
         Click on a Barangay to view details
-      </p>
+      </div>
     );
   }
 

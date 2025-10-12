@@ -14,15 +14,7 @@ const getInitialAuthState = () => {
   const refreshToken = refreshFromLocal || refreshFromSession || null;
   const isAuthenticated = !!(token && user);
 
-  console.log("[AUTH DEBUG] Initial auth state:", {
-    userFromLocal,
-    userFromSession,
-    tokenFromLocal,
-    tokenFromSession,
-    user,
-    token,
-    isAuthenticated,
-  });
+  // Debug logging removed for production
 
   return { user, token, refreshToken, isAuthenticated };
 };
@@ -36,12 +28,7 @@ const authSlice = createSlice({
     setAuthCredentials: (state, action) => {
       const { user, token, refreshToken, rememberMe } = action.payload;
 
-      console.log("[AUTH DEBUG] Setting auth credentials:", {
-        user: user?.name,
-        role: user?.role,
-        rememberMe,
-        hasToken: !!token,
-      });
+      // Debug logging removed for production
 
       // Update Redux state
       state.user = user;
@@ -62,12 +49,12 @@ const authSlice = createSlice({
         localStorage.setItem("token", token);
         if (refreshToken) localStorage.setItem("refreshToken", refreshToken);
         localStorage.setItem("user", JSON.stringify(user));
-        console.log("[AUTH DEBUG] Stored in localStorage");
+        // Debug logging removed for production
       } else {
         sessionStorage.setItem("token", token);
         if (refreshToken) sessionStorage.setItem("refreshToken", refreshToken);
         sessionStorage.setItem("user", JSON.stringify(user));
-        console.log("[AUTH DEBUG] Stored in sessionStorage");
+        // Debug logging removed for production
       }
 
       // Verify storage was successful
@@ -78,12 +65,7 @@ const authSlice = createSlice({
       const storedRefreshLocal = localStorage.getItem("refreshToken");
       const storedRefreshSession = sessionStorage.getItem("refreshToken");
 
-      console.log("[AUTH DEBUG] Storage verification:", {
-        storedUserLocal: !!storedUserLocal,
-        storedTokenLocal: !!storedTokenLocal,
-        storedUserSession: !!storedUserSession,
-        storedTokenSession: !!storedTokenSession,
-      });
+      // Debug logging removed for production
     },
     logout: (state) => {
       state.user = null;
