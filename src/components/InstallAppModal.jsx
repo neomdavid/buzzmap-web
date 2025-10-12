@@ -7,7 +7,7 @@ const InstallAppModal = ({ isOpen, onClose }) => {
 
   // App download URL (Google Drive)
   const apkDownloadUrl =
-    "https://drive.google.com/file/d/17qeWMdWSrnpyVHm2K5MHos50xCjScIbP/view?fbclid=IwY2xjawNYvPdleHRuA2FlbQIxMQABHjAFb63EOrqjho65H6Lv7GmHAiBGJ0odFRC1r1TOggTejo7uY8kaV6O6fxjV_aem_jPLz_kNT-GBfufb3B-ZP0A";
+    "https://drive.google.com/file/d/1EORxbzm4W2yuwlYoBHD3Ow9u-RrjwX1T/view?usp=sharing";
 
   useEffect(() => {
     if (modalRef.current) {

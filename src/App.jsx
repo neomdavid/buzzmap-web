@@ -38,6 +38,8 @@ import ArchivedAdminPosts from "./pages/admin/CEA/ArchivedAdminPosts";
 import ArchivedUsers from "./pages/superadmin/ArchivedUsers";
 import ArchivedAdmins from "./pages/superadmin/ArchivedAdmins";
 import AuthGuard from "./components/AuthGuard";
+import ErrorBoundary from "./components/ErrorBoundary";
+import GlobalErrorHandler from "./components/ErrorHandlers/GlobalErrorHandler";
 
 // Lazy-load heavy, map/chart routes - now handled by LazyComponent
 import { toastError } from "./utils.jsx";
@@ -421,9 +423,13 @@ const AppWithProviders = () => {
 
 function App() {
   return (
-    <GoogleMapsProvider>
-      <AppWithProviders />
-    </GoogleMapsProvider>
+    <ErrorBoundary>
+      <GlobalErrorHandler>
+        <GoogleMapsProvider>
+          <AppWithProviders />
+        </GoogleMapsProvider>
+      </GlobalErrorHandler>
+    </ErrorBoundary>
   );
 }
 

@@ -9,6 +9,7 @@ import {
 import { useSelector } from "react-redux";
 import { toastSuccess, toastError } from "../../utils";
 import { Link } from "react-router-dom";
+import AGGridErrorHandler from "../ErrorHandlers/AGGridErrorHandler";
 
 const customTheme = themeQuartz.withParams({
   borderRadius: 10,
@@ -214,12 +215,16 @@ const AdminPostsTable = () => {
     setIsSubmitting(true);
     try {
       await deleteAdminPost(deletingPost.id || deletingPost._id).unwrap();
+
+      // Close modal first, then refetch data
+      setDeletingPost(null);
+      deleteDialogRef.current?.close();
+      toastSuccess("Post deleted successfully!");
+
+      // Refetch data after modal is closed to avoid AG Grid render conflicts
       setTimeout(async () => {
         await refetch();
-        setDeletingPost(null);
-        deleteDialogRef.current?.close();
-        toastSuccess("Post deleted successfully!");
-      }, 0);
+      }, 100);
     } catch (error) {
       console.error("Error deleting post:", error);
       toastError("Failed to delete post");
@@ -304,25 +309,27 @@ const AdminPostsTable = () => {
         </div>
       ) : (
         <div className="ag-theme-quartz h-[500px] w-full" ref={containerRef}>
-          <AgGridReact
-            rowData={rows}
-            columnDefs={columns}
-            suppressRowClickSelection
-            suppressCellFocus
-            theme={customTheme}
-            domLayout="normal"
-            pagination={true}
-            paginationPageSize={paginationPageSize}
-            paginationPageSizeSelector={paginationPageSizeOptions}
-            defaultColDef={{
-              sortable: true,
-              filter: true,
-              resizable: true,
-            }}
-            style={{
-              height: "100%",
-            }}
-          />
+          <AGGridErrorHandler>
+            <AgGridReact
+              rowData={rows}
+              columnDefs={columns}
+              suppressRowClickSelection
+              suppressCellFocus
+              theme={customTheme}
+              domLayout="normal"
+              pagination={true}
+              paginationPageSize={paginationPageSize}
+              paginationPageSizeSelector={paginationPageSizeOptions}
+              defaultColDef={{
+                sortable: true,
+                filter: true,
+                resizable: true,
+              }}
+              style={{
+                height: "100%",
+              }}
+            />
+          </AGGridErrorHandler>
         </div>
       )}
 
