@@ -528,20 +528,6 @@ const ReportsVerification = () => {
           Reports Verification
         </p>
 
-        {/* Summary Cards Skeleton */}
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
-          {Array.from({ length: 6 }).map((_, index) => (
-            <div
-              key={index}
-              className="flex flex-col text-center rounded-2xl shadow bg-base-100 border border-base-200 px-6 py-5 items-center"
-            >
-              <div className="skeleton h-7 w-7 mb-1" />
-              <div className="skeleton h-8 w-12 mb-2" />
-              <div className="skeleton h-4 w-20" />
-            </div>
-          ))}
-        </div>
-
         <div className="flex flex-col">
           <section className="flex flex-col gap-2">
             <p className="text-base-content text-4xl font-bold mb-2">
@@ -563,69 +549,6 @@ const ReportsVerification = () => {
       <p className="flex justify-center text-5xl font-extrabold mb-10 text-center md:justify-start md:text-left md:w-[48%] ">
         Reports Verification
       </p>
-
-      {/* --- SUMMARY CARDS --- */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
-        {/* Total Reports */}
-        <div className="flex flex-col text-center rounded-2xl shadow bg-base-100 border border-base-200 px-6 py-5 items-center">
-          <IconChartBar size={28} className="text-primary mb-1" />
-          <span className="text-3xl font-bold text-primary">
-            {totalReports}
-          </span>
-          <span className="text-base font-medium text-gray-600 mt-1">
-            Total Reports
-          </span>
-        </div>
-        {/* Validated */}
-        <div className="flex flex-col text-center rounded-2xl shadow bg-green-50 border border-green-100 px-6 py-5 items-center">
-          <IconChecks size={28} className="text-green-600 mb-1" />
-          <span className="text-3xl font-bold text-green-600">
-            {totalValidated}
-          </span>
-          <span className="text-base font-medium text-green-700 mt-1">
-            Validated
-          </span>
-        </div>
-        {/* Pending */}
-        <div className="flex flex-col text-center rounded-2xl shadow bg-yellow-50 border border-yellow-100 px-6 py-5 items-center">
-          <IconClock size={28} className="text-yellow-600 mb-1" />
-          <span className="text-3xl font-bold text-yellow-600">
-            {totalPending}
-          </span>
-          <span className="text-base font-medium text-yellow-700 mt-1">
-            Pending
-          </span>
-        </div>
-        {/* Rejected */}
-        <div className="flex flex-col text-center rounded-2xl shadow bg-red-50 border border-red-100 px-6 py-5 items-center">
-          <IconUserCircle size={28} className="text-red-600 mb-1" />
-          <span className="text-3xl font-bold text-red-600">
-            {totalRejected}
-          </span>
-          <span className="text-base font-medium text-red-700 mt-1">
-            Rejected
-          </span>
-        </div>
-        {/* Reports Today */}
-        <div className="flex flex-col text-center rounded-2xl shadow bg-blue-50 border border-blue-100 px-6 py-5 items-center">
-          <IconClock size={28} className="text-blue-600 mb-1" />
-          <span className="text-3xl font-bold text-blue-600">{totalToday}</span>
-          <span className="text-base font-medium text-blue-700 mt-1">
-            Reports Today
-          </span>
-        </div>
-        {/* Most Active Barangay */}
-        <div className="flex flex-col text-center rounded-2xl shadow bg-purple-50 border border-purple-100 px-6 py-5 items-center">
-          <IconUserCircle size={28} className="text-purple-600 mb-1" />
-          <span className="text-2xl font-bold text-purple-700">
-            {mostActiveBarangay}
-          </span>
-          <span className="text-base font-medium text-purple-700 mt-1">
-            Most Active Barangay
-          </span>
-        </div>
-      </div>
-      {/* --- END SUMMARY CARDS --- */}
 
       {/* View toggle - segmented control */}
       <div className="mb-6 flex items-center">
