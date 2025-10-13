@@ -95,6 +95,9 @@ const Interventions = () => {
 
   // Log the raw API response data and transform it, augmenting with missing barangays as 'none'
   const transformedBarangays = React.useMemo(() => {
+    console.log("🔍 DEBUG - Raw barangaysList:", barangaysList);
+    console.log("🔍 DEBUG - Raw allBarangayNames:", allBarangayNames);
+
     const datasetBarangays = Array.isArray(barangaysList) ? barangaysList : [];
 
     const mapped = datasetBarangays.map((b) => {
@@ -128,13 +131,13 @@ const Interventions = () => {
 
     // Add barangays not present in dataset as 'No Pattern'
     const datasetNameSet = new Set(
-      mapped.map((m) => (m.name || "").toLowerCase())
+      mapped.map((m) => (m.name || "").toLowerCase().trim())
     );
     const extras = (allBarangayNames || [])
-      .filter((n) => n && !datasetNameSet.has(n.toLowerCase()))
+      .filter((n) => n && !datasetNameSet.has(n.toLowerCase().trim()))
       .map((name) => ({
-        name,
-        _id: `missing-${name}`,
+        name: name.trim(),
+        _id: `missing-${name.trim()}`,
         // Not present in dataset => No Data
         patternType: "no_data",
         issueDetected: "",
@@ -146,7 +149,44 @@ const Interventions = () => {
         _isMissingInDataset: true,
       }));
 
-    return [...mapped, ...extras];
+    // Remove duplicates by name (case-insensitive) and keep the first occurrence
+    const allBarangays = [...mapped, ...extras];
+    console.log(
+      "🔍 DEBUG - All barangays before deduplication:",
+      allBarangays.map((b) => b.name)
+    );
+
+    const uniqueBarangays = allBarangays.filter((barangay, index, array) => {
+      const normalizedName = (barangay.name || "").toLowerCase().trim();
+      const isFirstOccurrence =
+        array.findIndex(
+          (b) => (b.name || "").toLowerCase().trim() === normalizedName
+        ) === index;
+
+      if (!isFirstOccurrence) {
+        console.log(
+          "🔍 DEBUG - Removing duplicate:",
+          barangay.name,
+          "at index",
+          index
+        );
+      }
+
+      return isFirstOccurrence;
+    });
+
+    console.log(
+      "🔍 DEBUG - Unique barangays after deduplication:",
+      uniqueBarangays.map((b) => b.name)
+    );
+    console.log(
+      "🔍 DEBUG - No data barangays:",
+      uniqueBarangays
+        .filter((b) => b.patternType === "no_data")
+        .map((b) => b.name)
+    );
+
+    return uniqueBarangays;
   }, [barangaysList, allBarangayNames]);
 
   const completedInterventions = interventions
@@ -247,6 +287,14 @@ const Interventions = () => {
   const filteredRecommendations = React.useMemo(() => {
     if (!transformedBarangays) return [];
 
+    console.log(
+      "🔍 DEBUG - filteredRecommendations - transformedBarangays:",
+      transformedBarangays.map((b) => ({
+        name: b.name,
+        patternType: b.patternType,
+      }))
+    );
+
     // Get all interventions for each barangay
     const barangayInterventions = interventions
       ? interventions.reduce((acc, intervention) => {
@@ -295,10 +343,26 @@ const Interventions = () => {
 
     // Apply pattern filter
     if (patternFilter) {
+      console.log("🔍 DEBUG - Applying pattern filter:", patternFilter);
+      const beforeFilter = recommendations.length;
       recommendations = recommendations.filter(
         (item) =>
           normalizePatternType(item.patternType) ===
           normalizePatternType(patternFilter)
+      );
+      console.log(
+        "🔍 DEBUG - After pattern filter:",
+        recommendations.length,
+        "items (was",
+        beforeFilter,
+        ")"
+      );
+      console.log(
+        "🔍 DEBUG - Filtered recommendations:",
+        recommendations.map((r) => ({
+          name: r.name,
+          patternType: r.patternType,
+        }))
       );
     }
 
@@ -381,9 +445,25 @@ const Interventions = () => {
     return norm === activeTab;
   });
 
+  console.log(
+    "🔍 DEBUG - Cards for activeTab",
+    activeTab,
+    ":",
+    cards.map((c) => ({ name: c.name, _id: c._id, patternType: c.patternType }))
+  );
+
   const visibleCards = cards.slice(
     cardStartIndex,
     cardStartIndex + cardsPerPage
+  );
+
+  console.log(
+    "🔍 DEBUG - Visible cards:",
+    visibleCards.map((c) => ({
+      name: c.name,
+      _id: c._id,
+      patternType: c.patternType,
+    }))
   );
 
   // Count barangays per pattern for tab badges
@@ -526,6 +606,7 @@ const Interventions = () => {
     [PATTERN_TYPES.DECREASE]: "Continue Monitoring",
     [PATTERN_TYPES.LOW_LEVEL_ACTIVITY]: "Monitor Situation",
     [PATTERN_TYPES.NO_CHANGE]: "No Specific Pattern",
+    no_data: "No Data Available",
   };
 
   if (isLoadingInterventions || isLoadingPosts || isLoadingBarangays) {
@@ -704,7 +785,7 @@ const Interventions = () => {
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {visibleCards.map((item) => (
                       <div
-                        key={item.name + item.patternType}
+                        key={item._id || item.name + item.patternType}
                         className="flex flex-col items-center"
                       >
                         <ActionRecommendationCard

@@ -854,48 +854,6 @@ const ClusterDetailsModal = ({
               </div>
             )}
 
-            {/* Similarity Analysis */}
-            <div className="card bg-base-100 shadow-md mb-6">
-              <div className="card-body">
-                <h4 className="card-title text-primary">Similarity Analysis</h4>
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm">Location Proximity:</span>
-                    <div className="flex items-center gap-2">
-                      <progress
-                        className="progress progress-success w-20"
-                        value="85"
-                        max="100"
-                      ></progress>
-                      <span className="text-sm font-medium">85%</span>
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm">Report Type Match:</span>
-                    <div className="flex items-center gap-2">
-                      <progress
-                        className="progress progress-info w-20"
-                        value="100"
-                        max="100"
-                      ></progress>
-                      <span className="text-sm font-medium">100%</span>
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm">Time Proximity:</span>
-                    <div className="flex items-center gap-2">
-                      <progress
-                        className="progress progress-warning w-20"
-                        value="70"
-                        max="100"
-                      ></progress>
-                      <span className="text-sm font-medium">70%</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
             {/* Cluster Summary */}
             <div className="card bg-base-100 shadow-md mb-6">
               <div className="card-body">
