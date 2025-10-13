@@ -69,6 +69,7 @@ function Otp() {
           email: emailToUse,
           purpose: "account-verification",
         }).unwrap();
+        toastSuccess("OTP sent successfully to " + emailToUse);
         setCooldown(60); // Set initial cooldown
       } catch (err) {
         // Extract cooldown time from error message if available
@@ -100,6 +101,7 @@ function Otp() {
         email: emailToUse,
         purpose: "account-verification",
       }).unwrap();
+      toastSuccess("OTP resent successfully to " + emailToUse);
       setCooldown(60); // Start 60 second cooldown only for resend
       setHasResent(true);
     } catch (err) {
