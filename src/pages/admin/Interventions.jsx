@@ -458,6 +458,14 @@ const Interventions = () => {
   );
 
   console.log(
+    "🔍 DEBUG - Pagination - cardStartIndex:",
+    cardStartIndex,
+    "cardsPerPage:",
+    cardsPerPage,
+    "total cards:",
+    cards.length
+  );
+  console.log(
     "🔍 DEBUG - Visible cards:",
     visibleCards.map((c) => ({
       name: c.name,
@@ -486,6 +494,11 @@ const Interventions = () => {
       setActiveTab(PATTERN_TYPES.NO_CHANGE);
     }
   }, [cards.length, patternCountsByTab, activeTab]);
+
+  // Reset cardStartIndex when activeTab changes
+  useEffect(() => {
+    setCardStartIndex(0);
+  }, [activeTab]);
 
   // Responsive cardsPerPage
   useEffect(() => {
@@ -827,11 +840,7 @@ const Interventions = () => {
                   </button>
                   <button
                     className="btn btn-sm"
-                    onClick={() =>
-                      setCardStartIndex((i) =>
-                        Math.min(cards.length - cardsPerPage, i + cardsPerPage)
-                      )
-                    }
+                    onClick={() => setCardStartIndex((i) => i + cardsPerPage)}
                     disabled={cardStartIndex + cardsPerPage >= cards.length}
                   >
                     Next
