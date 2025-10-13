@@ -118,16 +118,25 @@ function SprUsers() {
 
       {/* Filters Section */}
       <div className="bg-white p-4 rounded-xl shadow-sm mb-8">
-        <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
+        <div className="flex flex-col md:flex-row gap-4 items-end justify-between">
           <div className="flex flex-col md:flex-row gap-4 w-full">
             <div className="flex-1">
-              <input
-                type="text"
-                placeholder="Search by username or email..."
-                className="input input-bordered w-full"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
+              <div className="form-control">
+                <label
+                  htmlFor="searchInput"
+                  className="label text-sm text-gray-600"
+                >
+                  Search
+                </label>
+                <input
+                  id="searchInput"
+                  type="text"
+                  placeholder="Search by username or email..."
+                  className="input input-bordered w-full"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+              </div>
             </div>
             <div className="flex gap-4">
               <div className="form-control">
@@ -150,26 +159,6 @@ function SprUsers() {
                   <option value="pending">Pending</option>
                 </select>
               </div>
-
-              <div className="form-control">
-                <label
-                  htmlFor="roleFilter"
-                  className="label text-sm text-gray-600"
-                >
-                  Role Filter
-                </label>
-                <select
-                  id="roleFilter"
-                  aria-label="Filter by user role"
-                  className="select select-bordered w-full max-w-xs hover:cursor-pointer"
-                  value={roleFilter}
-                  onChange={(e) => setRoleFilter(e.target.value)}
-                >
-                  <option value="">All Roles</option>
-                  <option value="user">User</option>
-                  <option value="moderator">Moderator</option>
-                </select>
-              </div>
             </div>
           </div>
 
@@ -179,7 +168,6 @@ function SprUsers() {
               aria-label="Clear all filters"
               onClick={() => {
                 setStatusFilter("");
-                setRoleFilter("");
                 setSearchQuery("");
               }}
             >
@@ -190,11 +178,7 @@ function SprUsers() {
       </div>
 
       <div className="bg-white rounded-xl shadow-sm p-4">
-        <UsersTable
-          statusFilter={statusFilter}
-          roleFilter={roleFilter}
-          searchQuery={searchQuery}
-        />
+        <UsersTable statusFilter={statusFilter} searchQuery={searchQuery} />
       </div>
 
       {/* Add Last Updated Info */}

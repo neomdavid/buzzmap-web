@@ -58,7 +58,10 @@ function SprAdmins() {
   // Update stats when accounts data changes
   useEffect(() => {
     if (accounts) {
-      const adminAccounts = accounts.filter((acc) => acc.role === "admin");
+      // Filter for admin accounts that are not deleted/archived
+      const adminAccounts = accounts.filter(
+        (acc) => acc.role === "admin" && acc.status !== "deleted"
+      );
       setStats({
         totalAdmins: adminAccounts.length,
         activeAdmins: adminAccounts.filter((acc) => acc.status === "active")
@@ -406,16 +409,25 @@ function SprAdmins() {
 
       {/* Add Filters Section */}
       <div className="bg-white p-4 rounded-xl shadow-sm mb-8">
-        <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
+        <div className="flex flex-col md:flex-row gap-4 items-end justify-between">
           <div className="flex flex-col md:flex-row gap-4 w-full">
             <div className="flex-1">
-              <input
-                type="text"
-                placeholder="Search by username or email..."
-                className="input input-bordered w-full"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
+              <div className="form-control">
+                <label
+                  htmlFor="adminSearchInput"
+                  className="label text-sm text-gray-600"
+                >
+                  Search
+                </label>
+                <input
+                  id="adminSearchInput"
+                  type="text"
+                  placeholder="Search by username or email..."
+                  className="input input-bordered w-full"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+              </div>
             </div>
             <div className="flex gap-4">
               <div className="form-control">
