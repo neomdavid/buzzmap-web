@@ -163,8 +163,11 @@ export const normalizePatternType = (patternType) => {
   if (normalized.includes("low_level")) {
     return PATTERN_TYPES.LOW_LEVEL_ACTIVITY;
   }
-  if (normalized.includes("no_change") || normalized === "none") {
+  if (normalized.includes("no_change")) {
     return PATTERN_TYPES.NO_CHANGE;
+  }
+  if (normalized === "none" || normalized === "no_data") {
+    return PATTERN_TYPES.NONE;
   }
   if (normalized.includes("spike")) {
     return PATTERN_TYPES.SPIKE;

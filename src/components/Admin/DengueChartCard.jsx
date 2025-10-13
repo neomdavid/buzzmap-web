@@ -195,7 +195,11 @@ export default function DengueChartCard() {
           <p className="text-sm text-white">
             Pattern:{" "}
             <span className="font-semibold" style={{ color: lineColor }}>
-              {getPatternLabel(normalizePatternType(selectedBarangayPattern))}
+              {showNoData
+                ? "No Data"
+                : getPatternLabel(
+                    normalizePatternType(selectedBarangayPattern)
+                  )}
             </span>
           </p>
         </div>
