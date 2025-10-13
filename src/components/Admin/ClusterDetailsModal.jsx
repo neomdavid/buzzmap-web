@@ -354,6 +354,36 @@ const ClusterDetailsModal = ({
   const resolveAllIds = Array.from(selectableReportIds);
   const isClusterTooSmall = resolveAllIds.length <= 1 && !isClusterResolved;
 
+  // Calculate primary type based on most common report type
+  const calculatePrimaryType = () => {
+    if (!Array.isArray(reports) || reports.length === 0) return "Unknown";
+    
+    const typeCounts = {};
+    reports.forEach(report => {
+      const type = report?.report_type || report?.type || "Unknown";
+      typeCounts[type] = (typeCounts[type] || 0) + 1;
+    });
+    
+    const sortedTypes = Object.entries(typeCounts).sort((a, b) => b[1] - a[1]);
+    const [mostCommonType, mostCommonCount] = sortedTypes[0];
+    const totalReports = reports.length;
+    
+    // If there's a clear majority (more than 50%), show the primary type
+    if (mostCommonCount > totalReports / 2) {
+      return mostCommonType;
+    }
+    
+    // If there are multiple types with equal or similar counts, show "Mixed"
+    const hasEqualCounts = sortedTypes.some(([_, count]) => count === mostCommonCount && count < totalReports);
+    if (hasEqualCounts && sortedTypes.length > 1) {
+      return "Mixed";
+    }
+    
+    return mostCommonType;
+  };
+  
+  const primaryType = calculatePrimaryType();
+
   return (
     <dialog
       id="cluster-verification-modal"
@@ -862,7 +892,7 @@ const ClusterDetailsModal = ({
                   <div className="flex justify-between">
                     <span className="text-gray-600">Primary Type:</span>
                     <span className="font-semibold">
-                      {reports[0]?.report_type || reports[0]?.type || "Unknown"}
+                      {primaryType}
                     </span>
                   </div>
                   <div className="flex justify-between">
