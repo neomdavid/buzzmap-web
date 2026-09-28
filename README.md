@@ -7,7 +7,7 @@
 
 > A comprehensive web platform for dengue surveillance, community engagement, and public health management in Quezon City with advanced analytics and intervention capabilities.
 
-**🌐 Live Demo: [https://buzzmap-client.vercel.app/home](https://buzzmap-client.vercel.app/home)**
+**🌐 Live Demo: [https://www.buzzmap-qcesd.com](https://www.buzzmap-qcesd.com)**
 
 ## 📋 Table of Contents
 
